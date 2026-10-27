@@ -1,5 +1,7 @@
 import { AgentMutations } from './agent-mutations';
 import { CommandConsistency } from './command-consistency';
+import { Search } from './search';
+
 import { snapshotLegacy, convertLegacy, legacyContent, candidateResource } from './migration';
 
 import { Annotations } from './annotations';
@@ -28,6 +30,8 @@ import { initializeReviewState, reviewSnapshot, setReviewStatus, confirmReviewPr
 const EDITABLE = 'RB-TH-01-01-what-is-positional-notation';
 interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; courseId: string; graph: CourseGraph;
   // T03 constructs its observer on this same connection; both student save entry points call it in-transaction.
+  search: Search;
+  unit: (id: string) => import('../shared').CourseUnit | undefined;
   annotations: Annotations;
   groups: CommandGroups;
   sources: Sources;
@@ -127,7 +131,10 @@ function open(directory: string): OpenedCourse {
     const parsing = new Parsing(db, canonical, sources, run => { queue = queue.then(run).catch(error => { console.error(error); }); }, workerData?.parseScheduling);
     const agent = new AgentStore(db, sources, sourceUnit);
     const mutations = new AgentMutations(db,groups,agent,sourceUnit,relations);
-    const course: Course = { db, owner, agent, mutations, annotations, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
+    const readableUnitIds = [...new Set([...db.prepare('SELECT id FROM units').all().map(r => String(r.id)), ...(!db.prepare("SELECT 1 FROM metadata WHERE key='content-scope'").get() ? ['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-035', 'KU-055', 'KU-057', 'KU-062'] : [])])];
+    const search = new Search(db, sourceUnit, readableUnitIds, graph.nodes.length, sources);
+    const course: Course = { db, owner, agent, mutations, search, unit: sourceUnit, annotations, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
+
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     const result = snapshot(course);
     courses.set(canonical, course);
@@ -154,7 +161,7 @@ parentPort!.on('message', message => {
     const course = [...courses.values()].find(c => c.sessionId === message.payload?.sessionId);
     try { course?.experiments.stopIssuing(message.payload); } catch { /* Invalid input is rejected by the ordered dispatcher below. */ }
   }
-  if (message.action === 'sources:page') {
+  if (message.action === 'sources:page' || message.action.startsWith('search:')) {
     // Immutable source bytes may parse asynchronously while short core requests continue.
     // Start after prior ordered writes; only close drains these read-only operations.
     queue = queue.then(() => {
@@ -199,12 +206,9 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       value = layoutGraph(course.db, course.relations.graph());
     } else if (action === 'readUnit') {
       const course = session(payload.sessionId);
-      const row = course.db.prepare('SELECT payload FROM units WHERE id=?').get(payload.unitId);
-      if (row) value = JSON.parse(String(row.payload));
-      else if (!course.db.prepare("SELECT 1 FROM metadata WHERE key='content-scope'").get() && ['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-035', 'KU-055', 'KU-057', 'KU-062'].includes(payload.unitId))
+      value = course.unit(payload.unitId);
+      if (!value) throw new Error('该单元不存在或正文尚未加入课程副本');
 
-        value = JSON.parse(readFileSync(join(__dirname, `fixtures/unit-${payload.unitId.slice(3)}.json`), 'utf8'));
-      else throw new Error('该单元不存在或正文尚未加入课程副本');
     }
     else if (action === 'extensions:recoverRenderers') { for(const course of courses.values()) {course.experiments.pauseAll();course.extensions.recoverRenderer();} }
     else if (action.startsWith('extensions:')) {
@@ -241,6 +245,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action === 'relations:query') value = session(payload.sessionId).relations.query(payload.operationId);
     else if (action === 'commands:resolveInput') { const c = session(payload.sessionId); value = resolveInput(c.db, payload, () => c.groups.observe()); }
     else if (action.startsWith('commands:')) value = session(payload.sessionId).groups.dispatch(action, payload);
+    else if (action.startsWith('search:')) value = await session(payload.sessionId).search.dispatch(action, payload);
     else if (action.startsWith('annotations:')) value = session(payload.sessionId).annotations.dispatch(action, payload);
     else if (action.startsWith('agentMutation:')) { const m=session(payload.sessionId).mutations; value=action==='agentMutation:read'?m.read(payload):action==='agentMutation:apply'?m.apply(payload):m.query(payload); }
     else if (action.startsWith('agent:')) value = session(payload.sessionId).agent.dispatch(action, payload);

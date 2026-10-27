@@ -147,7 +147,8 @@ export function BuiltinExperiment({ block, unitId, sessionId, active, disabled, 
   const v = client.view;
   const title = block.payload.title ?? (block.payload.component === 'kmap' ? '固定卡诺图 · 跨边四格' : '交互 · 多路选择');
   return <section ref={host} inert={disabled} className="builtin-experiment nodrag nopan" role="region" aria-label={title} onPointerDownCapture={beginGesture} onKeyDownCapture={e=>{if(e.key!=='Tab')beginGesture();}} onKeyUpCapture={endGesture} onCompositionStartCapture={beginGesture} onCompositionEndCapture={endGesture}>
-    <h3>{title}</h3>
+    <h3 data-search-field="title">{title}</h3>
+
     {!v ? <p role="status">{client.error ?? '正在恢复实验现场…'}</p> : <>
       {v.pendingDefinition && <div role="status" aria-label="实验定义迁移"><p>正式定义 {v.pendingDefinition.revision} 已保存；当前现场仍采用定义 {v.definition.revision}。{v.gesture ? '本次操作结束后迁移。' : v.migrationError ?? '正在接续兼容现场。'}</p>{v.migrationError && <button onClick={()=>client.send({kind:'restart',baseVersion:v.version})}>按新定义重新开始</button>}</div>}
       <p className="builtin-scope">{v.definition.kind === 'mux' ? '仅演示通道选择；不模拟器件使能端。' : v.definition.kind === 'decoder' ? '74LS138 式：使能满足时，仅选中输出为低电平。' : '固定 A / BC 示例，列按格雷顺序排列；不改变函数或自动化简。'}</p>

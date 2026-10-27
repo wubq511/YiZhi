@@ -1,12 +1,17 @@
 import type { AgentIntent } from '../agent-mutation-api';
+import type { SearchHit } from '../search-api';
+import { paintFrame, highlightSearch, waitForSearchElement } from './search-location';
+
 import { AgentProse } from './agent-prose';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { AgentTask, Conversation, ConversationView, ExecutorStatus, QuestionTarget, SubmitQuestion } from '../agent-api';
 import type { SourceCitation } from '../sources-api';
 import './agent-panel.css';
-export interface AgentPanelHandle { flush(): Promise<boolean>; attachCitation(citation: SourceCitation): void }
+export interface AgentScene { open: boolean; conversationId: string | null; scrollTop: number }
+export interface AgentPanelHandle { capture(): AgentScene; restore(scene: AgentScene): Promise<void>; openSearch(hit: SearchHit): Promise<void>; flush(): Promise<boolean>; attachCitation(citation: SourceCitation): void }
 const taskLabel: Record<AgentTask['status'], string> = { running: '正在回答', completed: '回答已完成', failed: '回答失败', interrupted: '回答已中断', unknown: '执行结果未知', partial: '部分完成 · 已提交组保留', pending: '待处理 · 候选尚未正式保存' };
+
 export const AgentPanel = forwardRef<AgentPanelHandle, {
   sessionId: string; narrow: boolean; target: QuestionTarget; targetName: string; sourceOpen: boolean;
   prepareMutation(): Promise<void>; onMutation(task: AgentTask, phase: 'start' | 'progress' | 'finish' | 'view'): Promise<void>;
@@ -100,7 +105,18 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
     document.addEventListener('mouseup', capture); document.addEventListener('keyup', capture);
     return () => { document.removeEventListener('mouseup', capture); document.removeEventListener('keyup', capture); };
   }, []);
-  useImperativeHandle(ref, () => ({ flush, attachCitation(citation) { chosenCitations.current = chosenCitations.current.some(c => c.id === citation.id) ? chosenCitations.current : [...chosenCitations.current, citation].slice(-8); setAttachments(chosenCitations.current); markDirty(); setOpen(true); } }));
+  useImperativeHandle(ref, () => ({ flush,
+    capture: () => ({ open, conversationId: current.current, scrollTop: panel.current?.scrollTop ?? 0 }),
+    async restore(scene) { if (!await flush()) throw new Error('对话草稿尚未保存'); if (scene.conversationId) await loadConversation(scene.conversationId); setOpen(scene.open); await paintFrame(); if (panel.current) panel.current.scrollTop = scene.scrollTop; },
+    async openSearch(hit) {
+      if (!await flush()) throw new Error('对话草稿尚未保存');
+      const latest = await api.get({ sessionId, conversationId: hit.conversationId! });
+      if (latest.messages.find(m => m.id === hit.messageId)?.text !== hit.text) throw new Error('消息版本已变化，请重新搜索');
+      await loadConversation(hit.conversationId!); setOpen(true); await paintFrame();
+      const element = await waitForSearchElement(() => panel.current?.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(hit.messageId!)}"]`));
+      if (!element) throw new Error('消息阅读位置暂不可用');
+      highlightSearch(element, hit); element.scrollIntoView({ block: 'center' });
+    }, attachCitation(citation) { chosenCitations.current = chosenCitations.current.some(c => c.id === citation.id) ? chosenCitations.current : [...chosenCitations.current, citation].slice(-8); setAttachments(chosenCitations.current); markDirty(); setOpen(true); } }));
   const close = async () => { if (!await flush()) return; setOpen(false); requestAnimationFrame(() => trigger.current?.focus()); };
   const guard = async (action: () => Promise<void>) => { if (busy) return; setBusy(true); setError(''); try { await action(); } catch (error) { setError((error as Error).message); } finally { setBusy(false); } };
   const send = async () => {

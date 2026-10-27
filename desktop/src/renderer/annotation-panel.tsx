@@ -1,9 +1,13 @@
+import type { SearchHit } from '../search-api';
+import { paintFrame, waitForSearchElement } from './search-location';
 import { createPortal } from 'react-dom';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type { AnnotationSelection, PersonalNote } from '../annotation-api';
 import './annotation-panel.css';
-export interface AnnotationPanelHandle { create(selection: AnnotationSelection): Promise<void>; flush(): Promise<boolean> }
+export interface AnnotationScene { open: boolean; active?: string; scrollTop: number }
+export interface AnnotationPanelHandle { capture(): AnnotationScene; restore(scene: AnnotationScene): Promise<void>; openSearch(hit: SearchHit): Promise<void>; create(selection: AnnotationSelection): Promise<void>; flush(): Promise<boolean> }
 export const AnnotationPanel = forwardRef<AnnotationPanelHandle, { sessionId: string; narrow: boolean; prepare(): Promise<boolean>; onOpenChange(open: boolean): void; locate(note: PersonalNote): Promise<void> }>(function AnnotationPanel({ sessionId, narrow, prepare, onOpenChange, locate }, ref) {
+  const [searchHit, setSearchHit] = useState<SearchHit>();
   const [open, setOpen] = useState(false), [notes, setNotes] = useState<PersonalNote[]>([]);
   const [locating, setLocating] = useState(false), [creating, setCreating] = useState(false);
   const [active, setActive] = useState<string>(), [status, setStatus] = useState('已保存'), [error, setError] = useState<string>();
@@ -55,7 +59,18 @@ export const AnnotationPanel = forwardRef<AnnotationPanelHandle, { sessionId: st
     };
     work.current = Promise.resolve().then(run); return work.current;
   };
-  useImperativeHandle(ref, () => ({ flush, async create(selection) {
+  useImperativeHandle(ref, () => ({ flush,
+    capture: () => ({ open, active, scrollTop: panel.current?.scrollTop ?? 0 }),
+    async restore(scene) { setSearchHit(undefined); if (!await flush()) throw new Error('笔记输入尚未保存'); show(scene.open); setActive(scene.active); await paintFrame(); if (panel.current) panel.current.scrollTop = scene.scrollTop; },
+    async openSearch(hit) {
+      if (!await flush()) throw new Error('笔记输入尚未保存');
+      await refresh(); const note = cache.current.get(hit.noteId!);
+      if (!note || String(note.version) !== hit.version || note.text !== hit.text) throw new Error('笔记版本已变化，请重新搜索');
+      setSearchHit(hit); show(true); setActive(note.id); await paintFrame();
+      const textarea = await waitForSearchElement(() => input.current?.dataset.noteId === note.id ? input.current : null) as HTMLTextAreaElement;
+      textarea.focus({ preventScroll: true }); textarea.dataset.searchCurrent = 'true';
+      textarea.setSelectionRange(Array.from(hit.text).slice(0, hit.start).join('').length, Array.from(hit.text).slice(0, hit.end).join('').length);
+    }, async create(selection) {
     show(true); setCreating(true); setError(undefined);
     try {
       if (!await prepare()) { setCreating(false); setError('正文输入尚未保存，请先重试正文保存，再添加批注。'); return; }
@@ -119,7 +134,7 @@ export const AnnotationPanel = forwardRef<AnnotationPanelHandle, { sessionId: st
       {current && !creating && <>
         <p className="annotation-association">{current.current.status === 'orphan' ? '待重新关联 · 原引用与笔记已保留' : `已关联 · ${current.current.fragments.length} 个有序片段`}</p>
         <blockquote>{current.original.fragments.map(f => f.quote).join('\n')}</blockquote>
-        <label className="annotation-label">批注内容<textarea ref={input} aria-label="批注内容" value={values.current.get(current.id) ?? current.text}
+        <label className="annotation-label">批注内容<textarea ref={input} data-note-id={current.id} data-search-current={searchHit?.noteId === current.id ? "true" : undefined} aria-label="批注内容" value={values.current.get(current.id) ?? current.text}
           onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; void flush(); }}
           onChange={e => edit(e.target.value)} onKeyDown={event => {
             if ((event.metaKey || event.ctrlKey) && ['z', 'y'].includes(event.key.toLowerCase())) { event.preventDefault(); event.stopPropagation(); undo(event.shiftKey || event.key.toLowerCase() === 'y'); }
