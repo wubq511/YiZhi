@@ -14,6 +14,7 @@ export function ControlledProducer({ course, prepare, committed, settled, narrow
   const [candidate, setCandidate] = useState('');
   const [premise, setPremise] = useState('');
   const [status, setStatus] = useState('尚未读取依据。');
+  const [substantive, setSubstantive] = useState(false);
   const [busy, setBusy] = useState(false);
   const [retained, setRetained] = useState<RetainedCandidate[]>([]);
   const pending = useRef<GroupCommand | undefined>(undefined);
@@ -41,7 +42,8 @@ export function ControlledProducer({ course, prepare, committed, settled, narrow
     if (!basis || !attempt) return;
     const original = basis.objects.find(object => object.id === targetId)!.value;
     pending.current ??= { sessionId: course.sessionId, attemptId: attempt.attemptId, operationId: crypto.randomUUID(),
-      basisId: basis.basisId, changes: [{ objectId: targetId, value: { ...original, payload: { ...original.payload, text: candidate } } }] };
+      basisId: basis.basisId, changes: [{ objectId: targetId, value: { ...original, payload: { ...original.payload, text: candidate } } }],
+      ...(substantive ? { semanticImpact: { version: 1 as const, unitId: 'KU-001', conclusionOrMethodChanged: true } } : {}) };
     const result = await commands.commit(pending.current);
     if (result.status === 'committed') {
       receiptId.current = result.operationId;
@@ -72,6 +74,7 @@ export function ControlledProducer({ course, prepare, committed, settled, narrow
       <details><summary>本次读取的前提</summary><p>{premise}</p></details>
       <label>可控候选内容<textarea rows={5} value={candidate} disabled={busy}
         onChange={event => { setCandidate(event.target.value); pending.current = undefined; }} /></label>
+      <label><input type="checkbox" checked={substantive} disabled={busy} onChange={event => { setSubstantive(event.target.checked); pending.current = undefined; }} /> 本次会改变重要结论或方法（阶段 II 元数据演示）</label>
       <div className="producer-actions"><button disabled={busy || !candidate} onClick={() => void submit()}>提交可控修改</button>
         <button disabled={busy || !receiptId.current} onClick={() => void run(async () => {
           const receipt = await commands.query({ sessionId: course.sessionId, operationId: receiptId.current! });

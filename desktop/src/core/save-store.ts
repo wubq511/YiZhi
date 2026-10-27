@@ -122,6 +122,7 @@ export function commitEdit(db: DatabaseSync, command: EditCommand, afterWrite?: 
   if (typeof command.operationId !== 'string' || !command.operationId.length || command.operationId.length > 160)
     throw new Error('无效的操作身份');
   const hash = digest(command);
+  if (db.prepare('SELECT 1 FROM cg_candidates WHERE id=?').get(command.operationId)) throw new Error('操作身份已用于其他正式修改');
   const old = db.prepare('SELECT digest, receipt FROM operations WHERE id=?').get(command.operationId);
   if (old) {
     if (old.digest !== hash) throw new Error('同一操作不能换用不同内容');

@@ -1,0 +1,169 @@
+{
+  "authorityFileSha256": "223f55f8f4ddac71f0036274778ab25de0f40f2cf8fdd9745a8b2cb85d1c1564",
+  "sources": [
+    {
+      "id": "SRC-C01",
+      "title": "01 简介、进制+码制",
+      "versions": [
+        {
+          "id": "VER-SRC-C01-42c5e893c129",
+          "totalPages": 57
+        }
+      ]
+    },
+    {
+      "id": "SRC-C02",
+      "title": "02 逻辑代数",
+      "versions": [
+        {
+          "id": "VER-SRC-C02-1c152428693e",
+          "totalPages": 61
+        }
+      ]
+    },
+    {
+      "id": "SRC-C03",
+      "title": "03 卡诺图",
+      "versions": [
+        {
+          "id": "VER-SRC-C03-8bd0e5dc8fe3",
+          "totalPages": 46
+        }
+      ]
+    },
+    {
+      "id": "SRC-C04",
+      "title": "04 组合逻辑分析+设计",
+      "versions": [
+        {
+          "id": "VER-SRC-C04-f29340849838",
+          "totalPages": 56
+        }
+      ]
+    },
+    {
+      "id": "SRC-C05",
+      "title": "05 组合模块1+代码",
+      "versions": [
+        {
+          "id": "VER-SRC-C05-ad2a56210ce2",
+          "totalPages": 61
+        }
+      ]
+    },
+    {
+      "id": "SRC-C06",
+      "title": "06 组合模块2+代码",
+      "versions": [
+        {
+          "id": "VER-SRC-C06-f7d512d6fda5",
+          "totalPages": 67
+        }
+      ]
+    },
+    {
+      "id": "SRC-HW01",
+      "title": "01 制式变换（合并版）",
+      "versions": [
+        {
+          "id": "VER-SRC-HW01-dc627c3cb036",
+          "totalPages": 5
+        }
+      ]
+    },
+    {
+      "id": "SRC-HW02",
+      "title": "02 逻辑代数（合并版）",
+      "versions": [
+        {
+          "id": "VER-SRC-HW02-289c86e54cd7",
+          "totalPages": 4
+        }
+      ]
+    },
+    {
+      "id": "SRC-HW03",
+      "title": "03 卡诺图（合并版）",
+      "versions": [
+        {
+          "id": "VER-SRC-HW03-cf0506042e8d",
+          "totalPages": 5
+        }
+      ]
+    },
+    {
+      "id": "SRC-HW04",
+      "title": "04 组合逻辑分析+设计（合并版）",
+      "versions": [
+        {
+          "id": "VER-SRC-HW04-b53935c20c83",
+          "totalPages": 5
+        }
+      ]
+    },
+    {
+      "id": "SRC-HW04S",
+      "title": "04 组合逻辑分析+设计：网页补充要求",
+      "versions": [
+        {
+          "id": "VER-SRC-HW04S-12ffc61caeec",
+          "totalPages": 1
+        }
+      ]
+    },
+    {
+      "id": "SRC-HW05",
+      "title": "05 组合模块1（原作业）",
+      "versions": [
+        {
+          "id": "VER-SRC-HW05-330710a40ab2",
+          "totalPages": 4
+        }
+      ]
+    },
+    {
+      "id": "SRC-HW06",
+      "title": "06 组合模块2（合并版）",
+      "versions": [
+        {
+          "id": "VER-SRC-HW06-781b011fcdf6",
+          "totalPages": 5
+        }
+      ]
+    },
+    {
+      "id": "SRC-EX07",
+      "title": "07 组合习题课+答案",
+      "versions": [
+        {
+          "id": "VER-SRC-EX07-94ba9b89b204",
+          "totalPages": 18
+        }
+      ]
+    },
+    {
+      "id": "SRC-TB",
+      "title": "数字设计和计算机体系结构（原书第2版）",
+      "versions": [
+        {
+          "id": "VER-SRC-TB-d1bc6409752a",
+          "totalPages": 495
+        }
+      ]
+    },
+    {
+      "id": "SRC-TI74153",
+      "title": "TI 74153/74LS153 双4选1复用器数据手册（SDLS055A）",
+      "versions": [
+        {
+          "id": "VER-SRC-TI74153-72557fe3909b",
+          "totalPages": 21
+        }
+      ]
+    }
+  ],
+  "retiredUnitIds": [
+    "KU-049",
+    "KU-073"
+  ]
+}

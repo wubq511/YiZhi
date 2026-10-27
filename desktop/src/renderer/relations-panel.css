@@ -1,0 +1,17 @@
+.relations-panel .relation-editor { margin-block: 24px; padding-block: 16px; border-block: 1px solid #d8dee3; }
+.relations-panel .relation-editor fieldset { padding: 0; border: 0; min-width: 0; }
+.relations-panel label { display: block; margin-block: 16px 8px; }
+.relations-panel input:not([type="checkbox"]), .relations-panel select, .relations-panel textarea {
+  display: block; width: 100%; box-sizing: border-box; margin-top: 8px; padding: 8px;
+  border: 1px solid #7798bc; border-radius: 6px; color: #27343e; background: #fffdf8; font: inherit;
+}
+.relations-panel textarea { resize: vertical; min-height: 80px; }
+.relations-panel .relation-direction { display: flex; gap: 8px; align-items: start; }
+.relations-panel .relation-source { margin-block: 24px; }
+.relations-panel .relation-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 24px 16px; }
+.relations-panel .relation-fact { padding-block: 16px; }
+.relations-panel [role="alert"] { color: #943c31; }
+.relations-panel [role="status"] { color: #345d88; }
+.relations-panel :focus-visible { outline: 2px solid #6965c7; outline-offset: 3px; }
+.relations-panel input::placeholder { color: #596978; }
+.relations-panel button:disabled { opacity: .55; cursor: default; }

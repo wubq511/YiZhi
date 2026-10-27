@@ -44,14 +44,26 @@ export interface SaveReceipt {
 }
 export interface DesktopBridge extends SaveBridge {
   commands: import('./command-api').CommandAPI;
+  relations: import('./relation-api').RelationAPI;
   open(): Promise<OpenedCourse>;
   graph(sessionId: string): Promise<CourseGraph>;
   readUnit(sessionId: string, unitId: string): Promise<CourseUnit>;
   readingState(sessionId: string): Promise<ReadingState | null>;
   setReadingState(sessionId: string, state: ReadingState): Promise<void>;
+  reviewStates(sessionId: string): Promise<ReviewSnapshot>;
+  setReviewStatus(sessionId: string, unitId: string, status: ReviewStatus): Promise<ReviewSnapshot>;
+  confirmReviewPrompt(sessionId: string, promptId: string, adjust: boolean): Promise<ReviewPromptResult>;
   save(command: SaveParagraph): Promise<SaveReceipt>;
   onCloseRequested(listener: () => Promise<boolean>): () => void;
 }
+export type ReviewStatus = 'pending' | 'weak' | 'mastered';
+export interface ReviewSnapshot {
+  units: Record<string, { status: ReviewStatus; version: number }>;
+  themes: Record<string, { pending: number; weak: number; mastered: number }>;
+  prompts: ReviewPrompt[];
+}
+export interface ReviewPrompt { id: string; unitId: string; contentRevision: number; stateVersion: number; semanticVersion: 1 }
+export type ReviewPromptResult = 'adjusted' | 'kept' | 'stale';
 export interface ReadingState {
   unitId: string;
   expanded: Record<string, boolean>;
@@ -62,8 +74,10 @@ export interface ReadingState {
 export interface CourseGraph {
   nodes: Array<{ id: string; name: string; kind: string; themeId: string; themeName: string; stars: number }>;
   groups: Array<{ id: string; name: string }>;
-  edges: Array<{ id: string; fromUnitId: string; toUnitId: string; type: string; directed: boolean; view: string; value: string; sourceRefs: Array<{ sourceId: string; pdfPages?: number[]; note?: string }>; requirementGroupId?: string }>;
-  requirementGroups: Array<{ id: string; targetUnitId: string; mode: "all" | "any"; unitIds: string[]; relationIds: string[]; value: string }>;
+  edges: Array<{ id: string; fromUnitId: string; toUnitId: string; type: string; directed: boolean; view: string; value: string; sourceRefs: Array<{ sourceId: string; versionId?: string; section?: string; pdfPages?: number[]; note?: string }>; requirementGroupId?: string }>;
+  requirementGroups: Array<{ id: string; targetUnitId: string; mode: "all" | "any"; unitIds: string[]; relationIds: string[]; value: string; sourceRefs?: Array<{ sourceId: string; versionId?: string; pdfPages?: number[]; section?: string }> }>;
+  counts?: { units: number; themes: number; relations: number };
+  themeEdges?: Array<{ fromThemeId: string; toThemeId: string; type: string; relationIds: string[]; count: number }>;
   conditions: Record<string, { required: string[]; groups: string[] }>;
   layout: { nodes: Array<{ unitId: string; x: number; y: number; width: number; height: number }>; groups: Array<any> };
 }
@@ -96,6 +110,7 @@ export interface EditHistory {
 export type SaveEventData =
   { type: 'draft.saved'; sessionId: string; inputSeq: number } |
   { type: 'content.committed'; receipt: EditReceipt } |
+  { type: 'relations.committed'; operationId: string; revision: number; changedObjectIds: string[] } |
   { type: 'group.committed'; operationId: string; revision: number; changedObjectIds: string[] };
 export type SaveEvent = SaveEventData & { cursor: number };
 export type EventPage = { kind: 'events'; events: SaveEvent[]; cursor: number; hasMore: boolean } |
