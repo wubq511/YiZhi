@@ -6,7 +6,7 @@ on:
       - desktop/**
       - .github/workflows/desktop.yml
   push:
-    branches: [main, 'codex/**']
+    branches: [main]
     paths:
       - desktop/**
       - .github/workflows/desktop.yml
