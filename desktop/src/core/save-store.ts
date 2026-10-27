@@ -7,6 +7,7 @@ export function initializeSaveStore(db: DatabaseSync) {
     session_id TEXT PRIMARY KEY, seq INTEGER NOT NULL, digest TEXT NOT NULL, receipt TEXT NOT NULL, confirmed_seq INTEGER NOT NULL DEFAULT 0);
     CREATE TABLE IF NOT EXISTS draft_versions(object_id TEXT PRIMARY KEY, version INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS drafts(session_id TEXT PRIMARY KEY, input TEXT NOT NULL, receipt TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS operation_times(operation_id TEXT PRIMARY KEY REFERENCES operations(id), committed_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS save_events(cursor INTEGER PRIMARY KEY AUTOINCREMENT, event TEXT NOT NULL);`);
 }
 export function eventCursor(db: DatabaseSync): number {
@@ -94,8 +95,10 @@ export function queryOperation(db: DatabaseSync, operationId: string): SaveRecei
 }
 export function history(db: DatabaseSync): EditHistory[] {
   const decode = (value: unknown) => { try { return JSON.parse(String(value)); } catch { return value; } };
-  return db.prepare('SELECT receipt, before_text, after_text FROM operations ORDER BY rowid').all().map(row => ({
+  return db.prepare(`SELECT o.receipt, o.before_text, o.after_text, t.committed_at FROM operations o
+    LEFT JOIN operation_times t ON t.operation_id=o.id ORDER BY o.rowid`).all().map(row => ({
     receipt: JSON.parse(String(row.receipt)), before: decode(row.before_text), after: decode(row.after_text),
+    committedAt: row.committed_at == null ? null : String(row.committed_at),
   }));
 }
 /** Text/object targets; callers must also check shared ancestors for structural operations. */
@@ -182,6 +185,7 @@ export function commitEdit(db: DatabaseSync, command: EditCommand, afterWrite?: 
     const after = [...affected].map(id => find(unit.reading.blocks, id)?.block).filter((block): block is ReadingBlock => !!block).map(valueOf);
     db.prepare('INSERT INTO operations VALUES (?, ?, ?, ?, ?, ?)')
       .run(command.operationId, hash, JSON.stringify(receipt), unit.id, JSON.stringify(before), JSON.stringify({ blocks: after, splits: correspondence, relatedChanges: relatedChanges ?? [] }));
+    db.prepare('INSERT INTO operation_times VALUES (?, ?)').run(command.operationId, new Date().toISOString());
     if (!progress || command.inputSeq > Number(progress.seq)) {
       db.prepare(`INSERT INTO input_progress VALUES (?, ?, ?, ?, ?) ON CONFLICT(session_id)
         DO UPDATE SET seq=excluded.seq, digest=excluded.digest, receipt=excluded.receipt, confirmed_seq=excluded.confirmed_seq`)
