@@ -198,7 +198,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     } else if (action === 'readUnit') {
       const course = session(payload.sessionId);
       value = course.unit(payload.unitId);
-      if (!value) throw new Error('该单元正文尚未加入课程副本');
+      if (!value) throw new Error('该单元不存在或正文尚未加入课程副本');
     }
     else if (action === 'extensions:recoverRenderers') { for(const course of courses.values()) {course.experiments.pauseAll();course.extensions.recoverRenderer();} }
     else if (action.startsWith('extensions:')) {

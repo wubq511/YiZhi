@@ -2,14 +2,19 @@ import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { resizeBoardWindow } from './board-test-helpers';
+import { resizeBoardWindow, revealBoardControl } from './board-test-helpers';
 
 test('offline real IPC search reveals a delivered deep answer and restores the original camera and disclosures', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-search-ui-'));
-  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  const launch = () => electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  let app = await launch();
   try {
-    const page = await app.firstWindow(); await resizeBoardWindow(app, page, 1200, 800);
+    const page = await app.firstWindow(); await resizeBoardWindow(app, page);
     await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    const first = page.getByRole('textbox', { name: '编辑首段正文' });
+    await revealBoardControl(page, first); await first.click();
+    await first.evaluate(el => { const range = document.createRange(); range.setStart(el.firstChild!, 0); range.setEnd(el.firstChild!, 3); const selection = getSelection()!; selection.removeAllRanges(); selection.addRange(range); document.dispatchEvent(new Event('selectionchange')); });
+    const selectedText = await page.evaluate(() => getSelection()!.toString());
     const before = await page.locator('.reading-layer[data-unit-id="KU-001"]').getAttribute('style');
     await page.context().setOffline(true);
     await page.getByRole('button', { name: '搜索课程', exact: true }).click();
@@ -21,11 +26,19 @@ test('offline real IPC search reveals a delivered deep answer and restores the o
     await expect(page.locator('[data-unit-id="KU-002"] details.answer')).toHaveAttribute('open', '');
     await page.getByRole('button', { name: '返回搜索前位置', exact: true }).click();
     await expect(page.locator('.reading-layer[data-unit-id="KU-001"]')).toHaveAttribute('style', before!);
+    await expect.poll(() => page.evaluate(() => getSelection()!.toString())).toBe(selectedText);
     await page.getByRole('button', { name: '搜索课程', exact: true }).click();
     await page.getByRole('searchbox', { name: '查找已有内容' }).fill('Nibble');
     await results.getByRole('button', { name: '定位命中' }).first().click();
     await expect(page.locator('[data-search-current="true"]')).toContainText('Nibble');
     await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t15-knowledge-hit.png' });
+    await app.close(); app = await launch();
+    const reopened = await app.firstWindow(); await resizeBoardWindow(app, reopened);
+    await reopened.context().setOffline(true);
+    await reopened.getByRole('button', { name: '搜索课程', exact: true }).click();
+    await reopened.getByRole('searchbox').fill('Nibble');
+    await reopened.getByRole('button', { name: '定位命中' }).first().click();
+    await expect(reopened.locator('[data-search-current="true"]')).toContainText('Nibble');
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
@@ -44,7 +57,7 @@ test('real saved note and durable message results open their own objects, preser
   await core.close();
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
-    const page = await app.firstWindow(); await resizeBoardWindow(app, page, 1200, 800);
+    const page = await app.firstWindow(); await resizeBoardWindow(app, page);
     await page.getByRole('button', { name: '搜索课程', exact: true }).click();
     await page.getByRole('searchbox').fill('笔记定位独特词');
     await page.getByRole('button', { name: '定位命中' }).click();
@@ -81,7 +94,7 @@ test('source result opens the fixed original page without creating an annotation
   await core.close();
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
-    const page = await app.firstWindow(); await resizeBoardWindow(app, page, 1200, 800);
+    const page = await app.firstWindow(); await resizeBoardWindow(app, page);
     await page.context().setOffline(true);
     await page.getByRole('button', { name: '搜索课程', exact: true }).click();
     await page.getByRole('searchbox').fill('original evidence');
