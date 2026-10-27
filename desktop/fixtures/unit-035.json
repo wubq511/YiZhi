@@ -1,0 +1,1154 @@
+{
+  "id": "KU-035",
+  "themeId": "TH-08",
+  "kind": "method",
+  "name": "2–4 变量卡诺图化简",
+  "aliases": [
+    "卡诺图化简",
+    "圈 1",
+    "合并最小项"
+  ],
+  "outcome": "能在 2–4 变量卡诺图上圈出最大相邻块，写出最简与-或式。",
+  "summary": "圈越大消去的变量越多；每个 1 至少被圈一次，圈可重复使用，结果可能不唯一。",
+  "internals": [
+    {
+      "kind": "method",
+      "text": "先圈尽可能大的 2^k 块，再处理剩余 1；圈数尽量少"
+    },
+    {
+      "kind": "condition",
+      "text": "2 格消 1 个变量，4 格消 2 个变量，8 格消 3 个变量"
+    },
+    {
+      "kind": "example",
+      "text": "课件练习 1–4 与习题课【5】的卡诺图化简"
+    }
+  ],
+  "questionTypes": [
+    "函数化简"
+  ],
+  "sourceRefs": [
+    {
+      "sourceId": "SRC-C03",
+      "pdfPages": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "visualStatus": "verified",
+      "note": "2–4 变量卡诺图化简：2/3/4 变量卡诺图结构、相邻规则与化简示例",
+      "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+    },
+    {
+      "sourceId": "SRC-C03",
+      "pdfPages": [
+        8,
+        9
+      ],
+      "visualStatus": "verified",
+      "note": "2–4 变量卡诺图化简：2–4 变量卡诺图练习",
+      "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+    },
+    {
+      "sourceId": "SRC-C03",
+      "pdfPages": [
+        10
+      ],
+      "visualStatus": "verified",
+      "note": "2–4 变量卡诺图化简：2/3/4 变量卡诺图结构、相邻规则与化简示例",
+      "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+    },
+    {
+      "sourceId": "SRC-C03",
+      "pdfPages": [
+        11,
+        12,
+        13,
+        14
+      ],
+      "visualStatus": "verified",
+      "note": "2–4 变量卡诺图化简：质蕴含、必要质蕴含与三步化简",
+      "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+    },
+    {
+      "sourceId": "SRC-C03",
+      "pdfPages": [
+        15,
+        16
+      ],
+      "visualStatus": "verified",
+      "note": "2–4 变量卡诺图化简：卡诺图化简练习 3、4",
+      "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+    },
+    {
+      "sourceId": "SRC-C03",
+      "pdfPages": [
+        17,
+        18
+      ],
+      "visualStatus": "verified",
+      "note": "2–4 变量卡诺图化简：借卡诺图辅助公式证明",
+      "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+    },
+    {
+      "sourceId": "SRC-C03",
+      "pdfPages": [
+        35
+      ],
+      "visualStatus": "verified",
+      "note": "2–4 变量卡诺图化简：教材 2.1e 真值表的卡诺图，用于连接作业 02",
+      "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+    },
+    {
+      "sourceId": "SRC-C03",
+      "pdfPages": [
+        46
+      ],
+      "visualStatus": "verified",
+      "note": "2–4 变量卡诺图化简：卡诺图小结",
+      "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+    }
+  ],
+  "rating": {
+    "stars": 5,
+    "rationale": "习题课解答例题直接考查：【5】①、【5】②、【5】③、【5】④、【10】；作业也直接考查：2.13(a)、2.13(b)、2.13(c)。",
+    "evidence": {
+      "exerciseExamples": [
+        {
+          "questionId": "Q-109",
+          "label": "【5】①",
+          "basis": "official-solution"
+        },
+        {
+          "questionId": "Q-110",
+          "label": "【5】②",
+          "basis": "official-solution"
+        },
+        {
+          "questionId": "Q-111",
+          "label": "【5】③",
+          "basis": "official-solution"
+        },
+        {
+          "questionId": "Q-112",
+          "label": "【5】④",
+          "basis": "official-solution"
+        },
+        {
+          "questionId": "Q-119",
+          "label": "【10】",
+          "basis": "official-solution"
+        }
+      ],
+      "homeworkDirect": [
+        {
+          "questionId": "Q-065",
+          "label": "2.13(a)",
+          "basis": "stem"
+        },
+        {
+          "questionId": "Q-066",
+          "label": "2.13(b)",
+          "basis": "stem"
+        },
+        {
+          "questionId": "Q-067",
+          "label": "2.13(c)",
+          "basis": "stem"
+        }
+      ],
+      "support": [
+        {
+          "questionId": "Q-086",
+          "label": "2.31",
+          "basis": "agent-analysis"
+        },
+        {
+          "questionId": "Q-087",
+          "label": "多输出函数化简",
+          "basis": "agent-analysis"
+        }
+      ],
+      "referenceItems": [
+        {
+          "id": "REF-002",
+          "kind": "basic-type-list",
+          "label": "组合逻辑表示与化简基本题型（习题课 P3 左栏）"
+        }
+      ]
+    },
+    "supportAdjustment": null
+  },
+  "reading": {
+    "schemaVersion": "review-reading-1",
+    "revision": 1,
+    "status": "complete",
+    "blocks": [
+      {
+        "id": "RB-KU-035-core",
+        "kind": "paragraph",
+        "role": "core",
+        "payload": {
+          "text": "卡诺图通过合并相邻的 1 来化简逻辑函数。填图和圈组前，先确认两位坐标按格雷码 00、01、11、10 排列；首尾也相邻，斜对角不相邻。"
+        },
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-C03",
+            "versionId": "VER-SRC-C03-8bd0e5dc8fe3",
+            "pdfPages": [
+              7
+            ],
+            "visualStatus": "verified",
+            "note": "格雷排列、跨边相邻、重复圈组与四角合并原页"
+          }
+        ]
+      },
+      {
+        "id": "RB-KU-035-prerequisite",
+        "kind": "knowledge-reference",
+        "role": "core",
+        "payload": {
+          "targetUnitId": "KU-034",
+          "intent": "回看坐标排列、最小项位置和相邻规则"
+        },
+        "sourceRefs": []
+      },
+      {
+        "id": "RB-KU-035-diagram",
+        "kind": "interactive",
+        "role": "core",
+        "payload": {
+          "component": "kmap",
+          "config": {
+            "variables": [
+              "A",
+              "B",
+              "C"
+            ],
+            "columnOrder": [
+              "00",
+              "01",
+              "11",
+              "10"
+            ],
+            "cells": [
+              [
+                1,
+                0,
+                0,
+                1
+              ],
+              [
+                1,
+                0,
+                0,
+                1
+              ]
+            ],
+            "highlight": "wrap-four"
+          },
+          "inputs": {
+            "showCorners": false
+          },
+          "bindings": {
+            "figure": "cells",
+            "controls": "showCorners",
+            "output": "highlight"
+          }
+        },
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-C03",
+            "versionId": "VER-SRC-C03-8bd0e5dc8fe3",
+            "pdfPages": [
+              7
+            ],
+            "visualStatus": "verified",
+            "note": "格雷排列、跨边相邻、重复圈组与四角合并原页"
+          }
+        ]
+      },
+      {
+        "id": "RB-KU-035-steps",
+        "kind": "steps",
+        "role": "core",
+        "payload": {
+          "items": [
+            "按真值表或最小项编号把 0、1 填入对应格。",
+            "把相邻的 1 圈成含 2^k 格的矩形；圈组可跨边界、可重叠，但不能含 0。",
+            "检查每个 1 至少被一个圈覆盖；圈越大，消去的变量越多。",
+            "每圈只保留取值不变的变量，消去发生变化的变量，再把各圈得到的与项相或。"
+          ]
+        },
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-C03",
+            "versionId": "VER-SRC-C03-8bd0e5dc8fe3",
+            "pdfPages": [
+              7
+            ],
+            "visualStatus": "verified",
+            "note": "格雷排列、跨边相邻、重复圈组与四角合并原页"
+          },
+          {
+            "sourceId": "SRC-C03",
+            "versionId": "VER-SRC-C03-8bd0e5dc8fe3",
+            "pdfPages": [
+              14
+            ],
+            "visualStatus": "verified",
+            "note": "质蕴含、必要质蕴含与覆盖流程原页"
+          }
+        ]
+      },
+      {
+        "id": "RB-KU-035-warning",
+        "kind": "callout",
+        "role": "core",
+        "payload": {
+          "tone": "amber",
+          "text": "不能只按‘先圈最大的圈’贪心。先找出所有质蕴含；若某个 1 只被一个质蕴含覆盖，该圈就是必要质蕴含，必须保留。先选必要质蕴含，再用尽量简洁的组合覆盖剩余的 1。"
+        },
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-C03",
+            "versionId": "VER-SRC-C03-8bd0e5dc8fe3",
+            "pdfPages": [
+              14
+            ],
+            "visualStatus": "verified",
+            "note": "质蕴含、必要质蕴含与覆盖流程原页"
+          }
+        ]
+      },
+      {
+        "id": "RB-KU-035-example",
+        "kind": "example",
+        "role": "material",
+        "payload": {
+          "title": "例题 · 跨边界的四格合并",
+          "questionId": "Q-109",
+          "answerNature": "official-solution"
+        },
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-EX07",
+            "versionId": "VER-SRC-EX07-94ba9b89b204",
+            "pdfPages": [
+              9
+            ],
+            "visualStatus": "verified",
+            "note": "【5】①完整题干、卡诺图和官方答案"
+          }
+        ]
+      },
+      {
+        "id": "RB-KU-035-practice",
+        "kind": "exercise",
+        "role": "material",
+        "payload": {
+          "title": "练习 · 同样的方法换一组 1",
+          "problem": "三变量函数 F(A,B,C)=Σm(1,3,5,7)，写出最简与或式，并说明哪两个变量被消去。",
+          "hint": "沿用 BC=00、01、11、10 的列顺序，观察四个 1 是否构成一个矩形。",
+          "answerNature": "self-test"
+        },
+        "sourceRefs": [],
+        "children": [
+          {
+            "id": "RB-KU-035-practice-answer",
+            "kind": "steps",
+            "role": "material",
+            "payload": {
+              "items": [
+                "编号 1、3、5、7 对应 C=1 的四格；填入图中后，两行中间两列都是 1。",
+                "将这四格合成一圈。圈内 A、B 都变化，只有 C 恒为 1。",
+                "消去 A、B，得到 F=C。代回四个最小项及另外四个输入组合复核，结果一致。"
+              ]
+            },
+            "sourceRefs": []
+          }
+        ]
+      }
+    ],
+    "coverage": [
+      {
+        "goal": "能在 2–4 变量卡诺图中合法圈组、消去变量并检查最简覆盖。",
+        "coreBlockIds": [
+          "RB-KU-035-core",
+          "RB-KU-035-diagram",
+          "RB-KU-035-steps",
+          "RB-KU-035-warning"
+        ],
+        "materials": [
+          {
+            "kind": "figure",
+            "status": "verified",
+            "blockIds": [
+              "RB-KU-035-diagram"
+            ]
+          },
+          {
+            "kind": "method",
+            "status": "verified",
+            "blockIds": [
+              "RB-KU-035-steps"
+            ]
+          },
+          {
+            "kind": "example",
+            "status": "verified",
+            "blockIds": [
+              "RB-KU-035-example"
+            ]
+          },
+          {
+            "kind": "exercise",
+            "status": "verified",
+            "blockIds": [
+              "RB-KU-035-practice"
+            ]
+          }
+        ],
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-C03",
+            "versionId": "VER-SRC-C03-8bd0e5dc8fe3",
+            "pdfPages": [
+              7
+            ],
+            "visualStatus": "verified",
+            "note": "格雷排列、跨边相邻、重复圈组与四角合并原页"
+          },
+          {
+            "sourceId": "SRC-C03",
+            "versionId": "VER-SRC-C03-8bd0e5dc8fe3",
+            "pdfPages": [
+              14
+            ],
+            "visualStatus": "verified",
+            "note": "质蕴含、必要质蕴含与覆盖流程原页"
+          },
+          {
+            "sourceId": "SRC-EX07",
+            "versionId": "VER-SRC-EX07-94ba9b89b204",
+            "pdfPages": [
+              9
+            ],
+            "visualStatus": "verified",
+            "note": "【5】①完整题干、卡诺图和官方答案"
+          }
+        ],
+        "visualStatus": "verified",
+        "readingStatus": "passed",
+        "note": "已查看 C03 P7/P14 与 EX07 P9 完整原页，核对格雷顺序、圈组条件、题干反相线和官方结果 F=C̄。"
+      }
+    ]
+  },
+  "theme": {
+    "id": "TH-08",
+    "lessonId": "L03",
+    "name": "卡诺图基础与化简",
+    "coreOutcome": "能画出并读取 2–6 变量卡诺图，按相邻与最简覆盖规则完成化简。",
+    "sourceRefs": [
+      {
+        "sourceId": "SRC-C03",
+        "pdfPages": [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          34,
+          36,
+          37,
+          38,
+          46
+        ],
+        "visualStatus": "verified",
+        "note": "主题范围页；具体单元拆分见 units",
+        "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+      }
+    ],
+    "rating": {
+      "stars": 5,
+      "rationale": "主题核心的卡诺图化简在习题课多组解答例题和作业中直接考查。"
+    }
+  },
+  "questions": [
+    {
+      "id": "MAP-087",
+      "questionId": "Q-065",
+      "unitId": "KU-035",
+      "role": "direct",
+      "basis": "stem",
+      "note": "真值表或卡诺图检验二选一；K-map 路径与真值表路径任选",
+      "question": {
+        "id": "Q-065",
+        "sourceId": "SRC-HW03",
+        "label": "2.13(a)",
+        "kind": "homework",
+        "taskSummary": "化简 2.13(a) 的布尔表达式，并用真值表或卡诺图检验。",
+        "questionTypes": [
+          "函数化简"
+        ],
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-HW03",
+            "pdfPages": [
+              1,
+              3,
+              4
+            ],
+            "visualStatus": "verified",
+            "note": "作业题号页与教材 P56–P57 的 2.13/2.15",
+            "versionId": "VER-SRC-HW03-cf0506042e8d"
+          }
+        ],
+        "hasOfficialAnswer": false,
+        "parentId": "Q-064"
+      },
+      "unit": {
+        "id": "KU-035",
+        "name": "2–4 变量卡诺图化简",
+        "kind": "method",
+        "themeId": "TH-08",
+        "themeName": "卡诺图基础与化简",
+        "stars": 5,
+        "questionTypes": [
+          "函数化简"
+        ]
+      }
+    },
+    {
+      "id": "MAP-091",
+      "questionId": "Q-066",
+      "unitId": "KU-035",
+      "role": "direct",
+      "basis": "stem",
+      "note": "真值表或卡诺图检验二选一；K-map 路径与真值表路径任选",
+      "question": {
+        "id": "Q-066",
+        "sourceId": "SRC-HW03",
+        "label": "2.13(b)",
+        "kind": "homework",
+        "taskSummary": "化简 2.13(b) 的布尔表达式，并用真值表或卡诺图检验。",
+        "questionTypes": [
+          "函数化简"
+        ],
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-HW03",
+            "pdfPages": [
+              1,
+              3,
+              4
+            ],
+            "visualStatus": "verified",
+            "note": "作业题号页与教材 P56–P57 的 2.13/2.15",
+            "versionId": "VER-SRC-HW03-cf0506042e8d"
+          }
+        ],
+        "hasOfficialAnswer": false,
+        "parentId": "Q-064"
+      },
+      "unit": {
+        "id": "KU-035",
+        "name": "2–4 变量卡诺图化简",
+        "kind": "method",
+        "themeId": "TH-08",
+        "themeName": "卡诺图基础与化简",
+        "stars": 5,
+        "questionTypes": [
+          "函数化简"
+        ]
+      }
+    },
+    {
+      "id": "MAP-095",
+      "questionId": "Q-067",
+      "unitId": "KU-035",
+      "role": "direct",
+      "basis": "stem",
+      "note": "真值表或卡诺图检验二选一；K-map 路径与真值表路径任选",
+      "question": {
+        "id": "Q-067",
+        "sourceId": "SRC-HW03",
+        "label": "2.13(c)",
+        "kind": "homework",
+        "taskSummary": "化简 2.13(c) 的布尔表达式，并用真值表或卡诺图检验。",
+        "questionTypes": [
+          "函数化简"
+        ],
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-HW03",
+            "pdfPages": [
+              1,
+              3,
+              4
+            ],
+            "visualStatus": "verified",
+            "note": "作业题号页与教材 P56–P57 的 2.13/2.15",
+            "versionId": "VER-SRC-HW03-cf0506042e8d"
+          }
+        ],
+        "hasOfficialAnswer": false,
+        "parentId": "Q-064"
+      },
+      "unit": {
+        "id": "KU-035",
+        "name": "2–4 变量卡诺图化简",
+        "kind": "method",
+        "themeId": "TH-08",
+        "themeName": "卡诺图基础与化简",
+        "stars": 5,
+        "questionTypes": [
+          "函数化简"
+        ]
+      }
+    },
+    {
+      "id": "MAP-180",
+      "questionId": "Q-109",
+      "unitId": "KU-035",
+      "role": "direct",
+      "basis": "official-solution",
+      "note": "卡诺图圈组化简",
+      "question": {
+        "id": "Q-109",
+        "sourceId": "SRC-EX07",
+        "label": "【5】①",
+        "kind": "exercise-example",
+        "taskSummary": "用卡诺图化简【5】①。",
+        "questionTypes": [
+          "函数化简"
+        ],
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-EX07",
+            "pdfPages": [
+              9
+            ],
+            "visualStatus": "verified",
+            "note": "习题课【5】①②题干与答案均在 P9",
+            "versionId": "VER-SRC-EX07-94ba9b89b204"
+          }
+        ],
+        "hasOfficialAnswer": true,
+        "parentId": "Q-108",
+        "stem": "用卡诺图化简【5】①：F=¬(AC+¬A·B·C+¬B·C)+A·B·¬C。",
+        "solution": "官方答案：F=¬C。按 A 为行、BC 按 00、01、11、10 为列填图，两行都是 1、0、0、1。首列与末列跨边相邻，四格 m(0,2,4,6) 合成一组；组内 A、B 变化而 C 恒为 0，所以消去 A、B，保留 ¬C。",
+        "answerNature": "official-solution"
+      },
+      "unit": {
+        "id": "KU-035",
+        "name": "2–4 变量卡诺图化简",
+        "kind": "method",
+        "themeId": "TH-08",
+        "themeName": "卡诺图基础与化简",
+        "stars": 5,
+        "questionTypes": [
+          "函数化简"
+        ]
+      }
+    },
+    {
+      "id": "MAP-181",
+      "questionId": "Q-110",
+      "unitId": "KU-035",
+      "role": "direct",
+      "basis": "official-solution",
+      "note": "卡诺图圈组化简",
+      "question": {
+        "id": "Q-110",
+        "sourceId": "SRC-EX07",
+        "label": "【5】②",
+        "kind": "exercise-example",
+        "taskSummary": "用卡诺图化简【5】②。",
+        "questionTypes": [
+          "函数化简"
+        ],
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-EX07",
+            "pdfPages": [
+              9
+            ],
+            "visualStatus": "verified",
+            "note": "习题课【5】①②题干与答案均在 P9",
+            "versionId": "VER-SRC-EX07-94ba9b89b204"
+          }
+        ],
+        "hasOfficialAnswer": true,
+        "parentId": "Q-108"
+      },
+      "unit": {
+        "id": "KU-035",
+        "name": "2–4 变量卡诺图化简",
+        "kind": "method",
+        "themeId": "TH-08",
+        "themeName": "卡诺图基础与化简",
+        "stars": 5,
+        "questionTypes": [
+          "函数化简"
+        ]
+      }
+    },
+    {
+      "id": "MAP-182",
+      "questionId": "Q-111",
+      "unitId": "KU-035",
+      "role": "direct",
+      "basis": "official-solution",
+      "note": "卡诺图圈组化简",
+      "question": {
+        "id": "Q-111",
+        "sourceId": "SRC-EX07",
+        "label": "【5】③",
+        "kind": "exercise-example",
+        "taskSummary": "用卡诺图化简【5】③。",
+        "questionTypes": [
+          "函数化简"
+        ],
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-EX07",
+            "pdfPages": [
+              10
+            ],
+            "visualStatus": "verified",
+            "note": "习题课【5】③④题干与答案均在 P10",
+            "versionId": "VER-SRC-EX07-94ba9b89b204"
+          }
+        ],
+        "hasOfficialAnswer": true,
+        "parentId": "Q-108"
+      },
+      "unit": {
+        "id": "KU-035",
+        "name": "2–4 变量卡诺图化简",
+        "kind": "method",
+        "themeId": "TH-08",
+        "themeName": "卡诺图基础与化简",
+        "stars": 5,
+        "questionTypes": [
+          "函数化简"
+        ]
+      }
+    },
+    {
+      "id": "MAP-183",
+      "questionId": "Q-112",
+      "unitId": "KU-035",
+      "role": "direct",
+      "basis": "official-solution",
+      "note": "卡诺图圈组化简",
+      "question": {
+        "answerNature": "official-solution",
+        "hasOfficialAnswer": true,
+        "id": "Q-112",
+        "kind": "exercise-example",
+        "label": "【5】④",
+        "parentId": "Q-108",
+        "questionTypes": [
+          "函数化简"
+        ],
+        "solution": "官方解答（习题课第10页）并补全覆盖理由：圈{0,1,2,3}得到¬A¬B；圈{9,11,13,15}得到AD；圈{10,11,14,15}得到AC。后两圈跨AB=10/11相邻行。 F=¬A¬B+AD+AC。m0、m13、m14分别只能由这三个有用质蕴含覆盖，故3项/6文字最简。 d1、2、3、9、10、11都被所选圈覆盖为1，且有效0集{4,5,6,7,8,12}全部保持0。此题恰好用完全部d，不表示其他题也必须如此。",
+        "sourceId": "SRC-EX07",
+        "sourceRefs": [
+          {
+            "note": "习题课【5】③④题干与答案均在 P10",
+            "pdfPages": [
+              10
+            ],
+            "sourceId": "SRC-EX07",
+            "versionId": "VER-SRC-EX07-94ba9b89b204",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "【5】④ 用卡诺图化简F(A,B,C,D)=Σm(0,13,14,15)+d(1,2,3,9,10,11)，A为最高位。",
+        "taskSummary": "用卡诺图化简【5】④。"
+      },
+      "unit": {
+        "id": "KU-035",
+        "name": "2–4 变量卡诺图化简",
+        "kind": "method",
+        "themeId": "TH-08",
+        "themeName": "卡诺图基础与化简",
+        "stars": 5,
+        "questionTypes": [
+          "函数化简"
+        ]
+      }
+    },
+    {
+      "id": "MAP-198",
+      "questionId": "Q-119",
+      "unitId": "KU-035",
+      "role": "direct",
+      "basis": "official-solution",
+      "note": "逐输出画卡诺图",
+      "question": {
+        "answerNature": "official-solution",
+        "hasOfficialAnswer": true,
+        "id": "Q-119",
+        "kind": "exercise-example",
+        "label": "【10】",
+        "questionTypes": [
+          "函数化简",
+          "逻辑设计"
+        ],
+        "solution": "官方答案（EX07 P16）：列 B3B2B1B0 到 G3G2G1G0 的 16 行对应表；最高位直接透传，其余位是相邻二进制位异或。 得到 G3=B3，G2=B3⊕B2，G1=B2⊕B1，G0=B1⊕B0。 卡诺图逐输出化简也得到同样结果；电路只需三个异或门和一条直通线。 门级接线是三条独立异或支路：B3/B2→G2，B2/B1→G1，B1/B0→G0；B3直接到G3。它们不是串接三个异或门来求全串奇偶。输入1010时输出1111，输入1011时输出1110，相邻数的格雷码只改一位。 完整16行表按G=n⊕(n右移1)生成，三个独立异或门和一条直通线。",
+        "sourceId": "SRC-EX07",
+        "sourceRefs": [
+          {
+            "note": "习题课第 16 页【10】及答案",
+            "pdfPages": [
+              16
+            ],
+            "sourceId": "SRC-EX07",
+            "versionId": "VER-SRC-EX07-94ba9b89b204",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "设计四位无符号二进制B3B2B1B0到反射格雷码G3G2G1G0的转换器；全16种输入均有效。",
+        "taskSummary": "设计 8421 码到格雷码的转换电路。"
+      },
+      "unit": {
+        "id": "KU-035",
+        "name": "2–4 变量卡诺图化简",
+        "kind": "method",
+        "themeId": "TH-08",
+        "themeName": "卡诺图基础与化简",
+        "stars": 5,
+        "questionTypes": [
+          "函数化简"
+        ]
+      }
+    },
+    {
+      "id": "MAP-144",
+      "questionId": "Q-086",
+      "unitId": "KU-035",
+      "role": "support",
+      "basis": "agent-analysis",
+      "note": "卡诺图圈组与最简覆盖",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-086",
+        "kind": "homework",
+        "label": "2.31",
+        "questionTypes": [
+          "函数化简"
+        ],
+        "solution": "据题干推导（无官方答案）：原题确定1={1,8,11,13,15}，d={2,3,5,6,7,14}，确定0={0,4,9,10,12}。特别注意m8的所有一位邻居m0、m9、m10、m12都是确定0，不能借d把m8扩大。 全部有用质蕴含为¬AD（1,3,5,7）、A¬B¬C¬D（8）、BC（6,7,14,15）、BD（5,7,13,15）、CD（3,7,11,15）。 m1只被¬AD覆盖，m8只被单格项A¬B¬C¬D覆盖，m13只被BD覆盖，m11只被CD覆盖，四项均必要；BC没有独占必需1，可不用。 因此Y=¬AD+A¬B¬C¬D+BD+CD，4项/10文字最简。这个实现让d3、5、7为1，d2、6、14为0，全部有效0保持0。",
+        "sourceId": "SRC-HW04S",
+        "sourceRefs": [
+          {
+            "note": "网页补充要求原文",
+            "pdfPages": [
+              1
+            ],
+            "sourceId": "SRC-HW04S",
+            "versionId": "VER-SRC-HW04S-12ffc61caeec",
+            "visualStatus": "verified"
+          },
+          {
+            "bookPages": [
+              58
+            ],
+            "note": "教材 P58 的 2.31 与图 2-86",
+            "pdfPages": [
+              72
+            ],
+            "sourceId": "SRC-TB",
+            "versionId": "VER-SRC-TB-d1bc6409752a",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "教材习题2.31：写出图2-86中函数的最小布尔表达式，利用无关项。输入位序ABCD（A最高位），按0000到1111排序，Y依次为0、1、X、X、0、X、X、X、1、0、0、1、0、1、X、1；X为无关项。",
+        "taskSummary": "写出图 2-86 中函数的最小布尔表达式，并利用无关项。"
+      },
+      "unit": {
+        "id": "KU-035",
+        "name": "2–4 变量卡诺图化简",
+        "kind": "method",
+        "themeId": "TH-08",
+        "themeName": "卡诺图基础与化简",
+        "stars": 5,
+        "questionTypes": [
+          "函数化简"
+        ]
+      }
+    },
+    {
+      "id": "MAP-146",
+      "questionId": "Q-087",
+      "unitId": "KU-035",
+      "role": "support",
+      "basis": "agent-analysis",
+      "note": "对各输出分别画卡诺图",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-087",
+        "kind": "homework",
+        "label": "多输出函数化简",
+        "questionTypes": [
+          "函数化简"
+        ],
+        "solution": "据题干推导（无官方答案）。成本模型为先最少不同乘积项，再最少这些项的总文字数，不计反相器和输出连线：分别求最简：F1=A¬B+AC+AD+CD，4项/8文字；F2=A¬B¬D+BC，2项/5文字。两组没有完全相同项，若直接搭电路需6个不同乘积项、13文字。 为了共享，把F1覆盖m8的项A¬B缩小为p=A¬B¬D（只盖8、10）。F1的m9仍由AD覆盖，m11仍由AC、AD、CD覆盖，所以没有漏1。p恰能同时送F2。 共同乘积池为p=A¬B¬D、q=AC、r=AD、s=CD、t=BC。接F1=p+q+r+s，F2=p+t，共5个不同项、11文字。F1局部成本变成4项/9文字，总体却少了1个项、2个文字。 全局下界：F1的m3、m8、m13、m14彼此分别要求不同合法项，至少4项；F2的m6需要额外项，任何覆盖m6的项都不能接F1，因为F1(6)=0，故至少5项。若只用5项，F2在m8的覆盖须同F1共享，该共有项至少固定A=1、B=0、D=0，至少3文字；其余四个不同项至少各2文字，合计至少11文字，本方案达到下界。",
+        "sourceId": "SRC-HW04S",
+        "sourceRefs": [
+          {
+            "note": "网页补充要求原文",
+            "pdfPages": [
+              1
+            ],
+            "sourceId": "SRC-HW04S",
+            "versionId": "VER-SRC-HW04S-12ffc61caeec",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "网页补充要求：化简多输出逻辑函数F1(a,b,c,d)=Σm(3,7,8,9,10,11,13,14,15)、F2(a,b,c,d)=Σm(6,7,8,10,14,15)。a为最高位；考虑共享乘积项，写出共同项和两个输出的连接。本解用A、B、C、D与a、b、c、d一一对应。",
+        "taskSummary": "化简 F1=Σm(3,7,8,9,10,11,13,14,15)、F2=Σm(6,7,8,10,14,15)，并共享乘积项。"
+      },
+      "unit": {
+        "id": "KU-035",
+        "name": "2–4 变量卡诺图化简",
+        "kind": "method",
+        "themeId": "TH-08",
+        "themeName": "卡诺图基础与化简",
+        "stars": 5,
+        "questionTypes": [
+          "函数化简"
+        ]
+      }
+    }
+  ],
+  "relations": [
+    {
+      "id": "REL-007",
+      "fromUnitId": "KU-034",
+      "toUnitId": "KU-035",
+      "type": "requires",
+      "directed": true,
+      "value": "圈组前必须掌握格雷排列及首尾、四角相邻，否则会把并不相邻的格错误合并。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C03",
+          "pdfPages": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "visualStatus": "verified",
+          "note": "卡诺图结构与相邻规则",
+          "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-008",
+      "fromUnitId": "KU-035",
+      "toUnitId": "KU-039",
+      "type": "requires",
+      "directed": true,
+      "value": "含 d 化简仍须形成合法 2^k 块并完整覆盖 1，先会普通圈组才能决定每个 d 是否值得圈入。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C03",
+          "pdfPages": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            23,
+            24,
+            25,
+            26,
+            27
+          ],
+          "visualStatus": "verified",
+          "note": "普通圈组到含无关项化简",
+          "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-011",
+      "fromUnitId": "KU-035",
+      "toUnitId": "KU-044",
+      "type": "requires",
+      "directed": true,
+      "value": "通用设计的求最简式也可走卡诺图，与代数法组成可替代路线，便于按题目给定表示选择方法。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C03",
+          "pdfPages": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16
+          ],
+          "visualStatus": "verified",
+          "note": "卡诺图化简路线",
+          "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+        },
+        {
+          "sourceId": "SRC-C04",
+          "pdfPages": [
+            19,
+            20
+          ],
+          "visualStatus": "verified",
+          "note": "组合设计流程",
+          "versionId": "VER-SRC-C04-f29340849838"
+        }
+      ],
+      "view": "main",
+      "status": "approved",
+      "requirementGroupId": "G1"
+    },
+    {
+      "id": "REL-034",
+      "fromUnitId": "KU-035",
+      "toUnitId": "KU-036",
+      "type": "improves",
+      "directed": true,
+      "value": "质蕴含和必要质蕴含把尽量圈大推进为可检查的最简覆盖流程，可用来发现漏圈必要项或任意选圈。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C03",
+          "pdfPages": [
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16
+          ],
+          "visualStatus": "verified",
+          "note": "圈组到最简覆盖",
+          "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+        }
+      ],
+      "view": "auxiliary",
+      "status": "approved"
+    },
+    {
+      "id": "REL-035",
+      "fromUnitId": "KU-035",
+      "toUnitId": "KU-037",
+      "type": "requires",
+      "directed": true,
+      "value": "5–6 变量图新增跨子图邻接，先会单图圈组，才能继续判断选择码只差一位的对应块能否合并。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C03",
+          "pdfPages": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            19,
+            20,
+            21
+          ],
+          "visualStatus": "verified",
+          "note": "单图到多图邻接",
+          "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+        }
+      ],
+      "view": "auxiliary",
+      "status": "approved"
+    },
+    {
+      "id": "REL-036",
+      "fromUnitId": "KU-035",
+      "toUnitId": "KU-040",
+      "type": "requires",
+      "directed": true,
+      "value": "圈 0 求 POS 或先化简 F′ 都复用基本圈组规则，先掌握圈 1 化简再切换覆盖对象可减少混淆。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C03",
+          "pdfPages": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            29,
+            30,
+            31,
+            32,
+            33
+          ],
+          "visualStatus": "verified",
+          "note": "圈 1 到圈 0 与或-与式",
+          "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+        }
+      ],
+      "view": "auxiliary",
+      "status": "approved"
+    }
+  ]
+}

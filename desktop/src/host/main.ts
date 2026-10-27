@@ -72,6 +72,9 @@ else {
     ipcMain.handle('course:queryOperation', (event, input) => { checkSender(event); return core.queryOperation(input.sessionId, input.operationId); });
     ipcMain.handle('course:readEvents', (event, input) => { checkSender(event); return core.readEvents(input.sessionId, input.after, input.limit); });
     ipcMain.handle('course:read', (event, input) => { checkSender(event); return core.read(input.sessionId); });
+    for (const method of ['open', 'read', 'snapshot', 'act', 'pauseAll'] as const) {
+      ipcMain.handle(`experiments:${method}`, (event, payload) => { checkSender(event); return core.experiments[method](payload); });
+    }
     for (const method of ['startAttempt', 'read', 'commit', 'stop', 'query', 'candidates', 'history'] as const) {
       ipcMain.handle(`commands:${method}`, (event, payload) => { checkSender(event); return core.commands[method](payload); });
     }
