@@ -1,3 +1,4 @@
+import { syncAnnotations } from './annotations';
 import { readDrafts, draftScopes, draftReadVersions, draftVersion, transaction, appendEvent, eventCursor } from './save-store';
 import { randomUUID, createHash } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
@@ -71,6 +72,7 @@ export class CommandGroups {
   /** Called inside every formal unit write transaction, including the student save path. */
   observe(explicitDependencies = new Set<string>()): GroupHistory['changes'] {
     const { unit } = this.unit();
+    syncAnnotations(this.db);
     const changed = new Set<string>();
     const memberships = new Map<string, string[]>();
     const walk = (blocks: ReadingBlock[], parentId: string) => {

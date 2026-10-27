@@ -1,3 +1,4 @@
+import { resizeBoardWindow, revealBoardControl } from './board-test-helpers';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -13,6 +14,7 @@ test('local PDF.js renders a real text layer, cites actual selection, preserves 
     env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const page = await app.firstWindow();
+    await resizeBoardWindow(app, page);
     await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     const editor = page.getByRole('textbox', { name: '编辑首段正文' });
     await editor.fill('阅读原文时保留的正文与编辑实例');
@@ -57,6 +59,7 @@ test('local PDF.js renders a real text layer, cites actual selection, preserves 
     expect(await editorHandle!.evaluate(node => node.isConnected)).toBe(true);
     await editor.fill('核对原文后继续编辑');
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
+    await revealBoardControl(page, page.locator('.source-references').getByRole('button', { name: '核对来源原页', exact: true }));
     await page.locator('.source-references').getByRole('button', { name: '核对来源原页', exact: true }).click();
     await expect(page.locator('.source-pdf .textLayer')).toContainText('Original course evidence');
     await expect(page.locator('.source-citation-marker')).toBeVisible();

@@ -1,3 +1,4 @@
+import { syncAnnotations } from './annotations';
 import type { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
 import { patchTargets } from '../editor-api';
@@ -244,6 +245,7 @@ export function commitEdit(db: DatabaseSync, command: EditCommand, afterWrite?: 
       inputSeq: command.inputSeq, revision: Number(row.revision) + 1,
       blockId: command.changes[0]?.blockId ?? command.splits?.[0]?.blockId ?? patchTargets(command.patch)[0] ?? unit.id, blockIds: [...affected], cursor: 0 };
     db.prepare('UPDATE units SET payload=?, revision=? WHERE id=?').run(JSON.stringify(unit), receipt.revision, unit.id);
+    syncAnnotations(db, patch ?? { updates: [], correspondence: correspondence.map(s => ({ kind: 'split', sourceId: s.blockId, targetId: s.newBlockId, offset: s.offset })) });
     const relatedChanges = afterWrite?.();
     receipt.cursor = appendEvent(db, { type: 'content.committed', receipt: { ...receipt, cursor: eventCursor(db) + 1 } });
     const legacyAffected = new Set([...command.changes.map(c => c.blockId), ...(command.splits ?? []).flatMap(s => [s.blockId, s.newBlockId])]);

@@ -9,7 +9,8 @@ export function initializeEditorStore(db: DatabaseSync) {
   db.exec('CREATE TABLE IF NOT EXISTS editor_retired(id TEXT PRIMARY KEY, digest TEXT NOT NULL)');
 }
 export function validatePatch(patch: ContentPatch) {
-  if (!patch || !Array.isArray(patch.updates) || !Array.isArray(patch.correspondence) ||
+  if (!patch || (patch.restorations !== undefined && !Array.isArray(patch.restorations)) || (patch.textEdits !== undefined && !Array.isArray(patch.textEdits)) ||
+    (patch.formulaEdits !== undefined && !Array.isArray(patch.formulaEdits)) || !Array.isArray(patch.updates) || !Array.isArray(patch.correspondence) ||
     patch.updates.some(u => !u || typeof u.blockId !== 'string' || !u.before || !u.after || Array.isArray(u.after)) ||
     (patch.structure && (typeof patch.structure.parentId !== 'string' || !Array.isArray(patch.structure.before) ||
       !Array.isArray(patch.structure.after) || !Array.isArray(patch.structure.inserted))) ||

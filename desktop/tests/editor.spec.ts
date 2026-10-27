@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { CourseService } from '../src/core/course-service';
 import type { ElectronApplication } from '@playwright/test';
+import { resizeBoardWindow, revealBoardControl } from './board-test-helpers';
 
 async function finish(app: ElectronApplication) {
   if (app.process().exitCode !== null || app.process().signalCode !== null) return;
@@ -26,6 +27,7 @@ test('independent producer range update survives student Undo and complete SQLit
   let app = await launch();
   try {
     let page = await app.firstWindow();
+    await resizeBoardWindow(app, page);
     await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     const original = await page.evaluate(() => (window as any).yizhi.open());
     const first = page.getByRole('textbox', { name: '编辑首段正文', exact: true });
@@ -43,6 +45,7 @@ test('independent producer range update survives student Undo and complete SQLit
     });
     expect(updated.result.status).toBe('committed');
     await expect(page.getByRole('textbox', { name: '编辑第二段正文', exact: true })).toHaveText('外部独立更新必须保留');
+    await revealBoardControl(page, page.getByRole('button', { name: '撤销正文', exact: true }));
     await page.getByRole('button', { name: '撤销正文', exact: true }).click();
     await expect(first).toHaveText(original.unit.reading.blocks[0].payload.text);
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
@@ -50,6 +53,7 @@ test('independent producer range update survives student Undo and complete SQLit
     expected.reading.blocks.find((b: any) => b.id === updated.targetId).payload.text = '外部独立更新必须保留';
     expect((await page.evaluate(() => (window as any).yizhi.open())).unit).toEqual(expected);
     await app.close(); app = await launch(); page = await app.firstWindow();
+    await resizeBoardWindow(app, page);
     await expect(page.getByRole('textbox', { name: '编辑首段正文', exact: true })).toHaveText(original.unit.reading.blocks[0].payload.text);
     expect((await page.evaluate(() => (window as any).yizhi.open())).unit).toEqual(expected);
   } finally { await finish(app); await rm(root, { recursive: true, force: true }); }
@@ -70,6 +74,7 @@ test('copy assigns fresh identities recursively, an explicit internal move keeps
   let clipboard: Awaited<ReturnType<typeof snapshotClipboard>> | undefined;
   try {
     const page = await app.firstWindow();
+    await resizeBoardWindow(app, page);
     await page.getByRole('status', { name: '保存状态' }).waitFor();
     clipboard = await snapshotClipboard(app);
     await app.evaluate(({ clipboard }) => clipboard.clear());
@@ -98,22 +103,29 @@ test('copy assigns fresh identities recursively, an explicit internal move keeps
     expect(copied.children[0].payload).toEqual(unknown.children[0].payload);
     const adjacent = saved.unit.reading.blocks[1];
     // Select first paragraph, move that actual object down, and save its identity/order.
+    await revealBoardControl(page, first);
     await first.click();
+    await revealBoardControl(page, page.getByRole('button', { name: '下移当前块', exact: true }));
     await page.getByRole('button', { name: '下移当前块', exact: true }).click();
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     saved = await page.evaluate(() => (window as any).yizhi.open());
     expect(saved.unit.reading.blocks[0]).toEqual(adjacent);
     expect(saved.unit.reading.blocks[1].payload.text).toBe('复制与移动');
     const movedId = saved.unit.reading.blocks[1].id;
+    await revealBoardControl(page, page.getByRole('button', { name: '撤销正文', exact: true }));
     await page.getByRole('button', { name: '撤销正文', exact: true }).click();
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     expect((await page.evaluate(() => (window as any).yizhi.open())).unit.reading.blocks[0].id).toBe(movedId);
+    await revealBoardControl(page, first);
     await first.click();
     const count = saved.unit.reading.blocks.filter((b: any) => b.kind === 'formula').length;
+    await revealBoardControl(page, page.getByRole('button', { name: '插入公式', exact: true }));
     await page.getByRole('button', { name: '插入公式', exact: true }).click();
     await expect.poll(async () => (await page.evaluate(() => (window as any).yizhi.open())).unit.reading.blocks.filter((b: any) => b.kind === 'formula').length).toBe(count + 1);
+    await revealBoardControl(page, page.getByRole('button', { name: '撤销正文', exact: true }));
     await page.getByRole('button', { name: '撤销正文', exact: true }).click();
     await expect.poll(async () => (await page.evaluate(() => (window as any).yizhi.open())).unit.reading.blocks.filter((b: any) => b.kind === 'formula').length).toBe(count);
+    await revealBoardControl(page, page.getByRole('button', { name: '重做正文', exact: true }));
     await page.getByRole('button', { name: '重做正文', exact: true }).click();
     await expect.poll(async () => (await page.evaluate(() => (window as any).yizhi.open())).unit.reading.blocks.filter((b: any) => b.kind === 'formula').length).toBe(count + 1);
   } finally {
@@ -134,6 +146,7 @@ test('MathLive owns inner Undo once, incomplete input survives host death separa
   let app = await launch();
   try {
     let page = await app.firstWindow();
+    await resizeBoardWindow(app, page);
     await expect(page).toHaveURL(/^yizhi-app:\/\/app\//);
     const fontLoads = new Set<string>(), fontFailures: string[] = [];
     page.on('response', response => { if (response.url().includes('/mathlive-fonts/')) {
@@ -143,6 +156,7 @@ test('MathLive owns inner Undo once, incomplete input survives host death separa
     await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     await page.getByRole('textbox', { name: '编辑首段正文', exact: true }).fill('保留正文与公式的独立撤销。');
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
+    await revealBoardControl(page, page.locator('.editor-formula').first().getByRole('button', { name: '编辑公式', exact: true }));
     await page.locator('.editor-formula').first().getByRole('button', { name: '编辑公式', exact: true }).click();
     let field = page.locator('math-field').first();
     // MathLive intentionally reuses existing KaTeX font families. Also decode its bundled fallback
@@ -182,7 +196,9 @@ test('MathLive owns inner Undo once, incomplete input survives host death separa
     expect(unfinished).toContain('placeholder');
     const proc = app.process(); const died = new Promise<void>(done => proc.once('exit', () => done())); proc.kill('SIGKILL'); await died;
     app = await launch(); page = await app.firstWindow();
+    await resizeBoardWindow(app, page);
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('草稿已保留');
+    await revealBoardControl(page, page.locator('.editor-formula').first().getByRole('button', { name: '编辑公式', exact: true }));
     await page.locator('.editor-formula').first().getByRole('button', { name: '编辑公式', exact: true }).click();
     field = page.locator('math-field').first();
     await expect.poll(() => field.evaluate((el: any) => el.value)).toBe(unfinished);
@@ -209,10 +225,12 @@ test('MathLive owns inner Undo once, incomplete input survives host death separa
     await expect.poll(() => field.evaluate((el: any) => el.value)).toBe('\\frac72');
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     await expect.poll(async () => (await page.evaluate(() => (window as any).yizhi.open())).unit.reading.blocks.find((b: any) => b.id === formula.id).payload.latex).toBe('\\frac72');
+    await revealBoardControl(page, page.locator('.editor-formula').first().getByRole('button', { name: '返回正文', exact: true }));
     await page.locator('.editor-formula').first().getByRole('button', { name: '返回正文', exact: true }).click();
     const confirmed = await page.evaluate(() => (window as any).yizhi.open());
     await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t05-editor.png' });
     await app.close(); app = await launch(); page = await app.firstWindow();
+    await resizeBoardWindow(app, page);
     await expect(page.getByRole('textbox', { name: '编辑首段正文', exact: true })).toBeVisible();
     expect((await page.evaluate(() => (window as any).yizhi.open())).unit).toEqual(confirmed.unit);
   } finally { await finish(app); await rm(root, { recursive: true, force: true }); }
@@ -224,6 +242,7 @@ test('continuous editor saves split/merge and cross-paragraph replacement throug
   let app = await launch();
   try {
     let page = await app.firstWindow();
+    await resizeBoardWindow(app, page);
     await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     const editor = page.getByRole('textbox', { name: '连续编辑正文', exact: true });
     await expect(editor).toBeVisible({ timeout: 3000 });
@@ -254,6 +273,7 @@ test('continuous editor saves split/merge and cross-paragraph replacement throug
     const position = await page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return b.readingState(c.sessionId); });
     expect(position?.unitId).toBe('KU-001');
     await app.close(); app = await launch(); page = await app.firstWindow();
+    await resizeBoardWindow(app, page);
     const restoredPosition = await page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return b.readingState(c.sessionId); });
     expect(restoredPosition?.unitId).toBe(position.unitId);
     expect(restoredPosition?.camera?.zoom).toBeGreaterThanOrEqual(0.55);
