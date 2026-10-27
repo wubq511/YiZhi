@@ -79,13 +79,15 @@ export function ReadingSurface({ id, name, position, baseline, measure, gesture,
     if (finish) { drag.current = undefined; commit(kind === 'width' ? { ...baseline, width: next.width } : next); gesture(undefined); }
   };
   const cancel = () => { if (drag.current?.kind === 'width') setWidth(drag.current.placement.width); drag.current = undefined; gesture(undefined); };
+  useEffect(()=>{const key=(event:globalThis.KeyboardEvent)=>{if(event.key==='Escape'&&drag.current){event.preventDefault();cancel();}};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[]);
+  useEffect(()=>{if(!drag.current)setWidth(baseline.width>=360?baseline.width:650);},[baseline.width]);
   return <article ref={element} className="nodrag nopan nowheel" style={{ width: readWidth }} data-unit-id={id} data-agent-unit={id}>
     <div className="layout-controls" aria-label={`${name}布局`}>
-      <button aria-label={`移动${name}`} onPointerDown={e => start(e, 'move')} onPointerMove={e => move(e)} onPointerUp={e => move(e, true)} onPointerCancel={cancel}
+      <button aria-label={`移动${name}`} onPointerDown={e => start(e, 'move')} onPointerMove={e => move(e)} onPointerUp={e => move(e, true)} onPointerCancel={cancel} onLostPointerCapture={cancel}
         onKeyDown={event => { const delta: Record<string, [number, number]> = { ArrowLeft: [-24, 0], ArrowRight: [24, 0], ArrowUp: [0, -24], ArrowDown: [0, 24] }; if (!delta[event.key]) return; event.preventDefault(); takeover(); commit({ ...position, width: readWidth, x: position.x + delta[event.key][0], y: position.y + delta[event.key][1] }); }}>移动单元</button>
       <span>宽度 {Math.round(readWidth)}</span>
       <div role="slider" tabIndex={0} aria-label={`调整${name}宽度`} aria-valuemin={360} aria-valuemax={1800} aria-valuenow={Math.round(readWidth)} aria-orientation="horizontal"
-        onPointerDown={e => start(e, 'width')} onPointerMove={e => move(e)} onPointerUp={e => move(e, true)} onPointerCancel={cancel}
+        onPointerDown={e => start(e, 'width')} onPointerMove={e => move(e)} onPointerUp={e => move(e, true)} onPointerCancel={cancel} onLostPointerCapture={cancel}
         onKeyDown={event => { if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return; event.preventDefault(); takeover(); const next = event.key === 'Home' ? 360 : event.key === 'End' ? 1800 : Math.max(360, Math.min(1800, readWidth + (event.key === 'ArrowRight' ? 24 : -24))); setWidth(next); commit({ ...baseline, width: next }); }}>拖动调宽</div>
     </div>{children}
   </article>;

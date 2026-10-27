@@ -94,7 +94,13 @@ export class ContinuousEditor {
         return tr.getMeta('clearSearchLocation') || tr.docChanged || tr.selectionSet && !tr.selection.eq(oldState.selection) ? DecorationSet.empty : previous;
       } }, props: { decorations(state) { return this.getState(state); } },
     })] });
-    this.editor = new Editor({ element, extensions: [...baseExtensions, opaque, formula, highlights, searchHighlights],
+    const drawingHighlights = Extension.create({ name: 'drawingTextHighlights', addProseMirrorPlugins: () => [new Plugin<DecorationSet>({
+      state: { init: () => DecorationSet.empty, apply(tr, previous) {
+        const ranges = tr.getMeta('drawingLocations') as Array<{ from: number; to: number }> | undefined;
+        return ranges ? DecorationSet.create(tr.doc, ranges.map(r => Decoration.inline(r.from,r.to,{class:'drawing-text-highlight'}))) : previous.map(tr.mapping,tr.doc);
+      } }, props: { decorations(state) { return this.getState(state); } },
+    })] });
+    this.editor = new Editor({ element, extensions: [...baseExtensions, opaque, formula, highlights, drawingHighlights, searchHighlights],
       content: { type: 'doc', content: recovered.map(project) },
       editorProps: { attributes: { role: 'textbox', 'aria-label': '连续编辑正文', 'aria-multiline': 'true', class: 'continuous-prose nodrag nopan' },
         transformPasted: freshClipboard,
@@ -220,6 +226,20 @@ export class ContinuousEditor {
     const first = ranges[0];
     this.editor.view.dispatch(this.editor.state.tr.setSelection(TextSelection.create(this.editor.state.doc, first.from, first.to)).setMeta('annotationLocations', ranges));
     this.editor.view.focus();
+  }
+  private paintSequence = 0;
+  async paintDrawings(notes: PersonalNote[]) {
+    const sequence = ++this.paintSequence, doc = this.editor.state.doc, blocks = blocksOf(doc);
+    const ranges: Array<{from:number;to:number}> = [];
+    for (const note of notes) for (const location of note.current.fragments) {
+      if (location.status !== 'attached' || location.field !== 'text') continue;
+      const block = blocks.find(b=>b.id===location.blockId);
+      if (!block) continue;
+      const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(block))))].map(n=>n.toString(16).padStart(2,'0')).join('');
+      if (digest !== location.version) continue;
+      doc.forEach((node,pos)=>{if(node.attrs.block.id===location.blockId && node.type.name==='paragraph') ranges.push({from:pos+1+utf16Offset(node.textContent,location.from),to:pos+1+utf16Offset(node.textContent,location.to)});});
+    }
+    if (!this.destroyed && sequence===this.paintSequence && this.editor.state.doc===doc) this.editor.view.dispatch(this.editor.state.tr.setMeta('drawingLocations',ranges).setMeta('addToHistory',false));
   }
   private selectionChanged() {
     const ids: string[] = [], { from, to, empty } = this.editor.state.selection;
