@@ -48,6 +48,10 @@ export function formulaFor(d: BuiltinDefinition): string {
 }
 /** Deliberately small Boolean grammar. No eval, symbolic solver or arbitrary K-map. */
 function expression(source: string, names: string[]): (bits: Record<string, number>) => number {
+  // Validate indexed atoms BEFORE flattening subscripts: S_{10} is not S1 multiplied by 0.
+  for (const atom of source.match(/[A-Za-z]_(?:\{[A-Za-z0-9]+\}|[A-Za-z0-9])/g) ?? []) {
+    if (!names.includes(atom.replace(/[_{}]/g, ''))) throw new Error('公式使用了未声明的下标变量');
+  }
   let s = source.replace(/\\(?:neg|lnot)\b/g, '¬').replace(/\\(?:left|right|,|;|!|quad|mathrm)/g, '').replace(/\\(?:cdot|land)/g, '·').replace(/\\(?:lor)/g, '+');
   // MathLive's braces and indexed identifiers are normalized without losing variable boundaries.
   for (let i = 0; i < 10; i++) s = s.replace(/\\(?:overline|bar)\{([^{}]*)\}/g, '¬($1)');

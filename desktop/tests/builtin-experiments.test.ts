@@ -78,11 +78,11 @@ test('formula/config changes are atomic, unsupported edits persist without stale
       assert.equal(scene.result?.output, Number(swapped[select][data]));
     }
     await assert.rejects(service.experiments.act({ ...cmd, action: { ...cmd.action, formula: 'Y=1' } }), /不同内容/);
-    v = await service.experiments.act({ ...cmd, operationId: 'unsupported', action: { kind: 'formula', baseRevision: 2, formula: 'Y=sin(x)' } });
+    v = await service.experiments.act({ ...cmd, operationId: 'unsupported', action: { kind: 'formula', baseRevision: 2, formula: 'Y=S_{10}' } });
     assert.equal(v.result, null); assert.equal(v.definition.check, 'needs-check');
     await service.close(); service = new CourseService(resolve('dist/worker.cjs')); c = await service.open(root); sessionId = c.sessionId;
     v = await service.experiments.open({ sessionId, unitId: 'KU-057', blockId: muxId });
-    assert.equal(v.definition.formula, 'Y=sin(x)'); assert.equal(v.result, null);
+    assert.equal(v.definition.formula, 'Y=S_{10}'); assert.equal(v.result, null);
     await assert.rejects(service.experiments.act({ sessionId, instanceId: v.instanceId, generation: v.generation, operationId: 'bad-run', action: { kind: 'run', running: true } }), /核对/);
     v = await service.experiments.act({ sessionId, instanceId: v.instanceId, generation: v.generation, operationId: 'constant', action: { kind: 'formula', baseRevision: 3, formula: 'Y=1' } });
     assert.equal(v.definition.check, 'verified'); assert.deepEqual(v.definition.config.dataSignals, ['1', '1', '1', '1']);
@@ -164,6 +164,9 @@ test('supported 2:1 uses its ordered single selector for all eight inputs; fixed
         action: { kind: 'inputs', inputs: { S: row >> 2, D0: row & 1, D1: (row >> 1) & 1 } } });
       assert.equal(m.result?.output, Number(truth[row]));
     }
+    m = await service.experiments.act({ sessionId, instanceId: m.instanceId, generation: m.generation, operationId: 'two-formula', action: { kind: 'formula', baseRevision: 1, formula: 'Z=\\overline{S}D_0+SD_1' } });
+    assert.equal(m.definition.check, 'verified');
+    assert.deepEqual(m.definition.config.dataSignals, ['D0', 'D1']);
     let k = await service.experiments.open({ sessionId, unitId: 'KU-035', blockId: 'RB-KU-035-diagram' });
     k = await service.experiments.act({ sessionId, instanceId: k.instanceId, generation: k.generation, operationId: 'kmap-equivalence', action: { kind: 'formula', baseRevision: 1, formula: 'F=\\overline{C}(A+\\overline{A})(B+\\overline{B})' } });
     assert.equal(k.definition.check, 'verified');
