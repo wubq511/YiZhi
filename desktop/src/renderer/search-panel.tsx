@@ -9,6 +9,7 @@ export function SearchPanel({ sessionId, narrow, beforeOpen, onOpenChange, locat
   const [error, setError] = useState(''), [loading, setLoading] = useState(false), [indexing, setIndexing] = useState(false), [revision, setRevision] = useState(0);
   const input = useRef<HTMLInputElement>(null), trigger = useRef<HTMLButtonElement>(null), panel = useRef<HTMLElement>(null);
   const prepared = useRef(false);
+  const lastQuery = useRef('');
   const serial = useRef(0), alive = useRef(true), indexingRef = useRef(false);
   useEffect(() => () => { alive.current = false; }, []);
   const show = (value: boolean) => { setOpen(value); onOpenChange(value); if (!value) requestAnimationFrame(() => trigger.current?.focus()); };
@@ -18,10 +19,12 @@ export function SearchPanel({ sessionId, narrow, beforeOpen, onOpenChange, locat
     try {
       let state = await window.yizhi.search.rebuild({ sessionId, batchSize: 2, reset, retryErrors });
       if (alive.current) setStatus(state);
+      let refreshedAt = performance.now();
       while (state.pending > state.indexErrors.length && alive.current) {
         await new Promise(resolve => setTimeout(resolve, 25));
         if (!alive.current) break;
         state = await window.yizhi.search.rebuild({ sessionId, batchSize: 2 }); setStatus(state);
+        if (performance.now() - refreshedAt >= 300) { refreshedAt = performance.now(); setRevision(n => n + 1); }
       }
       if (alive.current) setRevision(n => n + 1);
     } catch (e) { if (alive.current) setError(`索引未完成：${(e as Error).message}。可重试索引，已有内容仍可查找。`); }
@@ -31,12 +34,13 @@ export function SearchPanel({ sessionId, narrow, beforeOpen, onOpenChange, locat
   useEffect(() => {
     const token = ++serial.current;
     if (!open || !query.trim()) { setResults(undefined); setLoading(false); return; }
-    setLoading(true); setResults(undefined);
+    const key = JSON.stringify([sessionId, query, scopes]), changed = key !== lastQuery.current; lastQuery.current = key;
+    if (changed) { setLoading(true); setResults(undefined); }
     const timer = setTimeout(() => {
       void window.yizhi.search.query({ sessionId, query, scopes }).then(result => {
         if (token === serial.current && alive.current) { setResults(result); setStatus(result.status); setError(''); setLoading(false); }
       }).catch(e => { if (token === serial.current && alive.current) { setError(e.message); setLoading(false); } });
-    }, 150);
+    }, changed ? 150 : 0);
     return () => clearTimeout(timer);
   }, [query, scopes, open, revision]);
   return <><button ref={trigger} aria-expanded={open} onPointerDown={() => { if (!open) { beforeOpen(); prepared.current = true; } }} onKeyDown={event => { if (!open && ['Enter', ' '].includes(event.key)) { beforeOpen(); prepared.current = true; } }} onClick={() => { if (!open && !prepared.current) beforeOpen(); prepared.current = false; show(true); }}>搜索课程</button>{open && createPortal(<aside ref={panel} className="search-panel" role={narrow ? 'dialog' : 'complementary'} aria-modal={narrow || undefined} aria-label="搜索课程" onKeyDown={event => {

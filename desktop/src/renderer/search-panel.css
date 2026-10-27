@@ -24,4 +24,4 @@
 @media(max-width:760px) { .search-panel { top:10px; right:10px; bottom:10px; width:calc(100vw - 20px); max-width:none; } }
 
 .source-search-highlight { background:#eeedff; color:#27343e !important; }
-.unit-aliases { color:#626b79; font:14px/1.65 system-ui,sans-serif; margin-bottom:12px; }
+.unit-aliases { display:flex; flex-wrap:wrap; gap:4px 12px; color:#626b79; font:14px/1.65 system-ui,sans-serif; margin-bottom:12px; }
