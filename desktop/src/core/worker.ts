@@ -84,10 +84,11 @@ function open(directory: string): OpenedCourse {
     const graph = JSON.parse(readFileSync(join(__dirname, 'fixtures/graph.json'), 'utf8')) as CourseGraph;
     initializeReviewState(db);
     const groups = new CommandGroups(db, graph);
-    const relations = new FormalRelations(db, graph,
-      JSON.parse(readFileSync(join(__dirname, 'fixtures/relation-catalog.json'), 'utf8')));
-    const course: Course = { db, owner, sessionId: randomUUID(), graph, groups, relations, sources: new Sources(db, canonical, sourceUnit),
-
+    const sources = new Sources(db, canonical, sourceUnit);
+    const relationCatalog = JSON.parse(readFileSync(join(__dirname, 'fixtures/relation-catalog.json'), 'utf8'));
+    const relations = new FormalRelations(db, graph, { retiredUnitIds: relationCatalog.retiredUnitIds,
+      get sources() { return sources.relationCatalog(relationCatalog.sources); } });
+    const course: Course = { db, owner, sessionId: randomUUID(), graph, groups, relations, sources,
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     const result = snapshot(course);
     courses.set(canonical, course);
@@ -108,6 +109,7 @@ let queue = Promise.resolve();
 parentPort!.on('message', message => { queue = queue.then(() => dispatch(message)); });
 async function dispatch({ id, action, payload }: { id: number; action: string; payload: any }) {
   try {
+    if (payload?.operationId) session(payload.sessionId).sources.fenceOperation(action, payload.operationId);
     let value: unknown;
     if (action === 'open') value = open(payload.directory);
     else if (action === 'read') value = snapshot(session(payload.sessionId));

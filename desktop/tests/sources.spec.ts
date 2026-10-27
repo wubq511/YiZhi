@@ -62,6 +62,18 @@ test('local PDF.js renders a real text layer, cites actual selection, preserves 
     await expect(page.locator('.source-citation-marker')).toBeVisible();
     await expect(page.getByRole('status', { name: '原文位置保存' })).toHaveText('原文位置已保存');
     await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t14-source.png' });
+    await page.getByRole('button', { name: '返回画板', exact: true }).click();
+    await page.getByRole('button', { name: '查看关系', exact: true }).click();
+    const relation = page.getByLabel('关系详情');
+    await relation.getByRole('button', { name: '审核 REL-001', exact: true }).click();
+    const imported = await page.evaluate(async () => {
+      const api = (window as any).yizhi, opened = await api.open(); return (await api.sources.list({ sessionId: opened.sessionId })).versions.at(-1);
+    });
+    await relation.getByRole('combobox', { name: '来源 1', exact: true }).selectOption(imported.sourceId);
+    await relation.getByRole('combobox', { name: '固定版本 1', exact: true }).selectOption(imported.versionId);
+    await relation.getByRole('textbox', { name: 'PDF 页码 1', exact: true }).fill('1');
+    await relation.getByRole('button', { name: '保存正式关系', exact: true }).click();
+    await expect(relation.getByRole('status', { name: '正式关系结果' })).toContainText('已保存');
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
 

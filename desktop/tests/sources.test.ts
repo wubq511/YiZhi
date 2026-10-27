@@ -29,6 +29,8 @@ test('imported PDF versions remain immutable and independently readable after ne
     assert.notEqual(next.version.sha256, first.version.sha256);
     assert.equal(next.version.sourceId, first.version.sourceId);
     assert.deepEqual((await service.read(opened.sessionId)).unit, opened.unit);
+    await assert.rejects(service.save({ sessionId: opened.sessionId, operationId: 'import-first', inputSeq: 1,
+      baseRevision: 1, blockId: opened.editableBlockId, text: 'Must not reuse source operation' }), /操作身份/);
     await service.close(); service = new CourseService(resolve('dist/worker.cjs'));
     const reopened = await service.open(join(root, 'course'));
     const all = await service.sources.list({ sessionId: reopened.sessionId });
@@ -159,5 +161,47 @@ test('image import validates actual image bytes and malformed or missing resourc
     await assert.rejects(service.sources.page({ sessionId, versionId: version.versionId, pdfPageIndex: 0 }));
     assert.equal((await service.sources.list({ sessionId })).versions.length, 1);
     assert.deepEqual((await service.read(sessionId)).unit, opened.unit);
+  } finally { await service.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('source identities share the formal operation fence and imported versions can support a formal relation without rewriting existing references', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-source-domains-'));
+  const service = new CourseService(resolve('dist/worker.cjs'));
+  try {
+    const path = join(root, 'source.pdf'); await sourceFixture(path);
+    const opened = await service.open(join(root, 'course')), sessionId = opened.sessionId;
+    const originalCatalog = await service.relations.read({ sessionId });
+    assert.equal(originalCatalog.sources.reduce((total, source) => total + source.versions.length, 0), 16);
+    await service.save({ sessionId, operationId: 'student-edit', inputSeq: 1, baseRevision: 1, blockId: opened.editableBlockId, text: 'Student evidence review' });
+    await assert.rejects(service.sources.importFile({ sessionId, generation: 1, operationId: 'student-edit', path, title: 'Evidence' }), /操作身份/);
+    const imported = await service.sources.importFile({ sessionId, generation: 1, operationId: 'source-import', path, title: 'Evidence' });
+    const attempt = await service.commands.startAttempt({ sessionId, taskId: 'independent-producer' });
+    const basis = await service.commands.read({ sessionId, attemptId: attempt.attemptId, objectIds: [opened.editableBlockId] });
+    const block = basis.objects.find(object => object.id === opened.editableBlockId)!;
+    await assert.rejects(service.commands.commit({ sessionId, attemptId: attempt.attemptId, operationId: 'source-import', basisId: basis.basisId,
+      changes: [{ objectId: block.id, value: block.value }] }), /操作身份/);
+    const relationBasis = await service.relations.read({ sessionId });
+    for (const source of originalCatalog.sources) assert.deepEqual(relationBasis.sources.find(item => item.id === source.id), source);
+    assert.deepEqual(relationBasis.graph.edges, originalCatalog.graph.edges);
+    await assert.rejects(service.sources.getVersion({ sessionId, versionId: originalCatalog.sources[0].versions[0].id }), /未登记/);
+    assert.ok(relationBasis.sources.some(source => source.id === imported.version.sourceId && source.versions.some(version => version.id === imported.version.versionId)));
+    const edge = { ...relationBasis.graph.edges[0], value: 'Explicit correction supported by imported immutable evidence',
+      sourceRefs: [{ sourceId: imported.version.sourceId, versionId: imported.version.versionId, pdfPages: [1] }] };
+    await assert.rejects(service.relations.commit({ sessionId, generation: relationBasis.generation, basisId: relationBasis.basisId,
+      operationId: 'source-import', changes: [{ id: edge.id, value: edge }] }), /操作身份/);
+    const result = await service.relations.commit({ sessionId, generation: relationBasis.generation, basisId: relationBasis.basisId,
+      operationId: 'relation-correction', changes: [{ id: edge.id, value: edge }] });
+    assert.equal(result.status, 'committed');
+    await assert.rejects(service.sources.setUpdateIntent({ sessionId, generation: 1, operationId: 'relation-correction', versionId: imported.version.versionId, decision: 'update' }), /操作身份/);
+    assert.equal((await service.read(sessionId)).unit.reading.blocks[0].payload.text, 'Student evidence review');
+    assert.equal((await service.sources.list({ sessionId })).versions.length, 1);
+    await service.close();
+    const reopenedService = new CourseService(resolve('dist/worker.cjs'));
+    try {
+      const reopened = await reopenedService.open(join(root, 'course'));
+      const next = await reopenedService.relations.read({ sessionId: reopened.sessionId });
+      assert.ok(next.sources.some(source => source.id === imported.version.sourceId && source.versions[0].id === imported.version.versionId));
+      assert.deepEqual(next.graph.edges.find(item => item.id === edge.id)?.sourceRefs, edge.sourceRefs);
+    } finally { await reopenedService.close(); }
   } finally { await service.close(); await rm(root, { recursive: true, force: true }); }
 });

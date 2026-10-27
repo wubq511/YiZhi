@@ -5,6 +5,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import type { ImportSource, SourceReceipt, SourceVersion, ResourceRange, SourcePage, SourcePageRequest, SourceCommand, CiteSource, SourceCitation, PrintedPage, UpdateIntent, SourceReadingContext } from '../sources-api';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 import type { CourseUnit, ReadingBlock } from '../shared';
+import type { RelationSource } from '../relation-api';
 import { appendEvent, transaction } from './save-store';
 import { hashFile, MAX_RESOURCE_READ, publishResource } from './immutable-resource';
 import { withPdf } from './source-pdf';
@@ -22,15 +23,39 @@ export class Sources {
       CREATE TABLE IF NOT EXISTS source_reading(id INTEGER PRIMARY KEY CHECK(id=1), session_id TEXT NOT NULL, seq INTEGER NOT NULL, payload TEXT NOT NULL);`);
   }
   private generation() { return Number(this.db.prepare("SELECT value FROM metadata WHERE key='generation'").get()!.value); }
+  /** Preserve the common logical-operation namespace across student, producer, relation and source writes. */
+  fenceOperation(action: string, operationId: unknown) {
+    if (typeof operationId !== 'string') return;
+    if (action === 'sources:write') {
+      if (this.db.prepare('SELECT 1 FROM operations WHERE id=?').get(operationId) || this.db.prepare('SELECT 1 FROM cg_candidates WHERE id=?').get(operationId))
+        throw new Error('操作身份已用于其他正式修改');
+    } else if (['save', 'commitEdit', 'commands:commit', 'relations:commit'].includes(action)) {
+      if (this.db.prepare('SELECT 1 FROM source_operations WHERE id=?').get(operationId) || this.db.prepare('SELECT 1 FROM source_imports WHERE id=?').get(operationId))
+        throw new Error('操作身份已用于来源修改');
+    }
+  }
   list(sessionId: string) { const reading = this.db.prepare('SELECT session_id,seq FROM source_reading WHERE id=1').get();
     return { generation: this.generation(), readingSeq: reading?.session_id === sessionId ? Number(reading.seq) : 0,
     versions: this.db.prepare('SELECT payload FROM source_versions ORDER BY rowid').all().map(row => JSON.parse(String(row.payload)) as SourceVersion),
     intents: this.db.prepare('SELECT payload FROM source_intents ORDER BY rowid').all().map(row => JSON.parse(String(row.payload)) as UpdateIntent) }; }
+  /** A live projection of the actual registry, not another writable source catalog.
+   * Seed entries retain their metadata identity; this does not claim their original files are copied.
+   */
+  relationCatalog(seed: RelationSource[]): RelationSource[] {
+    const catalog = structuredClone(seed);
+    for (const version of this.list('').versions) {
+      let source = catalog.find(item => item.id === version.sourceId);
+      if (!source) { source = { id: version.sourceId, title: version.title, versions: [] }; catalog.push(source); }
+      if (!source.versions.some(item => item.id === version.versionId)) source.versions.push({ id: version.versionId, ...(version.pdfPages ? { totalPages: version.pdfPages } : {}) });
+    }
+    return catalog;
+  }
   private eligible(command: SourceCommand) {
     if (!id(command.operationId)) throw new Error('无效的来源操作身份');
     if (command.generation !== this.generation()) throw new Error('课程代际已变化，请重新读取');
   }
   private async operation<T>(kind: string, command: SourceCommand, prepare: () => Promise<() => T>): Promise<T> {
+    this.fenceOperation('sources:write', command.operationId);
     if (!id(command.operationId)) throw new Error('无效的来源操作身份');
     const { sessionId: _, ...identity } = command;
     const digest = createHash('sha256').update(JSON.stringify([kind, identity])).digest('hex');
@@ -59,6 +84,7 @@ export class Sources {
     return version;
   }
   async importFile(command: ImportSource): Promise<SourceReceipt> {
+    this.fenceOperation('sources:write', command.operationId);
     if (!id(command.operationId) || typeof command.path !== 'string' || !id(command.title) ||
       (command.sourceId !== undefined && !id(command.sourceId))) throw new Error('来源导入请求无效');
     const { sessionId: _, ...identity } = command;
