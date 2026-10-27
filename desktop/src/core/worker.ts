@@ -123,7 +123,7 @@ parentPort!.on('message', ({ id, action, payload }) => {
     } else if (action === 'readUnit') {
       const course = session(payload.sessionId);
       if (payload.unitId === 'KU-001') value = snapshot(course).unit;
-      else if (['KU-002', 'KU-003', 'KU-004', 'KU-055', 'KU-057'].includes(payload.unitId))
+      else if (['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-055', 'KU-057'].includes(payload.unitId))
         value = JSON.parse(readFileSync(join(__dirname, `fixtures/unit-${payload.unitId.slice(3)}.json`), 'utf8'));
       else throw new Error('该单元正文尚未加入课程副本');
     }

@@ -131,3 +131,19 @@ test('reading state survives reopening the course with disclosure and return pos
     assert.deepEqual(await service.readingState(reopened.sessionId), state);
   } finally { await service.close(); await rm(root, { recursive: true, force: true }); }
 });
+
+test('the selected sample references resolve to copied main units', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-reference-chain-'));
+  const service = new CourseService(resolve('dist/worker.cjs'));
+  try {
+    const opened = await service.open(root);
+    for (const id of ['KU-001', 'KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-057']) {
+      const unit = await service.readUnit(opened.sessionId, id);
+      for (const block of unit.reading.blocks.filter(block => block.kind === 'knowledge-reference')) {
+        const target = await service.readUnit(opened.sessionId, block.payload.targetUnitId);
+        assert.equal(target.id, block.payload.targetUnitId);
+        assert.ok(target.reading.blocks.length > 0);
+      }
+    }
+  } finally { await service.close(); await rm(root, { recursive: true, force: true }); }
+});

@@ -1,0 +1,682 @@
+{
+  "aliases": [
+    "二进制加法",
+    "借位",
+    "进位"
+  ],
+  "id": "KU-005",
+  "internals": [
+    {
+      "kind": "formula",
+      "text": "0+0=0，0+1=1，1+0=1，1+1=0 且进位 1"
+    },
+    {
+      "kind": "condition",
+      "text": "无符号溢出看最高有效位的进位/借位"
+    }
+  ],
+  "kind": "method",
+  "name": "无符号二进制四则运算",
+  "outcome": "能完成无符号二进制加、减、乘、除，并判断进位或借位。",
+  "questionTypes": [
+    "数制转换"
+  ],
+  "rating": {
+    "evidence": {
+      "exerciseExamples": [],
+      "homeworkDirect": [
+        {
+          "basis": "stem",
+          "label": "1.52(a)",
+          "questionId": "Q-024"
+        },
+        {
+          "basis": "stem",
+          "label": "1.52(b)",
+          "questionId": "Q-025"
+        }
+      ],
+      "referenceItems": [
+        {
+          "id": "REF-001",
+          "kind": "basic-type-list",
+          "label": "二进制基本题型（习题课 P2）"
+        }
+      ],
+      "support": []
+    },
+    "rationale": "习题课参考条目 REF-001 明确相关，且作业直接考查：1.52(a)、1.52(b)。",
+    "stars": 4,
+    "supportAdjustment": null
+  },
+  "reading": {
+    "blocks": [
+      {
+        "id": "RB-TH-01-80-overview",
+        "kind": "paragraph",
+        "payload": {
+          "text": "无符号二进制数的四则运算与十进制竖式完全同型，只是基数换成 2、每一步的规则表更短。课件 C01 第 24 页给出四张规则表：加法 0+0=0、0+1=1、1+0=1、1+1=0（进位为 1）；减法 0−0=0、1−1=0、1−0=1、0−1=1（借位为 1）；乘法 0×0=0、0×1=0、1×0=0、1×1=1；除法 0÷1=0、1÷1=1。乘法就是「移位 + 加法」：用乘数的每一位去乘被乘数，把各部分积按权错位后相加；除法就是「试减 + 移位」：每一步用当前被除数（余数）的高位去试除数，够减商 1、不够减商 0。运算结果是否正确、是否装得下给定的位数，由溢出判据（第 42 页）决定：无符号数溢出当且仅当最高有效位向外产生进位（加法）或借位（减法）。本单元的方法链条是：先按规则表做竖式，再用溢出判据对结果下结论；对 4 位无符号数等价口诀是——真实和（差）落在 0～15 内就不溢出，超出即溢出，且 4 位结果恰为真实值 mod 16。"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 24 页「(无符号) 二进制的四则运算」四张规则表与四个竖式、第 42 页「溢出 Overflow」判据文字的原页；「真实值 mod 16」等价说法由 4 位无符号表示范围推出并经独立枚举核对",
+            "pdfPages": [
+              24,
+              42
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-81-addition-steps",
+        "kind": "steps",
+        "payload": {
+          "items": [
+            "对齐个位，从最低位（最右一列）开始逐位相加。",
+            "每一列：两数位加来自右列的进位。0+0=0，0+1=1，1+0=1，1+1=0（进位为 1）；再加进位时 1+1+1=1（进位为 1）。",
+            "把该列结果位写下，进位 1 送到左邻列（最高有效位方向）。",
+            "全部列加完后若最高位仍有向外的进位，这个进位就是第 5 位输出：对 4 位无符号数它意味着溢出（和超过 15），对不定长运算它是结果的第 5 位。",
+            "核对锚点：把两个二进制数按 KU-001 展开成十进制相加，再与竖式结果对照，两者必须相等。"
+          ],
+          "title": "无符号加法竖式（含进位）"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 24 页加法规则行「0+0=0, 0+1=1, 1+0=1, 1+1=0（进位为1）」与加法竖式 11001+101=11110 的原页；操作步骤为方法复述",
+            "pdfPages": [
+              24
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-82-subtraction-steps",
+        "kind": "steps",
+        "payload": {
+          "items": [
+            "对齐个位，从最低位开始逐位相减，要求被减数 ≥ 减数（无符号数不够减即负，超出无符号表示范围）。",
+            "每一列：0−0=0，1−1=0，1−0=1；0−1 时本位写 1（借位为 1），并向左邻列借一位（左邻列相当于减去 1）。",
+            "左邻列被借位后要先减 1 再参与本列运算；连续 0 被借位时借位会向前传播。",
+            "全部列减完后若最高位仍需向外借位，说明被减数 < 减数：对 4 位无符号数即差为负、超出 0～15 的表示范围（溢出/借位输出 1）。",
+            "核对锚点：被减数 = 差 + 减数（含借位关系），可用十进制展开快速验证。"
+          ],
+          "title": "无符号减法竖式（含借位）"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 24 页减法规则行「0−0=0, 1−1=0, 1−0=1, 0−1=1（借位为1）」与减法竖式 11001−101=10100 的原页；操作步骤为方法复述",
+            "pdfPages": [
+              24
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-83-muldiv-steps",
+        "kind": "steps",
+        "payload": {
+          "items": [
+            "乘法 = 移位加法：位值规则只有 0×0=0、0×1=0、1×0=0、1×1=1。用乘数从低位到高位的每一位乘被乘数得各部分积，第 i 位乘数对应的部分积左移 i 位，最后把全部部分积相加。",
+            "乘法核对锚点：结果 = 被乘数 × 乘数的十进制值转回二进制；n 位 × m 位的积至多 n+m 位，若限定 n 位结果则看是否溢出。",
+            "除法 = 试减移位：除法位值规则只有 0÷1=0、1÷1=1。从被除数最高位起取与除数等长的段，够减（≥ 除数）则商 1 并做减法，不够减则商 0；每步把被除数的下一位落下来，重复到最低位。除数必须非零。",
+            "除法核对锚点：商 × 除数 + 余数 = 被除数；能整除时余数为 0。余数须满足0≤余数<除数。",
+            "在硬件层面，乘/除法器由「加法器 + 移位寄存器 + 控制时序」构成；本单元只需掌握手算竖式与溢出判断。"
+          ],
+          "title": "无符号乘法与除法竖式"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 24 页乘法规则行（0×0=0, 0×1=0, 1×0=0, 1×1=1）、除法规则行（0÷1=0, 1÷1=1）与乘法竖式 11001×101=1111101、除法竖式 11001÷101=101 的原页；步骤与「加法器+移位寄存器」表述为方法归纳",
+            "pdfPages": [
+              24
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-84-overflow-callout",
+        "kind": "callout",
+        "payload": {
+          "text": "固定位宽的无符号加法看最高位是否向外进位；无符号减法看是否向外借位。必须先区分位宽与数的解释：4位0101+0110=1011，按无符号数是5+6=11，未超过15；按4位补码则真值11超出上界7，发生有符号溢出。不能把“没有Cout”当作补码未溢出。减法若用 A+¬B+1 的加法器实现，Cout=1表示无借位，Cout=0表示有借位；这是该实现的进位含义，不是补码溢出V。补码运算与V的判断在有符号数单元继续学习。"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 42 页「溢出 Overflow」原页：无符号数溢出与有符号数溢出两行定义、4 位 2+3=5（√）、4 位 5+6=11 得 1011（×，页按符号+幅值读作 −3）、8 位 5+6=11（√）三个算例；mod 16 等价说法为推论并经独立枚举核对",
+            "pdfPages": [
+              42
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-85a-example-add-sub-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "加法（十进制锚点 25+5=30）：11001+00101 逐位列——bit0：1+1=0 进位 1；bit1：0+0+1=1；bit2：0+1=1；bit3：1+0=1；bit4：1+0=1，得 11110，与页面竖式一致；最高位无向外进位（30 ≤ 31，5 位不溢出）。",
+                "减法（十进制锚点 25−5=20）：11001−00101 逐位列——bit0：1−1=0；bit1：0−0=0；bit2：0−1 不够减，本位 1 并向 bit3 借位；bit3：1−0−借位 1=0；bit4：1−0=1，得 10100，与页面竖式一致；最高位无向外借位（20 ≥ 0，不溢出）。",
+                "两个结果分别等于十进制 30（11110₂）与 20（10100₂），与锚点 25+5、25−5 完全吻合。"
+              ]
+            },
+            "role": "core",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-85-example-add-sub",
+        "kind": "example",
+        "payload": {
+          "answerNature": "authored-example",
+          "hint": "先把 101₂ 对齐成 00101 再逐位算；十进制锚点 25±5。",
+          "problem": "按无符号二进制竖式计算 11001₂ + 101₂ 与 11001₂ − 101₂，写出每一步的进位/借位，并判断最高位是否有向外进位/借位。",
+          "title": "例 · 11001 + 101 与 11001 − 101 竖式（课件第 24 页原例）"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 24 页加法竖式 11001+101=11110 与减法竖式 11001−101=10100 的原页；逐位进位/借位过程为本片段补写，全部数值经独立竖式枚举核对",
+            "pdfPages": [
+              24
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-86a-example-mul-div-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "乘法（锚点 25×5=125）：乘数 101 三位给出的部分积为 bit0 的 11001（左移 0 位）、bit1 的 00000（左移 1 位）、bit2 的 11001（左移 2 位）；错位相加 11001 + 00000 + 1100100 = 1111101，与页面竖式一致；1111101₂ = 125 = 25×5，核对通过。",
+                "除法（锚点 25÷5=5 余 0）：101 ) 11001 —— 取前三位110，因为110≥101，商 1 减得 001；落下一位得 010 < 101，商 0；再落下一位得 101 ≥ 101，商 1 减得 0，除尽；商 101、余数 0，与页面竖式一致；101₂ = 5 = 25÷5，且 5×5+0 = 25 核对通过。",
+                "结论：乘法结果是 7 位数 1111101（5 位 × 3 位至多 8 位内），除法 11001÷101 = 101 余 0——「移位 + 加法/试减」的两个竖式与十进制完全同型。"
+              ]
+            },
+            "role": "core",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-86-example-mul-div",
+        "kind": "example",
+        "payload": {
+          "answerNature": "authored-example",
+          "hint": "乘法按 101 的每一位写出三个部分积；除法从最高位起逐步试减 101。",
+          "problem": "按无符号二进制竖式计算 11001₂ × 101₂ 与 11001₂ ÷ 101₂，写出部分积的移位相加过程与除法每一步的试减，并用十进制锚点核对。",
+          "title": "例 · 25 × 5 与 25 ÷ 5 竖式（课件第 24 页原例）"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 24 页乘法竖式 11001×101=1111101（部分积 11001、00000、11001 错位相加）与除法竖式 11001÷101 商 101 余 0 的原页；逐步过程为本片段补写，全部数值经独立计算核对",
+            "pdfPages": [
+              24
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-87a-example-overflow-caliber-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "4 位 0010+0011=0101（2+3=5）：无符号最高位无进位、不溢出；两数符号位均为 0、结果符号位 0，有符号也不溢出——页面标 √。",
+                "4位0101+0110=1011：无符号真值5+6=11≤15，且没有最高位进位，所以无符号不溢出；按4位补码解释时，11超出−8到7，结果1011读作−5，发生有符号溢出。课件此处的“? −3”和范围标题不用于补码读值，补码应按码值11−16=−5核对。",
+                "8 位 00000101+00000110=00001011（5+6=11）：位宽扩到 8 位后两种口径都装得下 11，都不溢出——页面第二个 5+6=11 标 √。",
+                "同一位串是否溢出，取决于操作、位宽和码型。课件“不能溢出”的提醒是要求检查表示范围，不能当作所有运算天然不溢出的前提。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-87-example-overflow-caliber",
+        "kind": "example",
+        "payload": {
+          "answerNature": "authored-example",
+          "hint": "先按无符号判据（最高位向外进位）逐一判，再按有符号判据（同号相加得异号）逐一判，列表对比。",
+          "problem": "用课件第 42 页的三个算例说明：为什么判断溢出必须先说清无符号口径还是有符号口径？算 4 位 0010+0011、4 位 0101+0110、8 位 00000101+00000110，分别给出两种口径的结论。",
+          "title": "例 · 同一组数位，两种口径的溢出结论（课件第 42 页原例）"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "第 42 页三个算例（4 位 2+3=5 √、4 位 5+6=11 ×／1011 标「? −3」、8 位 5+6=11 √）与「不能溢出！」红章标注的原页；口径对比结论为本片段归纳，全部判断经独立枚举核对",
+            "pdfPages": [
+              42
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-88a-example-Q024-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "竖式：1001+0100 逐位列——bit0：1+0=1；bit1：0+0=0；bit2：0+1=1；bit3：1+0=1；最高位无进位输出，得 4 位结果 1101。",
+                "十进制核对：1001₂=9、0100₂=4，9+4=13；1101₂=13，两者一致（13 ≤ 15，4 位装得下）。",
+                "结论：4 位结果 1101₂，最高位无进位输出，无符号不溢出。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-88-example-Q024",
+        "kind": "example",
+        "payload": {
+          "answerNature": "derived-solution",
+          "hint": "先按十进制锚点 9+4 估计范围，再做竖式逐位相加看最高位是否向外进位。",
+          "problem": "计算 1001₂ + 0100₂（无符号二进制加法）。指出 4 位结果，并判断在结果为 4 位的情况下和是否溢出。",
+          "questionId": "Q-024",
+          "title": "例题 · 1001₂ + 0100₂（习题 1.52(a)）"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "作业首页题号清单含 1.52；作业第 4 页（教材书页 24）1.52(a) 题面「1001₂ + 0100₂」（黄色高亮）；求解过程为本片段推导，数值经独立计算核对",
+            "pdfPages": [
+              1,
+              4
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          },
+          {
+            "bookPages": [
+              24
+            ],
+            "note": "教材 P24 习题 1.52 原页，与作业第 4 页为同一页（1.26–1.52）",
+            "pdfPages": [
+              38
+            ],
+            "sourceId": "SRC-TB",
+            "versionId": "VER-SRC-TB-d1bc6409752a",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-89a-example-Q025-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "竖式：1101+1011 逐位列——bit0：1+1=0 进位 1；bit1：0+1+1=0 进位 1；bit2：1+0+1=0 进位 1；bit3：1+1+1=1 进位 1（向外进位 1）；4 位结果 1000。",
+                "十进制核对：1101₂=13、1011₂=11，13+11=24 > 15；1000₂=8 = 24 mod 16，向外进位 1 恰是第 5 位的权值 16，16+8=24，两者一致。",
+                "结论：4 位结果 1000₂（按无符号读为 8，已不是真实和 24），最高位向外进位 1，无符号溢出（真实和 24 超出 4 位无符号范围 0～15）。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-89-example-Q025",
+        "kind": "example",
+        "payload": {
+          "answerNature": "derived-solution",
+          "hint": "先按十进制锚点 13+11 估计是否超过 15，再做竖式逐位相加看最高位是否向外进位。",
+          "problem": "计算 1101₂ + 1011₂（无符号二进制加法）。指出 4 位结果，并判断在结果为 4 位的情况下和是否溢出。",
+          "questionId": "Q-025",
+          "title": "例题 · 1101₂ + 1011₂（习题 1.52(b)）"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "作业首页题号清单含 1.52；作业第 4 页（教材书页 24）1.52(b) 题面「1101₂ + 1011₂」（黄色高亮）；求解过程为本片段推导，数值经独立计算核对",
+            "pdfPages": [
+              1,
+              4
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          },
+          {
+            "bookPages": [
+              24
+            ],
+            "note": "教材 P24 习题 1.52 原页，与作业第 4 页为同一页（1.26–1.52）",
+            "pdfPages": [
+              38
+            ],
+            "sourceId": "SRC-TB",
+            "versionId": "VER-SRC-TB-d1bc6409752a",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-90a-exercise-selftest-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "① 锚点 7+5=12 ≤ 15。竖式：0111+0101——bit0：1+1=0 进位 1；bit1：1+0+1=0 进位 1；bit2：1+1+1=1 进位 1；bit3：0+0+1=1，无向外进位；4 位结果 1100，最高位无进位输出，不溢出；1100₂ = 12 = 7+5，核对通过。",
+                "② 锚点 9+8=17 > 15，必然溢出。竖式：1001+1000——bit0：1+0=1；bit1：0+0=0；bit2：0+0=0；bit3：1+1=0 进位 1；4 位结果 0001，进位输出 1；0001₂ = 1 = 17 mod 16，5 位真值 1+16 = 1 0001 = 17，4 位只留下低 4 位——这正是「最高有效位向外进位 = 无符号溢出」的实例。",
+                "③ 锚点 13−6=7 ≥ 0。竖式：1101−0110——bit0：1−0=1；bit1：0−1 不够减，本位 1 向 bit2 借位；bit2：1−1−借位 1 = 0−1，再向 bit3 借位，本位 1；bit3：1−0−借位 1=0；4 位结果 0111，最高位无向外借位，不溢出；0111₂ = 7 = 13−6，核对通过。",
+                "方法回顾：三题都先用十进制锚点判断「装不装得下」，再做竖式；锚点与竖式结论必须一致，不一致时优先检查进位/借位链。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-90-exercise-selftest",
+        "kind": "exercise",
+        "payload": {
+          "answerNature": "self-test",
+          "hint": "每题先给十进制锚点（7+5、9+8、13−6），再做竖式逐位算，最后对照「0～15 内不溢出」的等价判据。",
+          "problem": "① 0111₂ + 0101₂ = ？写出 4 位结果并判断最高位是否有进位输出。② 1001₂ + 1000₂ = ？写出 4 位结果、进位输出，并说明为什么这是无符号溢出。③ 1101₂ − 0110₂ = ？写出 4 位结果并判断最终是否向外借位。",
+          "title": "练习 · 四则运算与溢出判断（自测）"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "三道自测题均按第 24 页四则规则与第 42 页无符号溢出判据编制（self-test 自编题），数值经独立竖式枚举核对",
+            "pdfPages": [
+              24,
+              42
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-91-next-unit-reference",
+        "kind": "knowledge-reference",
+        "payload": {
+          "intent": "4 位加法溢出时结果恰为真实和 mod 16——「截断 = 模运算」的视角在 KU-006《模运算与补码原理》展开：减去一个数可换成加上它的补码，从而把减法统一为加法。",
+          "targetUnitId": "KU-006"
+        },
+        "role": "supplement",
+        "sourceRefs": []
+      }
+    ],
+    "coverage": [
+      {
+        "coreBlockIds": [
+          "RB-TH-01-80-overview",
+          "RB-TH-01-81-addition-steps",
+          "RB-TH-01-82-subtraction-steps",
+          "RB-TH-01-83-muldiv-steps",
+          "RB-TH-01-84-overflow-callout",
+          "RB-TH-01-85-example-add-sub",
+          "RB-TH-01-86-example-mul-div"
+        ],
+        "goal": "能完成无符号二进制加、减、乘、除，并判断进位或借位。（KU-005 outcome）",
+        "materials": [
+          {
+            "blockIds": [
+              "RB-TH-01-80-overview",
+              "RB-TH-01-81-addition-steps",
+              "RB-TH-01-82-subtraction-steps",
+              "RB-TH-01-83-muldiv-steps",
+              "RB-TH-01-84-overflow-callout"
+            ],
+            "kind": "method",
+            "status": "verified"
+          },
+          {
+            "blockIds": [
+              "RB-TH-01-87-example-overflow-caliber",
+              "RB-TH-01-88-example-Q024",
+              "RB-TH-01-89-example-Q025"
+            ],
+            "kind": "example",
+            "status": "verified"
+          },
+          {
+            "blockIds": [
+              "RB-TH-01-90-exercise-selftest"
+            ],
+            "kind": "exercise",
+            "status": "verified"
+          },
+          {
+            "blockIds": [
+              "RB-TH-01-86-example-mul-div",
+              "RB-TH-01-89-example-Q025"
+            ],
+            "kind": "derivation",
+            "status": "verified"
+          },
+          {
+            "kind": "figure",
+            "reason": "本单元原页的竖式（加/减/乘/除与三个溢出算例）均为数位排版而非插图，已用 steps/example 块逐位复现，无需绘制图",
+            "status": "not-applicable"
+          },
+          {
+            "kind": "interactive",
+            "reason": "竖式进位/借位是逐位手工过程，复习画板现有 mux/decoder/kmap 组件均不适用",
+            "status": "not-applicable"
+          }
+        ],
+        "note": "已逐页目视核对四页渲染图：C01 第 24 页（pages/c01-p24-24.png）四张位值规则表与四个竖式（11001+101=11110、11001−101=10100、11001×101 部分积错位相加得 1111101、11001÷101 商 101 余 0）、C01 第 42 页（pages/c01-p42-42.png）无符号/有符号溢出两行定义与三个算例（4 位 2+3=5 √、4 位 5+6=11 ×／1011 标「? −3」、8 位 5+6=11 √，另有「不能溢出！」红章标注）、HW01 第 1 页（pages/hw01-p01-1.png，清单含 1.52）、HW01 第 4 页（pages/hw01-p04-4.png = 教材书页 24，1.52「对下列无符号二进制数进行加法。指出在结果为 4 位情况下，和是否舍溢出。」a) 1001₂+0100₂、b) 1101₂+1011₂ 黄色高亮）。教材 PDF 第 38 页（pages/tb-p38.png）与 HW01 第 4 页为同一页。Q-024/Q-025 原记录无 stem/solution 字段（hasOfficialAnswer=false，教材习题无官方答案）：stem 按原页实文补齐并通顺化，solution 以「据题干推导」给出完整竖式与溢出结论。全部数值（11110、10100、1111101=125、商 101 余 0、1101=13、1000=8=24 mod 16、进位 1、自测三题 1100/0001+进位/0111）经 content-audit.py 独立计算复核（含竖式逐位枚举与「溢出 ⇔ 真实和 > 15」全量枚举）。未发现与原页冲突的勘误。",
+        "readingStatus": "passed",
+        "sourceRefs": [
+          {
+            "note": "第 24 页四则规则与四个竖式、第 42 页溢出判据与三个算例的全部原页",
+            "pdfPages": [
+              24,
+              42
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          },
+          {
+            "note": "作业首页题号清单（含 1.52）与教材书页 24 的 1.52 题面原页",
+            "pdfPages": [
+              1,
+              4
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          },
+          {
+            "bookPages": [
+              24
+            ],
+            "note": "教材 PDF 第 38 页 = 书页 24，习题 1.52 题面（a)(b) 两小题黄色高亮",
+            "pdfPages": [
+              38
+            ],
+            "sourceId": "SRC-TB",
+            "versionId": "VER-SRC-TB-d1bc6409752a",
+            "visualStatus": "verified"
+          }
+        ],
+        "visualStatus": "verified"
+      }
+    ],
+    "revision": 1,
+    "schemaVersion": "review-reading-1",
+    "status": "complete"
+  },
+  "sourceRefs": [
+    {
+      "note": "无符号二进制四则运算：无符号二进制四则运算规则与竖式",
+      "pdfPages": [
+        24
+      ],
+      "sourceId": "SRC-C01",
+      "versionId": "VER-SRC-C01-42c5e893c129",
+      "visualStatus": "verified"
+    },
+    {
+      "note": "无符号溢出与最高位进位/借位",
+      "pdfPages": [
+        42
+      ],
+      "sourceId": "SRC-C01",
+      "versionId": "VER-SRC-C01-42c5e893c129",
+      "visualStatus": "verified"
+    }
+  ],
+  "summary": "无符号运算按二进制列竖式进行；最高位产生进位/借位表示超出当前位宽。",
+  "themeId": "TH-01",
+  "theme": {
+    "id": "TH-01",
+    "lessonId": "L01",
+    "name": "数制与数制转换",
+    "coreOutcome": "能在十进制、二进制、八进制、十六进制之间准确转换，并按权解释一个数的值。",
+    "sourceRefs": [
+      {
+        "sourceId": "SRC-C01",
+        "pdfPages": [
+          20,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34
+        ],
+        "visualStatus": "verified",
+        "note": "主题范围页；具体单元拆分见 units",
+        "versionId": "VER-SRC-C01-42c5e893c129"
+      }
+    ],
+    "rating": {
+      "stars": 5,
+      "rationale": "主题核心的多类数制转换被习题课基本题型明确列出，并被多次作业直接考查。"
+    }
+  },
+  "questions": [
+    {
+      "id": "MAP-026",
+      "questionId": "Q-024",
+      "unitId": "KU-005",
+      "role": "direct",
+      "basis": "stem",
+      "note": "无符号加法及最高位进位判断",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-024",
+        "kind": "homework",
+        "label": "1.52(a)",
+        "parentId": "Q-023",
+        "questionTypes": [
+          "数制转换"
+        ],
+        "solution": "据题干推导（教材习题无官方答案）：竖式逐位相加——bit0：1+0=1；bit1：0+0=0；bit2：0+1=1；bit3：1+0=1；最高位无进位输出，4 位结果 1101。十进制核对：1001₂=9、0100₂=4，9+4=13=1101₂，13 ≤ 15 装得下。结论：4 位结果 1101₂（十进制 13），最高位无进位输出，无符号不溢出。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "教材 P24 的 1.52(a)",
+            "pdfPages": [
+              1,
+              4
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "计算 1001₂ + 0100₂（无符号二进制加法）。指出 4 位结果，并判断在结果为 4 位的情况下和是否溢出。",
+        "taskSummary": "计算 1001₂+0100₂，指出 4 位结果并判断无符号溢出。"
+      },
+      "unit": {
+        "id": "KU-005",
+        "name": "无符号二进制四则运算",
+        "kind": "method",
+        "themeId": "TH-01",
+        "themeName": "数制与数制转换",
+        "stars": 4,
+        "questionTypes": [
+          "数制转换"
+        ]
+      }
+    },
+    {
+      "id": "MAP-027",
+      "questionId": "Q-025",
+      "unitId": "KU-005",
+      "role": "direct",
+      "basis": "stem",
+      "note": "无符号加法及最高位进位判断",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-025",
+        "kind": "homework",
+        "label": "1.52(b)",
+        "parentId": "Q-023",
+        "questionTypes": [
+          "数制转换"
+        ],
+        "solution": "据题干推导（教材习题无官方答案）：竖式逐位相加——bit0：1+1=0 进位 1；bit1：0+1+1=0 进位 1；bit2：1+0+1=0 进位 1；bit3：1+1+1=1 并向外进位 1；4 位结果 1000。十进制核对：1101₂=13、1011₂=11，13+11=24 > 15；1000₂=8 = 24 mod 16，向外进位 1 的权值为 16，16+8=24。结论：4 位结果 1000₂，最高位向外进位 1，无符号溢出（真实和 24 超出 4 位无符号范围 0～15，4 位读数 8 已不是真实和）。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "教材 P24 的 1.52(b)",
+            "pdfPages": [
+              1,
+              4
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "计算 1101₂ + 1011₂（无符号二进制加法）。指出 4 位结果，并判断在结果为 4 位的情况下和是否溢出。",
+        "taskSummary": "计算 1101₂+1011₂，指出 4 位结果并判断无符号溢出。"
+      },
+      "unit": {
+        "id": "KU-005",
+        "name": "无符号二进制四则运算",
+        "kind": "method",
+        "themeId": "TH-01",
+        "themeName": "数制与数制转换",
+        "stars": 4,
+        "questionTypes": [
+          "数制转换"
+        ]
+      }
+    }
+  ],
+  "relations": []
+}

@@ -6,8 +6,8 @@ import './controlled-producer.css';
 const targetId = 'RB-TH-01-03-expansion-terms';
 
 /** Deliberately controlled producer. This is an acceptance surface, not an Agent runtime. */
-export function ControlledProducer({ course, prepare, committed, settled }: {
-  course: OpenedCourse; prepare(): Promise<void>; committed(): Promise<void>; settled(): void;
+export function ControlledProducer({ course, prepare, committed, settled, narrow, onOpenChange }: {
+  course: OpenedCourse; prepare(): Promise<void>; committed(): Promise<void>; settled(): void; narrow: boolean; onOpenChange(open: boolean): void;
 }) {
   const [attempt, setAttempt] = useState<Attempt>();
   const [basis, setBasis] = useState<CommandBasis>();
@@ -50,10 +50,14 @@ export function ControlledProducer({ course, prepare, committed, settled }: {
     } else setStatus(result.reason!);
     setRetained(await commands.candidates({ sessionId: course.sessionId }));
   });
-  return <details className="controlled-producer" onKeyDown={event => {
+  return <details className="controlled-producer" onToggle={event => onOpenChange(event.currentTarget.open)} onKeyDown={event => {
     if (event.key === 'Escape') {
       event.currentTarget.open = false;
       event.currentTarget.querySelector('summary')?.focus();
+    } else if (narrow && event.key === 'Tab') {
+      const items = [...event.currentTarget.querySelectorAll<HTMLElement>('summary, button:not(:disabled), textarea:not(:disabled)')].filter(item => item.getClientRects().length > 0);
+      if (event.shiftKey && document.activeElement === items[0]) { event.preventDefault(); items[items.length - 1]?.focus(); }
+      else if (!event.shiftKey && document.activeElement === items[items.length - 1]) { event.preventDefault(); items[0]?.focus(); }
     }
   }}>
     <summary>可控生产者 · 验证入口</summary>

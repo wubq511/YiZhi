@@ -60,7 +60,7 @@ export interface ReadingState {
 export interface CourseGraph {
   nodes: Array<{ id: string; name: string; kind: string; themeId: string; themeName: string; stars: number }>;
   groups: Array<{ id: string; name: string }>;
-  edges: Array<{ id: string; fromUnitId: string; toUnitId: string; type: string; view: string; value: string; sourceRefs: Array<{ sourceId: string; pdfPages?: number[]; note?: string }>; requirementGroupId?: string }>;
+  edges: Array<{ id: string; fromUnitId: string; toUnitId: string; type: string; directed: boolean; view: string; value: string; sourceRefs: Array<{ sourceId: string; pdfPages?: number[]; note?: string }>; requirementGroupId?: string }>;
   requirementGroups: Array<{ id: string; targetUnitId: string; mode: "all" | "any"; unitIds: string[]; relationIds: string[]; value: string }>;
   conditions: Record<string, { required: string[]; groups: string[] }>;
   layout: { nodes: Array<{ unitId: string; x: number; y: number; width: number; height: number }>; groups: Array<any> };

@@ -25,6 +25,7 @@ test('controlled producer uses real IPC: stale premise is retained, reread integ
     env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const window = await app.firstWindow();
+    await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     await expect(window.getByRole('heading', { name: '位置记数法与权展开', exact: true })).toBeVisible();
     const entry = window.getByText('可控生产者 · 验证入口', { exact: true });
     await expect(entry).toBeVisible({ timeout: 3000 });
@@ -92,16 +93,16 @@ test('real Electron IPC saves, retains failed input, retries, drains quit, reope
     fault = new DatabaseSync(join(root, 'course/course.sqlite'));
     fault.exec("CREATE TRIGGER reject_write BEFORE UPDATE ON units BEGIN SELECT RAISE(ABORT, 'storage unavailable'); END");
     await editor.fill('保存失败后保留这段输入，重试仍是它。');
-    await expect(window.getByRole('status')).toContainText('未保存');
+    await expect(window.getByRole('status', { name: '保存状态' })).toContainText('未保存');
     await expect(editor).toHaveText('保存失败后保留这段输入，重试仍是它。');
     // A failed save must also prevent a normal close, retaining the live editor.
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].close());
-    await expect(window.getByRole('status')).toContainText('未保存');
+    await expect(window.getByRole('status', { name: '保存状态' })).toContainText('未保存');
     expect(window.isClosed()).toBe(false);
     await window.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t01-error.png' });
     fault.exec('DROP TRIGGER reject_write');
     await window.getByRole('button', { name: '重试保存' }).click();
-    await expect(window.getByRole('status')).toHaveText('已保存');
+    await expect(window.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     // A duplicate application process must exit, and focus/reuse the existing window.
     const second = spawn(app.process().spawnfile, [resolve('.'), `--course=${join(root, 'course')}`], {
       env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') }, stdio: 'ignore'
@@ -168,7 +169,7 @@ test('a knowledge reference opens its main unit and returns to the retained edit
     await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     const editor = window.getByRole('textbox', { name: '编辑首段正文' });
     await editor.fill('阅读引用之前的输入');
-    await reveal(window, window.getByRole('button', { name: /前往.*KU-002/ }));
+    await reveal(window, window.getByRole('button', { name: /前往.*KU-002/, includeHidden: true }));
     await window.getByRole('button', { name: /前往.*KU-002/ }).click();
     await expect(window.getByRole('heading', { name: '非十进制与十进制互转' })).toBeVisible();
     await window.getByRole('button', { name: '返回引用位置' }).click();
@@ -199,7 +200,7 @@ test('device sample has a working local multiplexer and source figure', async ()
     await window.getByRole('navigation', { name: '课程目录' }).getByRole('button', { name: 'MUX 器件、级联与扩展' }).click();
     await expect(window.getByRole('img', { name: /TI官方74153/ })).toBeVisible();
     await expect(window.getByRole('status', { name: 'MUX 输出' })).toHaveText('输出 Z = 0');
-    await reveal(window, window.getByRole('checkbox', { name: 'S0' }));
+    await reveal(window, window.getByRole('checkbox', { name: 'S0', includeHidden: true }));
     await window.getByRole('checkbox', { name: 'S0' }).check();
     await expect(window.getByRole('status', { name: 'MUX 输出' })).toHaveText('输出 Z = 1');
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
@@ -215,7 +216,7 @@ test('reopening resumes an expanded hint and knowledge-reference return position
     const exercise = window.locator('details.material').filter({ hasText: '练习 · 二进制小数与十六进制权展开自测' });
     await reveal(window, exercise.getByText('学习提示', { exact: true }));
     await exercise.getByText('学习提示', { exact: true }).click();
-    await reveal(window, window.getByRole('button', { name: /前往.*KU-002/ }));
+    await reveal(window, window.getByRole('button', { name: /前往.*KU-002/, includeHidden: true }));
     await window.getByRole('button', { name: /前往.*KU-002/ }).click();
     await expect(window.getByRole('heading', { name: '非十进制与十进制互转' })).toBeVisible();
     await expect.poll(async () => window.evaluate(async () => { const c = await (window as any).yizhi.open(); return (await (window as any).yizhi.readingState(c.sessionId))?.unitId; })).toBe('KU-002');
@@ -273,13 +274,23 @@ test('wheel routes pan and pointer-centered zoom without stealing text input', a
     const transform = () => window.locator('.react-flow__viewport').evaluate(el => getComputedStyle(el).transform);
     const before = await transform();
     await window.mouse.wheel(0, 180); await expect.poll(transform).not.toBe(before);
-    const afterPan = await transform();
+    const matrix = () => window.locator('.react-flow__viewport').evaluate(el => { const m = new DOMMatrixReadOnly(getComputedStyle(el).transform); return { x: m.e, y: m.f, zoom: m.a }; });
+    const vertical = await matrix();
+    await window.keyboard.down('Shift'); await window.mouse.wheel(0, 180); await window.keyboard.up('Shift');
+    await expect.poll(async () => (await matrix()).x).not.toBe(vertical.x);
+    const afterPan = await matrix();
+    expect(Math.abs(afterPan.y - vertical.y)).toBeLessThan(2);
+    const pointer = { x: bounds.width - 30, y: 150 };
+    const world = { x: (pointer.x - afterPan.x) / afterPan.zoom, y: (pointer.y - afterPan.y) / afterPan.zoom };
     await window.keyboard.down('Meta'); await window.mouse.wheel(0, -100); await window.keyboard.up('Meta');
-    await expect.poll(transform).not.toBe(afterPan);
+    await expect.poll(async () => (await matrix()).zoom).toBeGreaterThan(afterPan.zoom);
+    const zoomed = await matrix();
+    expect(Math.abs((pointer.x - zoomed.x) / zoomed.zoom - world.x)).toBeLessThan(2);
+    expect(Math.abs((pointer.y - zoomed.y) / zoomed.zoom - world.y)).toBeLessThan(2);
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
-test('wheel over reading text moves the board while table scrolling stays in the table', async () => {
+test('wheel over reading text moves the board', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-reading-wheel-'));
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
@@ -305,5 +316,128 @@ test('narrow relationship overlay isolates the workspace and returns focus', asy
     await window.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
     await expect(window.getByRole('button', { name: '查看关系' })).toBeFocused();
+  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('the local device source opens and returns focus to its reading context', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-source-return-'));
+  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  try {
+    const window = await app.firstWindow();
+    await window.getByRole('button', { name: '复用器与分配器', exact: true }).click();
+    await window.getByRole('navigation', { name: '课程目录' }).getByRole('button', { name: 'MUX 器件、级联与扩展' }).click();
+    const source = window.getByRole('button', { name: '查看 TI 74153 原页', includeHidden: true });
+    await reveal(window, source); await source.click();
+    await expect(window.getByRole('dialog', { name: 'TI 74153 原页' })).toBeVisible();
+    await window.getByRole('button', { name: '返回正文' }).click();
+    await expect(source).toBeFocused();
+  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('zoomed-out graph does not expose invisible unit nodes to keyboard focus', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-focus-depth-'));
+  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  try {
+    const window = await app.firstWindow();
+    const node = window.locator('[data-id="KU-001"]');
+    await expect(node).not.toHaveAttribute('tabindex', '0');
+    await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await expect(node).toHaveAttribute('tabindex', '0');
+  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('offscreen reading controls are excluded from keyboard navigation until in view', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-reading-focus-'));
+  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  try {
+    const window = await app.firstWindow();
+    await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    const summary = window.getByText('练习 · 二进制小数与十六进制权展开自测');
+    const boundary = summary.locator('..').locator('..');
+    await expect(boundary).toHaveAttribute('inert', '');
+    await reveal(window, summary);
+    await expect(boundary).not.toHaveAttribute('inert', '');
+  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('selection and hand tools offer distinct canvas drag modes', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-selection-'));
+  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  try {
+    const window = await app.firstWindow();
+    const select = window.getByRole('button', { name: '选择工具' });
+    const hand = window.getByRole('button', { name: '手形工具' });
+    const board = (await window.locator('main.board').boundingBox())!;
+    const transform = () => window.locator('.react-flow__viewport').evaluate(el => getComputedStyle(el).transform);
+    const drag = async () => { await window.mouse.move(board.x + 40, board.y + 120); await window.mouse.down(); await window.mouse.move(board.x + 100, board.y + 180, { steps: 4 }); await window.mouse.up(); };
+    await select.click(); await expect(select).toHaveAttribute('aria-pressed', 'true');
+    const before = await transform(); await drag(); expect(await transform()).toBe(before);
+    await hand.click(); await expect(hand).toHaveAttribute('aria-pressed', 'true');
+    await drag(); await expect.poll(transform).not.toBe(before);
+  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('a rejected reading position stays visible and can be retried', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-reading-fault-'));
+  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  let fault: DatabaseSync | undefined;
+  try {
+    const window = await app.firstWindow();
+    await window.emulateMedia({ reducedMotion: 'reduce' });
+    await expect(window.getByRole('button', { name: '数制与数制转换', exact: true }).first()).toBeVisible();
+    fault = new DatabaseSync(join(root, 'course/course.sqlite'));
+    fault.exec("CREATE TRIGGER reject_reading BEFORE INSERT ON reading_state BEGIN SELECT RAISE(ABORT, 'reading storage unavailable'); END");
+    await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await expect(window.getByRole('status', { name: '阅读状态' })).toContainText('未保存');
+    fault.exec('DROP TRIGGER reject_reading');
+    await window.getByRole('button', { name: '重试保存阅读位置' }).click();
+    await expect(window.getByRole('status', { name: '阅读状态' })).toContainText('已保存');
+  } finally { fault?.close(); await app.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('wheel inside the relationships panel scrolls it without panning the canvas', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-panel-scroll-'));
+  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  try {
+    const window = await app.firstWindow();
+    await window.getByRole('button', { name: '查看关系' }).click();
+    const panel = window.getByLabel('关系详情');
+    const transform = () => window.locator('.react-flow__viewport').evaluate(el => getComputedStyle(el).transform);
+    const before = await transform(); await panel.hover(); await window.mouse.wheel(0, 300);
+    await expect.poll(() => panel.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+    expect(await transform()).toBe(before);
+  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('camera can step from reading through unit overview to theme overview in one board', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-depths-'));
+  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  try {
+    const window = await app.firstWindow();
+    await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await expect(window.getByRole('heading', { name: '位置记数法与权展开' })).toBeVisible();
+    const board = (await window.locator('main.board').boundingBox())!;
+    await window.mouse.move(board.x + board.width - 30, board.y + 150);
+    await window.keyboard.down('Meta');
+    for (let i = 0; i < 3; i++) await window.mouse.wheel(0, 180);
+    await window.keyboard.up('Meta');
+    await expect(window.getByRole('heading', { name: '位置记数法与权展开' })).toBeHidden();
+    await expect(window.locator('[data-id="KU-002"]')).toHaveCSS('opacity', '1');
+    await window.getByRole('button', { name: '全图' }).click();
+    await expect(window.locator('[data-id="KU-002"]')).toHaveCSS('opacity', '0');
+    await expect(window.locator('[data-id="TH-01"]')).toHaveCSS('opacity', '1');
+  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('narrow controlled producer overlay returns focus and isolates the board', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-producer-overlay-'));
+  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  try {
+    const window = await app.firstWindow(); await window.setViewportSize({ width: 700, height: 600 });
+    await window.getByRole('button', { name: '关闭目录' }).click();
+    const entry = window.getByText('可控生产者 · 验证入口', { exact: true }); await entry.click();
+    await expect(window.locator('main.board')).toHaveAttribute('inert', '');
+    await window.keyboard.press('Escape'); await expect(entry).toBeFocused();
+    await expect(window.locator('main.board')).not.toHaveAttribute('inert', '');
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });

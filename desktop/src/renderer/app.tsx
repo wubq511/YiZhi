@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { ReactFlow, ReactFlowProvider, MiniMap, useReactFlow, type Viewport } from '@xyflow/react';
+import { ReactFlow, ReactFlowProvider, MiniMap, useReactFlow, MarkerType, type Viewport } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { createRoot } from 'react-dom/client';
 import katex from 'katex';
@@ -39,9 +39,22 @@ function Mux({ payload }: { payload: Record<string, any> }) {
     <p role="status" aria-label="MUX 输出">输出 {payload.bindings?.output ?? 'Z'} = {output}</p></section>;
 }
 
-function Block({ block, onReference, reading, updateReading }: { block: ReadingBlock; onReference: (id: string, blockId: string) => void; reading: ReadingState | null; updateReading: (key: string, value: boolean) => void }) {
+function ReadingBoundary({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  const [focused, setFocused] = useState(false);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const observer = new IntersectionObserver(entries => setVisible(entries[0].isIntersecting), { root: element.closest('main.board') });
+    observer.observe(element); return () => observer.disconnect();
+  }, []);
+  return <div data-reading-block ref={ref} inert={!visible && !focused} onFocus={() => setFocused(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>{children}</div>;
+}
+
+function Block({ block, onReference, reading, updateReading, onSource }: { block: ReadingBlock; onReference: (id: string, blockId: string) => void; reading: ReadingState | null; updateReading: (key: string, value: boolean) => void; onSource: (button: HTMLButtonElement) => void }) {
   const payload = block.payload;
-  const children = block.children?.map(child => <Block key={child.id} block={child} onReference={onReference} reading={reading} updateReading={updateReading} />);
+  const children = block.children?.map(child => <ReadingBoundary key={child.id}><Block block={child} onReference={onReference} onSource={onSource} reading={reading} updateReading={updateReading} /></ReadingBoundary>);
   if (block.kind === 'paragraph') return <p>{payload.text}</p>;
   if (block.kind === 'formula') return <div className="formula" role="math" aria-label={payload.latex}
     dangerouslySetInnerHTML={{ __html: katex.renderToString(payload.latex, { throwOnError: false, trust: false, displayMode: true }) }} />;
@@ -57,7 +70,7 @@ function Block({ block, onReference, reading, updateReading }: { block: ReadingB
     {block.kind === 'exercise' ? <details className="answer" open={reading?.expanded[block.id + ":answer"] ?? false} onToggle={event => updateReading(block.id + ":answer", event.currentTarget.open)}><summary>答案与步骤</summary>{children}</details> : children}
   </details>;
   if (block.kind === 'interactive' && payload.component === 'mux') return <Mux payload={payload} />;
-  if (block.kind === 'figure' && payload.asset) return <figure><img src="./ti74153-1.png" alt={payload.alt} /><figcaption>{payload.caption}</figcaption></figure>;
+  if (block.kind === 'figure' && payload.asset) return <figure><img src="./ti74153-1.png" alt={payload.alt} /><figcaption>{payload.caption}</figcaption><button onClick={event => onSource(event.currentTarget)}>查看 TI 74153 原页</button></figure>;
   if (block.kind === 'figure' && payload.config?.nodes) return <figure><figcaption>{payload.alt}</figcaption><svg viewBox="0 0 640 250" role="img" aria-label={payload.alt}>{payload.config.edges.map((edge: any, index: number) => { const a = payload.config.nodes.find((node: any) => node.id === edge.from), b = payload.config.nodes.find((node: any) => node.id === edge.to); return <line key={index} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#7798bc" />; })}{payload.config.nodes.map((node: any) => <g key={node.id}><rect x={node.x - 45} y={node.y - 20} width="90" height="40" fill="white" stroke="#7798bc" /><text x={node.x} y={node.y} textAnchor="middle" dominantBaseline="middle" fontSize="13">{node.label}</text></g>)}</svg><figcaption>{payload.config.caption}</figcaption></figure>;
   if (block.kind === 'knowledge-reference') return <p className="reference">{payload.intent}<br/><button onClick={() => onReference(payload.targetUnitId, block.id)}>前往 {payload.targetUnitId}</button></p>;
   return <details><summary>保留的内容 · {block.kind}</summary><pre>{JSON.stringify(payload, null, 2)}</pre>{children}</details>;
@@ -89,6 +102,12 @@ function App() {
     else if (!event.shiftKey && document.activeElement === items[items.length - 1]) { event.preventDefault(); items[0].focus(); }
   };
   const [minimap, setMinimap] = useState(true);
+  const [tool, setTool] = useState<"read" | "select" | "hand">("read");
+  const [sourceOpen, setSourceOpen] = useState(false);
+  const sourceTrigger = useRef<HTMLButtonElement | null>(null);
+  const sourceDialog = useRef<HTMLElement | null>(null);
+  const closeSource = () => { setSourceOpen(false); requestAnimationFrame(() => sourceTrigger.current?.focus()); };
+  useEffect(() => { if (sourceOpen) sourceDialog.current?.querySelector<HTMLButtonElement>('button')?.focus(); }, [sourceOpen]);
   const [relationsOpen, setRelationsOpen] = useState(false);
   const relationButton = useRef<HTMLButtonElement>(null);
   const relationPanel = useRef<HTMLElement>(null);
@@ -100,6 +119,7 @@ function App() {
   const [state, setState] = useState<SaveState>({ status: 'saved' });
   const [closing, setClosing] = useState(false);
   const [producerBusy, setProducerBusy] = useState(false);
+  const [producerOpen, setProducerOpen] = useState(false);
   const producerRunning = useRef(false);
   const channel = useRef<ParagraphSaveChannel | undefined>(undefined);
   const editor = useRef<HTMLDivElement>(null);
@@ -107,11 +127,19 @@ function App() {
   const [reading, setReading] = useState<ReadingState | null>(null);
   const readingRef = useRef<ReadingState | null>(null);
   const writes = useRef<Promise<void>>(Promise.resolve());
+  const [readingSave, setReadingSave] = useState<'saved' | 'pending' | 'error'>('saved');
+  const readingFailed = useRef(false);
+  const readingSequence = useRef(0);
   const restored = useRef(false);
   const articleRef = useRef<HTMLElement | null>(null);
   const persist = (next: ReadingState) => {
     readingRef.current = next; setReading(next);
-    if (course) writes.current = writes.current.then(() => window.yizhi.setReadingState(course.sessionId, next)).catch(error => { setReadError(`阅读位置未保存：${error.message}`); });
+    if (course) {
+      const sequence = ++readingSequence.current; setReadingSave('pending');
+      writes.current = writes.current.then(() => window.yizhi.setReadingState(course.sessionId, next)).then(() => {
+        if (sequence === readingSequence.current) { readingFailed.current = false; setReadingSave('saved'); }
+      }, () => { if (sequence === readingSequence.current) { readingFailed.current = true; setReadingSave('error'); } });
+    }
   };
   const updateReading = (key: string, value: boolean) => {
     const current = readingRef.current;
@@ -140,6 +168,7 @@ function App() {
     if (!channel.current) return true;
     setClosing(true);
     await writes.current;
+    if (readingFailed.current) { setClosing(false); return false; }
     const saved = await channel.current.flush();
     if (!saved) setClosing(false);
     return saved;
@@ -170,7 +199,8 @@ function App() {
     if (!board) return;
     const wheel = (event: WheelEvent) => {
       const target = event.target as HTMLElement;
-      if (!target.closest('.reading-layer') || target.closest('.table-scroll, input, select, textarea, .mux')) return;
+      if (target.closest('.board-tools, .relations-panel, .source-dialog, .react-flow__minimap, .table-scroll, input, select, textarea, .mux')) return;
+      if (!target.closest('.reading-layer') && !event.shiftKey) return;
       event.preventDefault(); event.stopPropagation();
       const current = flow.getViewport();
       if (event.ctrlKey || event.metaKey) {
@@ -180,31 +210,31 @@ function App() {
         void flow.setViewport({ x: px - (px - current.x) * ratio, y: py - (py - current.y) * ratio, zoom });
       } else void flow.setViewport({ ...current, x: current.x - (event.shiftKey ? event.deltaY : event.deltaX), y: current.y - (event.shiftKey ? 0 : event.deltaY) });
     };
-    board.addEventListener('wheel', wheel, { passive: false });
-    return () => board.removeEventListener('wheel', wheel);
+    board.addEventListener('wheel', wheel, { passive: false, capture: true });
+    return () => board.removeEventListener('wheel', wheel, true);
   }, [flow]);
   const nodes = useMemo(() => graph ? [
-    ...graph.layout.groups.map(group => ({ id: group.themeId, position: { x: group.x, y: group.y }, data: { label: group.title }, style: { width: group.width, height: group.height, fontSize: 50, border: "1px solid #bbc9d5", background: "#fff", opacity: viewport.zoom < 0.35 ? 1 : 0.35 }, selectable: false, draggable: false })),
-    ...graph.nodes.map(node => { const pos = graph.layout.nodes.find(item => item.unitId === node.id)!; return { id: node.id, position: { x: pos.x, y: pos.y }, data: { label: node.name }, style: { width: pos.width, height: pos.height, opacity: viewport.zoom >= 0.35 ? 1 : 0, pointerEvents: viewport.zoom >= 0.35 ? "auto" as const : "none" as const }, draggable: false }; })
+    ...graph.layout.groups.map(group => ({ id: group.themeId, position: { x: group.x, y: group.y }, data: { label: group.title }, width: group.width, height: group.height, style: { width: group.width, height: group.height, fontSize: 50, border: "1px solid #bbc9d5", background: "#fff", opacity: viewport.zoom < 0.35 ? 1 : 0.35 }, selectable: false, draggable: false })),
+    ...graph.nodes.map(node => { const pos = graph.layout.nodes.find(item => item.unitId === node.id)!; return { id: node.id, position: { x: pos.x, y: pos.y }, data: { label: node.name }, width: pos.width, height: pos.height, style: { width: pos.width, height: pos.height, opacity: viewport.zoom >= 0.35 ? 1 : 0, pointerEvents: viewport.zoom >= 0.35 ? "auto" as const : "none" as const }, draggable: false, focusable: viewport.zoom >= 0.35 && pos.x * viewport.zoom + viewport.x + pos.width * viewport.zoom > 0 && pos.y * viewport.zoom + viewport.y + pos.height * viewport.zoom > 0 && pos.x * viewport.zoom + viewport.x < (boardRef.current?.clientWidth ?? 0) && pos.y * viewport.zoom + viewport.y < (boardRef.current?.clientHeight ?? 0) }; })
   ] : [], [graph, viewport.zoom]);
   const edges = useMemo(() => {
     if (!graph) return [];
     const visible = graph.edges.filter(edge => relationView === 'all' || edge.view === relationView);
-    if (viewport.zoom >= 0.35) return visible.map(edge => ({ id: edge.id, source: edge.fromUnitId, target: edge.toUnitId, label: edge.type, animated: false }));
-    const groups = new Map<string, { source: string; target: string; count: number }>();
+    if (viewport.zoom >= 0.35) return visible.map(edge => ({ id: edge.id, source: edge.fromUnitId, target: edge.toUnitId, label: edge.requirementGroupId ? `${edge.type} · ${edge.requirementGroupId}（或）` : edge.type, markerEnd: edge.directed ? { type: MarkerType.ArrowClosed } : undefined, animated: false }));
+    const groups = new Map<string, { source: string; target: string; count: number; type: string; directed: boolean }>();
     for (const edge of visible) {
       const source = graph.nodes.find(node => node.id === edge.fromUnitId)?.themeId;
       const target = graph.nodes.find(node => node.id === edge.toUnitId)?.themeId;
       if (!source || !target || source === target) continue;
-      const key = `${source}:${target}`;
-      const group = groups.get(key) ?? { source, target, count: 0 }; group.count++; groups.set(key, group);
+      const key = `${source}:${target}:${edge.type}:${edge.directed}`;
+      const group = groups.get(key) ?? { source, target, count: 0, type: edge.type, directed: edge.directed }; group.count++; groups.set(key, group);
     }
-    return [...groups.entries()].map(([id, group]) => ({ id, source: group.source, target: group.target, label: `${group.count} 条已有关系`, animated: false }));
+    return [...groups.entries()].map(([id, group]) => ({ id, source: group.source, target: group.target, label: `${group.type} · ${group.count} 条已有关系`, markerEnd: group.directed ? { type: MarkerType.ArrowClosed } : undefined, animated: false }));
   }, [graph, relationView, viewport.zoom]);
   const status = { saved: '已保存', pending: '待保存', saving: '正在保存…', error: '未保存' }[state.status];
   return <>
-    <header className="app-header" inert={narrow && (directory || relationsOpen)}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
-      {course && <ControlledProducer course={course} prepare={async () => {
+    <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
+      {course && <ControlledProducer course={course} narrow={narrow} onOpenChange={setProducerOpen} prepare={async () => {
         if (composing.current) throw new Error('请先完成中文候选输入，再运行可控修改。');
         producerRunning.current = true; setProducerBusy(true);
         if (!await channel.current?.flush()) throw new Error('学生输入尚未保存，请先重试保存。');
@@ -216,26 +246,26 @@ function App() {
         if (editor.current) editor.current.textContent = editedText.current;
         setMounted(previous => previous.map(item => item.id === current.unit.id ? current.unit : item));
       }} settled={() => { producerRunning.current = false; setProducerBusy(false); }} />}
-      <div className="save-area"><span role="status" aria-label="保存状态" aria-live="polite" className={state.status}>{course ? status : '正在打开课程…'}</span>
+      <div className="save-area" inert={narrow && producerOpen}><span role="status" aria-label="阅读状态">{readingSave === "error" ? "阅读位置未保存" : readingSave === "pending" ? "正在保存阅读位置" : "阅读位置已保存"}</span>{readingSave === "error" && <button onClick={() => { if (readingRef.current) persist(readingRef.current); }}>重试保存阅读位置</button>}<span role="status" aria-label="保存状态" aria-live="polite" className={state.status}>{course ? status : '正在打开课程…'}</span>
 
         {state.status === 'error' && <button onClick={() => void channel.current?.flush()}>重试保存</button>}
       </div>
     </header>
     {state.error && <div className="save-error" role="alert">{state.error} 输入仍保留，请重试保存。</div>}
     <div className="workspace board-workspace">
-      {directory && <nav ref={navRef} inert={narrow && relationsOpen} aria-label="课程目录" onKeyDown={event => trap(event, closeDirectory)}><h2>课程目录</h2>{narrow && <button onClick={closeDirectory}>关闭目录</button>}{graph?.groups.map(group => <div key={group.id}><button className="directory-theme" onClick={() => { const first = graph.nodes.find(node => node.themeId === group.id); if (first) void go(first.id); }}>{group.name}</button>{selected?.theme.id === group.id && graph.nodes.filter(node => node.themeId === group.id).map(node => <button className="directory-unit" key={node.id} onClick={() => void go(node.id)}>{node.name}</button>)}</div>)}</nav>}
-      <main ref={boardRef} className="board" aria-label="知识画板" role="region" inert={narrow && directory}>
-        <div className="board-background" inert={narrow && relationsOpen}><ReactFlow nodes={nodes} edges={edges} onInit={() => setNodesReady(true)} minZoom={0.04} maxZoom={2} nodesDraggable={false} panOnScroll zoomOnScroll={false} zoomOnPinch panOnDrag onMove={(_event, next) => setViewport(next)} onMoveEnd={(_event, next) => { const current = readingRef.current; if (current) persist({ ...current, camera: next }); }} onNodeClick={(_event, node) => { const first = graph?.nodes.find(item => item.id === node.id || item.themeId === node.id); if (first) void go(first.id); }}>
+      {directory && <nav ref={navRef} inert={sourceOpen || (narrow && (relationsOpen || producerOpen))} aria-label="课程目录" onKeyDown={event => trap(event, closeDirectory)}><h2>课程目录</h2>{narrow && <button onClick={closeDirectory}>关闭目录</button>}{graph?.groups.map(group => <div key={group.id}><button className="directory-theme" onClick={() => { const first = graph.nodes.find(node => node.themeId === group.id); if (first) { void go(first.id); if (narrow) closeDirectory(); } }}>{group.name}</button>{selected?.theme.id === group.id && graph.nodes.filter(node => node.themeId === group.id).map(node => <button className="directory-unit" key={node.id} onClick={() => { void go(node.id); if (narrow) closeDirectory(); }}>{node.name}</button>)}</div>)}</nav>}
+      <main ref={boardRef} className="board" aria-label="知识画板" role="region" inert={narrow && (directory || producerOpen)}>
+        <div className="board-background" inert={sourceOpen || (narrow && relationsOpen)}><ReactFlow nodes={nodes} edges={edges} onInit={() => setNodesReady(true)} minZoom={0.04} maxZoom={2} nodesDraggable={false} panOnScroll zoomOnScroll={false} zoomOnPinch panOnDrag={tool === "select" ? [1] : [0, 1]} selectionOnDrag={tool === "select"} panActivationKeyCode="Space" onMove={(_event, next) => setViewport(next)} onMoveEnd={(_event, next) => { const current = readingRef.current; if (current) persist({ ...current, camera: next }); }} onNodeClick={(_event, node) => { const first = graph?.nodes.find(item => item.id === node.id || item.themeId === node.id); if (first) void go(first.id); }}>
           {minimap && <MiniMap ariaLabel="小地图" nodeColor="#7798bc" nodeStrokeColor="#345d88" maskColor="rgba(105,101,219,.12)" pannable zoomable />}
         </ReactFlow>
-        <div className="board-tools">{reading?.returnStack.length ? <button onClick={() => { const previous = reading.returnStack[reading.returnStack.length - 1]; void go(previous.unitId, { ...reading, unitId: previous.unitId, scrollTop: previous.scrollTop, camera: previous.camera, returnStack: reading.returnStack.slice(0, -1) }); }}>返回引用位置</button> : null}<button ref={directoryButton} onClick={() => setDirectory(!directory)}>{directory ? '收起目录' : '展开目录'}</button><button onClick={() => setMinimap(!minimap)}>{minimap ? '收起小地图' : '展开小地图'}</button><button onClick={() => void flow.fitView({ duration: 0 })}>全图</button><button ref={relationButton} onClick={() => setRelationsOpen(!relationsOpen)}>{relationsOpen ? "关闭关系" : "查看关系"}</button><label>关系 <select aria-label="关系范围" value={relationView} onChange={event => setRelationView(event.target.value)}><option value="main">主关系</option><option value="auxiliary">辅助关系</option><option value="all">全部关系</option></select></label></div>
+        <div className="board-tools">{reading?.returnStack.length ? <button onClick={() => { const previous = reading.returnStack[reading.returnStack.length - 1]; void go(previous.unitId, { ...reading, unitId: previous.unitId, scrollTop: previous.scrollTop, camera: previous.camera, returnStack: reading.returnStack.slice(0, -1) }); }}>返回引用位置</button> : null}<button ref={directoryButton} onClick={() => setDirectory(!directory)}>{directory ? '收起目录' : '展开目录'}</button><button onClick={() => setMinimap(!minimap)}>{minimap ? '收起小地图' : '展开小地图'}</button><button onClick={() => void flow.fitView({ duration: 0 })}>全图</button><button aria-pressed={tool === "read"} onClick={() => setTool("read")}>阅读工具</button><button aria-pressed={tool === "select"} onClick={() => setTool("select")}>选择工具</button><button aria-pressed={tool === "hand"} onClick={() => setTool("hand")}>手形工具</button><button ref={relationButton} onClick={() => setRelationsOpen(!relationsOpen)}>{relationsOpen ? "关闭关系" : "查看关系"}</button><label>关系 <select aria-label="关系范围" value={relationView} onChange={event => setRelationView(event.target.value)}><option value="main">主关系</option><option value="auxiliary">辅助关系</option><option value="all">全部关系</option></select></label></div>
         {loadError && <div className="load-error" role="alert"><h1>课程未打开</h1><p>{loadError}</p><button onClick={() => void load()}>重新打开课程</button></div>}
         {readError && <div className="read-error" role="status">{readError}</div>}
         {course && mounted.map(unit => { const position = graph?.layout.nodes.find(node => node.unitId === unit.id); if (!position) return null; return <div key={unit.id} className="reading-layer" style={{ transform: `translate(${viewport.x + position.x * viewport.zoom}px, ${viewport.y + position.y * viewport.zoom}px) scale(${viewport.zoom})`, visibility: viewport.zoom >= 0.55 && selected?.id === unit.id ? 'visible' : 'hidden' }}>
           <article id="unit" ref={element => { if (selected?.id === unit.id) articleRef.current = element; }} onScroll={event => { const current = readingRef.current; if (current && current.unitId === unit.id && Math.abs(current.scrollTop - event.currentTarget.scrollTop) > 2) persist({ ...current, scrollTop: event.currentTarget.scrollTop }); }} className="nodrag nopan nowheel"><RoughFrame id={unit.id} />
             <h1>{unit.name}</h1><p className="unit-meta">课程重要性 {unit.rating.stars} / 5 · {unit.id}</p><p className="outcome">{unit.outcome}</p>
-            {unit.id === 'KU-001' && <div className="editable-section"><label id="editor-label">首段正文 <span>可直接编辑，自动保存</span></label><div ref={editor} role="textbox" aria-label="编辑首段正文" aria-multiline="true" contentEditable={!closing && !producerBusy} suppressContentEditableWarning className="paragraph-editor" onInput={event => { editedText.current = event.currentTarget.innerText; if (!composing.current) channel.current?.input(event.currentTarget.innerText); }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => { composing.current = false; editedText.current = event.currentTarget.innerText; channel.current?.input(event.currentTarget.innerText); }} /></div>}
-            {unit.reading.blocks.slice(unit.id === 'KU-001' ? 1 : 0).map(block => <Block key={block.id} block={block} reading={reading} updateReading={updateReading} onReference={(id, blockId) => { const current = readingRef.current!; void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} />)}
+            {unit.id === 'KU-001' && <ReadingBoundary><div className="editable-section"><label id="editor-label">首段正文 <span>可直接编辑，自动保存</span></label><div ref={editor} role="textbox" aria-label="编辑首段正文" aria-multiline="true" contentEditable={!closing && !producerBusy} suppressContentEditableWarning className="paragraph-editor" onInput={event => { editedText.current = event.currentTarget.innerText; if (!composing.current) channel.current?.input(event.currentTarget.innerText); }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => { composing.current = false; editedText.current = event.currentTarget.innerText; channel.current?.input(event.currentTarget.innerText); }} /></div></ReadingBoundary>}
+            {unit.reading.blocks.slice(unit.id === 'KU-001' ? 1 : 0).map(block => <ReadingBoundary key={block.id}><Block block={block} reading={reading} updateReading={updateReading} onSource={button => { sourceTrigger.current = button; setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!; void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} /></ReadingBoundary>)}
 
             <footer>来源：既有数字逻辑课程单元的独立副本。编辑保留原有知识身份。</footer>
           </article>
@@ -244,6 +274,7 @@ function App() {
           {relationView !== 'auxiliary' && graph.requirementGroups.map(group => <section key={group.id}><h3>{graph.nodes.find(n => n.id === group.targetUnitId)?.name} · 前置条件</h3>{(graph.conditions[group.targetUnitId]?.required ?? []).map(id => <p key={id}>{id}：{graph.nodes.find(n => n.id === id)?.name}</p>)}<p>{group.mode === 'any' ? '任选一条' : '全部需要'}：{group.unitIds.map(id => `${id} ${graph.nodes.find(n => n.id === id)?.name}`).join(' 或 ')}</p><p>{group.value}</p></section>)}
           {graph.edges.filter(edge => relationView === 'all' || edge.view === relationView).map(edge => <section key={edge.id}><h3>{edge.id} · {edge.type}</h3><p>{edge.fromUnitId} {graph.nodes.find(n => n.id === edge.fromUnitId)?.name} → {edge.toUnitId} {graph.nodes.find(n => n.id === edge.toUnitId)?.name}</p><p>{edge.value}</p><p>来源：{edge.sourceRefs.map(ref => `${ref.sourceId} ${ref.pdfPages?.join('、') ?? ''} ${ref.note ?? ''}`).join('；')}</p></section>)}
         </aside>}
+        {sourceOpen && <section ref={sourceDialog} className="source-dialog" role="dialog" aria-modal="true" aria-label="TI 74153 原页" onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); closeSource(); } else if (event.key === 'Tab') { event.preventDefault(); sourceDialog.current?.querySelector<HTMLButtonElement>('button')?.focus(); } }}><button onClick={closeSource}>返回正文</button><h2>TI 74153 原页 · 第 1 页</h2><img src="./ti74153-1.png" alt="TI 74153 手册第 1 页" /></section>}
       </main>
     </div>
   </>;
