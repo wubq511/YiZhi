@@ -8,8 +8,13 @@ export interface AgentMutation {
  remove?: string[]; moves?: {blockId:string;beforeId?:string}[];
  copies?: {blockId:string;beforeId?:string}[];
  insert?: {kind:'paragraph'|'formula';text?:string;latex?:string;beforeId?:string}[];
- layout?: ConsistencyEdits['layout']; relations?: ConsistencyEdits['relations'];
+ layout?: ConsistencyEdits['layout']; relations?: {changes: Array<{id:string;value:string;citationIds:string[]}>};
  experiments?: Array<NonNullable<ConsistencyEdits['experiments']>[number] & {
    config: {dataSignals:string[];selectBits:string[]}; inputNames?:string[];
  }>;
 }
+
+export type AgentMutationContext = import('./command-api').CommandBasis & {
+ unitId: string; content: import('./shared').CourseUnit; submittedTarget: import('./agent-api').QuestionSnapshot['target'];
+ capabilities: {updates:string;structure:string;layout:string;experiment:string};
+};

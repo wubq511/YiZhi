@@ -204,7 +204,7 @@ export class CommandGroups {
     if (command.patch) validatePatch(command.patch);
     this.fenceOperation(command.operationId);
     const nested = this.db.isTransaction;
-    let publish: (() => void) | undefined; let committed!: GroupResult;
+    let requiresConsistency = false; let publish: (() => void) | undefined; let committed!: GroupResult;
     try { committed = this.transaction(() => {
       this.observe();
       if (this.db.prepare('SELECT 1 FROM operations WHERE id=?').get(command.operationId)) throw new Error('操作身份已用于正文修改');
@@ -321,7 +321,11 @@ export class CommandGroups {
           beforeVersion: versions.get(`structure:${unit.id}`)!, afterVersion: versions.get(`structure:${unit.id}`)! + 1 });
       }
       let related: GroupResult['related'];
-      if (command.bundle) {
+      requiresConsistency = beforeUnit.reading.blocks.some(old => {
+        const next=unit.reading.blocks.find(b=>b.id===old.id);
+        return old.kind==='interactive' && ['mux','decoder','kmap'].includes(old.payload.component) && (!next || !equal([old.payload.config,old.payload.inputs],[next.payload.config,next.payload.inputs])) || old.payload.experimentBlockId && !equal(old.payload,next?.payload);
+      });
+      if (command.bundle || requiresConsistency) {
         if (!basis.domain_basis || !this.consistency) throw new Error('必要领域的读取依据缺失');
         const applied = this.consistency.apply(command,beforeUnit,unit,parse(basis.domain_basis));
         changes.push(...applied.changes); related=applied.receipt; publish=applied.publish;
@@ -349,7 +353,7 @@ export class CommandGroups {
       this.releaseReadValues(command.basisId);
       return result;
     }); } catch (error) {
-      if ((!command.patch && !command.bundle) || nested) throw error;
+      if ((!command.patch && !command.bundle && !requiresConsistency) || nested) throw error;
       return this.transaction(() => {
         const old = this.db.prepare('SELECT digest,result FROM cg_candidates WHERE id=?').get(command.operationId);
         if (old) { if (old.digest !== digest(command)) throw error; return parse(old.result); }

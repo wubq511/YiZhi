@@ -169,7 +169,6 @@ function App() {
     },
   }, setFollowState), [flow]);
   useEffect(() => () => camera.dispose(), [camera]);
-  useEffect(() => { const view = (e:Event)=>{workTarget.current=(e as CustomEvent<string>).detail;camera.resume();};document.addEventListener('yizhi-view-agent-result',view);return ()=>document.removeEventListener('yizhi-view-agent-result',view);},[camera]);
   const local = useLocalLayout(graph, selected?.id, camera, viewport.zoom >= .55, cameraReady);
   const placementsRef = useRef(local.placements); placementsRef.current = local.placements;
   const [layoutSave, setLayoutSave] = useState<'saved' | 'pending' | 'error'>('saved');
@@ -380,14 +379,15 @@ function App() {
         if(phase==='start') {
           camera.start(); persist({...(readingRef.current ?? {unitId:task.snapshot.target.unitId,expanded:{},returnStack:[],scrollTop:0}),modification:{targetId:workTarget.current,ended:false}});
         }
-        if(phase==='start' || task.progress?.stage==='committed') {
+        if(phase==='start' || phase==='view' || task.progress?.stage==='committed') {
           const unit=await window.yizhi.readUnit(course.sessionId,task.snapshot.target.unitId);
           if(unit.id==='KU-001'){await channel.current?.synchronize();setCourse(await window.yizhi.open());}
           setMounted(previous=>previous.some(u=>u.id===unit.id)?previous.map(u=>u.id===unit.id?unit:u):[...previous,unit]);
           setSelected(previous=>previous?.id===unit.id?unit:previous);
           setGraph(await window.yizhi.graph(course.sessionId));setReview(await window.yizhi.reviewStates(course.sessionId));
         }
-        if(phase==='finish'){camera.finish();if(readingRef.current)persist({...readingRef.current,modification:{targetId:workTarget.current,ended:true}});}
+        if(phase==='view'){const unit=await window.yizhi.readUnit(course.sessionId,task.snapshot.target.unitId);setSelected(unit);setDirectoryTheme(unit.theme.id);if(readingRef.current)persist({...readingRef.current,unitId:unit.id});requestAnimationFrame(()=>camera.resume());}
+        else if(phase==='finish'){camera.finish();if(readingRef.current)persist({...readingRef.current,modification:{targetId:workTarget.current,ended:true}});}
         else requestAnimationFrame(()=>camera.updated());
       }} onOpenChange={value => { setAgentOpen(value); if (value && narrow) setDirectory(false); }} openCitation={citation => sourcesPanel.current?.openCitation(citation)} />}
       {!cameraReady && !loadError && <span role="status" aria-label="画板定位">正在定位画板…</span>}

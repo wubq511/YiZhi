@@ -171,3 +171,18 @@ test('host shutdown drains accepted question registration and leaves no running 
     assert.equal(await core.commands.history({ sessionId }).then(h => h.length), 0);
   } finally { await runtime.close(); await core.close(); await rm(root, { recursive: true, force: true }); }
 });
+
+test('mutation protocol exposes actual grouped receipts and partial status; a later QA uses a distinct ephemeral read-only thread',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-mutation-rpc-')),core=new CourseService(resolve('dist/worker.cjs'));
+ const runtime=new AgentRuntime(core,{cliPath:resolve('dist/tests/agent-executor-fixture.cjs'),directory:join(root,'runtime'),env:{...process.env,YIZHI_FIXTURE_MODE:'mutation'}});
+ try{
+  const c=await core.open(join(root,'course')),sessionId=c.sessionId,conv=await core.agent.create({sessionId,operationId:'create'});
+  await runtime.submit({sessionId,conversationId:conv.id,operationId:'explicit-modify',generation:1,intent:'modify',text:'受控协议修改',target:{unitId:'KU-001'}});
+  const done=await until(()=>core.agent.get({sessionId,conversationId:conv.id}),v=>v.tasks[0].status!=='running');
+  assert.equal(done.tasks[0].status,'partial');assert.ok(done.messages.filter(m=>m.role==='assistant').every(m=>m.state==='complete'));assert.deepEqual(done.tasks[0].groups!.map(g=>g.status),['committed','retained']);assert.ok(done.toolFacts.every(f=>!f.hasRecoveryPayload));
+  const saved=(await core.read(sessionId)).unit;
+  await runtime.submit({sessionId,conversationId:conv.id,operationId:'ordinary-qa',generation:1,text:'只读解释',target:{unitId:'KU-001'}});
+  const qa=await until(()=>core.agent.get({sessionId,conversationId:conv.id}),v=>v.tasks.length===2&&v.tasks[1].status!=='running');
+  assert.equal(qa.tasks[1].status,'completed');assert.notEqual(qa.tasks[0].threadId,qa.tasks[1].threadId);assert.deepEqual((await core.read(sessionId)).unit,saved);
+ }finally{await runtime.close();await core.close();await rm(root,{recursive:true,force:true});}
+});

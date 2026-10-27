@@ -2,17 +2,17 @@ import type { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
 import type { CourseGraph, CourseUnit, ReadingBlock } from '../shared';
 import type { CommandRead, GroupCommand, GroupHistory, GroupResult } from '../command-api';
-import type { ConsistencyContext, ConsistencyReceipt } from '../consistency-api';
+import type { ConsistencyBasis, ConsistencyContext, ConsistencyReceipt } from '../consistency-api';
 import type { FormalRelations } from './formal-relations';
 import type { Sources } from './sources';
 import type { BuiltinExperiments } from './builtin-experiments';
 import { layoutGraph, saveLayout } from './local-layout';
-import { assignments, evaluate, formulaOutputs } from './builtin-model';
+import { assignments, evaluate, formulaOutputs, convertFormula } from './builtin-model';
 import { equal } from '../editor-api';
 const hash = (v: unknown) => createHash('sha256').update(JSON.stringify(v)).digest('hex');
 export interface ConsistencyPort {
   read(request: CommandRead): ConsistencyContext;
-  apply(command: GroupCommand, before: CourseUnit, after: CourseUnit, context: ConsistencyContext): { changes: GroupHistory['changes']; receipt: ConsistencyReceipt; publish(): void };
+  apply(command: GroupCommand, before: CourseUnit, after: CourseUnit, context: ConsistencyBasis): { changes: GroupHistory['changes']; receipt: ConsistencyReceipt; publish(): void };
   committed?(result: GroupResult): void;
 }
 export class CommandConsistency implements ConsistencyPort {
@@ -27,7 +27,7 @@ export class CommandConsistency implements ConsistencyPort {
         const definition = this.experiments.formalDefinition(unitId, b.id); return { blockId: b.id, definition, signature: hash(definition) };
       }) };
   }
-  apply(command: GroupCommand, before: CourseUnit, after: CourseUnit, context: ConsistencyContext) {
+  apply(command: GroupCommand, before: CourseUnit, after: CourseUnit, context: ConsistencyBasis) {
     if (!this.db.isTransaction) throw new Error('必要一致组缺少事务');
     const edits = command.bundle ?? {}, changes: GroupHistory['changes'] = [], receipt: ConsistencyReceipt = { layoutUnitIds: [], definitions: [] };
     const publications: Array<() => void> = [];
@@ -38,13 +38,14 @@ export class CommandConsistency implements ConsistencyPort {
     }
     if (edits.layout && (edits.layout.length > 3 || edits.layout.some(n => !context.layout.some(old => old.unitId === n.unitId)))) throw new Error('整理只能覆盖目标与已读取的两个局部邻居');
     const planned = new Map((edits.experiments ?? []).map(e => [e.blockId,e]));
+    if (planned.size !== (edits.experiments?.length ?? 0)) throw new Error('必要实验不能重复提交');
     const find = (u: CourseUnit, id: string): ReadingBlock | undefined => {
       const walk = (bs: ReadingBlock[]): ReadingBlock | undefined => { for (const b of bs) { if (b.id === id) return b; const found = walk(b.children ?? []); if (found) return found; } }; return walk(u.reading.blocks);
     };
     for (const old of context.experiments) {
       if (hash(this.experiments.formalDefinition(before.id,old.blockId)) !== old.signature) throw new Error('实验正式定义已变化，请重新读取');
       const block = find(after,old.blockId), prior = find(before,old.blockId)!;
-      if (block && !equal(block.payload.config,prior.payload.config) && !planned.has(old.blockId)) throw new Error('实验配置变化必须连同公式校验作为完整组提交');
+      if ((!block || !equal([block.payload.config,block.payload.inputs],[prior.payload.config,prior.payload.inputs])) && !planned.has(old.blockId)) throw new Error('实验配置变化必须连同公式校验作为完整组提交');
       for (const formula of before.reading.blocks.filter(b => b.payload.experimentBlockId === old.blockId)) if (!equal(find(after,formula.id)?.payload,formula.payload) && !planned.has(old.blockId)) throw new Error('关联公式变化缺少必要实验校验');
     }
     for (const proposal of edits.experiments ?? []) {
@@ -53,13 +54,18 @@ export class CommandConsistency implements ConsistencyPort {
       const citation = this.sources.citations().find(c => c.id === proposal.sourceCitationId);
       if (!citation?.quote || citation.target?.unitId !== before.id) throw new Error('有限计算纠错需要该单元实际保留的来源选文');
       const next = this.experiments.prepareDefinition(before.id,block,proposal.formula);
-      if (proposal.formulaBlockId && (find(after,proposal.formulaBlockId)?.payload.latex !== proposal.formula || find(after,proposal.formulaBlockId)?.payload.experimentBlockId !== block.id)) throw new Error('公式正文与实验新定义不一致');
+      if (proposal.formulaBlockId && find(after,proposal.formulaBlockId)?.payload.experimentBlockId !== block.id) throw new Error('公式正文缺少同组实验对应');
       const required = (find(before,block.id)?.payload.necessaryRelationIds ?? []) as string[];
       if (required.some(id => !edits.relations?.changes.some(c => c.id === id))) throw new Error('缺少直接受影响的正式关系纠正');
       const names = ['I0','I1','I2','I3','S0','S1'];
       if (next.definition.kind !== 'mux' || !equal(Object.keys(next.definition.initialInputs).sort(), [...names].sort())) throw new Error('当前独立校验仅覆盖实际六位4:1 MUX有限域');
       const rows = assignments(names), actual = rows.map(bits => evaluate(next.definition,bits).output), formula = formulaOutputs(proposal.formula,names);
       const expected = rows.map(bits => bits[['I0','I1','I2','I3'][2*bits.S1+bits.S0]]);
+      for(const linked of after.reading.blocks.filter(b=>b.payload.experimentBlockId===block.id)) {
+        if(typeof linked.payload.latex!=='string')throw new Error('关联公式正文缺失');
+        const display=convertFormula(next.definition,linked.payload.latex);
+        if(display.check!=='verified' || display.outputName!==next.definition.outputName || !equal(formulaOutputs(linked.payload.latex,names),expected))throw new Error('关联公式正文与实验有限域语义不一致');
+      }
       if (!equal(actual,expected) || !equal(formula,expected)) throw new Error('独立64组穷举失败：公式／实验与S1高位S0低位的来源语义不一致');
       const previousDefinition = this.experiments.formalDefinition(before.id,block.id);
       publications.push(next.apply());

@@ -9,7 +9,7 @@ export interface AgentPanelHandle { flush(): Promise<boolean>; attachCitation(ci
 const taskLabel: Record<AgentTask['status'], string> = { running: '正在回答', completed: '回答已完成', failed: '回答失败', interrupted: '回答已中断', unknown: '执行结果未知', partial: '部分完成 · 已提交组保留', pending: '待处理 · 候选尚未正式保存' };
 export const AgentPanel = forwardRef<AgentPanelHandle, {
   sessionId: string; narrow: boolean; target: QuestionTarget; targetName: string; sourceOpen: boolean;
-  prepareMutation(): Promise<void>; onMutation(task: AgentTask, phase: 'start' | 'progress' | 'finish'): Promise<void>;
+  prepareMutation(): Promise<void>; onMutation(task: AgentTask, phase: 'start' | 'progress' | 'finish' | 'view'): Promise<void>;
   onOpenChange(open: boolean): void; openCitation(citation: SourceCitation): void;
 }>(function AgentPanel({ sessionId, narrow, target, targetName, sourceOpen, onOpenChange, openCitation, prepareMutation, onMutation }, ref) {
   const api = window.yizhi.agent;
@@ -38,9 +38,9 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
     clearTimeout(timer.current); clearTimeout(deadline.current); deadline.current = undefined;
     if (composing.current) { setError('请先完成中文候选输入，再离开对话。'); return false; }
     if (dirty.current && current.current && !failed.current) {
-      const id = current.current, text = draft.current, target = chosenTarget.current, citationIds = chosenCitations.current.map(c => c.id), inputSeq = ++seq.current; dirty.current = false;
+      const id = current.current, text = draft.current, target = chosenTarget.current, citationIds = chosenCitations.current.map(c => c.id), savedIntent = intentRef.current, inputSeq = ++seq.current; dirty.current = false;
       writes.current = writes.current.then(async () => {
-        try { await api.saveDraft({ sessionId, conversationId: id, seq: inputSeq, text, target, citationIds, intent: intentRef.current }); if (id === current.current && !dirty.current) setDraftState('草稿已保存'); }
+        try { await api.saveDraft({ sessionId, conversationId: id, seq: inputSeq, text, target, citationIds, intent: savedIntent }); if (id === current.current && !dirty.current) setDraftState('草稿已保存'); }
         catch (error) { failed.current = true; dirty.current = true; setDraftState('草稿未保存'); setError((error as Error).message); }
       });
     }
@@ -141,11 +141,11 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
             <button onClick={() => openCitation(citation)}>{version.title} · PDF 第 {citation.pdfPageIndex + 1} 页 · 印刷页 {citation.printedPage?.label ?? '未核对'}</button>
           </section>)}</div>}
         </section>; })}
-        {view?.tasks.map(task => <div className="agent-task" role="status" aria-label="回答状态" key={task.id}>{task.status === 'running' && task.snapshot.intent && task.snapshot.intent !== 'question' ? '正在修改 · 以正式回执为准' : taskLabel[task.status]}{task.groups?.map(group => <section key={group.operationId}>{group.status === 'committed' ? `正式保存 · ${group.changedObjectIds.length} 个变化对象` : `草稿候选 · ${group.reason}`}<details><summary>保存回执</summary><p>{group.operationId}</p><p>{group.changedObjectIds.join('、')}</p></details></section>)}{task.groups?.some(g=>g.status==='committed' && g.changedObjectIds.length>0) && <button onClick={() => void onMutation(task,'progress').then(()=>document.dispatchEvent(new CustomEvent('yizhi-view-agent-result',{detail:task.progress?.targetId ?? task.snapshot.target.unitId})))}>查看实际修改</button>}{task.status === 'completed' && view.messages.some(m => m.taskId === task.id && m.state === 'partial') ? ' · 部分消息未确认' : ''}{task.error && <p>{task.error}</p>}</div>)}
+        {view?.tasks.map(task => <div className="agent-task" role="status" aria-label="回答状态" key={task.id}>{task.snapshot.intent && task.snapshot.intent !== 'question' && task.status === 'running' ? '正在修改 · 以正式回执为准' : task.snapshot.intent && task.snapshot.intent !== 'question' && task.status === 'completed' ? '修改已完成' : taskLabel[task.status]}{task.groups?.map(group => <section key={group.operationId}>{group.status === 'committed' ? `正式保存 · ${group.changedObjectIds.length} 个变化对象` : `草稿候选 · ${group.reason}`}<details><summary>保存回执</summary><p>{group.operationId}</p><p>{group.changedObjectIds.join('、')}</p></details></section>)}{task.groups?.some(g=>g.status==='committed' && g.changedObjectIds.length>0) && <button onClick={() => void guard(()=>onMutation(task,'view'))}>查看实际修改</button>}{task.status === 'completed' && view.messages.some(m => m.taskId === task.id && m.state === 'partial') ? ' · 部分消息未确认' : ''}{task.error && <p>{task.error}</p>}</div>)}
       </div>
       <div className="agent-composer">
-        <p className="agent-target">提问目标：{selection ? `${selection.unitId} · 已选正文` : attachments.at(-1)?.target ? `${attachments.at(-1)!.target!.unitId} · 来源关联单元` : targetName}</p>
-        {selection && <div className="agent-attachment"><blockquote>{selection.selectedText}</blockquote><button onClick={() => { chosenTarget.current = undefined; setSelection(undefined); markDirty(); }}>移除正文选文</button></div>}
+        <p className="agent-target">提问目标：{selection?.selectedText ? `${selection.unitId} · 已选正文` : attachments.at(-1)?.target ? `${attachments.at(-1)!.target!.unitId} · 来源关联单元` : targetName}</p>
+        {selection?.selectedText && <div className="agent-attachment"><blockquote>{selection.selectedText}</blockquote><button onClick={() => { chosenTarget.current = undefined; setSelection(undefined); markDirty(); }}>移除正文选文</button></div>}
         {attachments.map(c => <div className="agent-attachment" key={c.id}>{c.quote ? <blockquote>{c.quote}</blockquote> : <p>原页／选区 · 无精确选文</p>}<span>PDF 第 {c.pdfPageIndex + 1} 页 · 固定版本</span><button onClick={() => { chosenCitations.current = chosenCitations.current.filter(item => item.id !== c.id); setAttachments(chosenCitations.current); markDirty(); }}>移除出处</button></div>)}
         <label>请求方式<select aria-label="Agent 请求方式" value={intent} disabled={busy} onChange={e=>{intentRef.current=e.target.value as AgentIntent;setIntent(intentRef.current);markDirty();}}><option value="question">只读提问</option><option value="modify">修改正文与整理</option><option value="add-to-board">加入画板</option></select></label><label htmlFor="agent-composer">{intent === 'question' ? '只读提问' : '明确修改请求'}</label><textarea id="agent-composer" ref={composer} aria-label="学习对话草稿" defaultValue={draft.current} disabled={busy} placeholder="哪里还没理解？" onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; if (dirty.current) void flush(); }} onInput={event => {
           draft.current = event.currentTarget.value; markDirty();

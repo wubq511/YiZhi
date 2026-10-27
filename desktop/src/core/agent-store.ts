@@ -166,6 +166,7 @@ export class AgentStore {
   }
   private message(message: AgentMessage) { this.db.prepare('INSERT INTO agent_messages VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload').run(message.id, message.taskId, JSON.stringify(message)); }
   private finish(task: AgentTask, status: AgentTask['status'], error?: string) {
+    const executorCompleted = status === 'completed';
     if (task.snapshot.intent && task.snapshot.intent !== 'question') {
       const committed = task.groups?.some(g => g.status === 'committed' && g.changedObjectIds.length);
       const unfinished = status !== 'completed' || task.mutationFailure || task.groups?.some(g => g.status === 'retained');
@@ -174,9 +175,10 @@ export class AgentStore {
     task.status = status; task.error = error ?? task.mutationFailure ?? null;
     for (const row of this.db.prepare('SELECT payload FROM agent_messages WHERE task_id=?').all(task.id)) {
       const message = parse(row.payload) as AgentMessage;
-      if (message.role === 'assistant') { message.state = status === 'completed' && message.state === 'complete' ? 'complete' : 'partial'; this.message(message); }
+      if (message.role === 'assistant') { message.state = executorCompleted && message.state === 'complete' ? 'complete' : 'partial'; this.message(message); }
     }
     this.db.prepare("UPDATE cg_attempts SET status='stopped' WHERE id=?").run(task.attemptId);
+    this.db.prepare("UPDATE cg_bases SET read_values='[]',domain_basis=NULL WHERE attempt_id=?").run(task.attemptId);
     // Completed/unknown attempts never need a permanent duplicate of whole tool reads.
     this.db.prepare("UPDATE agent_tool_recovery SET input=NULL,output=NULL,purpose='result-fact' WHERE attempt_id=?").run(task.attemptId);
     task.cursor = this.changed(task.conversationId, task.id);

@@ -48,41 +48,7 @@ test('producer reads and commits one identified B beyond KU-001 through the same
 });
 
 import { DatabaseSync } from 'node:sqlite';
-import { sourceFixture } from './source-fixture';
-const muxId = 'RB-TH-13-057-010-interactive';
-const correctFormula = 'Z=¬S1·¬S0·I0+¬S1·S0·I1+S1·¬S0·I2+S1·S0·I3';
-async function muxCopy(core: CourseService, root: string, incomplete = false) {
-  const opened = await core.open(root), sessionId = opened.sessionId, unit = await core.readUnit(sessionId,'KU-057');
-  const a = await core.commands.startAttempt({sessionId,taskId:'explicitly-erroneous-copy'});
-  const basis = await core.commands.read({sessionId,attemptId:a.attemptId,unitId:unit.id,objectIds:unit.reading.blocks.map(b=>b.id)});
-  const block = unit.reading.blocks.find(b=>b.id===muxId)!;
-  const bad = structuredClone(block); bad.payload.config.selectBits=['S0','S1']; bad.payload.necessaryRelationIds=['REL-014'];
-  if(incomplete){ delete bad.payload.inputs.I3; bad.payload.config.dataSignals=['I0','I1','I2','0']; }
-  const f = {id:'mux-linked-formula',kind:'formula',payload:{latex:'Z=0',experimentBlockId:muxId}};
-  assert.equal((await core.commands.commit({sessionId,unitId:unit.id,attemptId:a.attemptId,operationId:'prepare-copy',basisId:basis.basisId,
-    changes:[{objectId:muxId,value:bad}],patch:{updates:[],structure:{parentId:unit.id,before:unit.reading.blocks.map(b=>b.id),after:[f.id,...unit.reading.blocks.map(b=>b.id)],inserted:[f]},correspondence:[]}})).status,'committed');
-  const rb = await core.relations.read({sessionId}); const edge=rb.graph.edges.find(e=>e.id==='REL-014')!;
-  await core.relations.commit({sessionId,generation:rb.generation,basisId:rb.basisId,operationId:'explicit-bad-relation-copy',changes:[{id:edge.id,value:{...edge,value:'此副本错误地宣称S0为高位，交换01与10通道。'}}]});
-  const path=join(root,'source.pdf'); await sourceFixture(path,'MUX selector evidence: S1 is high, S0 is low. 00:I0 01:I1 10:I2 11:I3');
-  const source=await core.sources.importFile({sessionId,generation:1,operationId:'source',path,title:'Regression evidence, not actual-executor acceptance'});
-  const page=await core.sources.page({sessionId,versionId:source.version.versionId,pdfPageIndex:0});
-  const citation=await core.sources.cite({sessionId,generation:1,operationId:'cite',versionId:source.version.versionId,pdfPageIndex:0,projectionId:page.projection.id,start:0,end:Array.from(page.projection.text).length,target:{unitId:'KU-057',blockId:muxId}});
-  await core.setReviewStatus(sessionId,'KU-057','mastered');
-  const view=await core.experiments.open({sessionId,unitId:'KU-057',blockId:muxId});
-  return {sessionId,citation,view};
-}
-async function correction(core: CourseService, sessionId:string, citationId:string, operationId:string) {
-  const unit=await core.readUnit(sessionId,'KU-057'), a=await core.commands.startAttempt({sessionId,taskId:operationId});
-  const basis=await core.commands.read({sessionId,unitId:unit.id,attemptId:a.attemptId,objectIds:unit.reading.blocks.map(b=>b.id),context:true});
-  const b=unit.reading.blocks.find(b=>b.id===muxId)!, next=structuredClone(b);
-  next.payload.config.selectBits=['S1','S0']; next.payload.config.dataSignals=['I0','I1','I2','I3']; next.payload.inputs.I3=0;
-  const edge=basis.context!.relations.graph.edges.find(e=>e.id==='REL-014')!;
-  return { sessionId,unitId:unit.id,attemptId:a.attemptId,operationId,basisId:basis.basisId,changes:[{objectId:muxId,value:next}],
-    patch:{updates:[{blockId:'mux-linked-formula',before:unit.reading.blocks[0].payload,after:{...unit.reading.blocks[0].payload,latex:correctFormula}}],correspondence:[]},
-    semanticImpact:{version:1 as const,unitId:unit.id,conclusionOrMethodChanged:true},
-    bundle:{layout:basis.context!.layout.map(n=>({unitId:n.unitId,x:n.x+20,y:n.y+40,width:n.width})),relations:{changes:[{id:edge.id,value:{...edge,value:'组内由低位S0选择，组间由高位S1选择，三个2:1构成4:1，通道按2S1+S0编号。'}}]},
-      experiments:[{blockId:muxId,formula:correctFormula,formulaBlockId:'mux-linked-formula',sourceCitationId:citationId}]} };
-}
+import { muxCopy, correction, muxId, correctFormula } from './agent-mutation-setup';
 test('formula, finite experiment, necessary reviewed relation and local manual baseline roll back together on the final history write', async()=>{
   const root=await mkdtemp(join(tmpdir(),'yizhi-necessary-'));const core=new CourseService(resolve('dist/worker.cjs'));let fault:DatabaseSync|undefined;
   try{
@@ -163,5 +129,36 @@ test('missing necessary relation, invalid finite formula and layout A-to-B-to-A 
   await core.setLayout(sessionId,[{unitId:p.unitId,x:p.x+10,y:p.y,width:p.width}]);await core.setLayout(sessionId,[{unitId:p.unitId,x:p.x,y:p.y,width:p.width}]);
   assert.match((await core.commands.commit(command)).reason!,/布局基线/);
   assert.deepEqual(await core.readUnit(sessionId,'KU-057'),before);assert.equal((await core.reviewStates(sessionId)).prompts.length,0);
+ }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+
+test('public producer cannot bypass the necessary formula and experiment boundary with a plain payload replacement',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-coupled-guard-')),core=new CourseService(resolve('dist/worker.cjs'));
+ try{const c=await core.open(root),unit=await core.readUnit(c.sessionId,'KU-057'),a=await core.commands.startAttempt({sessionId:c.sessionId,taskId:'cannot-bypass'}),basis=await core.commands.read({sessionId:c.sessionId,attemptId:a.attemptId,unitId:unit.id,objectIds:[muxId]}),next=structuredClone(basis.objects.find(o=>o.id===muxId)!.value);next.payload.config.selectBits=['S0','S1'];
+ const result=await core.commands.commit({sessionId:c.sessionId,attemptId:a.attemptId,unitId:unit.id,operationId:'unbundled',basisId:basis.basisId,changes:[{objectId:muxId,value:next}]});assert.equal(result.status,'retained');assert.deepEqual(await core.readUnit(c.sessionId,unit.id),unit);
+ }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+
+test('add-to-board copies renew every hidden child identity and never acquire original personal annotations',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-copy-identity-')),core=new CourseService(resolve('dist/worker.cjs'));
+ try{
+  const c=await core.open(root),sessionId=c.sessionId,p=c.unit.reading.blocks.find(b=>b.kind==='paragraph')!,example=c.unit.reading.blocks.find(b=>b.kind==='example'&&b.children?.length)!;
+  const note=await core.annotations.create({sessionId,operationId:'source-note',text:'仅属于原段落',selection:{unitId:c.unit.id,fragments:[{blockId:p.id,block:p,field:'text',formalRevision:c.revision,source:'formal',projection:{version:1,encoding:'unicode-code-points',text:p.payload.text},from:0,to:2,quote:Array.from(p.payload.text).slice(0,2).join('')}]}});
+  const conv=await core.agent.create({sessionId,operationId:'conversation'}),task=await core.agent.submit({sessionId,conversationId:conv.id,operationId:'add',generation:1,intent:'add-to-board',text:'复制为补充材料',target:{unitId:c.unit.id}}),identity={sessionId,taskId:task.id,attemptId:task.attemptId,generation:1},basis=await core.readAgentMutation(identity);
+  const receipt=await core.applyAgentMutation({...identity,input:{basisId:basis.basisId,operationId:'copy',conclusionOrMethodChanged:false,copies:[{blockId:example.id},{blockId:p.id}]}});assert.equal(receipt.status,'committed',receipt.reason);
+  const after=(await core.read(sessionId)).unit,newBlocks=after.reading.blocks.filter(b=>!c.unit.reading.blocks.some(old=>old.id===b.id));assert.equal(newBlocks.length,2);
+  const body=(b:any):any=>({kind:b.kind,payload:b.payload,...(b.children?{children:b.children.map(body)}:{})});assert.deepEqual(body(newBlocks[0]),body(example));
+  const ids=(b:any):string[]=>[b.id,...(b.children??[]).flatMap(ids)];assert.ok(ids(newBlocks[0]).every(id=>!ids(example).includes(id)));assert.deepEqual(await core.annotations.list({sessionId}),[note]);
+ }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+
+test('narrow Agent relation correction preserves reviewed identity and maps fixed citations; equivalent display formula is independently checked with experiment in one group',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-narrow-correction-')),core=new CourseService(resolve('dist/worker.cjs'));
+ try{
+  const {sessionId,citation}=await muxCopy(core,root),conv=await core.agent.create({sessionId,operationId:'conversation'}),task=await core.agent.submit({sessionId,conversationId:conv.id,operationId:'modify',generation:1,intent:'modify',text:'纠正实际4:1副本',target:{unitId:'KU-057'},citationIds:[citation.id]});
+  const identity={sessionId,taskId:task.id,attemptId:task.attemptId,generation:1},basis=await core.readAgentMutation(identity),old=(await core.graph(sessionId)).edges.find(e=>e.id==='REL-014')!;
+  const result=await core.applyAgentMutation({...identity,input:{operationId:'necessary',basisId:basis.basisId,conclusionOrMethodChanged:true,updates:[{blockId:'mux-linked-formula',latex:'Z=\\overline{S_1}\\overline{S_0}I_0+\\overline{S_1}S_0I_1+S_1\\overline{S_0}I_2+S_1S_0I_3'}],experiments:[{blockId:muxId,formulaBlockId:'mux-linked-formula',formula:correctFormula,sourceCitationId:citation.id,config:{selectBits:['S1','S0'],dataSignals:['I0','I1','I2','I3']}}],relations:{changes:[{id:'REL-014',value:'第一级S0选择组内通道，第二级S1选择分组，三个2:1构成4:1，索引2S1+S0。',citationIds:[citation.id]}]}} as any});
+  assert.equal(result.status,'committed',result.reason);const edge=(await core.graph(sessionId)).edges.find(e=>e.id==='REL-014')!;
+  assert.equal(edge.id,old.id);assert.equal(edge.fromUnitId,old.fromUnitId);assert.equal(edge.toUnitId,old.toUnitId);assert.equal(edge.type,old.type);assert.equal(edge.directed,old.directed);assert.deepEqual(edge.sourceRefs.map(r=>[r.sourceId,r.versionId,r.pdfPages]),[[citation.sourceId,citation.versionId,[citation.pdfPageIndex+1]]]);assert.equal(result.related!.definitions[0].proof.assignments,64);
  }finally{await core.close();await rm(root,{recursive:true,force:true});}
 });

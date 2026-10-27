@@ -126,7 +126,7 @@ function open(directory: string): OpenedCourse {
     const extensions = new Extensions(db, canonical);
     const parsing = new Parsing(db, canonical, sources, run => { queue = queue.then(run).catch(error => { console.error(error); }); }, workerData?.parseScheduling);
     const agent = new AgentStore(db, sources, sourceUnit);
-    const mutations = new AgentMutations(db,groups,agent,sourceUnit);
+    const mutations = new AgentMutations(db,groups,agent,sourceUnit,relations);
     const course: Course = { db, owner, agent, mutations, annotations, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     const result = snapshot(course);

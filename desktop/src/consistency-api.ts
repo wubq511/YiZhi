@@ -16,3 +16,10 @@ export interface ConsistencyReceipt {
   relation?: RelationReceipt;
   definitions: Array<{ blockId: string; revision: number; proof: { kind: string; assignments: number; digest: string; sourceCitationId: string } }>;
 }
+
+/** Minimal durable read fences; full teaching definitions/graphs remain in active tool context only. */
+export interface ConsistencyBasis {
+ layout: ConsistencyContext['layout'];
+ relations: Pick<ConsistencyContext['relations'],'basisId'|'generation'|'revision'>;
+ experiments: Array<Pick<ConsistencyContext['experiments'][number],'blockId'|'signature'>>;
+}
