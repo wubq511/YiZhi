@@ -2,18 +2,22 @@ import { parentPort } from 'node:worker_threads';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, realpathSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { FormalRelations } from './formal-relations';
 import { CommandGroups } from './command-groups';
 import { Sources } from './sources';
 import { randomUUID } from 'node:crypto';
-import type { OpenedCourse, SaveParagraph, SaveReceipt, EditCommand } from '../shared';
+import type { CourseGraph, OpenedCourse, SaveParagraph, SaveReceipt, EditCommand } from '../shared';
 
 import { initializeSaveStore, readDrafts, saveDraft, eventCursor, commitEdit, queryOperation, history, confirmedInput, readEvents } from './save-store';
+import { transaction } from './save-store';
+import { initializeReviewState, reviewSnapshot, setReviewStatus, confirmReviewPrompt } from './review-state';
 
 const EDITABLE = 'RB-TH-01-01-what-is-positional-notation';
-interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; courseId: string;
+interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; courseId: string; graph: CourseGraph;
   // T03 constructs its observer on this same connection; both student save entry points call it in-transaction.
   groups: CommandGroups;
   sources: Sources;
+  relations: FormalRelations;
 }
 const courses = new Map<string, Course>();
 function session(id: string): Course {
@@ -77,7 +81,13 @@ function open(directory: string): OpenedCourse {
       if (['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-055', 'KU-057'].includes(id))
         return JSON.parse(readFileSync(join(__dirname, `fixtures/unit-${id.slice(3)}.json`), 'utf8'));
     };
-    const course: Course = { db, owner, sessionId: randomUUID(), groups: new CommandGroups(db), sources: new Sources(db, canonical, sourceUnit),
+    const graph = JSON.parse(readFileSync(join(__dirname, 'fixtures/graph.json'), 'utf8')) as CourseGraph;
+    initializeReviewState(db);
+    const groups = new CommandGroups(db, graph);
+    const relations = new FormalRelations(db, graph,
+      JSON.parse(readFileSync(join(__dirname, 'fixtures/relation-catalog.json'), 'utf8')));
+    const course: Course = { db, owner, sessionId: randomUUID(), graph, groups, relations, sources: new Sources(db, canonical, sourceUnit),
+
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     const result = snapshot(course);
     courses.set(canonical, course);
@@ -109,9 +119,11 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       if (!encoded || encoded.length > 100000) throw new Error('阅读状态无效');
       session(payload.sessionId).db.prepare('INSERT INTO reading_state(id,payload) VALUES(1,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload').run(encoded);
     }
+    else if (action === 'reviewStates') { const course = session(payload.sessionId); value = reviewSnapshot(course.db, course.graph); }
+    else if (action === 'setReviewStatus') { const course = session(payload.sessionId); value = transaction(course.db, () => setReviewStatus(course.db, course.graph, payload.unitId, payload.status)); }
+    else if (action === 'confirmReviewPrompt') { const course = session(payload.sessionId); value = transaction(course.db, () => confirmReviewPrompt(course.db, course.graph, payload.promptId, payload.adjust)); }
     else if (action === 'graph') {
-      session(payload.sessionId);
-      value = JSON.parse(readFileSync(join(__dirname, 'fixtures/graph.json'), 'utf8'));
+      value = session(payload.sessionId).relations.graph();
     } else if (action === 'readUnit') {
       const course = session(payload.sessionId);
       if (payload.unitId === 'KU-001') value = snapshot(course).unit;
@@ -129,6 +141,10 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     }
     else if (action === 'history') value = history(session(payload.sessionId).db);
     else if (action === 'save') value = save(payload);
+    else if (action === 'relations:prerequisites') value = session(payload.sessionId).relations.prerequisites(payload.unitId);
+    else if (action === 'relations:read') value = session(payload.sessionId).relations.read(payload);
+    else if (action === 'relations:commit') value = session(payload.sessionId).relations.commit(payload);
+    else if (action === 'relations:query') value = session(payload.sessionId).relations.query(payload.operationId);
     else if (action.startsWith('commands:')) value = session(payload.sessionId).groups.dispatch(action, payload);
     else if (action.startsWith('sources:')) value = await session(payload.sessionId).sources.dispatch(action, payload);
     else if (action === 'close') {

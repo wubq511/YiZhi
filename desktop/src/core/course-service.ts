@@ -1,10 +1,12 @@
+import { relationClient } from '../relation-api';
 import { Worker } from 'node:worker_threads';
 import { commandClient } from '../command-api';
 import { sourcesClient } from '../sources-api';
-import type { CourseGraph, CourseUnit, ReadingState, OpenedCourse, SaveParagraph, SaveReceipt, DraftInput, DraftReceipt, EditCommand, EditReceipt, EditHistory, EventPage } from '../shared';
+import type { CourseGraph, CourseUnit, ReadingState, OpenedCourse, SaveParagraph, SaveReceipt, DraftInput, DraftReceipt, EditCommand, EditReceipt, EditHistory, EventPage, ReviewSnapshot, ReviewStatus, ReviewPromptResult } from '../shared';
 
 /** One instance belongs to the application host, shared by all its windows/courses. */
 export class CourseService {
+  readonly relations = relationClient((action, payload) => this.request(action, payload));
   readonly commands = commandClient((action, payload) => this.request(action, payload));
   readonly sources = sourcesClient((action, payload) => this.request(action, payload));
   private readonly worker: Worker;
@@ -45,6 +47,9 @@ export class CourseService {
   readUnit(sessionId: string, unitId: string): Promise<CourseUnit> { return this.request('readUnit', { sessionId, unitId }); }
   readingState(sessionId: string): Promise<ReadingState | null> { return this.request('readingState', { sessionId }); }
   setReadingState(sessionId: string, state: ReadingState): Promise<void> { return this.request('setReadingState', { sessionId, state }); }
+  reviewStates(sessionId: string): Promise<ReviewSnapshot> { return this.request('reviewStates', { sessionId }); }
+  setReviewStatus(sessionId: string, unitId: string, status: ReviewStatus): Promise<ReviewSnapshot> { return this.request('setReviewStatus', { sessionId, unitId, status }); }
+  confirmReviewPrompt(sessionId: string, promptId: string, adjust: boolean): Promise<ReviewPromptResult> { return this.request('confirmReviewPrompt', { sessionId, promptId, adjust }); }
   save(command: SaveParagraph): Promise<SaveReceipt> { return this.request('save', command); }
   saveDraft(input: DraftInput): Promise<DraftReceipt> { return this.request('saveDraft', input); }
   commitEdit(command: EditCommand): Promise<EditReceipt> { return this.request('commitEdit', command); }

@@ -29,6 +29,8 @@ npm run test:smoke
 
 顶栏“可控生产者 · 验证入口”连接真实 preload IPC、CourseService、Worker 和同一课程数据库。先读取前提与目标，再修改首段并等待自动保存，提交可控候选会保留旧候选并说明依据变化；“重读并整合”用当前正文重新形成候选。停止后拒绝新提交，原成功回执仍可核对。此入口是固定规则的验证工具，未接入真实 Agent。展开面板内可滚动，Escape 收起并返回入口。
 
+复习状态按知识单元 B 写入课程 SQLite，严格取“待复习／薄弱／已掌握”之一；新单元缺省为待复习。主题 A 只显示下属 B 的状态数量。状态控件、主题汇总与筛选均不写课程星级、主题评级或单元峰值。命令组可带版本化 `semanticImpact` 元数据；只有正文已提交且明确标记重要结论或方法发生实质变化时，已掌握单元才出现询问。询问保存内容 revision 和复习状态 version，学生之后改变状态会使旧确认失效。可控生产者中的勾选项仅用于展示此接线，不代表真实 Agent 已接入。
+
 ## 边界与后续接口
 
 `src/core/course-service.ts` 是宿主公共边界，`src/shared.ts` 定义请求与回执。每个应用一个 `CourseService`／Worker，课程按规范目录持有唯一连接和写入资格。`open`／`read` 返回完整单元、会话、正式确认进度、未吸收草稿及事件游标。保留 T01 `save`；新增 `saveDraft`、`commitEdit`、`queryOperation`、`history` 与 `readEvents`，均已连接 preload IPC。

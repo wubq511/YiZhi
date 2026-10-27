@@ -46,6 +46,40 @@ test('a controlled producer commits a changed block, reports only its before/aft
   });
 });
 
+test('only versioned substantive metadata after a saved change prompts a mastered B, and stale confirmation preserves the newer student choice', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'yizhi-review-prompt-'));
+  const service = new CourseService(resolve('dist/worker.cjs'));
+  try {
+    const opened = await service.open(directory);
+    await service.setReviewStatus(opened.sessionId, 'KU-001', 'mastered');
+    const attempt = await service.commands.startAttempt({ sessionId: opened.sessionId, taskId: 'review-impact' });
+    const submit = async (operationId: string, text: string, conclusionOrMethodChanged: boolean) => {
+      const basis = await service.commands.read({ sessionId: opened.sessionId, attemptId: attempt.attemptId, objectIds: ['RB-TH-01-03-expansion-terms'] });
+      const old = basis.objects[0].value;
+      return service.commands.commit({ sessionId: opened.sessionId, attemptId: attempt.attemptId, operationId, basisId: basis.basisId,
+        changes: [{ objectId: old.id, value: { ...old, payload: { ...old.payload, text } } },
+          // Keep the existing controlled producer block value valid for this fixture's stable id.
+        ], semanticImpact: { version: 1, unitId: 'KU-001', conclusionOrMethodChanged } });
+    };
+    const wording = await submit('wording-only', '只调整表达方式，不改结论。', false);
+    assert.equal(wording.reviewPrompt, undefined);
+    const substantive = await submit('substantive', '重要结论与方法已发生实质变化。', true);
+    assert.ok(substantive.reviewPrompt);
+    assert.equal(substantive.reviewPrompt!.contentRevision, (await service.read(opened.sessionId)).revision);
+    assert.equal((await service.reviewStates(opened.sessionId)).units['KU-001'].status, 'mastered');
+    await service.setReviewStatus(opened.sessionId, 'KU-001', 'weak');
+    assert.equal(await service.confirmReviewPrompt(opened.sessionId, substantive.reviewPrompt!.id, true), 'stale');
+    assert.equal((await service.reviewStates(opened.sessionId)).units['KU-001'].status, 'weak');
+
+    await service.setReviewStatus(opened.sessionId, 'KU-001', 'mastered');
+    const freshPrompt = await submit('substantive-confirmed', '新的方法结论已保存。', true);
+    assert.ok(freshPrompt.reviewPrompt);
+    assert.equal((await service.reviewStates(opened.sessionId)).units['KU-001'].status, 'mastered');
+    assert.equal(await service.confirmReviewPrompt(opened.sessionId, freshPrompt.reviewPrompt!.id, true), 'adjusted');
+    assert.equal((await service.reviewStates(opened.sessionId)).units['KU-001'].status, 'pending');
+  } finally { await service.close(); await rm(directory, { recursive: true, force: true }); }
+});
+
 test('changing a read premise retains the old candidate; only a fresh read and new integrated candidate may commit', async () => {
   await fixture(async (service, directory) => {
     const opened = await service.open(directory);

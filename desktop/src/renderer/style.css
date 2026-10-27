@@ -28,6 +28,16 @@ main { overflow: auto; padding: 40px 38px 80px; scroll-behavior: smooth; }
 article { max-width: 900px; margin: 0 auto; font-family: var(--hand); font-size: 24px; line-height: 1.85; overflow-wrap: anywhere; }
 article h1 { font-size: 34px; line-height: 1.5; font-weight: 400; text-wrap: balance; margin: 0 0 12px; }
 .unit-meta { font-family: system-ui, sans-serif; font-size: .8125rem; color: var(--muted); margin: 0 0 28px; }
+.review-controls { margin: -16px 0 24px; font-family: system-ui, sans-serif; }
+.review-choice { display: flex; flex-wrap: wrap; gap: 8px; }
+.review-choice button { border: 1px solid #aebdc9; border-radius: 4px; padding: 6px 12px; background: white; color: #263b4d; }
+.review-choice button[aria-pressed="true"] { outline: 2px solid currentColor; outline-offset: 1px; }
+.review-choice .review-pending { color: #526474; }
+.review-choice .review-weak { color: #963f56; }
+.review-choice .review-mastered { color: #187452; }
+.review-prompt { margin-top: 12px; padding: 10px 12px; border: 1px solid #c5a66b; color: #59451e; background: #fff9e9; line-height: 1.6; }
+.review-prompt button { margin-left: 8px; }
+.review-filter { display: grid; gap: 6px; margin: 12px 0; font-family: system-ui, sans-serif; font-size: .85rem; }
 .outcome { font-size: 28px; margin: 0 0 34px; }
 article p { margin: 20px 0; }
 .editable-section { margin: 28px 0 36px; }

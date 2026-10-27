@@ -5,14 +5,16 @@ export interface CommandObject { id: string; kind: 'block' | 'structure' | 'refe
 export interface CommandRead { sessionId: string; attemptId: string; objectIds: string[] }
 export interface CommandBasis { basisId: string; generation: number; objects: CommandObject[] }
 export interface ObjectChange { objectId: string; value: Record<string, any> }
-export interface GroupCommand { sessionId: string; attemptId: string; operationId: string; basisId: string; changes: ObjectChange[] }
+export interface GroupCommand { sessionId: string; attemptId: string; operationId: string; basisId: string; changes: ObjectChange[];
+  semanticImpact?: { version: 1; unitId: string; conclusionOrMethodChanged: boolean } }
 export interface GroupResult {
   operationId: string; attemptId: string; status: 'committed' | 'retained';
   revision?: number; cursor?: number; changedObjectIds: string[]; reason?: string;
+  reviewPrompt?: import('./shared').ReviewPrompt;
 }
 export interface GroupHistory {
-  operationId: string; attemptId: string; taskId: string; generation: number; revision: number; committedAt: string;
-  changes: { objectId: string; before: Record<string, any> | null; after: Record<string, any>; beforeVersion: number; afterVersion: number }[];
+  operationId: string; attemptId?: string; taskId?: string; domain?: 'formal-relation'; actor?: 'agent' | 'student'; generation: number; revision: number; committedAt: string;
+  changes: { objectId: string; before: Record<string, any> | null; after: Record<string, any> | null; beforeVersion: number; afterVersion: number }[];
 }
 export interface RetainedCandidate { command: GroupCommand; result: GroupResult }
 export interface CommandAPI {

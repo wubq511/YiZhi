@@ -2,6 +2,8 @@ import { readDrafts, draftScopes, draftReadVersions, draftVersion, transaction, 
 import { randomUUID, createHash } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import type { CourseUnit, ReadingBlock } from '../shared';
+import type { CourseGraph } from '../shared';
+import { recordSemanticImpact } from './review-state';
 import type { Attempt, AttemptRequest, CommandObject, CommandRead, GroupCommand, GroupHistory, GroupResult } from '../command-api';
 
 const json = (value: unknown) => JSON.stringify(value);
@@ -12,7 +14,7 @@ const record = (value: unknown): value is Record<string, any> => !!value && type
 
 /** All methods run synchronously in the host-owned Worker on its course connection. */
 export class CommandGroups {
-  constructor(private db: DatabaseSync) {
+  constructor(private db: DatabaseSync, private graph: CourseGraph) {
     db.exec(`
       CREATE TABLE IF NOT EXISTS cg_objects(id TEXT PRIMARY KEY, kind TEXT NOT NULL, value TEXT NOT NULL, version INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS cg_attempts(id TEXT PRIMARY KEY, task_id TEXT NOT NULL, generation INTEGER NOT NULL, status TEXT NOT NULL);
@@ -144,6 +146,7 @@ export class CommandGroups {
       throw new Error('无效或重复的一致修改组写入范围');
     return this.transaction(() => {
       this.observe();
+      if (this.db.prepare('SELECT 1 FROM operations WHERE id=?').get(command.operationId)) throw new Error('操作身份已用于正文修改');
       const previous = this.db.prepare('SELECT * FROM cg_candidates WHERE id=?').get(command.operationId);
       if (previous) {
         if (previous.digest !== digest(command)) throw new Error('同一操作不能换用不同内容');
@@ -247,6 +250,8 @@ export class CommandGroups {
       changes.push(...this.observe(new Set(command.changes.filter(change => change.objectId.startsWith('dependency:')).map(change => change.objectId))));
       const result: GroupResult = { operationId: command.operationId, attemptId: command.attemptId,
         status: 'committed', revision: nextRevision, changedObjectIds: changes.map(change => change.objectId) };
+      if (changes.length && command.semanticImpact)
+        result.reviewPrompt = recordSemanticImpact(this.db, this.graph, command.semanticImpact, unit.id, nextRevision);
       result.cursor = changes.length ? appendEvent(this.db, { type: 'group.committed', operationId: result.operationId,
         revision: nextRevision, changedObjectIds: result.changedObjectIds }) : eventCursor(this.db);
       // Successful request bodies are already represented by changed-object history; keep only dedupe facts here.
@@ -263,7 +268,9 @@ export class CommandGroups {
   }
   query(operationId: string): GroupResult | null {
     const row = this.db.prepare('SELECT result FROM cg_candidates WHERE id=?').get(operationId);
-    return row ? parse(row.result) : null;
+    if (!row) return null;
+    const result = parse(row.result);
+    return result.domain === 'formal-relation' ? null : result;
   }
   private attempt(attemptId: string): Attempt {
     const row = this.db.prepare('SELECT * FROM cg_attempts WHERE id=?').get(attemptId);

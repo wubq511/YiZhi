@@ -54,6 +54,9 @@ else {
     ipcMain.handle('course:read-unit', async (event, sessionId: string, unitId: string) => { checkSender(event); return core.readUnit(sessionId, unitId); });
     ipcMain.handle('course:reading-state', async (event, sessionId: string) => { checkSender(event); return core.readingState(sessionId); });
     ipcMain.handle('course:set-reading-state', async (event, sessionId: string, state) => { checkSender(event); return core.setReadingState(sessionId, state); });
+    ipcMain.handle('course:review-states', async (event, sessionId: string) => { checkSender(event); return core.reviewStates(sessionId); });
+    ipcMain.handle('course:set-review-status', async (event, input) => { checkSender(event); return core.setReviewStatus(input.sessionId, input.unitId, input.status); });
+    ipcMain.handle('course:confirm-review-prompt', async (event, input) => { checkSender(event); return core.confirmReviewPrompt(input.sessionId, input.promptId, input.adjust); });
     ipcMain.handle('course:save', async (event, command: SaveParagraph) => { checkSender(event); return core.save(command); });
     ipcMain.handle('course:saveDraft', (event, input) => { checkSender(event); return core.saveDraft(input); });
     ipcMain.handle('course:commitEdit', (event, command) => { checkSender(event); return core.commitEdit(command); });
@@ -62,6 +65,9 @@ else {
     ipcMain.handle('course:read', (event, input) => { checkSender(event); return core.read(input.sessionId); });
     for (const method of ['startAttempt', 'read', 'commit', 'stop', 'query', 'candidates', 'history'] as const) {
       ipcMain.handle(`commands:${method}`, (event, payload) => { checkSender(event); return core.commands[method](payload); });
+    }
+    for (const method of ['read', 'commit', 'query', 'prerequisites'] as const) {
+      ipcMain.handle(`relations:${method}`, (event, payload) => { checkSender(event); return core.relations[method](payload); });
     }
     ipcMain.on('window:close-result', async (event, result) => {
       checkSender(event);

@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { DesktopBridge } from '../shared';
+import { relationClient } from '../relation-api';
 import { commandClient } from '../command-api';
 import { sourceBridge } from '../sources-api';
 async function invoke(channel: string, argument?: unknown) {
@@ -12,11 +13,15 @@ async function invoke(channel: string, argument?: unknown) {
 const bridge: DesktopBridge = {
   sources: sourceBridge(invoke),
   commands: commandClient(invoke),
+  relations: relationClient(invoke),
   open: () => invoke('course:open'),
   graph: sessionId => invoke('course:graph', sessionId),
   readUnit: (sessionId, unitId) => ipcRenderer.invoke('course:read-unit', sessionId, unitId),
   readingState: sessionId => invoke('course:reading-state', sessionId),
   setReadingState: (sessionId, state) => ipcRenderer.invoke('course:set-reading-state', sessionId, state),
+  reviewStates: sessionId => invoke('course:review-states', sessionId),
+  setReviewStatus: (sessionId, unitId, status) => invoke('course:set-review-status', { sessionId, unitId, status }),
+  confirmReviewPrompt: (sessionId, promptId, adjust) => invoke('course:confirm-review-prompt', { sessionId, promptId, adjust }),
   save: command => invoke('course:save', command),
   saveDraft: input => invoke('course:saveDraft', input),
   commitEdit: command => invoke('course:commitEdit', command),
