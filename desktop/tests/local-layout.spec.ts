@@ -1,9 +1,10 @@
 import { DatabaseSync } from 'node:sqlite';
 import { test, expect, _electron as electron } from '@playwright/test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import type { Locator, Page } from '@playwright/test';
+import { resizeBoardWindow } from './board-test-helpers';
 
 async function reveal(page: Page, target: Locator) {
   await expect(page.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
@@ -17,6 +18,49 @@ async function reveal(page: Page, target: Locator) {
     await page.waitForTimeout(30);
   }
   throw new Error('没有找到阅读位置');
+}
+
+
+async function boardWheelPoint(page: Page) {
+  return page.evaluate(() => {
+    const board = document.querySelector('main.board')!, rect = board.getBoundingClientRect();
+    const left = Math.max(12, rect.left + 12), right = Math.min(innerWidth - 12, rect.right - 12);
+    const top = Math.max(12, rect.top + 12), bottom = Math.min(innerHeight - 12, rect.bottom - 12);
+    const blocked = '.board-tools, .relations-panel, .source-dialog, .react-flow__minimap, .drawing-tools, .drawing-entry, .follow-control, input, select, textarea, button, .mux, .builtin-formula-editor, math-field';
+    for (const y of [top + (bottom - top) / 2, top + (bottom - top) * .75, top + (bottom - top) / 3]) {
+      for (const x of [left + 38, (left + right) / 2, right - 24]) {
+        const hit = document.elementFromPoint(x, y);
+        if (x >= left && x <= right && y >= top && y <= bottom && hit?.closest('main.board') === board && !hit.closest(blocked) && !hit.closest('[inert]'))
+          return { x, y, hit: hit.outerHTML.slice(0, 280), board: rect.toJSON(), viewport: [innerWidth, innerHeight] };
+      }
+    }
+    throw new Error('没有无遮挡的画板滚轮起点：' + JSON.stringify({ board: rect.toJSON(), viewport: [innerWidth, innerHeight] }));
+  });
+}
+
+async function followScene(page: Page) {
+  return page.evaluate(() => {
+    const viewport = document.querySelector('.react-flow__viewport')!;
+    const m = new DOMMatrixReadOnly(getComputedStyle(viewport).transform);
+    return { viewport: [innerWidth, innerHeight], scroll: [scrollX, scrollY], camera: { x: m.e, y: m.f, zoom: m.a },
+      board: document.querySelector('main.board')?.getBoundingClientRect().toJSON(), producer: document.querySelector('.producer-panel')?.getBoundingClientRect().toJSON(),
+      activeElement: document.activeElement?.outerHTML.slice(0, 280),
+      follow: document.querySelector('[aria-label="修改跟随"]')?.textContent, controls: document.querySelector('.follow-control')?.outerHTML,
+      wheel: (window as any).__layoutWheelEvidence ?? null };
+  });
+}
+
+async function saveFollowFailure(page: Page, observations: unknown[]) {
+  try {
+    observations.push({ phase: 'failure', scene: await followScene(page) });
+    const scenePath = test.info().outputPath('follow-failure-scene.json'), domPath = test.info().outputPath('follow-failure-dom.html');
+    await writeFile(scenePath, JSON.stringify(observations, null, 2)); await writeFile(domPath, await page.content());
+    await test.info().attach('follow-failure-scene', { path: scenePath, contentType: 'application/json' });
+    await test.info().attach('follow-failure-dom', { path: domPath, contentType: 'text/html' });
+    await page.screenshot({ path: test.info().outputPath('follow-failure.png') });
+  } catch (captureError) {
+    await test.info().attach('follow-capture-error', { body: String(captureError), contentType: 'text/plain' });
+  }
 }
 
 
@@ -89,52 +133,79 @@ test('actual producer follows only actual changes, student takeover cancels moti
   let app = await launch();
   try {
     let page = await app.firstWindow();
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
-    await page.getByText('可控生产者 · 验证入口', { exact: true }).click();
-    await page.getByRole('button', { name: '读取当前依据', exact: true }).click();
-    await expect(page.getByRole('status', { name: '修改跟随' })).toHaveText('正在跟随可控修改');
-    const matrix = () => page.locator('.react-flow__viewport').evaluate(el => { const m = new DOMMatrixReadOnly(getComputedStyle(el).transform); return { x: m.e, y: m.f, zoom: m.a }; });
-    const initial = await matrix();
-    await page.getByRole('textbox', { name: '可控候选内容' }).fill('实际增长的正文。'.repeat(80));
-    await page.getByRole('button', { name: '提交可控修改', exact: true }).click();
-    await expect(page.getByRole('status', { name: '可控生产者状态' })).toContainText('正式修改已保存');
-    const changed = page.locator('[data-block-id="RB-TH-01-03-expansion-terms"]').first();
-    await expect(changed).toHaveText('实际增长的正文。'.repeat(80));
-    // Actual changed content must be visible; movement depends on the starting camera.
-    const viewBounds = (await page.locator('main.board').boundingBox())!;
-    await expect.poll(async () => (await changed.boundingBox())!.y).toBeGreaterThanOrEqual(viewBounds.y);
-    await expect.poll(async () => (await changed.boundingBox())!.y).toBeLessThan(viewBounds.y + viewBounds.height - 32);
-    expect((await matrix()).zoom).toBe(initial.zoom);
-    // A real wheel event takes control while the authored follow can still have queued frames.
-    const board = (await page.locator('main.board').boundingBox())!;
-    await page.mouse.move(board.x + 50, board.y + 160); await page.mouse.wheel(0, -220);
-    await expect(page.getByRole('button', { name: '返回并继续跟随', exact: true })).toBeVisible();
-    const taken = await matrix();
-    await page.evaluate(() => new Promise<void>(done => { let frames = 0; const next = () => { if (++frames === 4) done(); else requestAnimationFrame(next); }; requestAnimationFrame(next); }));
-    expect(await matrix()).toEqual(taken);
-    await page.getByRole('button', { name: '重读并整合', exact: true }).click();
-    await page.getByRole('textbox', { name: '可控候选内容' }).fill('后一个真实修改也不能抢回视野。'.repeat(110));
-    await page.getByRole('button', { name: '提交可控修改', exact: true }).click();
-    await expect(page.getByRole('status', { name: '可控生产者状态' })).toContainText('正式修改已保存');
-    await expect.poll(matrix).toEqual(taken);
-    await page.getByRole('button', { name: '返回并继续跟随', exact: true }).click();
-    await expect(page.getByRole('status', { name: '修改跟随' })).toHaveText('正在跟随可控修改');
-    await expect.poll(async () => (await matrix()).y).not.toBe(taken.y);
-    await page.getByText('可控生产者 · 验证入口', { exact: true }).click();
-    await page.getByRole('button', { name: '全图', exact: true }).click();
-    await expect(page.getByRole('button', { name: '返回并继续跟随', exact: true })).toBeVisible();
-    await expect.poll(async () => (await matrix()).zoom).toBeLessThan(.35);
-    const beforeEnd = await matrix();
-    await page.getByText('可控生产者 · 验证入口', { exact: true }).click();
-    await page.getByRole('button', { name: '结束可控修改', exact: true }).click();
-    await expect(page.getByRole('button', { name: '查看修改结果', exact: true })).toBeVisible();
-    expect(await matrix()).toEqual(beforeEnd);
-    await app.close(); app = await launch(); page = await app.firstWindow();
-    await expect(page.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
-    expect(await matrix()).toEqual(beforeEnd);
-    await expect(page.getByRole('button', { name: '返回并继续跟随', exact: true })).toHaveCount(0);
-    await expect(page.getByRole('status', { name: '修改跟随' })).toHaveText('可控修改已结束');
-    await expect(page.getByRole('button', { name: '查看修改结果', exact: true })).toBeVisible();
+    const observations: unknown[] = [];
+    try {
+      await resizeBoardWindow(app, page, 900, 688);
+      await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+      await page.getByText('可控生产者 · 验证入口', { exact: true }).click();
+      await page.getByRole('button', { name: '读取当前依据', exact: true }).click();
+      await expect(page.getByRole('status', { name: '修改跟随' })).toHaveText('正在跟随可控修改');
+      const matrix = () => page.locator('.react-flow__viewport').evaluate(el => { const m = new DOMMatrixReadOnly(getComputedStyle(el).transform); return { x: m.e, y: m.f, zoom: m.a }; });
+      const initial = await matrix();
+      await page.getByRole('textbox', { name: '可控候选内容' }).fill('实际增长的正文。'.repeat(80));
+      await page.getByRole('button', { name: '提交可控修改', exact: true }).click();
+      await expect(page.getByRole('status', { name: '可控生产者状态' })).toContainText('正式修改已保存');
+      const changed = page.locator('[data-block-id="RB-TH-01-03-expansion-terms"]').first();
+      await expect(changed).toHaveText('实际增长的正文。'.repeat(80));
+      // Actual changed content must be visible; movement depends on the starting camera.
+      const viewBounds = (await page.locator('main.board').boundingBox())!;
+      await expect.poll(async () => (await changed.boundingBox())!.y).toBeGreaterThanOrEqual(viewBounds.y);
+      await expect.poll(async () => (await changed.boundingBox())!.y).toBeLessThan(viewBounds.y + viewBounds.height - 32);
+      expect((await matrix()).zoom).toBe(initial.zoom);
+      // A real wheel event takes control while the authored follow can still have queued frames.
+      const point = await boardWheelPoint(page);
+      observations.push({ phase: 'before-wheel', point, scene: await followScene(page) });
+      await page.evaluate(() => {
+        (window as any).__layoutWheelEvidence = null;
+        window.addEventListener('wheel', event => {
+          const target = event.target as Element, m = new DOMMatrixReadOnly(getComputedStyle(document.querySelector('.react-flow__viewport')!).transform);
+          (window as any).__layoutWheelEvidence = { trusted: event.isTrusted, dx: event.deltaX, dy: event.deltaY, point: [event.clientX, event.clientY],
+            inBoard: target.closest('main.board') === document.querySelector('main.board'), target: target.outerHTML.slice(0, 280),
+            path: event.composedPath().map(node => node instanceof Element ? { tag: node.tagName, class: node.getAttribute('class'), label: node.getAttribute('aria-label') } : String(node)),
+            camera: { x: m.e, y: m.f, zoom: m.a } };
+        }, { capture: true, once: true });
+      });
+      await page.mouse.move(point.x, point.y); await page.mouse.wheel(0, -220);
+      await expect.poll(() => page.evaluate(() => (window as any).__layoutWheelEvidence)).not.toBeNull();
+      const wheel = await page.evaluate(() => (window as any).__layoutWheelEvidence);
+      expect(wheel.trusted).toBe(true); expect(wheel.inBoard).toBe(true); expect(wheel.dy).toBe(-220);
+      await expect.poll(async () => (await matrix()).y).toBeGreaterThan(wheel.camera.y);
+      observations.push({ phase: 'after-wheel', scene: await followScene(page) });
+      await expect(page.getByRole('button', { name: '返回并继续跟随', exact: true })).toBeVisible();
+      const taken = await matrix();
+      await page.evaluate(() => new Promise<void>(done => { let frames = 0; const next = () => { if (++frames === 4) done(); else requestAnimationFrame(next); }; requestAnimationFrame(next); }));
+      expect(await matrix()).toEqual(taken);
+      await page.getByRole('button', { name: '重读并整合', exact: true }).click();
+      await page.getByRole('textbox', { name: '可控候选内容' }).fill('后一个真实修改也不能抢回视野。'.repeat(110));
+      await page.getByRole('button', { name: '提交可控修改', exact: true }).click();
+      await expect(page.getByRole('status', { name: '可控生产者状态' })).toContainText('正式修改已保存');
+      await expect.poll(matrix).toEqual(taken);
+      await page.getByRole('button', { name: '返回并继续跟随', exact: true }).click();
+      await expect(page.getByRole('status', { name: '修改跟随' })).toHaveText('正在跟随可控修改');
+      await expect.poll(async () => (await matrix()).y).not.toBe(taken.y);
+      await page.getByText('可控生产者 · 验证入口', { exact: true }).click();
+      await page.getByRole('button', { name: '全图', exact: true }).click();
+      await expect(page.getByRole('button', { name: '返回并继续跟随', exact: true })).toBeVisible();
+      await expect.poll(async () => (await matrix()).zoom).toBeLessThan(.35);
+      const beforeEnd = await matrix();
+      await page.getByText('可控生产者 · 验证入口', { exact: true }).click();
+      await page.getByRole('button', { name: '结束可控修改', exact: true }).click();
+      await expect(page.getByRole('button', { name: '查看修改结果', exact: true })).toBeVisible();
+      expect(await matrix()).toEqual(beforeEnd);
+      observations.push({ phase: 'finished', scene: await followScene(page) });
+      await app.close(); app = await launch(); page = await app.firstWindow();
+      await resizeBoardWindow(app, page, 900, 688);
+      await expect(page.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
+      expect(await matrix()).toEqual(beforeEnd);
+      await expect(page.getByRole('button', { name: '返回并继续跟随', exact: true })).toHaveCount(0);
+      await expect(page.getByRole('status', { name: '修改跟随' })).toHaveText('可控修改已结束');
+      await expect(page.getByRole('button', { name: '查看修改结果', exact: true })).toBeVisible();
+      observations.push({ phase: 'reopened', scene: await followScene(page) });
+      const scenePath = test.info().outputPath('follow-wheel-scenes.json');
+      await writeFile(scenePath, JSON.stringify(observations, null, 2));
+      await test.info().attach('follow-wheel-scenes', { path: scenePath, contentType: 'application/json' });
+      console.log('Follow takeover geometry:', JSON.stringify({ viewport: point.viewport, point: [point.x, point.y], trusted: wheel.trusted, inBoard: wheel.inBoard, before: wheel.camera, taken }));
+    } catch (error) { await saveFollowFailure(page, observations); throw error; }
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
 

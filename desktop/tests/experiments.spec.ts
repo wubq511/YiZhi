@@ -1,18 +1,23 @@
 import { test, expect, _electron as electron } from '@playwright/test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { ElectronApplication, Page, Locator } from '@playwright/test';
+import { resizeBoardWindow } from './board-test-helpers';
 
-async function smallExperimentWindow(app: ElectronApplication) {
+async function smallExperimentWindow(app: ElectronApplication, phase = 'initial') {
   const page = await app.firstWindow();
-  await expect(page.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
-  const size = await app.evaluate(({ BrowserWindow }) => {
+  await resizeBoardWindow(app, page, 1024, 688);
+  const geometry = await app.evaluate(({ BrowserWindow, screen }) => {
     const window = BrowserWindow.getAllWindows()[0];
-    window.setContentSize(1024, 688); return window.getContentSize();
+    return { requestedOuter: [1024, 688], outer: window.getSize(), content: window.getContentSize(), workArea: screen.getDisplayMatching(window.getBounds()).workArea };
   });
-  expect(size).toEqual([1024, 688]);
-  await expect.poll(() => page.evaluate(() => [innerWidth, innerHeight])).toEqual(size);
+  const renderer = await page.evaluate(() => ({ inner: [innerWidth, innerHeight], board: document.querySelector('main.board')!.getBoundingClientRect().toJSON() }));
+  expect(renderer.inner).toEqual(geometry.content);
+  const geometryPath = test.info().outputPath(`experiment-window-${phase}.json`);
+  await writeFile(geometryPath, JSON.stringify({ ...geometry, ...renderer }, null, 2));
+  await test.info().attach(`experiment-window-${phase}`, { path: geometryPath, contentType: 'application/json' });
+  console.log('Experiment window geometry:', JSON.stringify({ ...geometry, ...renderer }));
   return page;
 }
 
@@ -88,7 +93,7 @@ test('actual built-in controls, diagram, offscreen stop and formula confirmation
     await reveal(page, lab.getByRole('button', { name: '完成公式编辑', exact: true, includeHidden: true }));
     await lab.getByRole('button', { name: '完成公式编辑', exact: true }).click();
     await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t12-mux.png' });
-    await app.close(); app = await launch(); page = await smallExperimentWindow(app);
+    await app.close(); app = await launch(); page = await smallExperimentWindow(app, 'reopened');
     lab = page.getByRole('region', { name: '交互 · 4 选 1 的选择语义', exact: true }); await reveal(page, lab.getByRole('checkbox', { name: 'I0', exact: true, includeHidden: true }));
     const reopened = await read(); expect(reopened.definition).toEqual(confirmed.definition); expect(reopened.state).toEqual(confirmed.state);
     await reveal(page, lab.getByRole('button', { name: '编辑实验公式', exact: true, includeHidden: true }));
