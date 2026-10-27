@@ -4,6 +4,9 @@ import type { DatabaseSync } from 'node:sqlite';
 import type { CourseUnit, ReadingBlock } from '../shared';
 import type { CourseGraph } from '../shared';
 import { recordSemanticImpact } from './review-state';
+import { integrateValue } from '../content-integration';
+import { equal } from '../editor-api';
+import type { EditorProtection, CandidateCheck } from '../command-api';
 import type { Attempt, AttemptRequest, CommandObject, CommandRead, GroupCommand, GroupHistory, GroupResult } from '../command-api';
 
 const json = (value: unknown) => JSON.stringify(value);
@@ -14,6 +17,7 @@ const record = (value: unknown): value is Record<string, any> => !!value && type
 
 /** All methods run synchronously in the host-owned Worker on its course connection. */
 export class CommandGroups {
+  private protections = new Map<string, EditorProtection>();
   constructor(private db: DatabaseSync, private graph: CourseGraph) {
     db.exec(`
       CREATE TABLE IF NOT EXISTS cg_objects(id TEXT PRIMARY KEY, kind TEXT NOT NULL, value TEXT NOT NULL, version INTEGER NOT NULL);
@@ -21,12 +25,38 @@ export class CommandGroups {
       CREATE TABLE IF NOT EXISTS cg_bases(id TEXT PRIMARY KEY, attempt_id TEXT NOT NULL REFERENCES cg_attempts(id), generation INTEGER NOT NULL, versions TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS cg_candidates(id TEXT PRIMARY KEY, digest TEXT NOT NULL, command TEXT NOT NULL, result TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS cg_history(operation_id TEXT PRIMARY KEY REFERENCES cg_candidates(id), payload TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS cg_resolved(candidate_id TEXT PRIMARY KEY REFERENCES cg_candidates(id), operation_id TEXT NOT NULL);
       INSERT OR IGNORE INTO metadata VALUES ('generation', '1');
       UPDATE cg_attempts SET status='interrupted' WHERE status='running';
     `);
     if (!db.prepare('PRAGMA table_info(cg_bases)').all().some(row => row.name === 'draft_versions'))
       db.exec("ALTER TABLE cg_bases ADD COLUMN draft_versions TEXT NOT NULL DEFAULT '{}'");
+    if (!db.prepare('PRAGMA table_info(cg_bases)').all().some(row => row.name === 'read_values'))
+      db.exec("ALTER TABLE cg_bases ADD COLUMN read_values TEXT NOT NULL DEFAULT '[]'");
+    db.exec("UPDATE cg_bases SET read_values='[]' WHERE attempt_id IN (SELECT id FROM cg_attempts WHERE status<>'running')");
     this.observe();
+  }
+  protect(input: EditorProtection) {
+    if (!validId(input.editorId) || !Number.isSafeInteger(input.sequence) || input.sequence < 1 ||
+      !Number.isSafeInteger(input.inputSeq) || input.inputSeq < 0 || !['editing', 'selection'].includes(input.mode) ||
+      !Array.isArray(input.blockIds) || input.blockIds.length > 1000 || input.blockIds.some(id => !validId(id))) throw new Error('无效的编辑保护范围');
+    const old = this.protections.get(input.editorId);
+    if (old && input.sequence <= old.sequence) return;
+    // Moving the caret must not release the only copy of an unacknowledged input tail.
+    if (old?.blockIds.some(id => !input.blockIds.includes(id))) {
+      const durable = this.db.prepare('SELECT seq FROM input_progress WHERE session_id=?').get(input.sessionId);
+      if (input.inputSeq > Number(durable?.seq ?? 0)) throw new Error('最新输入尚未持久保留，不能解除现场保护');
+    }
+    this.protections.set(input.editorId, structuredClone(input));
+  }
+  private protectedWrites(ids: string[]) {
+    const { unit } = this.unit();
+    for (const protection of this.protections.values()) {
+      if (protection.mode !== 'editing') continue;
+      const { direct, ancestors } = draftScopes(unit, { changes: protection.blockIds.map(blockId => ({ blockId, text: '' })) } as any);
+      if (ids.some(id => direct.has(id) || ancestors.has(id))) return true;
+    }
+    return false;
   }
   private transaction<T>(run: () => T): T { return transaction(this.db, run); }
   private generation() { return Number(this.db.prepare("SELECT value FROM metadata WHERE key='generation'").get()!.value); }
@@ -132,9 +162,9 @@ export class CommandGroups {
       }
       const objects = [...ids].map(id => this.object(id));
       const basisId = randomUUID(), generation = this.generation();
-      this.db.prepare('INSERT INTO cg_bases(id, attempt_id, generation, versions, draft_versions) VALUES (?, ?, ?, ?, ?)')
+      this.db.prepare('INSERT INTO cg_bases(id, attempt_id, generation, versions, draft_versions, read_values) VALUES (?, ?, ?, ?, ?, ?)')
         .run(basisId, request.attemptId, generation, json(objects.map(object => [object.id, object.version])),
-          json(draftReadVersions(this.db, ids)));
+          json(draftReadVersions(this.db, ids)), json(objects));
       return { basisId, generation, objects };
     });
   }
@@ -165,6 +195,8 @@ export class CommandGroups {
       const basis = this.db.prepare('SELECT * FROM cg_bases WHERE id=?').get(command.basisId);
       if (!basis || basis.attempt_id !== command.attemptId || Number(basis.generation) !== this.generation())
         return retain('读取凭据或课程代际已失效，请重新读取并整合；旧候选已保留');
+      if (this.protectedWrites(command.changes.map(c => c.objectId)))
+        return retain('等待当前编辑结束；同处或共同祖先候选已保留');
       const versions = new Map<string, number>(parse(basis.versions));
       for (const [id, version] of versions) {
         if (this.object(id).version !== version) return retain(`读取依据已变化：${id}。请重新读取并整合；旧候选已保留`);
@@ -263,6 +295,7 @@ export class CommandGroups {
           committedAt: new Date().toISOString(), changes };
         this.db.prepare('INSERT INTO cg_history VALUES (?, ?)').run(command.operationId, json(history));
       }
+      this.releaseReadValues(command.basisId);
       return result;
     });
   }
@@ -281,6 +314,7 @@ export class CommandGroups {
     return this.transaction(() => {
       const attempt = this.attempt(attemptId);
       this.db.prepare("UPDATE cg_attempts SET status='stopped' WHERE id=?").run(attemptId);
+      this.db.prepare("UPDATE cg_bases SET read_values='[]' WHERE attempt_id=?").run(attemptId);
       return { ...attempt, status: 'stopped' };
     });
   }
@@ -288,13 +322,96 @@ export class CommandGroups {
     return this.db.prepare('SELECT payload FROM cg_history ORDER BY rowid DESC LIMIT ?').all(Math.min(100, Math.max(1, limit)))
       .map(row => parse(row.payload));
   }
-  candidates(attemptId?: string, limit = 50) {
+  candidates(attemptId?: string, limit = 50): import('../command-api').RetainedCandidate[] {
     return this.db.prepare(`SELECT command, result FROM cg_candidates
-      WHERE json_extract(result, '$.status')='retained' AND (? IS NULL OR json_extract(command, '$.attemptId')=?)
+      WHERE json_extract(result, '$.status')='retained' AND NOT EXISTS (SELECT 1 FROM cg_resolved WHERE candidate_id=cg_candidates.id)
+        AND (? IS NULL OR json_extract(command, '$.attemptId')=?)
       ORDER BY rowid DESC LIMIT ?`).all(attemptId ?? null, attemptId ?? null, Math.min(100, Math.max(1, limit)))
       .map(row => ({ command: parse(row.command), result: parse(row.result) }));
   }
+  recheck(sessionId: string): CandidateCheck[] {
+    return this.candidates().reverse().map(({ command }) => this.transaction((): CandidateCheck => {
+      const objectIds = command.changes.map(c => c.objectId), candidateId = command.operationId;
+      const result = (status: CandidateCheck['status'], reason: string): CandidateCheck => ({ candidateId, status, reason, objectIds,
+        ...(status === 'conflict' ? { parts: command.changes.map(c => ({ objectId: c.objectId, current: this.object(c.objectId).value, incoming: c.value })) } : {}) });
+      const attempt = this.attempt(command.attemptId);
+      if (attempt.status !== 'running' || attempt.generation !== this.generation()) return result('ineligible', '任务已停止或失效；保留候选供查阅');
+      if (this.protectedWrites(objectIds)) return result('waiting', '等待当前编辑结束');
+      const row = this.db.prepare('SELECT * FROM cg_bases WHERE id=?').get(command.basisId);
+      if (!row || Number(row.generation) !== this.generation()) return result('ineligible', '课程或原读取依据已失效');
+      const original: CommandObject[] = parse(row.read_values);
+      if (!original.length) return result('conflict', '原读取内容不可用，需要生产者重新读取');
+      // Every read prerequisite participates, including ancestor, relation membership and ABA versions.
+      for (const old of original) if (!objectIds.includes(old.id) && this.object(old.id).version !== old.version)
+        return result('conflict', `读取依据已变化：${old.id}，需要重新推导该一致组`);
+      const scope = new Set(original.map(o => o.id));
+      const writes = new Set(objectIds);
+      if (readDrafts(this.db).some(d => {
+        const s = draftScopes(this.unit().unit, d.input);
+        return [...s.direct].some(id => scope.has(id)) || [...s.ancestors].some(id => writes.has(id));
+      })) return result('waiting', '最新学生草稿尚待整合');
+      const changes = [];
+      for (const change of command.changes) {
+        const before = original.find(o => o.id === change.objectId);
+        if (!before) return result('conflict', '候选包含未读取对象');
+        const current = this.object(change.objectId);
+        // Structural/dependency changes must retain their original exact basis; only text/own fields have a bounded merge.
+        const merged = current.kind === 'block' ? integrateValue(before.value, current.value, change.value)
+          : { compatible: equal(before.value, current.value), value: change.value };
+        if (!merged.compatible) return result('conflict', `同处内容不兼容：${change.objectId}，双方内容均已保留`);
+        changes.push({ objectId: change.objectId, value: merged.value });
+      }
+      const basis = this.read({ sessionId, attemptId: command.attemptId, objectIds: original.map(o => o.id) });
+      const operationId = `integrate-${createHash('sha256').update(candidateId).digest('hex')}`;
+      const receipt = this.commit({ ...command, sessionId, basisId: basis.basisId, operationId, changes });
+      if (receipt.status !== 'committed') return result('waiting', receipt.reason!);
+      this.db.prepare('INSERT OR IGNORE INTO cg_resolved VALUES (?, ?)').run(candidateId, operationId);
+      this.releaseReadValues(command.basisId);
+      return { candidateId, status: 'committed', objectIds, receipt };
+    }));
+  }
+  private releaseReadValues(basisId: string) {
+    if (!this.db.prepare(`SELECT 1 FROM cg_candidates c WHERE json_extract(c.command, '$.basisId')=?
+      AND json_extract(c.result, '$.status')='retained' AND NOT EXISTS (SELECT 1 FROM cg_resolved r WHERE r.candidate_id=c.id) LIMIT 1`).get(basisId))
+      this.db.prepare("UPDATE cg_bases SET read_values='[]' WHERE id=?").run(basisId);
+  }
+  resolveCandidate(request: { sessionId: string; candidateId: string; basisRevision: number; choice: 'current' | 'incoming' }) {
+    if (!['current', 'incoming'].includes(request.choice)) throw new Error('无效的候选冲突选择');
+    return this.transaction(() => {
+      const resolved = this.db.prepare('SELECT operation_id FROM cg_resolved WHERE candidate_id=?').get(request.candidateId);
+      if (resolved) return this.query(String(resolved.operation_id));
+      if (this.unit().revision !== request.basisRevision) throw new Error('正文版本已变化，请重新查看冲突部分');
+      const candidate = this.candidates(undefined, 100).find(c => c.command.operationId === request.candidateId);
+      if (!candidate) throw new Error('待处理候选不存在');
+      const { command } = candidate;
+      if (request.choice === 'current') {
+        this.db.prepare('INSERT INTO cg_resolved VALUES (?, ?)').run(request.candidateId, 'kept-current');
+        this.releaseReadValues(command.basisId);
+        return null;
+      }
+      const attempt = this.attempt(command.attemptId);
+      if (attempt.status !== 'running' || attempt.generation !== this.generation()) throw new Error('任务已停止或失效，不能采用其候选');
+      if (this.protectedWrites(command.changes.map(c => c.objectId))) throw new Error('请先结束该处编辑');
+      const row = this.db.prepare('SELECT read_values FROM cg_bases WHERE id=?').get(command.basisId);
+      const original: CommandObject[] = row ? parse(row.read_values) : [];
+      if (!original.length) throw new Error('读取依据已失效，需要生产者重新读取');
+      const writes = new Set(command.changes.map(c => c.objectId));
+      for (const old of original) if (!writes.has(old.id) && this.object(old.id).version !== old.version)
+        throw new Error('读取前提已变化，不能用冲突选择跳过重新推导');
+      const basis = this.read({ sessionId: request.sessionId, attemptId: command.attemptId, objectIds: original.map(o => o.id) });
+      const receipt = this.commit({ ...command, sessionId: request.sessionId, basisId: basis.basisId,
+        operationId: `resolve-${createHash('sha256').update(request.candidateId).digest('hex')}` });
+      if (receipt.status !== 'committed') throw new Error(receipt.reason);
+      this.db.prepare('INSERT INTO cg_resolved VALUES (?, ?)').run(request.candidateId, receipt.operationId);
+      this.releaseReadValues(command.basisId);
+      return receipt;
+    });
+  }
   dispatch(action: string, payload: any): unknown {
+    if (action === 'commands:protect') return this.protect(payload);
+    if (action === 'commands:releaseView') { this.protections.clear(); return; }
+    if (action === 'commands:recheck') return this.recheck(payload.sessionId);
+    if (action === 'commands:resolveCandidate') return this.resolveCandidate(payload);
     if (action === 'commands:startAttempt') return this.startAttempt(payload);
     if (action === 'commands:read') return this.read(payload);
     if (action === 'commands:commit') return this.commit(payload);

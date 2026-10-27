@@ -193,6 +193,7 @@ function App() {
     if (readingFailed.current) { setClosing(false); return false; }
     if (sourcesPanel.current && !await sourcesPanel.current.flush()) { setClosing(false); return false; }
     const saved = await channel.current.flush();
+    if (saved && continuous.current && !await continuous.current.finish()) { setClosing(false); return false; }
     if (!saved) setClosing(false);
     return saved;
   }), []);
@@ -315,7 +316,7 @@ function App() {
           <article id="unit" ref={element => { if (selected?.id === unit.id) articleRef.current = element; }} onScroll={event => { const current = readingRef.current; if (current && current.unitId === unit.id && Math.abs(current.scrollTop - event.currentTarget.scrollTop) > 2) persist({ ...current, scrollTop: event.currentTarget.scrollTop }); }} className="nodrag nopan nowheel"><RoughFrame id={unit.id} />
             <h1>{unit.name}</h1><p className="unit-meta">课程重要性 {unit.rating.stars} / 5 · {unit.id}</p>{review && <ReviewControls unitId={unit.id} snapshot={review} change={status => void changeReview(unit.id, status)} confirm={(id, adjust) => void confirmReview(id, adjust)} />}<p className="outcome">{unit.outcome}</p>
             <SourceReferences citations={sourceCitations.filter(citation => citation.target?.unitId === unit.id)} onOpen={citation => sourcesPanel.current?.openCitation(citation)} />
-            {unit.id === 'KU-001' && channel.current ? <ContinuousUnitEditor course={course} channel={channel.current} disabled={closing || producerBusy}
+            {unit.id === 'KU-001' && channel.current ? <ContinuousUnitEditor course={course} channel={channel.current} disabled={closing || producerBusy} saveError={state.status === 'error'}
               composition={active => { composing.current = active; }} controller={instance => { continuous.current = instance; }}
               renderBlock={block => <ReadingBoundary><Block block={block} reading={reading} updateReading={updateReading}
                 onSource={button => { sourceTrigger.current = button; setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;

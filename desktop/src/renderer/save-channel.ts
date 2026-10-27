@@ -118,6 +118,18 @@ export class ParagraphSaveChannel {
   /** Initial recovery projection only. Live editors reconcile snapshots through range transactions. */
   recovery() { return { patch: this.patches.reduce<ContentPatch | undefined>((p, n) => composePatch(p, n.patch), undefined),
     formulaDrafts: structuredClone(this.formulaDrafts) }; }
+  progress() { return { inputSeq: this.sequence, durableInputSeq: Math.max(this.confirmed, this.draftSaved), confirmedInputSeq: this.confirmed }; }
+  pendingTargets() { return new Set([...this.changes.keys(), ...this.splits.flatMap(s => [s.blockId, s.newBlockId]),
+    ...this.patches.flatMap(p => patchTargets(p.patch)), ...this.formulaDrafts.map(f => f.blockId)]); }
+  snapshot() { return this.bridge.read(this.course.sessionId); }
+  /** Only after a version-checked explicit resolution of this exact latest durable input. */
+  adoptResolution(snapshot: OpenedCourse) {
+    if (this.running) throw new Error('请等待当前保存完成');
+    this.command = undefined; this.changes.clear(); this.splits = []; this.patches = []; this.formulaDrafts = [];
+    this.replacesDraft = undefined; this.complete = true;
+    this.sequence = this.confirmed = snapshot.confirmedInputSeq; this.draftSaved = this.confirmed;
+    this.deliverSnapshot(snapshot); this.publish('saved');
+  }
   flush(): Promise<boolean> {
     clearTimeout(this.idle); clearTimeout(this.deadline); this.deadline = undefined;
     if (this.running) return this.running;
@@ -135,7 +147,8 @@ export class ParagraphSaveChannel {
     const command = this.command;
     if (!command || receipt.operationId !== command.operationId || receipt.inputSeq !== command.inputSeq ||
       receipt.sessionId !== command.sessionId || receipt.blockId !== (command.changes[0]?.blockId ?? command.splits?.[0]?.blockId ?? patchTargets(command.patch)[0] ?? this.course.unit.id) ||
-      receipt.revision !== command.baseRevision + 1) throw new Error('保存确认与当前输入不匹配，请重试');
+      (receipt.basedOnRevision !== undefined ? receipt.basedOnRevision !== command.baseRevision || receipt.revision <= command.baseRevision
+        : receipt.revision !== command.baseRevision + 1)) throw new Error('保存确认与当前输入不匹配，请重试');
     this.revision = receipt.revision;
     this.confirmed = Math.max(this.confirmed, receipt.inputSeq);
     for (const [id, change] of this.changes) if (change.seq <= receipt.inputSeq) this.changes.delete(id);
@@ -174,6 +187,8 @@ export class ParagraphSaveChannel {
           this.accept(receipt);
         }
         this.command = undefined;
+        try { this.deliverSnapshot(await this.bridge.read(this.course.sessionId)); }
+        catch { /* The exact input receipt is already durable. Event replay can refresh its projection. */ }
       } catch (error) {
         const detail = (error as Error).message;
         this.publish('error', /[\u4e00-\u9fff]/.test(detail) ? detail

@@ -24,6 +24,11 @@ let exiting = false;
 let closeSequence = 0;
 let pendingClose: number | undefined;
 let closeTimer: ReturnType<typeof setTimeout> | undefined;
+let activeSessionId: string | undefined;
+function detachView() {
+  if (core && activeSessionId) void core.commands.releaseView({ sessionId: activeSessionId })
+    .then(() => core.commands.recheck({ sessionId: activeSessionId! })).catch(() => { /* Durable drafts remain guarded, including after renderer death. */ });
+}
 
 // Acquire before creating Worker or touching any course. Secondary launch rejoins this host.
 if (!app.requestSingleInstanceLock()) app.exit(0);
@@ -49,7 +54,7 @@ else {
     };
     registerSourceProtocols(core, join(__dirname, 'renderer'));
     registerSourceIPC(core, checkSender);
-    ipcMain.handle('course:open', async event => { checkSender(event); return core.open(courseDirectory); });
+    ipcMain.handle('course:open', async event => { checkSender(event); const opened = await core.open(courseDirectory); activeSessionId = opened.sessionId; return opened; });
     ipcMain.handle('course:graph', async (event, sessionId: string) => { checkSender(event); return core.graph(sessionId); });
     ipcMain.handle('course:read-unit', async (event, sessionId: string, unitId: string) => { checkSender(event); return core.readUnit(sessionId, unitId); });
     ipcMain.handle('course:reading-state', async (event, sessionId: string) => { checkSender(event); return core.readingState(sessionId); });
@@ -63,7 +68,7 @@ else {
     ipcMain.handle('course:queryOperation', (event, input) => { checkSender(event); return core.queryOperation(input.sessionId, input.operationId); });
     ipcMain.handle('course:readEvents', (event, input) => { checkSender(event); return core.readEvents(input.sessionId, input.after, input.limit); });
     ipcMain.handle('course:read', (event, input) => { checkSender(event); return core.read(input.sessionId); });
-    for (const method of ['startAttempt', 'read', 'commit', 'stop', 'query', 'candidates', 'history'] as const) {
+    for (const method of ['protect', 'releaseView', 'recheck', 'resolveInput', 'resolveCandidate', 'startAttempt', 'read', 'commit', 'stop', 'query', 'candidates', 'history'] as const) {
       ipcMain.handle(`commands:${method}`, (event, payload) => { checkSender(event); return core.commands[method](payload); });
     }
     for (const method of ['read', 'commit', 'query', 'prerequisites'] as const) {
@@ -119,7 +124,8 @@ async function showWindow() {
     webPreferences: { preload: join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', event => event.preventDefault());
+  window.webContents.on('render-process-gone', detachView);
   window.on('close', event => { if (!exiting) { event.preventDefault(); requestClose(); } });
-  window.on('closed', () => { window = undefined; pendingClose = undefined; clearTimeout(closeTimer); });
+  window.on('closed', () => { detachView(); window = undefined; pendingClose = undefined; clearTimeout(closeTimer); });
   await window.loadURL('yizhi-app://app/index.html');
 }

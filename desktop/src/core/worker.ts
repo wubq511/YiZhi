@@ -10,6 +10,7 @@ import type { CourseGraph, OpenedCourse, SaveParagraph, SaveReceipt, EditCommand
 
 import { initializeSaveStore, readDrafts, saveDraft, eventCursor, commitEdit, queryOperation, history, confirmedInput, readEvents } from './save-store';
 import { transaction } from './save-store';
+import { resolveInput } from './save-store';
 import { initializeReviewState, reviewSnapshot, setReviewStatus, confirmReviewPrompt } from './review-state';
 
 const EDITABLE = 'RB-TH-01-01-what-is-positional-notation';
@@ -28,6 +29,7 @@ function session(id: string): Course {
 function snapshot(course: Course): OpenedCourse {
   const row = course.db.prepare('SELECT payload, revision FROM units WHERE id = ?').get('KU-001')!;
   return { courseId: course.courseId, sessionId: course.sessionId, revision: Number(row.revision),
+    blockVersions: Object.fromEntries(course.db.prepare("SELECT id, version FROM cg_objects WHERE kind='block'").all().map(r => [String(r.id), Number(r.version)])),
     drafts: readDrafts(course.db), eventCursor: eventCursor(course.db),
     confirmedInputSeq: confirmedInput(course.db, course.sessionId), editableBlockId: EDITABLE, unit: JSON.parse(String(row.payload)),
     runtime: { node: process.versions.node, electron: process.versions.electron,
@@ -147,6 +149,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action === 'relations:read') value = session(payload.sessionId).relations.read(payload);
     else if (action === 'relations:commit') value = session(payload.sessionId).relations.commit(payload);
     else if (action === 'relations:query') value = session(payload.sessionId).relations.query(payload.operationId);
+    else if (action === 'commands:resolveInput') { const c = session(payload.sessionId); value = resolveInput(c.db, payload, () => c.groups.observe()); }
     else if (action.startsWith('commands:')) value = session(payload.sessionId).groups.dispatch(action, payload);
     else if (action.startsWith('sources:')) value = await session(payload.sessionId).sources.dispatch(action, payload);
     else if (action === 'close') {
