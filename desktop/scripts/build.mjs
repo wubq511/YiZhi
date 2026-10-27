@@ -31,3 +31,5 @@ try {
 await mkdir('dist/fixtures', { recursive: true });
 await cp('licenses', 'dist/licenses', { recursive: true });
 for (const file of await readdir('fixtures')) await copyFile(`fixtures/${file}`, `dist/fixtures/${file}`);
+
+await cp('src/extensions/packages', 'dist/extensions', { recursive: true });

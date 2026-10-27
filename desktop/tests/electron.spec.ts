@@ -6,13 +6,14 @@ import { DatabaseSync } from 'node:sqlite';
 import type { ElectronApplication, Locator, Page } from '@playwright/test';
 
 async function reveal(window: Page, target: Locator) {
+  await expect(window.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
   const board = (await window.locator('main.board').boundingBox())!;
   await window.mouse.move(board.x + 10, board.y + board.height / 2);
   for (let i = 0; i < 60; i++) {
     const box = (await target.boundingBox())!;
     const delta = box.y - board.y - board.height / 2;
     if (Math.abs(delta) < board.height / 3) return;
-    await window.mouse.wheel(0, Math.max(-500, Math.min(500, delta * 2)));
+    await window.mouse.wheel(0, Math.max(-500, Math.min(500, delta)));
     await window.waitForTimeout(30);
   }
   throw new Error('无法通过画板平移找到阅读位置');
@@ -352,6 +353,8 @@ test('offscreen reading controls are excluded from keyboard navigation until in 
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const window = await app.firstWindow();
+    await expect(window.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1024, 768));
     await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     const summary = window.getByText('练习 · 二进制小数与十六进制权展开自测');
     const boundary = summary.locator('..').locator('..');

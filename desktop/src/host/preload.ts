@@ -1,4 +1,5 @@
 import { annotationClient } from '../annotation-api';
+import {extensionsClient} from '../extensions-api';
 import { experimentsClient } from '../experiments-api';
 import { agentClient } from '../agent-api';
 import { contextBridge, ipcRenderer } from 'electron';
@@ -16,6 +17,7 @@ async function invoke(channel: string, argument?: unknown) {
 }
 const bridge: DesktopBridge = {
   annotations: annotationClient(invoke),
+  extensions: (() => { const {resource, ...api}=extensionsClient(invoke); return api; })(),
   experiments: experimentsClient(invoke),
   agent: { ...agentClient(invoke), status: () => invoke('agent:status') },
   parsing: parsingBridge(invoke),

@@ -2,6 +2,7 @@ import { AnnotationPanel, type AnnotationPanelHandle } from './annotation-panel'
 import { CameraController, type FollowState } from './camera-controller';
 import { useLocalLayout, ReadingSurface } from './local-layout';
 import type { LayoutPlacement } from '../layout';
+import {ExtensionExperiment,flushExtensions} from './extension-experiment';
 import { BuiltinExperiment, flushBuiltinExperiments } from './builtin-experiment';
 
 import { AgentPanel, type AgentPanelHandle } from './agent-panel';
@@ -250,6 +251,7 @@ function App() {
     if (notesPanel.current && !await notesPanel.current.flush()) { setClosing(false); return false; }
     if (sourcesPanel.current && !await sourcesPanel.current.flush()) { setClosing(false); return false; }
     const current = await window.yizhi.open();
+    if (!await flushExtensions(current.sessionId)) { setReadError('扩展现场尚未确认，请恢复最近确认现场后重试。'); setClosing(false); return false; }
     if (!await flushBuiltinExperiments(window.yizhi, current.sessionId)) { setReadError('实验现场尚未确认，请返回实验重试保存或恢复最近确认现场。'); setClosing(false); return false; }
     if (agentPanel.current && !await agentPanel.current.flush()) { setClosing(false); return false; }
     const saved = await channel.current.flush();
@@ -299,6 +301,14 @@ function App() {
   useEffect(() => {
     const board = boardRef.current;
     if (!board) return;
+    const nativeScroll = () => {
+      const dx = board.scrollLeft, dy = board.scrollTop;
+      if (!dx && !dy) return;
+      // Browser caret/focus navigation can scroll overflow:hidden containers.
+      // Transfer that visible movement to the saved camera; keep overlay controls fixed.
+      board.scrollLeft = 0; board.scrollTop = 0;
+      camera.pan(-dx, -dy);
+    };
     const wheel = (event: WheelEvent) => {
       const target = event.target as HTMLElement;
       if (target.closest('.board-tools, .relations-panel, .source-dialog, .react-flow__minimap, .table-scroll, input, select, textarea, .mux, .builtin-formula-editor, math-field')) return;
@@ -314,7 +324,8 @@ function App() {
       } else camera.pan(-(event.shiftKey ? event.deltaY : event.deltaX), -(event.shiftKey ? 0 : event.deltaY));
     };
     board.addEventListener('wheel', wheel, { passive: false, capture: true });
-    return () => board.removeEventListener('wheel', wheel, true);
+    board.addEventListener('scroll', nativeScroll, { passive: true });
+    return () => { board.removeEventListener('wheel', wheel, true); board.removeEventListener('scroll', nativeScroll); };
   }, [flow, camera]);
   const nodes = useMemo(() => graph ? [
     ...graph.layout.groups.map(group => ({ id: group.themeId, position: { x: group.x, y: group.y }, data: { label: group.title }, width: group.width, height: group.height, style: { width: group.width, height: group.height, fontSize: 50, border: "1px solid #bbc9d5", background: "#fff", opacity: viewport.zoom < 0.35 ? 1 : 0.35 }, selectable: false, draggable: false })),
@@ -405,6 +416,7 @@ function App() {
             <RoughFrame id={unit.id} />
 
             <h1>{unit.name}</h1><p className="unit-meta">课程重要性 {unit.rating.stars} / 5 · {unit.id}</p>{review && <ReviewControls unitId={unit.id} snapshot={review} change={status => void changeReview(unit.id, status)} confirm={(id, adjust) => void confirmReview(id, adjust)} />}<p className="outcome">{unit.outcome}</p>
+            {unit.id==='KU-001'&&<ExtensionExperiment sessionId={course.sessionId} active={viewport.zoom>=0.55&&selected?.id===unit.id} disabled={closing}/>}
             <SourceReferences citations={sourceCitations.filter(citation => citation.target?.unitId === unit.id)} onOpen={citation => sourcesPanel.current?.openCitation(citation)} />
             {unit.id === 'KU-001' && channel.current ? <ContinuousUnitEditor course={course} channel={channel.current} disabled={closing || producerBusy || !cameraReady} saveError={state.status === 'error'}
               annotate={selection => { void (async () => { if (!await channel.current?.flush()) return; await notesPanel.current?.create(selection); })(); }}

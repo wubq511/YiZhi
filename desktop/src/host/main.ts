@@ -1,4 +1,5 @@
 import { annotationMethods } from '../annotation-api';
+import {registerExtensionProtocol,extensionNavigation} from './extension-protocol';
 import { AgentRuntime } from '../agent/executor';
 import { registerAgentIPC } from './agent-ipc';
 import { app, BrowserWindow, dialog, ipcMain, Menu, protocol } from 'electron';
@@ -9,7 +10,7 @@ import type { SaveParagraph } from '../shared';
 import { registerSourceProtocols } from './source-protocol';
 import { registerSourceIPC } from './source-ipc';
 
-protocol.registerSchemesAsPrivileged(['yizhi-app', 'yizhi-resource'].map(scheme => ({ scheme,
+protocol.registerSchemesAsPrivileged(['yizhi-app', 'yizhi-resource', 'yizhi-extension'].map(scheme => ({ scheme,
   privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } })));
 
 app.setName('绎知');
@@ -25,6 +26,7 @@ let agent: AgentRuntime;
 let window: BrowserWindow | undefined;
 let quitRequested = false;
 let exiting = false;
+let recoveringRenderer = false;
 let closeSequence = 0;
 let pendingClose: number | undefined;
 let closeTimer: ReturnType<typeof setTimeout> | undefined;
@@ -58,6 +60,7 @@ else {
       if (!window || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame)
         throw new Error('未知课程窗口');
     };
+    registerExtensionProtocol(core);
     registerSourceProtocols(core, join(__dirname, 'renderer'));
     registerSourceIPC(core, checkSender);
     registerAgentIPC(core, agent, checkSender);
@@ -65,6 +68,7 @@ else {
       ipcMain.handle(`parsing:${method}`, (event, request) => { checkSender(event); return core.parsing[method](request); });
     }
     for (const method of annotationMethods) ipcMain.handle(`annotations:${method}`, (event, request) => { checkSender(event); return core.annotations[method](request); });
+    for (const method of ['open','read','act'] as const) ipcMain.handle(`extensions:${method}`, (event,payload) => {checkSender(event);return core.extensions[method](payload);});
     ipcMain.handle('course:open', async event => { checkSender(event); const opened = await core.open(courseDirectory); activeSessionId = opened.sessionId; return opened; });
     ipcMain.handle('course:graph', async (event, sessionId: string) => { checkSender(event); return core.graph(sessionId); });
     ipcMain.handle('course:read-unit', async (event, sessionId: string, unitId: string) => { checkSender(event); return core.readUnit(sessionId, unitId); });
@@ -108,7 +112,7 @@ else {
         { label: '退出绎知', accelerator: 'Cmd+Q', click: () => app.quit() }] },
       { label: '编辑', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' },
         { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
-      { label: '窗口', submenu: [{ role: 'minimize' }, { label: '继续阅读', click: () => void showWindow() }] },
+      { label: '窗口', submenu: [{ role: 'minimize' }, { label: '继续阅读', click: () => void showWindow() }, {label:'恢复无响应窗口',click:()=>void recoverRenderer()}] },
     ]));
     await showWindow();
   }).catch(error => { dialog.showErrorBox('无法打开绎知', String(error)); app.exit(1); });
@@ -124,6 +128,23 @@ else {
     });
   });
 }
+/** This runs in the host even if every script in the learning renderer is stuck. */
+async function recoverRenderer() {
+  if(!window||recoveringRenderer||exiting)return;
+  recoveringRenderer=true;
+  try {
+    const {response}=await dialog.showMessageBox(window,{type:'warning',message:'学习窗口没有响应',detail:'从已保存的正文、草稿与实验确认现场恢复。未确认的实验计算不会作为保存结果。',buttons:['恢复窗口','暂不恢复'],defaultId:0,cancelId:1});
+    if(response!==0||!window)return;
+    // Revoke all browser callbacks before creating another process. Core/Agent/parser stay owned by the host.
+    await core.recoverExtensionRenderers();
+    clearTimeout(closeTimer);pendingClose=undefined;quitRequested=false;
+    const failed=window,bounds=failed.getBounds();
+    failed.webContents.forcefullyCrashRenderer();
+    failed.destroy();
+    await showWindow(bounds);
+  }catch(error){dialog.showErrorBox('窗口恢复未完成',String(error));}
+  finally{recoveringRenderer=false;}
+}
 function requestClose() {
   if (!window || pendingClose !== undefined) return;
   pendingClose = ++closeSequence;
@@ -133,14 +154,16 @@ function requestClose() {
     dialog.showErrorBox('尚未确认保存', '窗口没有返回最新输入的保存确认。窗口仍保留，请检查后重试。');
   }, 15_000);
 }
-async function showWindow() {
+async function showWindow(bounds?: Electron.Rectangle) {
   if (window) { if (window.isMinimized()) window.restore(); window.show(); window.focus(); return; }
-  window = new BrowserWindow({ width: 1280, height: 900, minWidth: 660, minHeight: 500,
+  window = new BrowserWindow({ width: 1280, height: 900, ...bounds, minWidth: 660, minHeight: 500,
     title: '绎知 · 数字逻辑', backgroundColor: '#ffffff',
-    webPreferences: { preload: join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
+    webPreferences: { preload: join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, nodeIntegrationInSubFrames: false, sandbox: true } });
+  window.webContents.on('unresponsive',()=>void recoverRenderer());
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', event => event.preventDefault());
   window.webContents.on('render-process-gone', detachView);
+  window.webContents.on('will-frame-navigate', event => { if(event.isMainFrame || !extensionNavigation(event.url)) event.preventDefault(); });
   window.on('close', event => { if (!exiting) { event.preventDefault(); requestClose(); } });
   window.on('closed', () => { detachView(); window = undefined; pendingClose = undefined; clearTimeout(closeTimer); });
   await window.loadURL('yizhi-app://app/index.html');
