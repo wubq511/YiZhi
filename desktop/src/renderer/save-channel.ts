@@ -1,7 +1,9 @@
 import type { SaveBridge, OpenedCourse, DraftInput, EditCommand, SaveReceipt, TextChange, ParagraphSplit } from '../shared';
+import { composePatch, equal, patchTargets, type ContentPatch, type FormulaDraft } from '../editor-api';
 export type SaveState = { status: 'saved' | 'draft' | 'pending' | 'saving' | 'error'; error?: string;
   inputSeq?: number; confirmedInputSeq?: number; draftInputSeq?: number };
-export interface EditorDelta { changes: TextChange[]; splits?: ParagraphSplit[]; complete?: boolean }
+export interface EditorDelta { changes: TextChange[]; splits?: ParagraphSplit[]; complete?: boolean;
+  patch?: ContentPatch; formulaDrafts?: FormulaDraft[] }
 export interface SaveChannelOptions {
   idleMs?: number; maxWaitMs?: number; pollMs?: number;
   /** Reconcile an external snapshot through editor transactions, preserving active input/selection. */
@@ -17,6 +19,9 @@ export class ParagraphSaveChannel {
   private complete = true;
   private changes = new Map<string, TextChange & { seq: number }>();
   private splits: (ParagraphSplit & { seq: number })[] = [];
+  private patches: { seq: number; patch: ContentPatch }[] = [];
+  private formulaDrafts: FormulaDraft[] = [];
+  private structured = false;
   private replacesDraft?: DraftInput['replacesDraft'];
   private command?: EditCommand;
   private running?: Promise<boolean>;
@@ -41,6 +46,8 @@ export class ParagraphSaveChannel {
       this.complete = input.complete;
       for (const change of input.changes) this.changes.set(change.blockId, { ...change, seq: this.sequence });
       this.splits = (input.splits ?? []).map(split => ({ ...split, seq: this.sequence }));
+      if (input.patch) this.patches = [{ seq: this.sequence, patch: input.patch }];
+      this.formulaDrafts = input.formulaDrafts ?? [];
       if (!sameSession) this.replacesDraft = { sessionId: input.sessionId, inputSeq: input.inputSeq };
       else this.draftSaved = input.inputSeq;
       this.publish('draft');
@@ -59,7 +66,15 @@ export class ParagraphSaveChannel {
     const seq = ++this.sequence;
     for (const change of delta.changes) this.changes.set(change.blockId, { ...change, seq });
     this.splits.push(...(delta.splits ?? []).map(split => ({ ...split, seq })));
-    this.complete = delta.complete ?? true;
+    if (delta.patch) {
+      const pending = this.patches.at(-1);
+      // At most an immutable in-flight delta plus one composed pending union, even with a stalled transport.
+      if (pending && (!this.command || pending.seq > this.command.inputSeq)) {
+        pending.patch = composePatch(pending.patch, delta.patch); pending.seq = seq;
+      } else this.patches.push({ seq, patch: delta.patch });
+    }
+    if (delta.formulaDrafts) this.formulaDrafts = delta.formulaDrafts;
+    this.complete = delta.complete ?? this.formulaDrafts.length === 0;
     this.publish('pending');
     clearTimeout(this.idle);
     this.idle = setTimeout(() => { void this.flush(); }, this.options.idleMs ?? 250);
@@ -68,6 +83,41 @@ export class ParagraphSaveChannel {
   }
   /** Recoverable local input. Reading this never replaces a live editor's DOM or Undo. */
   text(blockId: string): string | undefined { return this.changes.get(blockId)?.text; }
+  /** Activate the continuous adapter before its first input; retain the original formal basis of old drafts. */
+  useContentPatches() {
+    if (this.structured) return;
+    this.structured = true;
+    const before = this.course.unit.reading.blocks, after = structuredClone(before);
+    const converted = new Set<string>();
+    for (const change of this.changes.values()) {
+      const block = after.find(b => b.id === change.blockId && b.kind === 'paragraph' && !b.children?.length);
+      if (block) { block.payload.text = change.text; converted.add(block.id); }
+    }
+    const convertedSplits = new Set<ParagraphSplit>();
+    const correspondence: ContentPatch['correspondence'] = [];
+    for (const split of this.splits) {
+      const index = after.findIndex(b => b.id === split.blockId && b.kind === 'paragraph' && !b.children?.length);
+      if (index < 0 || after.some(b => b.id === split.newBlockId)) continue;
+      const block = after[index], text = Array.from(String(block.payload.text));
+      if (split.offset < 0 || split.offset > text.length) continue;
+      const next = { ...structuredClone(block), id: split.newBlockId, payload: { text: text.slice(split.offset).join('') } };
+      block.payload.text = text.slice(0, split.offset).join(''); after.splice(index + 1, 0, next);
+      convertedSplits.add(split); converted.add(block.id);
+      correspondence.push({ kind: 'split', sourceId: block.id, targetId: next.id, offset: split.offset });
+    }
+    if (!converted.size && !convertedSplits.size) return;
+    const old = new Map(before.map(b => [b.id, b]));
+    let patch: ContentPatch = { updates: after.filter(b => old.has(b.id) && !equal(old.get(b.id)!.payload, b.payload))
+      .map(b => ({ blockId: b.id, before: old.get(b.id)!.payload, after: b.payload })), correspondence,
+      ...(convertedSplits.size ? { structure: { parentId: this.course.unit.id, before: before.map(b => b.id), after: after.map(b => b.id), inserted: after.filter(b => !old.has(b.id)) } } : {}) };
+    for (const pending of this.patches) patch = composePatch(patch, pending.patch);
+    this.patches = [{ seq: this.sequence, patch }];
+    for (const id of converted) this.changes.delete(id);
+    this.splits = this.splits.filter(split => !convertedSplits.has(split));
+  }
+  /** Initial recovery projection only. Live editors reconcile snapshots through range transactions. */
+  recovery() { return { patch: this.patches.reduce<ContentPatch | undefined>((p, n) => composePatch(p, n.patch), undefined),
+    formulaDrafts: structuredClone(this.formulaDrafts) }; }
   flush(): Promise<boolean> {
     clearTimeout(this.idle); clearTimeout(this.deadline); this.deadline = undefined;
     if (this.running) return this.running;
@@ -84,12 +134,13 @@ export class ParagraphSaveChannel {
   private accept(receipt: SaveReceipt) {
     const command = this.command;
     if (!command || receipt.operationId !== command.operationId || receipt.inputSeq !== command.inputSeq ||
-      receipt.sessionId !== command.sessionId || receipt.blockId !== (command.changes[0]?.blockId ?? command.splits?.[0]?.blockId) ||
+      receipt.sessionId !== command.sessionId || receipt.blockId !== (command.changes[0]?.blockId ?? command.splits?.[0]?.blockId ?? patchTargets(command.patch)[0] ?? this.course.unit.id) ||
       receipt.revision !== command.baseRevision + 1) throw new Error('保存确认与当前输入不匹配，请重试');
     this.revision = receipt.revision;
     this.confirmed = Math.max(this.confirmed, receipt.inputSeq);
     for (const [id, change] of this.changes) if (change.seq <= receipt.inputSeq) this.changes.delete(id);
     this.splits = this.splits.filter(split => split.seq > receipt.inputSeq);
+    this.patches = this.patches.filter(patch => patch.seq > receipt.inputSeq);
     this.publish(this.sequence <= this.confirmed ? 'saved' : 'saving');
   }
   private async drain(): Promise<boolean> {
@@ -100,6 +151,8 @@ export class ParagraphSaveChannel {
           baseRevision: this.revision, complete: this.complete,
           changes: [...this.changes.values()].map(({ seq: _, ...change }) => change),
           splits: this.splits.map(({ seq: _, ...split }) => split),
+          ...(this.patches.length ? { patch: this.patches.reduce<ContentPatch | undefined>((p, n) => composePatch(p, n.patch), undefined) } : {}),
+          ...(this.formulaDrafts.length ? { formulaDrafts: structuredClone(this.formulaDrafts) } : {}),
           ...(this.replacesDraft ? { replacesDraft: this.replacesDraft } : {}) };
       }
       try {
@@ -172,7 +225,7 @@ export class ParagraphSaveChannel {
     this.options.onSnapshot?.(snapshot);
     // An idle reopened/slow window resumes the host's actual sequence rather than reusing an old one.
     // Dirty input keeps its original basis: an external snapshot cannot silently rebase it.
-    if (!this.changes.size && !this.splits.length && this.sequence <= this.confirmed) {
+    if (!this.changes.size && !this.splits.length && !this.patches.length && this.sequence <= this.confirmed) {
       this.revision = snapshot.revision;
       this.sequence = this.confirmed = Math.max(this.confirmed, snapshot.confirmedInputSeq);
       this.publish(snapshot.drafts.length ? 'draft' : 'saved');
