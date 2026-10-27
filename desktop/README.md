@@ -49,13 +49,13 @@ npm run test:smoke
 
 外部更新以 `addToHistory:false` 的范围事务更新，保留当前编辑实例和可映射的学生 Undo。光标停顿、窗口失焦都保持当前段落保护；跨段选文保留实际显示的范围和版本，独立范围继续更新。离开前先取得最新输入的持久确认，再调用 `commands.recheck`，重新检查任务资格、所有读取前提、关系／依赖和草稿；只整合有依据的独立字段或文本范围，歧义与冲突保留双方，界面只呈现需要选择的部分。共同成立的命令组不拆成半组。外部已先提交时，其正式历史保留，学生原始差量作为草稿持久保留后再整合；回执的 `basedOnRevision` 仍关联原输入依据。
 
-`commands.protect` 接收独立编辑实例身份、单调序号、实际块范围、`editing`／仅视觉保护的 `selection` 和输入进度；解除范围前核心检查实际持久进度。`resolveInput`／`resolveCandidate` 的显式冲突选择仍核对当前版本，不能绕过停止或变化的读取前提。窗口关闭／渲染器消失由宿主解除临时保护，持久草稿继续守卫同处写入。`ContinuousEditor.captureSelection()`（亦为 `editor.storage.courseSelection.capture()`）给后续批注返回实际显示的块、内容版本、正式修订、Unicode 码点投影与有序选段；选文滞后期间不替换为 `open()` 的最新正文。未确认输入明确标为 `student-draft`。
+`commands.protect` 接收独立编辑实例身份、单调序号、实际块范围、`editing`／仅视觉保护的 `selection` 和输入进度；解除范围前核心检查实际持久进度。`resolveInput`／`resolveCandidate` 的显式冲突选择仍核对当前版本，不能绕过停止或变化的读取前提。窗口关闭／渲染器消失由宿主解除临时保护，持久草稿继续守卫同处写入。`ContinuousEditor.captureSelection()`（亦为 `editor.storage.courseSelection.capture()`）给批注返回实际显示的块、内容版本、正式修订、Unicode 码点投影与有序选段；选文滞后期间不替换为 `open()` 的最新正文。未确认输入明确标为 `student-draft`。
 
 顶栏“个人批注”和正文“批注所选文字”连接同一份个人记录；公式默认静态呈现，“选择公式片段”按需创建只读 MathLive，返回正文即释放这次阅读选择控件。正文与公式选区保留实际显示的正式／草稿依据、原内容、选段与完整上下文，文字范围持久化为 Unicode code point。跨段、拆合后的有序片段仍归属同一笔记；有证明的局部编辑与精确 Undo 才迁移关联，删除或不明确改写保留原语境并显示“待重新关联”。“关联到当前选段”只改变当前定位。
 
-`CourseService.annotations` 与 preload `annotations` 共用 `src/annotation-api.ts`：`create/list/update/reassociate/query`。笔记文字的 Undo／Redo、250ms 空闲／1000ms 最长等待自动保存与正常关闭屏障独立于正文。核心用原操作身份查询／重试，笔记版本检查与事件、回执原子提交；正文提交与命令组的批注迁移也在原事务内。`ContentPatch.textEdits/formulaEdits` 携带实际 PM 替换范围或 MathLive 前后模型与输入选区；它们是当前版本内的对应证明，不是跨公式重写的永久符号 ID。`x+x → 2x` 没有对应证明就保持待重新关联。原公式复制获得新身份，不带走原批注。
+`CourseService.annotations` 与 preload `annotations` 共用 `src/annotation-api.ts`：`create/list/update/reassociate/query`。笔记文字的 Undo／Redo、250ms 空闲／1000ms 最长等待自动保存与正常关闭屏障独立于正文。核心用原操作身份查询／重试，笔记版本检查与事件、回执原子提交；正文提交与命令组的批注迁移也在原事务内。`ContentPatch.textEdits/formulaEdits` 携带实际 PM 替换范围或 MathLive 前后模型与输入选区；它们是当前版本内的对应证明，不是跨公式重写的永久符号 ID。`x+x → 2x` 没有对应证明就保持待重新关联。原公式复制获得新身份，不带走原批注。`ContentPatch.restorations` 仅由实际 PM history 事务或 MathLive `undo-state-change` 形成，恢复时核对已记录目标版本；后来重新键入相同内容不构成 Undo 证明。
 
-当前正文并发与批注覆盖真实 KU-001 和可控外部修改；生成扩展与实际修改运行器状态分别属后续票。有限内置实验与真实 Agent 只读问答见下文 T12／T16。物理中文输入法、触控板和系统字号尚未实机验收；合成组合事件仅作回归，关窗保留未完成组合输入现场并要求完成输入。异常退出前尚未取得持久确认的输入不承诺恢复。整课迁移、Agent 正文修改、安装包和 Windows 交付仍属后续范围。
+当前正文并发与批注覆盖真实 KU-001 和可控外部修改；实际 Agent 修改运行器仍属后续票。内置实验、自含离线扩展与真实 Agent 只读问答见下文 T12／T13／T16。物理中文输入法、触控板和系统字号尚未实机验收；合成组合事件仅作回归，关窗保留未完成组合输入现场并要求完成输入。异常退出前尚未取得持久确认的输入不承诺恢复。整课迁移、Agent 正文修改、安装包和 Windows 交付仍属后续范围。
 
 T03 的 `CourseService.commands` 与 preload `commands` 共用 `src/command-api.ts`：`startAttempt`、`read`、`commit`、`stop`、`query`、`candidates`、`history`。`read` 返回核心保存的不可修改依据身份，包含所读块、祖先与顺序、引用和依赖闭包的版本；`commit` 按对象写入，独立块不因整单元 revision 变化而冲突。关系新增也使旧读取失效，内容改回原值不复活旧凭据。被拒候选保留原命令与原因；重读后的整合必须使用新操作身份。历史只保存实际变化对象的前后值与共同提交事实。正式块、必要顺序、引用、依赖状态、历史和回执在同一事务提交，存储故障整组回滚。
 

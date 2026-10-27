@@ -3,9 +3,9 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import type { AnnotationSelection, PersonalNote } from '../annotation-api';
 import './annotation-panel.css';
 export interface AnnotationPanelHandle { create(selection: AnnotationSelection): Promise<void>; flush(): Promise<boolean> }
-export const AnnotationPanel = forwardRef<AnnotationPanelHandle, { sessionId: string; narrow: boolean; onOpenChange(open: boolean): void; locate(note: PersonalNote): Promise<void> }>(function AnnotationPanel({ sessionId, narrow, onOpenChange, locate }, ref) {
+export const AnnotationPanel = forwardRef<AnnotationPanelHandle, { sessionId: string; narrow: boolean; prepare(): Promise<boolean>; onOpenChange(open: boolean): void; locate(note: PersonalNote): Promise<void> }>(function AnnotationPanel({ sessionId, narrow, prepare, onOpenChange, locate }, ref) {
   const [open, setOpen] = useState(false), [notes, setNotes] = useState<PersonalNote[]>([]);
-  const [locating, setLocating] = useState(false);
+  const [locating, setLocating] = useState(false), [creating, setCreating] = useState(false);
   const [active, setActive] = useState<string>(), [status, setStatus] = useState('已保存'), [error, setError] = useState<string>();
   const reassociation = useRef<AnnotationSelection | undefined>(undefined);
   const values = useRef(new Map<string, string>()), histories = useRef(new Map<string, { undo: string[]; redo: string[] }>());
@@ -36,7 +36,7 @@ export const AnnotationPanel = forwardRef<AnnotationPanelHandle, { sessionId: st
           if (creation.current) {
             const request = creation.current;
             const note = await window.yizhi.annotations.query({ sessionId, operationId: request.operationId }) ?? await window.yizhi.annotations.create(request);
-            creation.current = undefined; cache.current.set(note.id, note);
+            creation.current = undefined; cache.current.set(note.id, note); setCreating(false);
             if (!values.current.has(note.id)) values.current.set(note.id, note.text);
             publish(); setActive(note.id); requestAnimationFrame(() => input.current?.focus());
             continue;
@@ -56,10 +56,14 @@ export const AnnotationPanel = forwardRef<AnnotationPanelHandle, { sessionId: st
     work.current = Promise.resolve().then(run); return work.current;
   };
   useImperativeHandle(ref, () => ({ flush, async create(selection) {
-    show(true); setError(undefined);
-    if (creation.current && !await flush()) return;
-    creation.current = { sessionId, operationId: `note-create-${crypto.randomUUID()}`, selection, text: '' };
-    await flush();
+    show(true); setCreating(true); setError(undefined);
+    try {
+      if (!await prepare()) { setCreating(false); setError('正文输入尚未保存，请先重试正文保存，再添加批注。'); return; }
+      if (creation.current && !await flush()) return;
+      setCreating(true);
+      creation.current = { sessionId, operationId: `note-create-${crypto.randomUUID()}`, selection, text: '' };
+      await flush();
+    } catch (e) { setCreating(false); setError((e as Error).message); }
   } }));
   useEffect(() => {
     if (!open) return;
@@ -83,6 +87,7 @@ export const AnnotationPanel = forwardRef<AnnotationPanelHandle, { sessionId: st
     const text = source.pop(); if (text === undefined) return;
     destination.push(values.current.get(active) ?? ''); edit(text, false);
   };
+  const close = async () => { if (await flush()) show(false); };
   const current = notes.find(n => n.id === active);
   const reassociate = async () => {
     setError(undefined);
@@ -98,19 +103,20 @@ export const AnnotationPanel = forwardRef<AnnotationPanelHandle, { sessionId: st
     } catch (e) { setError((e as Error).message); }
   };
   return <>
-    <button ref={opener} onClick={() => show(!open)} aria-expanded={open}>个人批注</button>
+    <button ref={opener} onClick={() => { if (open) void close(); else show(true); }} aria-expanded={open}>个人批注</button>
     {open && createPortal(<section ref={panel} className="annotation-panel" role={narrow ? 'dialog' : 'region'} aria-modal={narrow || undefined} aria-label="个人批注" onKeyDown={event => {
-      if (event.key === 'Escape') { event.preventDefault(); show(false); }
+      if (event.key === 'Escape') { event.preventDefault(); void close(); }
       if (narrow && event.key === 'Tab') {
         const items = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled),textarea,summary')];
         if (event.shiftKey && document.activeElement === items[0]) { event.preventDefault(); items.at(-1)?.focus(); }
         else if (!event.shiftKey && document.activeElement === items.at(-1)) { event.preventDefault(); items[0]?.focus(); }
       }
     }}>
-      <div className="annotation-heading"><h2>个人批注</h2><button onClick={() => show(false)}>关闭批注</button></div>
+      <div className="annotation-heading"><h2>个人批注</h2><button onClick={() => void close()}>关闭批注</button></div>
       {!notes.length && <p>选择正文文字或公式片段后添加批注。原引用会随笔记保留。</p>}
       {notes.length > 1 && <nav aria-label="批注列表">{notes.map((n, i) => <button key={n.id} aria-current={n.id === active ? 'true' : undefined} onClick={() => setActive(n.id)}>{n.text.slice(0, 20) || `批注 ${i + 1}`} · {n.current.status === 'orphan' ? '待重新关联' : '已关联'}</button>)}</nav>}
-      {current && <>
+      {creating && <p role="status">{error ? '批注尚未建立，请重试后继续填写。' : '正在建立批注…'}</p>}
+      {current && !creating && <>
         <p className="annotation-association">{current.current.status === 'orphan' ? '待重新关联 · 原引用与笔记已保留' : `已关联 · ${current.current.fragments.length} 个有序片段`}</p>
         <blockquote>{current.original.fragments.map(f => f.quote).join('\n')}</blockquote>
         <label className="annotation-label">批注内容<textarea ref={input} aria-label="批注内容" value={values.current.get(current.id) ?? current.text}

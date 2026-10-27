@@ -1,3 +1,4 @@
+import { revealControl } from './reveal-control';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -209,6 +210,7 @@ test('MathLive owns inner Undo once, incomplete input survives host death separa
     await expect.poll(() => field.evaluate((el: any) => el.value)).toBe('\\frac72');
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     await expect.poll(async () => (await page.evaluate(() => (window as any).yizhi.open())).unit.reading.blocks.find((b: any) => b.id === formula.id).payload.latex).toBe('\\frac72');
+    await revealControl(page, page.locator('.editor-formula').first().getByRole('button', { name: '返回正文', exact: true }));
     await page.locator('.editor-formula').first().getByRole('button', { name: '返回正文', exact: true }).click();
     const confirmed = await page.evaluate(() => (window as any).yizhi.open());
     await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t05-editor.png' });

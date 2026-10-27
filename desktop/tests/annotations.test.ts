@@ -133,3 +133,19 @@ test('rewriting the same complete text later is not an Undo proof and cannot sil
     assert.equal(orphan.current.status, 'orphan'); assert.deepEqual(orphan.original, note.original);
   } finally { await core.close(); await rm(root, { recursive: true, force: true }); }
 });
+
+test('annotations and generated extensions retain both directions of the shared operation identity fence after integration', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-note-extension-')); const core = new CourseService(resolve('dist/worker.cjs'));
+  try {
+    const c = await core.open(root), sessionId = c.sessionId;
+    let extension = await core.extensions.open({ sessionId });
+    const note = await core.annotations.create({ sessionId, operationId: 'note-owned-operation', selection: selection(c), text: '个人记录' });
+    const command = { sessionId, instanceId: extension.instanceId, generation: extension.generation, operationId: 'extension-owned-operation',
+      action: { kind: 'validate' as const, version: '1.0.0' as const, report: { outputs: '01101001', lifecycle: true, migration: true } } };
+    await assert.rejects(core.extensions.act({ ...command, operationId: 'note-owned-operation' }), /操作身份已用于个人笔记/);
+    extension = await core.extensions.act(command); assert.equal(extension.phase, 'paused');
+    await assert.rejects(core.annotations.update({ sessionId, operationId: command.operationId, id: note.id, expectedVersion: note.version, text: '不能盗用扩展回执' }), /操作身份已用于扩展修改/);
+    assert.deepEqual(await core.annotations.list({ sessionId }), [note]); assert.deepEqual((await core.extensions.read({ sessionId })).definition, extension.definition);
+    assert.deepEqual((await core.read(sessionId)).unit, c.unit);
+  } finally { await core.close(); await rm(root, { recursive: true, force: true }); }
+});

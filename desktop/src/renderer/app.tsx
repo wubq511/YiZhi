@@ -361,7 +361,7 @@ function App() {
   const status = { draft: '草稿已保留', saved: '已保存', pending: '待保存', saving: '正在保存…', error: '未保存' }[state.status];
   return <>
     <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen || sourcesOpen || agentOpen || notesOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
-      {course && <AnnotationPanel ref={notesPanel} sessionId={course.sessionId} narrow={narrow} onOpenChange={value => { setNotesOpen(value); if (value && narrow) setDirectory(false); }} locate={async note => {
+      {course && <AnnotationPanel ref={notesPanel} sessionId={course.sessionId} narrow={narrow} prepare={async () => !!await channel.current?.flush()} onOpenChange={value => { setNotesOpen(value); if (value && narrow) setDirectory(false); }} locate={async note => {
         if (selected?.id !== 'KU-001') await go('KU-001');
         const editor = continuous.current;
         if (!editor) throw new Error('请先定位批注所属单元。');
@@ -419,7 +419,7 @@ function App() {
             {unit.id==='KU-001'&&<ExtensionExperiment sessionId={course.sessionId} active={viewport.zoom>=0.55&&selected?.id===unit.id} disabled={closing}/>}
             <SourceReferences citations={sourceCitations.filter(citation => citation.target?.unitId === unit.id)} onOpen={citation => sourcesPanel.current?.openCitation(citation)} />
             {unit.id === 'KU-001' && channel.current ? <ContinuousUnitEditor course={course} channel={channel.current} disabled={closing || producerBusy || !cameraReady} saveError={state.status === 'error'}
-              annotate={selection => { void (async () => { if (!await channel.current?.flush()) return; await notesPanel.current?.create(selection); })(); }}
+              annotate={selection => { void notesPanel.current?.create(selection); }}
               composition={active => { composing.current = active; }} controller={instance => { continuous.current = instance; }}
               renderBlock={block => <ReadingBoundary><Block block={block} experiment={{ unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing, composition: active => { composing.current = active; } }} reading={reading} updateReading={updateReading}
                 onSource={button => { sourceTrigger.current = button; setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;

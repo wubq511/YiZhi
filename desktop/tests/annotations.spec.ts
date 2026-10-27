@@ -19,9 +19,13 @@ test('actual displayed Unicode selection creates one note; note Undo/autosave/re
     await page.getByRole('button', { name: '批注所选文字', exact: true }).click();
     const note = page.getByRole('textbox', { name: '批注内容', exact: true });
     await note.fill('第一版理解');
+    await page.getByRole('button', { name: '关闭批注', exact: true }).click();
+    await expect(page.getByRole('region', { name: '个人批注', exact: true })).toHaveCount(0);
+    await expect.poll(() => page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return (await b.annotations.list({ sessionId: c.sessionId }))[0]?.text; })).toBe('第一版理解');
+    await page.getByRole('button', { name: '个人批注', exact: true }).click();
     await expect(page.getByRole('status', { name: '批注同步状态' })).toHaveText('已保存');
     await note.fill('第二版理解');
-    await page.getByRole('button', { name: '撤销笔记', exact: true }).click();
+    await note.press('Meta+z');
     await expect(note).toHaveValue('第一版理解');
     await expect.poll(() => page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return (await b.annotations.list({ sessionId: c.sessionId }))[0]?.text; })).toBe('第一版理解');
     expect(await editor.evaluate((el: any, original: any) => el.editor === original, instance)).toBe(true);
@@ -102,7 +106,9 @@ test('real MathLive nested selection uses a lazy reading field, proven independe
     const beforeRewrite = await field.evaluate((el: any) => el.getValue());
     // Real navigation ends MathLive's current typing group before the next structural edit.
     await field.press('ArrowLeft');
-    await field.evaluate((el: any) => { for (let a = 0; a < el.lastOffset; a++) for (let b = a + 1; b <= el.lastOffset; b++) if (el.getValue([a, a + 1]) && el.getValue([b - 1, b]) && el.getValue([a, b]) === 'x+x') { el.selection = { ranges: [[a, b]] }; el.executeCommand(['insert', '2x']); return; } throw new Error('No exact actual numerator range'); });
+    await field.evaluate((el: any) => { for (let a = 0; a < el.lastOffset; a++) for (let b = a + 1; b <= el.lastOffset; b++) if (el.getValue([a, a + 1]) && el.getValue([b - 1, b]) && el.getValue([a, b]) === 'x+x') { el.selection = { ranges: [[a, b]] }; return; } throw new Error('No exact actual numerator range'); });
+    await field.press('2'); await field.press('x');
+    await expect.poll(() => field.evaluate((el: any) => el.getValue())).toBe('\\frac{2x}{z}');
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     await expect.poll(async () => (await getNotes())[0].current.status).toBe('orphan');
     expect((await getNotes())[0].original).toEqual(original.original);
@@ -112,6 +118,10 @@ test('real MathLive nested selection uses a lazy reading field, proven independe
     await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t07-formula-orphan.png' });
     await page.getByRole('button', { name: '关闭批注', exact: true }).click();
     await field.press('Meta+z');
+    if (await field.evaluate((el: any) => el.getValue()) !== beforeRewrite) {
+      expect((await getNotes())[0].current.status).toBe('orphan');
+      await field.press('Meta+z');
+    }
     await expect.poll(() => field.evaluate((el: any) => el.getValue())).toBe(beforeRewrite);
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     await expect.poll(async () => (await getNotes())[0].current.status).toBe('attached');

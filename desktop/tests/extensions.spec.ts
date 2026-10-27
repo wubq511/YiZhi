@@ -1,3 +1,4 @@
+import { revealControl } from './reveal-control';
 import {test,expect,_electron as electron} from '@playwright/test';
 import {mkdtemp,rm} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
@@ -43,7 +44,7 @@ test('a real sandboxed browser Worker verifies learning results, saves complete 
   const directory=page.getByRole('navigation',{name:'课程目录'});if(await directory.isVisible())await directory.press('Escape');
   const narrowBoard=(await page.locator('main.board').boundingBox())!;
   await page.mouse.move(narrowBoard.x+12,narrowBoard.y+narrowBoard.height/2);await page.mouse.wheel(220,400);await page.waitForTimeout(180);
-  const narrowInput=lab().getByRole('checkbox',{name:'A',exact:true});await expect(narrowInput).toBeVisible();
+  const narrowInput=lab().getByRole('checkbox',{name:'A',exact:true});await expect(narrowInput).toBeVisible();await revealControl(page,narrowInput);
   const inputBox=(await narrowInput.boundingBox())!;expect(inputBox.y).toBeGreaterThan(narrowBoard.y);expect(inputBox.y+inputBox.height).toBeLessThan(narrowBoard.y+narrowBoard.height);
   await page.screenshot({path:'/tmp/yizhi-implement-gFFkA7/t13-extension-narrow.png'});
  }finally{await app.close();await rm(root,{recursive:true,force:true});}
