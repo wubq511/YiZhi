@@ -47,6 +47,7 @@ export interface SaveReceipt {
   basedOnRevision?: number;
 }
 export interface DesktopBridge extends SaveBridge {
+  drawings: import('./drawing-api').DrawingAPI;
   annotations: import('./annotation-api').AnnotationAPI;
   extensions: Omit<import('./extensions-api').ExtensionsAPI, 'resource'>;
   experiments: import('./experiments-api').ExperimentsAPI;
@@ -122,6 +123,7 @@ export interface EditHistory {
   committedAt: string | null;
 }
 export type SaveEventData =
+  { type: 'drawing.changed'; drawingId: string } |
   { type: 'annotation.changed'; noteId: string } |
   { type: 'agent.changed'; conversationId: string; taskId?: string } |
   { type: 'parse.changed'; taskId: string; attemptId: string; kind: string; artifactId?: string } |

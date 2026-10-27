@@ -22,3 +22,4 @@
 .formula-draft:not(:empty) { border: 1px dashed #a9bdce; background: #f0f5fa; padding: 8px; margin-top: 10px; }
 
 .continuous-prose .annotation-highlight { background: #fff3ce; text-decoration: underline; text-decoration-color: #bc9a5b; text-underline-offset: .2em; }
+.continuous-prose .drawing-text-highlight { background: #fff0ad; text-decoration: underline; text-decoration-color: #bc9a5b; text-underline-offset: .2em; }

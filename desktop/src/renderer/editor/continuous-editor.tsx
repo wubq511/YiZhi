@@ -6,7 +6,8 @@ import type { ParagraphSaveChannel } from '../save-channel';
 import { ContinuousEditor } from './controller';
 import './editor.css';
 
-export function ContinuousUnitEditor({ course, channel, disabled, saveError, composition, renderBlock, controller, annotate }: {
+export function ContinuousUnitEditor({ course, channel, disabled, saveError, composition, renderBlock, controller, annotate, highlight }: {
+  highlight(selection: import('../../annotation-api').AnnotationSelection): void;
   annotate(selection: import('../../annotation-api').AnnotationSelection): void;
   course: OpenedCourse; channel: ParagraphSaveChannel; disabled: boolean;
   saveError?: boolean;
@@ -49,6 +50,7 @@ export function ContinuousUnitEditor({ course, channel, disabled, saveError, com
     <div className="editor-tools" role="toolbar" aria-label="正文编辑工具" onMouseDown={event => event.preventDefault()}>
       <span>正文 · 连续编辑，自动保存</span>
       <button disabled={disabled} onClick={() => { const capture = instance.current?.captureAnnotation(); if (capture) annotate(capture); }}>批注所选文字</button>
+      <button disabled={disabled} onClick={() => { const capture = instance.current?.captureAnnotation(); if (capture) highlight(capture); }}>荧光笔标记所选文字</button>
       <button disabled={disabled} onClick={() => instance.current?.undo()}>撤销正文</button>
       <button disabled={disabled} onClick={() => instance.current?.redo()}>重做正文</button>
       <button disabled={disabled} onClick={() => instance.current?.insertFormula()}>插入公式</button>

@@ -1,4 +1,5 @@
 import { snapshotLegacy, convertLegacy, legacyContent, candidateResource } from './migration';
+import { Drawings } from './drawings';
 import { Annotations } from './annotations';
 import { initializeLayout, layoutGraph, saveLayout } from './local-layout';
 import { projectLayout } from '../layout';
@@ -26,6 +27,7 @@ const EDITABLE = 'RB-TH-01-01-what-is-positional-notation';
 interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; courseId: string; graph: CourseGraph;
   // T03 constructs its observer on this same connection; both student save entry points call it in-transaction.
   annotations: Annotations;
+  drawings: Drawings;
   groups: CommandGroups;
   sources: Sources;
   experiments: BuiltinExperiments;
@@ -104,8 +106,10 @@ function open(directory: string): OpenedCourse {
     const graph = JSON.parse(storedGraph ? String(storedGraph.value) : readFileSync(join(__dirname, 'fixtures/graph.json'), 'utf8')) as CourseGraph;
     initializeReviewState(db);
     const annotations = new Annotations(db);
+    const drawings = new Drawings(db, sourceUnit, annotations, graph);
     const groups = new CommandGroups(db, graph, operationId => {
       annotations.fence('commands:commit', operationId);
+      drawings.fence('commands:commit', operationId);
       sources.fenceOperation('commands:commit', operationId);
       agent.fence('commands:commit', operationId);
       experiments.fenceOperation('commands:commit', operationId);
@@ -120,7 +124,7 @@ function open(directory: string): OpenedCourse {
     const extensions = new Extensions(db, canonical);
     const parsing = new Parsing(db, canonical, sources, run => { queue = queue.then(run).catch(error => { console.error(error); }); }, workerData?.parseScheduling);
     const agent = new AgentStore(db, sources, sourceUnit);
-    const course: Course = { db, owner, agent, annotations, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
+    const course: Course = { db, owner, agent, annotations, drawings, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     const result = snapshot(course);
     courses.set(canonical, course);
@@ -162,6 +166,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       const course = session(payload.sessionId);
       const fencedAction = action === 'commands:resolveInput' ? 'commitEdit' : action;
       course.annotations.fence(fencedAction, payload.operationId);
+      course.drawings.fence(fencedAction, payload.operationId);
       course.sources.fenceOperation(fencedAction, payload.operationId);
       course.agent.fence(fencedAction, payload.operationId);
       course.experiments.fenceOperation(fencedAction, payload.operationId);
@@ -233,6 +238,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action === 'relations:query') value = session(payload.sessionId).relations.query(payload.operationId);
     else if (action === 'commands:resolveInput') { const c = session(payload.sessionId); value = resolveInput(c.db, payload, () => c.groups.observe()); }
     else if (action.startsWith('commands:')) value = session(payload.sessionId).groups.dispatch(action, payload);
+    else if (action.startsWith('drawings:')) value = session(payload.sessionId).drawings.dispatch(action, payload);
     else if (action.startsWith('annotations:')) value = session(payload.sessionId).annotations.dispatch(action, payload);
     else if (action.startsWith('agent:')) value = session(payload.sessionId).agent.dispatch(action, payload);
     else if (action.startsWith('parsing:')) value = await session(payload.sessionId).parsing.dispatch(action, payload);

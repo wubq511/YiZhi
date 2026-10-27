@@ -1,3 +1,4 @@
+import { Drawings, type DrawingHandle } from './drawings';
 import { AnnotationPanel, type AnnotationPanelHandle } from './annotation-panel';
 import { CameraController, type FollowState } from './camera-controller';
 import { useLocalLayout, ReadingSurface } from './local-layout';
@@ -45,7 +46,7 @@ function RoughFrame({ id }: { id: string }) {
   return <svg ref={ref} className="rough-frame" aria-hidden="true" />;
 }
 
-function ReadingBoundary({ children }: { children: React.ReactNode }) {
+function ReadingBoundary({ children, blockId }: { children: React.ReactNode; blockId?:string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -55,12 +56,12 @@ function ReadingBoundary({ children }: { children: React.ReactNode }) {
     const observer = new IntersectionObserver(entries => setVisible(entries[0].isIntersecting), { root: element.closest('main.board') });
     observer.observe(element); return () => observer.disconnect();
   }, []);
-  return <div data-reading-block ref={ref} inert={!visible && !focused} onFocus={() => setFocused(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>{children}</div>;
+  return <div data-reading-block data-block-id={blockId} ref={ref} inert={!visible && !focused} onFocus={() => setFocused(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>{children}</div>;
 }
 
 function Block({ block, onReference, reading, updateReading, onSource, experiment }: { block: ReadingBlock; experiment: { contentScope?: string; unitId: string; sessionId: string; active: boolean; disabled: boolean; composition?: (active: boolean) => void }; onReference: (id: string, blockId: string) => void; reading: ReadingState | null; updateReading: (key: string, value: boolean) => void; onSource: (button: HTMLButtonElement) => void }) {
   const payload = block.payload;
-  const children = block.children?.map(child => <ReadingBoundary key={child.id}><Block block={child} experiment={experiment} onReference={onReference} onSource={onSource} reading={reading} updateReading={updateReading} /></ReadingBoundary>);
+  const children = block.children?.map(child => <ReadingBoundary key={child.id} blockId={child.id}><Block block={child} experiment={experiment} onReference={onReference} onSource={onSource} reading={reading} updateReading={updateReading} /></ReadingBoundary>);
   if (block.kind === 'paragraph') return <p>{payload.text}</p>;
   if (block.kind === 'formula') return <div className="formula" role="math" aria-label={payload.latex}
     dangerouslySetInnerHTML={{ __html: katex.renderToString(payload.latex, { throwOnError: false, trust: false, displayMode: true }) }} />;
@@ -118,6 +119,7 @@ function App() {
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [agentOpen, setAgentOpen] = useState(false);
   const agentPanel = useRef<AgentPanelHandle>(null);
+  const drawingPanel = useRef<DrawingHandle>(null);
   const notesPanel = useRef<AnnotationPanelHandle>(null);
   const [notesOpen, setNotesOpen] = useState(false);
   const sourcesPanel = useRef<SourcePanelHandle>(null);
@@ -172,27 +174,36 @@ function App() {
   const local = useLocalLayout(graph, selected?.id, camera, viewport.zoom >= .55, cameraReady);
   const placementsRef = useRef(local.placements); placementsRef.current = local.placements;
   const [layoutSave, setLayoutSave] = useState<'saved' | 'pending' | 'error'>('saved');
-  const layoutPending = useRef(new Map<string, LayoutPlacement>());
+  type PendingPlacement = { request: import('../drawing-api').PlacementChange & {sessionId:string}; done(edit: import('../drawing-api').PlacementEdit):void };
+  const layoutPending = useRef<PendingPlacement[]>([]);
   const layoutWrites = useRef<Promise<void>>(Promise.resolve());
+  const graphRef=useRef(graph);graphRef.current=graph;
   const saveLayout = () => {
-    if (!course) return;
     setLayoutSave('pending');
     layoutWrites.current = layoutWrites.current.then(async () => {
-      const updates = [...layoutPending.current.values()];
-      if (!updates.length) return;
-      try {
-        await window.yizhi.setLayout(course.sessionId, updates);
-        for (const update of updates) if (layoutPending.current.get(update.unitId) === update) layoutPending.current.delete(update.unitId);
-        setLayoutSave(layoutPending.current.size ? 'pending' : 'saved');
-      } catch { setLayoutSave('error'); }
+      while(layoutPending.current.length){
+        const item=layoutPending.current[0];
+        try{
+          const found=await window.yizhi.drawings.queryPlacement({sessionId:item.request.sessionId,operationId:item.request.operationId});
+          const saved=found??await window.yizhi.drawings.place(item.request);
+          layoutPending.current.shift();item.done(saved);
+        }catch{setLayoutSave('error');return;}
+      }
+      setLayoutSave('saved');
     });
   };
-  const place = (placement: LayoutPlacement) => {
-    const old = graph?.layout.nodes.find(node => node.unitId === placement.unitId);
-    if (old?.x !== placement.x || old?.y !== placement.y) local.manual(placement.unitId);
-    // Update only the explicit object, never persist displaced neighbours.
-    setGraph(current => current && ({ ...current, layout: { ...current.layout, nodes: current.layout.nodes.map(node => node.unitId === placement.unitId ? { ...node, ...placement } : node) } }));
-    layoutPending.current.set(placement.unitId, placement); saveLayout();
+  const placement=(node:LayoutPlacement):LayoutPlacement=>({unitId:node.unitId,x:node.x,y:node.y,width:node.width});
+  const enqueuePlacement=(before:LayoutPlacement,after:LayoutPlacement,done:(edit:import('../drawing-api').PlacementEdit)=>void)=>{
+    if(!course)return;
+    if(before.x!==after.x||before.y!==after.y)local.manual(after.unitId);
+    setGraph(current=>current&&({...current,layout:{...current.layout,nodes:current.layout.nodes.map(node=>node.unitId===after.unitId?{...node,...after}:node)}}));
+    const request={sessionId:course.sessionId,operationId:crypto.randomUUID(),before:placement(before),after:placement(after)};
+    layoutPending.current.push({request,done});saveLayout();return request;
+  };
+  const place = (next: LayoutPlacement) => {
+    const before=graphRef.current?.layout.nodes.find(node=>node.unitId===next.unitId);if(!before)return;
+    const a=placement(before),b=placement(next);if(JSON.stringify(a)===JSON.stringify(b))return;
+    enqueuePlacement(a,b,saved=>drawingPanel.current?.recordPlacement(saved));
   };
 
   const persist = (next: ReadingState) => {
@@ -243,7 +254,7 @@ function App() {
     catch { setClosing(false); return false; }
     await writes.current;
     await layoutWrites.current;
-    if (layoutPending.current.size) { setClosing(false); return false; }
+    if (layoutPending.current.length) { setClosing(false); return false; }
     if (readingFailed.current) { setClosing(false); return false; }
     // A zero-duration viewport update can reach the DOM before onMoveEnd. The close
     // barrier records the actual final camera instead of dropping that last gesture.
@@ -251,6 +262,7 @@ function App() {
       try { await window.yizhi.setReadingState(sessionRef.current, { ...readingRef.current, camera: flow.getViewport() }); }
       catch { readingFailed.current = true; setReadingSave('error'); setClosing(false); return false; }
     }
+    if (drawingPanel.current && !await drawingPanel.current.flush()) { setClosing(false); return false; }
     if (notesPanel.current && !await notesPanel.current.flush()) { setClosing(false); return false; }
     if (sourcesPanel.current && !await sourcesPanel.current.flush()) { setClosing(false); return false; }
     const current = await window.yizhi.open();
@@ -422,12 +434,13 @@ function App() {
             {unit.id==='KU-001'&&!course.contentScope&&<ExtensionExperiment sessionId={course.sessionId} active={viewport.zoom>=0.55&&selected?.id===unit.id} disabled={closing}/>}
             <SourceReferences citations={sourceCitations.filter(citation => citation.target?.unitId === unit.id)} onOpen={citation => sourcesPanel.current?.openCitation(citation)} />
             {unit.id === 'KU-001' && channel.current ? <ContinuousUnitEditor course={course} channel={channel.current} disabled={closing || producerBusy || !cameraReady} saveError={state.status === 'error'}
+              highlight={selection => { void drawingPanel.current?.highlight(selection); }}
               annotate={selection => { void notesPanel.current?.create(selection); }}
               composition={active => { composing.current = active; }} controller={instance => { continuous.current = instance; }}
               renderBlock={block => <ReadingBoundary><Block block={block} experiment={{ contentScope: course.contentScope, unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing, composition: active => { composing.current = active; } }} reading={reading} updateReading={updateReading}
                 onSource={button => { sourceTrigger.current = button; if (course.contentScope && button.dataset.sourceVersion) sourcesPanel.current?.openVersion(button.dataset.sourceVersion, Number(button.dataset.sourcePage ?? 1) - 1); else setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;
                   void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} /></ReadingBoundary>} />
-              : unit.reading.blocks.map(block => <ReadingBoundary key={block.id}><Block block={block} experiment={{ contentScope: course.contentScope, unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing, composition: active => { composing.current = active; } }} reading={reading} updateReading={updateReading}
+              : unit.reading.blocks.map(block => <ReadingBoundary key={block.id} blockId={block.id}><Block block={block} experiment={{ contentScope: course.contentScope, unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing, composition: active => { composing.current = active; } }} reading={reading} updateReading={updateReading}
                 onSource={button => { sourceTrigger.current = button; if (course.contentScope && button.dataset.sourceVersion) sourcesPanel.current?.openVersion(button.dataset.sourceVersion, Number(button.dataset.sourcePage ?? 1) - 1); else setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;
                   void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} /></ReadingBoundary>)}
 
@@ -435,6 +448,7 @@ function App() {
             <footer>来源：既有数字逻辑课程单元的独立副本。编辑保留原有知识身份。</footer>
           </ReadingSurface>
         </div>; })}</div>
+        {course && <div inert={sourceOpen||(narrow&&relationsOpen)}><Drawings ref={drawingPanel} sessionId={course.sessionId} viewport={viewport} takeover={()=>camera.takeover()} pan={(dx,dy)=>camera.pan(dx,dy)} prepare={async()=>!!await channel.current?.flush()} paint={notes=>{void continuous.current?.paintDrawings(notes);}} contentKey={`${course.revision}:${mounted.map(u=>u.id).join(',')}`} waitLayout={async()=>{await layoutWrites.current;return !layoutPending.current.length;}} restorePlacement={enqueuePlacement}  /></div>}
         {followState !== 'idle' && <div className="follow-control"><span role="status" aria-label="修改跟随">{followState === 'following' ? '正在跟随可控修改' : followState === 'paused' ? '已由你控制视野' : '可控修改已结束'}</span>{followState !== 'following' && <button onClick={() => { camera.resume(); }}>{followState === 'finished' ? '查看修改结果' : '返回并继续跟随'}</button>}</div>}
         {relationsOpen && graph && course && <RelationsPanel graph={graph} sessionId={course.sessionId} view={relationView} narrow={narrow} panelRef={relationPanel} onClose={closeRelations} onKeyDown={event => trap(event, closeRelations)} onGraph={setGraph} focusId={relationFocus} />}
         {sourceOpen && <section ref={sourceDialog} className="source-dialog" role="dialog" aria-modal="true" aria-label="TI 74153 原页" onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); closeSource(); } else if (event.key === 'Tab') { event.preventDefault(); sourceDialog.current?.querySelector<HTMLButtonElement>('button')?.focus(); } }}><button onClick={closeSource}>返回正文</button><h2>TI 74153 原页 · 第 1 页</h2><img src="./ti74153-1.png" alt="TI 74153 手册第 1 页" /></section>}
