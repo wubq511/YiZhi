@@ -1,8 +1,10 @@
+import { unitBlocks,linkedExperiment } from './consistency-links';
 import type { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
 import type { CourseUnit, ReadingBlock } from '../shared';
-import type { ExperimentCommand, ExperimentView, ConfirmedExperimentSnapshot } from '../experiments-api';
+import type { BuiltinDefinition, ExperimentCommand, ExperimentView, ConfirmedExperimentSnapshot } from '../experiments-api';
 import { definitionFrom, evaluate, convertFormula, assignments, inputsFor, validateInputs } from './builtin-model';
+import { equal } from '../editor-api';
 import { transaction, appendEvent } from './save-store';
 
 export class BuiltinExperiments {
@@ -10,6 +12,7 @@ export class BuiltinExperiments {
   private timers = new Map<string, ReturnType<typeof setTimeout>>();
   constructor(private db: DatabaseSync, private readUnit: (id: string) => CourseUnit | undefined) {
     db.exec(`CREATE TABLE IF NOT EXISTS builtin_experiments(id TEXT PRIMARY KEY, payload TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS builtin_formal_definitions(id TEXT PRIMARY KEY,payload TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS builtin_experiment_operations(id TEXT PRIMARY KEY, digest TEXT NOT NULL, receipt TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS builtin_definition_history(instance_id TEXT NOT NULL, revision INTEGER NOT NULL, before_value TEXT NOT NULL, after_value TEXT NOT NULL, PRIMARY KEY(instance_id,revision));`);
   }
@@ -19,19 +22,44 @@ export class BuiltinExperiments {
     const row = this.db.prepare('SELECT payload FROM builtin_experiments WHERE id=?').get(id);
     let v: ExperimentView;
     if (row) {
-      v = JSON.parse(String(row.payload)); v.generation++; v.visible = false; v.phase = v.definition.check === 'verified' ? 'paused' : 'needs-check';
+      v = JSON.parse(String(row.payload)); v.gesture=false; v.generation++; v.visible = false; v.phase = v.definition.check === 'verified' ? 'paused' : 'needs-check';
     } else {
       const find = (blocks: ReadingBlock[]): ReadingBlock | undefined => {
         for (const b of blocks) { if (b.id === input.blockId) return b; const n = find(b.children ?? []); if (n) return n; }
       };
       const unit = this.readUnit(input.unitId), block = unit && find(unit.reading.blocks);
       if (!block || block.kind !== 'interactive') throw new Error('当前单元没有受支持的内置实验');
-      const definition = definitionFrom(block.payload);
+      const definition = this.formalDefinition(input.unitId,input.blockId);
       v = { instanceId: id, unitId: input.unitId, blockId: input.blockId, generation: 1, version: 1, definition,
         state: { inputs: structuredClone(definition.initialInputs), step: 0, simulationTime: 0, seed: 1 },
         result: evaluate(definition, definition.initialInputs), visible: false, background: false, running: false, phase: 'paused' };
     }
-    this.persist(v); this.live.set(id, v); return structuredClone(v);
+    this.persist(v); this.live.set(id, v); return this.project(v);
+  }
+  formalDefinition(unitId: string, blockId: string): BuiltinDefinition {
+    const id = `${unitId}/${blockId}`, row = this.db.prepare('SELECT payload FROM builtin_formal_definitions WHERE id=?').get(id);
+    if (row) return JSON.parse(String(row.payload));
+    const runtime = this.db.prepare('SELECT payload FROM builtin_experiments WHERE id=?').get(id);
+    if (runtime) return JSON.parse(String(runtime.payload)).definition;
+    const block = unitBlocks(this.readUnit(unitId)).find(b => b.id === blockId);
+    if (!block) throw new Error('实验定义不存在'); return definitionFrom(block.payload);
+  }
+  prepareDefinition(unitId: string, block: ReadingBlock, formula: string) {
+    const before = this.formalDefinition(unitId,block.id), body = definitionFrom(block.payload), definition = convertFormula(body, formula);
+    if (definition.check !== 'verified' || !equal(definition.config,block.payload.config) || definition.outputName!==body.outputName) throw new Error('公式不能转换为所提交的完整实验配置');
+    definition.revision = before.revision + 1;
+    return { definition, apply: () => {
+      if (!this.db.isTransaction) throw new Error('实验定义必须在必要组事务内应用');
+      const id = `${unitId}/${block.id}`;
+      this.db.prepare('INSERT INTO builtin_formal_definitions VALUES(?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload').run(id,JSON.stringify(definition));
+      this.db.prepare('INSERT INTO builtin_definition_history VALUES(?,?,?,?)').run(id,definition.revision,JSON.stringify(before),JSON.stringify(definition));
+      const row = this.db.prepare('SELECT payload FROM builtin_experiments WHERE id=?').get(id);
+      let pending: ExperimentView | undefined;
+      if (row) { pending = JSON.parse(String(row.payload)); pending!.pendingDefinition=definition; pending!.version++; delete pending!.migrationError; this.persist(pending!); }
+      appendEvent(this.db,{ type:'experiment.changed',instanceId:id,definitionRevision:definition.revision });
+      // No heap/timer mutation before the enclosing necessary group really commits.
+      return () => { if (pending && this.live.has(id)) this.live.set(id,pending); };
+    } };
   }
   fenceOperation(action: string, operationId: unknown) {
     if (typeof operationId !== 'string') return;
@@ -43,7 +71,10 @@ export class BuiltinExperiments {
     }
   }
   read({ instanceId }: { instanceId: string }): ExperimentView {
-    const v = this.live.get(instanceId); if (!v) throw new Error('实验实例未初始化'); return structuredClone(v);
+    const v = this.live.get(instanceId); if (!v) throw new Error('实验实例未初始化'); return this.project(v);
+  }
+  private project(v:ExperimentView):ExperimentView {
+    return {...structuredClone(v),formulaScope:unitBlocks(this.readUnit(v.unitId)).some(b=>linkedExperiment(b)===v.blockId)?'consistency-group':'independent'};
   }
   private persist(v: ExperimentView) {
     this.db.prepare('INSERT INTO builtin_experiments VALUES (?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload').run(v.instanceId, JSON.stringify(v));
@@ -77,13 +108,28 @@ export class BuiltinExperiments {
     if (encoded.length > 24000) throw new Error('实验输入超出范围');
     const hash = createHash('sha256').update(encoded).digest('hex');
     const receipt = this.db.prepare('SELECT digest,receipt FROM builtin_experiment_operations WHERE id=?').get(command.operationId);
-    if (receipt) { if (receipt.digest !== hash) throw new Error('同一操作不能换用不同内容'); return JSON.parse(String(receipt.receipt)); }
+    if (receipt) { if (receipt.digest !== hash) throw new Error('同一操作不能换用不同内容'); return this.project(JSON.parse(String(receipt.receipt))); }
     const v = structuredClone(old), a = command.action;
     if (a.kind === 'recover') {
       const row = this.db.prepare('SELECT payload FROM builtin_experiments WHERE id=?').get(v.instanceId)!;
       Object.assign(v, JSON.parse(String(row.payload))); v.generation = old.generation + 1; v.running = false; v.visible = false; delete v.error;
     } else if (a.kind === 'inputs') { validateInputs(v.definition, a.inputs); v.state.inputs = structuredClone(a.inputs); }
+    else if (a.kind === 'gesture') { if (typeof a.active !== 'boolean') throw new Error('实验手势状态无效'); v.gesture=a.active; }
+    else if (a.kind === 'migrate' || a.kind === 'restart') {
+      if (a.baseVersion !== v.version) throw new Error('实验现场已变化，迁移副本失效');
+      if (v.gesture) throw new Error('等待当前实验操作结束');
+      const next = v.pendingDefinition; if (!next) throw new Error('没有待迁移定义');
+      const compatible = equal(Object.keys(v.state.inputs).sort(),Object.keys(next.initialInputs).sort()) && next.kind === v.definition.kind;
+      if (!compatible && a.kind !== 'restart') { v.migrationError='新定义输入与当前现场不兼容；已保留旧版和现场，请选择是否重新开始。'; }
+      else {
+        if (a.kind === 'restart') v.state={ inputs: structuredClone(next.initialInputs),step:0,simulationTime:0,seed:1 };
+        else validateInputs(next,v.state.inputs);
+        v.definition=next; delete v.pendingDefinition; delete v.migrationError; v.generation++; v.running=false;
+      }
+    }
     else if (a.kind === 'formula') {
+      if(unitBlocks(this.readUnit(v.unitId)).some(b=>linkedExperiment(b)===v.blockId))throw new Error('当前实验有关联正文公式，修改必须通过完整一致组共同校验保存');
+      if (v.pendingDefinition) throw new Error('请先完成待升级定义的现场迁移');
       if (typeof a.formula !== 'string' || a.formula.length > 8000 || a.baseRevision !== v.definition.revision) throw new Error('实验公式版本已变化，请重新核对');
       v.definition = convertFormula(v.definition, a.formula); if (v.definition.check === 'needs-check') v.running = false;
     } else if (a.kind === 'run') { if (typeof a.running !== 'boolean' || (a.running && v.definition.check !== 'verified')) throw new Error('公式需要核对，不能继续计算'); v.running = a.running; }
@@ -102,6 +148,7 @@ export class BuiltinExperiments {
     try { transaction(this.db, () => {
       this.persist(v);
       if (a.kind === 'formula') {
+        this.db.prepare('INSERT INTO builtin_formal_definitions VALUES(?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload').run(v.instanceId,JSON.stringify(v.definition));
         this.db.prepare('INSERT INTO builtin_definition_history VALUES (?,?,?,?)').run(v.instanceId, v.definition.revision, JSON.stringify(old.definition), JSON.stringify(v.definition));
         appendEvent(this.db, { type: 'experiment.changed', instanceId: v.instanceId, definitionRevision: v.definition.revision });
       }
@@ -110,7 +157,7 @@ export class BuiltinExperiments {
       if (stopping) this.live.set(v.instanceId, { ...old, running: false, phase: 'pause-incomplete', error: String(error) });
       throw error;
     }
-    this.live.set(v.instanceId, v); this.schedule(v); return structuredClone(v);
+    this.live.set(v.instanceId, v); this.schedule(v); return this.project(v);
   }
   private schedule(v: ExperimentView) {
     clearTimeout(this.timers.get(v.instanceId)); this.timers.delete(v.instanceId);

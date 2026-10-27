@@ -12,6 +12,7 @@ type Job = { operationId: string; action: (view: ExperimentView) => ExperimentAc
 class ExperimentClient {
   view?: ExperimentView;
   error?: string;
+  notice?: string;
   private jobs: Job[] = [];
   private work?: Promise<boolean>;
   private listeners = new Set<() => void>();
@@ -23,6 +24,7 @@ class ExperimentClient {
   subscribe(fn: () => void) { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; }
   private emit() { for (const fn of this.listeners) fn(); }
   send(action: ExperimentAction | Job['action']) {
+    this.notice=undefined;
     this.jobs.push({ operationId: crypto.randomUUID(), action: typeof action === 'function' ? action : () => action }); this.emit();
     if (!this.error) void this.flush();
   }
@@ -31,7 +33,7 @@ class ExperimentClient {
     if (!this.view || this.pending || this.error) return;
     try {
       const v = await this.bridge.experiments.read({ sessionId: this.sessionId, instanceId: this.view.instanceId });
-      if (!this.pending && (!this.view || v.version >= this.view.version)) { this.view = v; this.emit(); }
+      if (!this.pending && (!this.view || v.version >= this.view.version)) { this.view = v; this.emit(); if(v.pendingDefinition && !v.gesture && !v.migrationError && !this.pending) this.send({kind:'migrate',baseVersion:v.version}); }
     } catch (error) { this.error = String(error); this.emit(); }
   }
   async flush(): Promise<boolean> {
@@ -47,6 +49,9 @@ class ExperimentClient {
         try {
           this.view = await this.bridge.experiments.act(command); this.jobs.shift(); this.emit();
         } catch (error) {
+          if (['migrate','restart'].includes(command.action.kind) && /现场已变化|等待当前/.test(String(error))) {
+            this.jobs.shift(); this.view = await this.bridge.experiments.read({sessionId:this.sessionId,instanceId:command.instanceId}); if(command.action.kind==='restart')this.notice='现场已变化，请确认当前现场后重新选择是否开始。'; this.emit(); continue;
+          }
           this.error = String(error);
           try { this.view = await this.bridge.experiments.read({ sessionId: this.sessionId, instanceId: command.instanceId }); } catch { /* Retain the last confirmed view on transport loss. */ }
           this.emit(); return false;
@@ -137,21 +142,37 @@ export function BuiltinExperiment({ block, unitId, sessionId, active, disabled, 
     document.addEventListener('visibilitychange', update);
     return () => { observer.disconnect(); document.removeEventListener('visibilitychange', update); client.send({ kind: 'visibility', visible: false }); };
   }, [client, active, client.view?.generation]);
+  const gestures=useRef(new Set<string>());
+  const gesture=(kind:string,active:boolean)=>{
+    const was=gestures.current.size>0;
+    if(active)gestures.current.add(kind);else gestures.current.delete(kind);
+    const now=gestures.current.size>0;if(was!==now)client.send({kind:'gesture',active:now});
+  };
+  const isInput=(target:EventTarget)=>target instanceof Element && !!target.closest('input, math-field, .builtin-formula-editor');
+  useEffect(()=>{
+    const pointerEnd=()=>gesture('pointer',false),keyEnd=(e:KeyboardEvent)=>gesture(`key:${e.code}`,false),endAll=()=>{if(gestures.current.size){gestures.current.clear();client.send({kind:'gesture',active:false});}};
+    window.addEventListener('pointerup',pointerEnd);window.addEventListener('pointercancel',pointerEnd);window.addEventListener('keyup',keyEnd);window.addEventListener('blur',endAll);
+    return()=>{window.removeEventListener('pointerup',pointerEnd);window.removeEventListener('pointercancel',pointerEnd);window.removeEventListener('keyup',keyEnd);window.removeEventListener('blur',endAll);endAll();};
+  },[client]);
   const v = client.view;
   const title = block.payload.title ?? (block.payload.component === 'kmap' ? '固定卡诺图 · 跨边四格' : '交互 · 多路选择');
-  return <section ref={host} inert={disabled} className="builtin-experiment nodrag nopan" role="region" aria-label={title}>
+  return <section ref={host} inert={disabled} className="builtin-experiment nodrag nopan" role="region" aria-label={title} onPointerDownCapture={e=>{if(isInput(e.target))gesture('pointer',true);}} onKeyDownCapture={e=>{if(e.key!=='Tab'&&isInput(e.target))gesture(`key:${e.code}`,true);}} onCompositionStartCapture={()=>gesture('composition',true)} onCompositionEndCapture={()=>gesture('composition',false)}>
     <h3 data-search-field="title">{title}</h3>
+
     {!v ? <p role="status">{client.error ?? '正在恢复实验现场…'}</p> : <>
+      {v.pendingDefinition && <div role="status" aria-label="实验定义迁移"><p>正式定义 {v.pendingDefinition.revision} 已保存；当前现场仍采用定义 {v.definition.revision}。{v.gesture ? '本次操作结束后迁移。' : v.migrationError ?? '正在接续兼容现场。'}</p>{v.migrationError && <button onClick={()=>client.send({kind:'restart',baseVersion:v.version})}>按新定义重新开始</button>}</div>}
       <p className="builtin-scope">{v.definition.kind === 'mux' ? '仅演示通道选择；不模拟器件使能端。' : v.definition.kind === 'decoder' ? '74LS138 式：使能满足时，仅选中输出为低电平。' : '固定 A / BC 示例，列按格雷顺序排列；不改变函数或自动化简。'}</p>
       <fieldset disabled={v.phase === 'pause-incomplete'}><legend>实验输入</legend>{Object.entries(localInputs ?? v.state.inputs).map(([n, value]) => <label key={n}><input type="checkbox" aria-label={n === 'showCorners' ? '显示跨边四格' : n} checked={!!value} onChange={event => {
         const next = { ...(localInputs ?? v.state.inputs), [n]: Number(event.target.checked) }; setLocalInputs(next); client.send({ kind: 'inputs', inputs: next });
       }} />{n === 'showCorners' ? '显示跨边四格' : `${n} = ${value}`}</label>)}</fieldset>
-      <div className="builtin-formula"><span>本实验公式</span>{editing ? <FormulaEditor composition={composition} initial={formula ?? v.definition.formula} changed={latex => { setFormula(latex); client.send(current => ({ kind: 'formula', formula: latex, baseRevision: current.definition.revision })); }} done={() => setEditing(false)} /> : <><p role="math" aria-label="本实验公式">{v.definition.formula}</p><button onClick={() => { setFormula(v.definition.formula); setEditing(true); }}>编辑实验公式</button></>}</div>
+      <div className="builtin-formula"><span>本实验公式</span>{editing ? <FormulaEditor composition={composition} initial={formula ?? v.definition.formula} changed={latex => { setFormula(latex); client.send(current => ({ kind: 'formula', formula: latex, baseRevision: current.definition.revision })); }} done={() => setEditing(false)} /> : <><p role="math" aria-label="本实验公式">{v.definition.formula}</p><button disabled={v.formulaScope==='consistency-group'} onClick={() => { setFormula(v.definition.formula); setEditing(true); }}>编辑实验公式</button></>}</div>
+      {v.formulaScope==='consistency-group' && <p className="builtin-grammar" role="status" aria-label="关联公式编辑">此公式与正文及相关内容一起保存。请在 Agent 中请求修改。</p>}
       <p className="builtin-grammar">{v.definition.kind === 'mux' ? '可转换：0、1、声明变量及非／与／或；每一路须能化为常量或单个输入（含取反）。' : v.definition.kind === 'decoder' ? '可转换：Y0–Y7 的八个布尔等式（分号分隔），须与当前 74LS138 定义等价。' : '可转换：与 ¬C 等价的三变量布尔式。'}</p>
       {v.definition.check === 'needs-check' ? <p className="builtin-error" role="status">公式需要核对；当前不显示计算结果。</p> : <><Diagram v={v} />{v.definition.kind === 'mux' && <p className="builtin-result" role="status" aria-label="MUX 输出">输出 {v.definition.outputName} = {v.result?.output}</p>}{v.definition.kind === 'decoder' && <p className="builtin-result" role="status" aria-label="译码器输出">{v.result?.enabled ? `选中 Y${v.result.selected}` : '未使能'} · Y0–Y7 = {v.result?.outputs?.join('')}</p>}</>}
       <div className="builtin-runtime"><button disabled={v.definition.check !== 'verified' || v.phase === 'pause-incomplete'} onClick={() => client.send({ kind: 'run', running: !v.running })}>{v.running ? '暂停遍历' : '开始遍历输入'}</button><label><input type="checkbox" checked={v.background} onChange={e => client.send({ kind: 'background', enabled: e.target.checked })} />离屏继续运行</label></div>
       <p className="builtin-runtime-state" role="status" aria-label="实验运行状态">{v.phase === 'running' ? '正在遍历' : v.phase === 'pause-incomplete' ? '暂停未完成' : v.phase === 'needs-check' ? '等待公式核对' : '已暂停'} · 模拟时间 {v.state.simulationTime} ms · 已确认 {v.state.step} 步 · 定义 {v.definition.revision}</p>
       <p role="status" aria-label="实验保存状态">{client.error || v.phase === 'pause-incomplete' ? '现场未保存' : client.pending ? '正在保存现场' : '现场已保存'}</p>
+      {client.notice && <p role="status">{client.notice}</p>}
       {client.error && <p className="builtin-error" role="alert">{client.error} 输入仍保留。<button onClick={() => void client.retry()}>重试保存现场</button></p>}
       {v.phase === 'pause-incomplete' && <p className="builtin-error" role="alert">暂停未完成，显示的是最近确认现场。<button onClick={() => void client.recover()}>恢复最近确认现场</button></p>}
     </>}

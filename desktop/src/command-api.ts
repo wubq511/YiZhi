@@ -2,14 +2,14 @@
 export interface AttemptRequest { sessionId: string; taskId: string; resume?: boolean }
 export interface Attempt { taskId: string; attemptId: string; generation: number; status: 'running' | 'stopped' | 'interrupted' }
 export interface CommandObject { id: string; kind: 'block' | 'structure' | 'reference' | 'dependency'; version: number; value: Record<string, any> }
-export interface CommandRead { sessionId: string; attemptId: string; objectIds: string[] }
-export interface CommandBasis { basisId: string; generation: number; objects: CommandObject[] }
+export interface CommandRead { context?: boolean; unitId?: string; sessionId: string; attemptId: string; objectIds: string[] }
+export interface CommandBasis { context?: import('./consistency-api').ConsistencyContext; basisId: string; generation: number; objects: CommandObject[] }
 export interface ObjectChange { objectId: string; value: Record<string, any> }
-export interface GroupCommand { sessionId: string; attemptId: string; operationId: string; basisId: string; changes: ObjectChange[];
+export interface GroupCommand { bundle?: import('./consistency-api').ConsistencyEdits; patch?: import('./editor-api').ContentPatch; unitId?: string; sessionId: string; attemptId: string; operationId: string; basisId: string; changes: ObjectChange[];
   semanticImpact?: { version: 1; unitId: string; conclusionOrMethodChanged: boolean } }
 export interface GroupResult {
   operationId: string; attemptId: string; status: 'committed' | 'retained';
-  revision?: number; cursor?: number; changedObjectIds: string[]; reason?: string;
+  unitId?: string; related?: import('./consistency-api').ConsistencyReceipt; revision?: number; cursor?: number; changedObjectIds: string[]; reason?: string;
   reviewPrompt?: import('./shared').ReviewPrompt;
 }
 export interface GroupHistory {

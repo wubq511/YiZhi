@@ -177,7 +177,7 @@ function App() {
     bounds: () => ({ width: boardRef.current?.clientWidth ?? 800, height: boardRef.current?.clientHeight ?? 600 }),
     reduced: () => matchMedia('(prefers-reduced-motion: reduce)').matches,
     target: () => {
-      const element = boardRef.current?.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(workTarget.current)}"]`);
+      const element = boardRef.current?.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(workTarget.current)}"], [data-agent-unit="${CSS.escape(workTarget.current)}"]`);
       if (!element) return;
       const rect = element.getBoundingClientRect(), board = boardRef.current!.getBoundingClientRect(), view = flow.getViewport();
       return { x: (rect.left - board.left - view.x) / view.zoom, y: (rect.top - board.top - view.y) / view.zoom, width: rect.width / view.zoom, height: rect.height / view.zoom };
@@ -454,7 +454,22 @@ function App() {
       }} />}
       {course && <ExchangePanel sessionId={course.sessionId} narrow={narrow} onOpenChange={value => { setExchangeOpen(value); if (value && narrow) setDirectory(false); }} prepare={async () => !!await channel.current?.flush() && (await notesPanel.current?.flush() ?? true)} imported={async () => { const [current, nextGraph, nextReview] = await Promise.all([window.yizhi.read(course.sessionId), window.yizhi.graph(course.sessionId), window.yizhi.reviewStates(course.sessionId)]); setCourse(current); setReview(nextReview); setGraph(nextGraph); }} />}
       {course && <SourcePanel ref={sourcesPanel} sessionId={course.sessionId} narrow={narrow} target={selected ? { unitId: selected.id } : undefined} onOpenChange={setSourcesOpen} onCitationsChange={setSourceCitations} onQuestion={citation => agentPanel.current?.attachCitation(citation)} />}
-      {course && <AgentPanel ref={agentPanel} sessionId={course.sessionId} narrow={narrow} target={{ unitId: selected?.id ?? course.unit.id }} targetName={selected?.name ?? course.unit.name} sourceOpen={sourcesOpen} onOpenChange={value => { setAgentOpen(value); if (value && narrow) setDirectory(false); }} openCitation={citation => sourcesPanel.current?.openCitation(citation)} />}
+      {course && <AgentPanel ref={agentPanel} sessionId={course.sessionId} narrow={narrow} target={{ unitId: selected?.id ?? course.unit.id }} targetName={selected?.name ?? course.unit.name} sourceOpen={sourcesOpen} prepareMutation={async()=>{ if(composing.current)throw new Error('请先完成中文候选输入。');if(!await channel.current?.flush())throw new Error('请先重试保存当前输入。'); }} onMutation={async(task,phase)=>{
+        workTarget.current=task.progress?.targetId ?? task.snapshot.target.blockId ?? task.snapshot.target.unitId;
+        if(phase==='start') {
+          camera.start(); persist({...(readingRef.current ?? {unitId:task.snapshot.target.unitId,expanded:{},returnStack:[],scrollTop:0}),modification:{targetId:workTarget.current,ended:false}});
+        }
+        if(phase==='start' || phase==='view' || task.progress?.stage==='committed') {
+          const unit=await window.yizhi.readUnit(course.sessionId,task.snapshot.target.unitId);
+          if(unit.id==='KU-001'){await channel.current?.synchronize();setCourse(await window.yizhi.open());}
+          setMounted(previous=>previous.some(u=>u.id===unit.id)?previous.map(u=>u.id===unit.id?unit:u):[...previous,unit]);
+          setSelected(previous=>previous?.id===unit.id?unit:previous);
+          setGraph(await window.yizhi.graph(course.sessionId));setReview(await window.yizhi.reviewStates(course.sessionId));
+        }
+        if(phase==='view'){const unit=await window.yizhi.readUnit(course.sessionId,task.snapshot.target.unitId);setSelected(unit);setDirectoryTheme(unit.theme.id);if(readingRef.current)persist({...readingRef.current,unitId:unit.id});requestAnimationFrame(()=>camera.resume());}
+        else if(phase==='finish'){camera.finish();if(readingRef.current)persist({...readingRef.current,modification:{targetId:workTarget.current,ended:true}});}
+        else requestAnimationFrame(()=>camera.updated());
+      }} onOpenChange={value => { setAgentOpen(value); if (value && narrow) setDirectory(false); }} openCitation={citation => sourcesPanel.current?.openCitation(citation)} />}
       {!cameraReady && !loadError && <span role="status" aria-label="画板定位">正在定位画板…</span>}
 
       {course && <ControlledProducer course={course} narrow={narrow} onOpenChange={setProducerOpen} started={async () => {
@@ -517,7 +532,8 @@ function App() {
           </ReadingSurface>
         </div>; })}</div>
         {course && <div inert={sourceOpen||(narrow&&relationsOpen)}><Drawings ref={drawingPanel} sessionId={course.sessionId} viewport={viewport} takeover={()=>camera.takeover()} pan={(dx,dy)=>camera.pan(dx,dy)} prepare={async()=>!!await channel.current?.flush()} paint={notes=>{void continuous.current?.paintDrawings(notes);}} contentKey={`${course.revision}:${mounted.map(u=>u.id).join(',')}`} waitLayout={async()=>{await layoutWrites.current;return !layoutPending.current.length;}} restorePlacement={enqueuePlacement}  /></div>}
-        {followState !== 'idle' && <div className="follow-control"><span role="status" aria-label="修改跟随">{followState === 'following' ? '正在跟随可控修改' : followState === 'paused' ? '已由你控制视野' : '可控修改已结束'}</span>{followState !== 'following' && <button onClick={() => { camera.resume(); }}>{followState === 'finished' ? '查看修改结果' : '返回并继续跟随'}</button>}</div>}
+        {followState !== 'idle' && <div className="follow-control"><span role="status" aria-label="修改跟随">{followState === 'following' ? '正在跟随修改' : followState === 'paused' ? '已由你控制视野' : '修改已结束'}</span>{followState !== 'following' && <button onClick={() => { camera.resume(); }}>{followState === 'finished' ? '查看修改结果' : '返回并继续跟随'}</button>}</div>}
+
         {relationsOpen && graph && course && <RelationsPanel graph={graph} sessionId={course.sessionId} view={relationView} narrow={narrow} panelRef={relationPanel} onClose={closeRelations} onKeyDown={event => trap(event, closeRelations)} onGraph={setGraph} focusId={relationFocus} />}
         {sourceOpen && <section ref={sourceDialog} className="source-dialog" role="dialog" aria-modal="true" aria-label="TI 74153 原页" onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); closeSource(); } else if (event.key === 'Tab') { event.preventDefault(); sourceDialog.current?.querySelector<HTMLButtonElement>('button')?.focus(); } }}><button onClick={closeSource}>返回正文</button><h2>TI 74153 原页 · 第 1 页</h2><img src="./ti74153-1.png" alt="TI 74153 手册第 1 页" /></section>}
       </main>

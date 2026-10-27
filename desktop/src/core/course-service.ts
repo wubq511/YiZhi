@@ -24,6 +24,9 @@ export class CourseService {
   readonly experiments = experimentsClient((action, payload) => this.request(action, payload));
   readonly agent = agentClient((action, payload) => this.request(action, payload));
   readAgentTarget(request: { sessionId: string; taskId: string; attemptId: string; generation: number }): Promise<unknown> { return this.request('agent:readTarget', request); }
+  readAgentMutation(request: import('../agent-mutation-api').AgentIdentity): Promise<import('../agent-mutation-api').AgentMutationContext> { return this.request('agentMutation:read',request); }
+  applyAgentMutation(request: import('../agent-mutation-api').AgentIdentity & {input: import('../agent-mutation-api').AgentMutation}): Promise<import('../command-api').GroupResult> { return this.request('agentMutation:apply',request); }
+  queryAgentMutation(request: import('../agent-mutation-api').AgentIdentity & {operationId:string}): Promise<import('../command-api').GroupResult|null> { return this.request('agentMutation:query',request); }
   recordAgent(event: AgentEvent): Promise<AgentTask> { return this.request('agent:record', event); }
   activeAgent(request: { sessionId: string; taskId: string; attemptId: string; generation: number }): Promise<AgentTask> { return this.request('agent:active', request); }
   readonly relations = relationClient((action, payload) => this.request(action, payload));

@@ -1,4 +1,7 @@
+import { AgentMutations } from './agent-mutations';
+import { CommandConsistency } from './command-consistency';
 import { Exchange } from './exchange';
+
 import { Search } from './search';
 import { snapshotLegacy, convertLegacy, legacyContent, candidateResource } from './migration';
 import { Drawings } from './drawings';
@@ -40,6 +43,7 @@ interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; cou
   parsing: Parsing;
   relations: FormalRelations;
   agent: AgentStore;
+  mutations: AgentMutations;
 }
 const courses = new Map<string, Course>();
 function session(id: string): Course {
@@ -111,7 +115,9 @@ function open(directory: string): OpenedCourse {
     const graph = JSON.parse(storedGraph ? String(storedGraph.value) : readFileSync(join(__dirname, 'fixtures/graph.json'), 'utf8')) as CourseGraph;
     initializeReviewState(db);
     const annotations = new Annotations(db);
+    let consistency!: CommandConsistency;
     const drawings = new Drawings(db, sourceUnit, annotations, graph);
+
     const groups = new CommandGroups(db, graph, operationId => {
       exchange.fence('commands:commit', operationId);
       annotations.fence('commands:commit', operationId);
@@ -120,20 +126,23 @@ function open(directory: string): OpenedCourse {
       agent.fence('commands:commit', operationId);
       experiments.fenceOperation('commands:commit', operationId);
       extensions.fence('commands:commit', operationId);
-    });
+    }, sourceUnit, { read: request => consistency.read(request), apply: (...args) => consistency.apply(...args), committed: result => agent.group(result) });
     const sources = new Sources(db, canonical, sourceUnit);
     const storedCatalog = db.prepare("SELECT value FROM metadata WHERE key='relation-catalog'").get();
     const relationCatalog = JSON.parse(storedCatalog ? String(storedCatalog.value) : readFileSync(join(__dirname, 'fixtures/relation-catalog.json'), 'utf8'));
     const relations = new FormalRelations(db, graph, { retiredUnitIds: relationCatalog.retiredUnitIds,
       get sources() { return sources.relationCatalog(relationCatalog.sources); } });
     const experiments = new BuiltinExperiments(db, sourceUnit);
+    consistency = new CommandConsistency(db,graph,relations,experiments,sources);
     const extensions = new Extensions(db, canonical);
     const parsing = new Parsing(db, canonical, sources, run => { queue = queue.then(run).catch(error => { console.error(error); }); }, workerData?.parseScheduling);
     const agent = new AgentStore(db, sources, sourceUnit);
+    const mutations = new AgentMutations(db,groups,agent,sourceUnit,relations);
     const exchange = new Exchange(db, canonical, graph, () => relations.graph(), () => ({ sources: sources.relationCatalog(relationCatalog.sources), retiredUnitIds: relationCatalog.retiredUnitIds }));
     const readableUnitIds = [...new Set([...db.prepare('SELECT id FROM units').all().map(r => String(r.id)), ...(!db.prepare("SELECT 1 FROM metadata WHERE key='content-scope'").get() ? ['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-035', 'KU-055', 'KU-057', 'KU-062'] : [])])];
     const search = new Search(db, sourceUnit, readableUnitIds, graph.nodes.length, sources);
-    const course: Course = { exchange, db, owner, agent, search, unit: sourceUnit, annotations, drawings, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
+    const course: Course = { exchange, db, owner, agent, mutations, search, unit: sourceUnit, annotations, drawings, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
+
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     const result = snapshot(course);
     courses.set(canonical, course);
@@ -218,6 +227,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       const course = session(payload.sessionId);
       value = course.unit(payload.unitId);
       if (!value) throw new Error('该单元不存在或正文尚未加入课程副本');
+
     }
     else if (action === 'extensions:recoverRenderers') { for(const course of courses.values()) {course.experiments.pauseAll();course.extensions.recoverRenderer();} }
     else if (action.startsWith('extensions:')) {
@@ -257,6 +267,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action.startsWith('drawings:')) value = session(payload.sessionId).drawings.dispatch(action, payload);
     else if (action.startsWith('search:')) value = await session(payload.sessionId).search.dispatch(action, payload);
     else if (action.startsWith('annotations:')) value = session(payload.sessionId).annotations.dispatch(action, payload);
+    else if (action.startsWith('agentMutation:')) { const m=session(payload.sessionId).mutations; value=action==='agentMutation:read'?m.read(payload):action==='agentMutation:apply'?m.apply(payload):m.query(payload); }
     else if (action.startsWith('agent:')) value = session(payload.sessionId).agent.dispatch(action, payload);
     else if (action.startsWith('parsing:')) value = await session(payload.sessionId).parsing.dispatch(action, payload);
     else if (action.startsWith('sources:')) value = await session(payload.sessionId).sources.dispatch(action, payload);

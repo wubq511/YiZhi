@@ -13,7 +13,7 @@ const entries = [
 for (const [entry, outfile] of entries) {
   try {
     await build({ entryPoints: [entry], outfile, bundle: true, platform: 'node', format: 'cjs',
-      target: 'node24', external: ['electron', 'pdfjs-dist/*', '@napi-rs/canvas', '@playwright/test'], sourcemap: true });
+      target: 'node24', external: ['electron', 'pdfjs-dist/*', '@napi-rs/canvas', '@playwright/test', 'playwright', 'playwright-core'], sourcemap: true });
   } catch (error) { throw error; }
 }
 try {

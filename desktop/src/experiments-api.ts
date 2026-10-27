@@ -10,7 +10,8 @@ export interface ExperimentState {
 export interface ExperimentResult { output?: number; selected?: number; enabled?: boolean; outputs?: number[]; highlighted?: number[] }
 export interface ExperimentView {
   instanceId: string; unitId: string; blockId: string; generation: number; version: number;
-  definition: BuiltinDefinition; state: ExperimentState; result: ExperimentResult | null;
+  formulaScope?: 'independent'|'consistency-group';
+  pendingDefinition?: BuiltinDefinition; gesture?: boolean; migrationError?: string; definition: BuiltinDefinition; state: ExperimentState; result: ExperimentResult | null;
   running: boolean; background: boolean; visible: boolean;
   phase: 'running' | 'paused' | 'needs-check' | 'pause-incomplete'; error?: string;
 }
@@ -20,6 +21,7 @@ export interface ConfirmedExperimentSnapshot {
   state: ExperimentState;
 }
 export type ExperimentAction =
+  { kind: 'gesture'; active: boolean } | { kind: 'migrate' | 'restart'; baseVersion: number } |
   { kind: 'inputs'; inputs: Record<string, number> } |
   { kind: 'formula'; formula: string; baseRevision: number } |
   { kind: 'run'; running: boolean } | { kind: 'background'; enabled: boolean } |
