@@ -21,4 +21,10 @@
 
 正式交付 HTML 可直接查看；`visual-explainer-mux.src.html` 是生成源，其原有 `kit.css` 缺失引用已用正式 HTML 内嵌的同版 CSS 补齐。历史生成命令中的 `/tmp`、`/private/tmp` 上游工具目录不属于随附运行依赖，复现需按原记录准备固定版本；本次没有重跑生成算法或旧测试。
 
-[返回调研导航](../docs/research/README.md) · [迁移核验](../docs/research/evidence/迁移记录/迁移核验.md)
+[返回调研导航](../docs/research/README.md) · [项目迁移记录](../docs/development/migration-2026-10-28.md)
+
+## 原始记录的身份
+
+Archify 的交付 JSON 中 `specification.sha256` 和 `specification.bytes` 描述原生成输入。早期整理曾修改配置的 `meta.output` 路径，因此它们不代表当前配置文件的字节摘要；正式 HTML 的原始 artifact 摘要继续对应原交付。不要把目录搬迁视为重新生成或重新验收。
+
+`visual-explainer-mux.src.html` 缺失的 `kit.css` 已从其正式 HTML 内嵌的同版样式逐字补齐。历史 Fireworks／visual-explainer 的 `/tmp` 上游目录只记录原环境，随附产物与许可记录继续保留；复现构建时按固定版本另行准备工具。

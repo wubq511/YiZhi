@@ -5,10 +5,12 @@
 | 位置 | 入口 |
 | --- | --- |
 | 工具总览 | [复习系统工具调研总览](overview/复习系统工具调研总览.md) |
-| 架构研究 | [第一性原理复审](architecture/第一性原理与轻量化架构.md)、[运行与进程边界](architecture/运行交付与进程边界.md)、[后端存储](architecture/后端存储方案调研.md) |
+| 架构研究 | [第一性原理复审](architecture/第一性原理与轻量化架构.md)、[运行与进程边界](architecture/运行交付与进程边界.md)、[后端存储](architecture/后端存储方案调研.md)、[Agent 接入能力与边界](architecture/agent-integration-feasibility.md) |
 | 专题报告 | [产品与知识库](topics/产品与知识库/)、[Agent 与图形工具](topics/Agent与图形工具/)、[历史与恢复](topics/历史与恢复/)及 [topics/](topics/) 下的编辑器、公式批注、并发与交互机制核查 |
 | 可运行实验 | [experiments](../../experiments/README.md)，保留独立结果和边界 |
-| 来源与图片 | [evidence](evidence/)，包含官方图片、来源元数据及此前一次资料归整记录 |
-| 原始过程 | [系统架构讨论](../history/系统架构讨论.md)、[产品讨论](../history/复习系统设计讨论.md)、[旧版实施](../history/legacy-v1/implementation/README.md) |
+| 知识组织研究 | [主题重要性评级依据](topics/知识组织/主题重要性评级依据.md)，保留方法比较、推论限制与原始文献 |
+| 工具实测 | [工具原型验证记录](topics/工具原型验证记录.md)，保留候选工具的操作与输出依据 |
+| 来源与图片 | [evidence](evidence/)，包含官方图片、来源元数据及接入探针 |
+| 已采纳或拒绝的选择 | [设计取舍记录](../adr/设计取舍记录.md)、[旧版行为与验收](../development/旧版运行基线与验收.md) |
 
-历史记录中的 `/tmp`、旧学习目录和工具版本描述的是当时环境；本次搬迁只修复现有入口，不重跑测量或更改其原始结果。现行目录见 [项目布局](../development/project-layout.md)。
+研究保留调查日期。历史记录中的 `/tmp`、旧学习目录和工具版本描述的是当时环境；搬迁不代表重新测量或刷新平台能力。项目目录与维护入口见 [项目说明](../../README.md)。

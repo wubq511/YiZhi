@@ -4,7 +4,7 @@
 From the repo root: python3 legacy/review-board/import_content.py path/to/package.json
 Use --course /path/to/copied-course for temporary-course checks.
 
-The old 期中/工具/复习内容.py import CLI does not use .content.lock and still races
+The old tools/digital-logic/复习内容.py import CLI does not use .content.lock and still races
 with live edits. #02 must use this entry point for serialized formal imports.
 No fallback writer is started after a live server rejects/loses an HTTP request;
 retry the same package to recover the durable OP-IMPORT-<packageId> receipt.
@@ -124,7 +124,7 @@ def import_course(course_root, package_path):
 def main(argv=None):
     parser = argparse.ArgumentParser(description="通过课程统一命令串行导入 #02 正式内容包", epilog=(
         "已有课程服务时转发 /api/v1/content/import；否则持有 CourseLock 临时导入。"
-        "原生期中/工具/复习内容.py import 未参与内容锁，并发导入请改用本入口。"))
+        "原生tools/digital-logic/复习内容.py import 未参与内容锁，并发导入请改用本入口。"))
     parser.add_argument("package", type=Path, help="内容包 JSON 路径，相对当前工作目录解析")
     parser.add_argument("--course", type=Path, default=DEFAULT_COURSE_ROOT,
                         help="课程根目录，默认 courses/digital-logic；验证时指定临时副本")

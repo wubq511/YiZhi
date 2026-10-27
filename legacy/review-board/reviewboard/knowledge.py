@@ -6,6 +6,8 @@ from pathlib import Path
 import sys
 import threading
 
+from .paths import KNOWLEDGE_TOOLS_ROOT
+
 
 class KnowledgeCatalog:
     PRIMARY_IDS = ("KU-035", "KU-055", "KU-056", "KU-063")
@@ -16,9 +18,9 @@ class KnowledgeCatalog:
         self._lock = threading.RLock()
         self._stamp = None
         self._store = None
-        tool = root / "期中/工具/知识地图.py"
+        tool = KNOWLEDGE_TOOLS_ROOT / "知识地图.py"
         if not tool.is_file():
-            raise FileNotFoundError(f"课程缺少知识查询入口：{tool}")
+            raise FileNotFoundError(f"应用缺少知识查询工具：{tool}")
         sys.path.insert(0, str(tool.parent))
         spec = importlib.util.spec_from_file_location("review_course_knowledge", tool)
         self.module = importlib.util.module_from_spec(spec)

@@ -7,7 +7,7 @@ import subprocess
 here = pathlib.Path(__file__).resolve().parent
 project = here.parents[1]
 root = project / "courses/digital-logic"
-cli = ["python3", str(root / "期中/工具/知识地图.py")]
+cli = ["python3", str(project / "tools/digital-logic/知识地图.py")]
 
 def query(*args):
     return json.loads(subprocess.check_output(cli + list(args), cwd=root, text=True))

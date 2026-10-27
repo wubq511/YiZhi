@@ -130,8 +130,8 @@ Robert 在接受 Electron 后明确要求记录以下四项，作为下一版实
 ## Evidence on Hand
 
 - **本轮架构设计**：[系统设计定稿](docs/architecture/系统设计定稿.md)汇总工作区、编辑批注、实验、保存历史、Agent、来源检索、迁移备份与分阶段验收；各项产品取舍与工程合同均已整体确认。[架构决策总览](docs/architecture/架构决策总览.md)连接理由与证据。既有实现与首版验收不代替下一版架构验收。
-- **已确认产品规则**：`docs/history/复习系统设计讨论.md` 是长期产品方向与阅读要求的主要记录；`docs/history/legacy-v1/implementation/01-正式版任务规范.md` 和 `02-数据与行为合同.md` 将其落实为 60 条用户故事及统一行为合同。
-- **领域与课程规则**：`CONTEXT.md`、`docs/knowledge/`、`courses/digital-logic/期中/设计/` 保存已确认的术语、知识粒度、题目映射、重要性、关系价值、稳定身份和消费接口规则。`courses/digital-logic/期中/待审查/` 只保存历史审核证据，不是当前内容入口。
+- **产品取舍与既有行为**：[设计取舍记录](docs/adr/设计取舍记录.md)保存长期产品方向、阅读要求与拒绝方案的理由；[旧版运行基线](docs/development/旧版运行基线与验收.md)保留 60 条用户故事对应的行为、回归经验和验证边界，[运行接口](legacy/review-board/接口.md)描述当前实现。
+- **领域与课程规则**：[CONTEXT.md](CONTEXT.md)与 [知识文档](docs/knowledge/README.md)保存术语、粒度、评级、关系和课程依据；[课程基线](docs/knowledge/数字逻辑课程基线.md)集中说明范围、稳定身份、审校纠正与历史证据位置。课程目录只保存资料与知识内容。
 - **真实课程资料**：`courses/digital-logic/理论课/课件/`、`courses/digital-logic/理论课/课后作业/整理版/`、`courses/digital-logic/习题课/`、`courses/digital-logic/教材/` 与 `courses/digital-logic/笔记/` 均在项目内。首个内容实例覆盖教师第 01–06 课、六次作业及指定组合习题课，排除实验与 SystemVerilog/HDL；这一排除是当前课程实例的范围，不是通用产品限制。
 - **正式课程数据**：`courses/digital-logic/期中/数据/知识地图.json` 与 `courses/digital-logic/期中/数据/视图布局.json`。首版包含 20 个主题、84 个有效单元、94 个可作答小问、202 条题目映射和 43 条精选关系；这些是当前实例证据，不是限制后续合法新增、拆分或合并的固定额度。
 - **旧版运行基线**：`legacy/review-board/` 包含本地服务、浏览器界面、启动入口、接口和验收记录。`legacy/review-board/验收/整课联合验收-2026-10-26.json` 记录全部 84 单元正文、真实 Agent、编辑标注、保存重开和独立路径迁移的联合通过结果，以及实际测试数量。

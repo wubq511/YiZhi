@@ -1,18 +1,21 @@
-# YiZhi 文档
+# 文档导航
 
-当前实施从 [系统设计定稿](architecture/系统设计定稿.md) 进入。产品规则在 [PRODUCT.md](../PRODUCT.md)，术语在 [CONTEXT.md](../CONTEXT.md)，视觉规范在 [DESIGN.md](../DESIGN.md)。
+当前产品规则由 [PRODUCT.md](../PRODUCT.md)、[CONTEXT.md](../CONTEXT.md)、[DESIGN.md](../DESIGN.md) 分别维护。新版从系统设计定稿进入实施；当前可运行应用仍为 Python／Web 基线。
 
-| 入口 | 用途 |
+| 要做的事 | 首选入口 |
 | --- | --- |
-| [架构决策总览](architecture/架构决策总览.md)与 [ADR](adr/) | 已确认选择、工程合同与实际验证边界 |
-| [内容演进与实时修改](architecture/内容演进与实时修改协议.md) | 内容身份、并发、停止、撤回与恢复 |
-| [正文编辑与保存](architecture/正文编辑与保存衔接设计.md) | 连续正文、输入现场、草稿与持久确认 |
-| [历史管理与恢复](architecture/历史管理与恢复设计.md) | 即时撤销、选择性撤回与版本恢复 |
-| [知识整理方法](knowledge/README.md) | 拆分、粒度、重要性评级和课程入口 |
-| [研究索引](research/README.md) | 工具比较、技术研究与来源证据 |
-| [实验索引](../experiments/README.md) | 原型、测量方法、原始结果和限制 |
-| [历史索引](history/README.md) | 已完成旧版交付、讨论过程和技能评测 |
-| [目录约定](development/project-layout.md) | 文件职责、验证和备份 |
-| [项目迁移](development/migration-2026-10-28.md) | 2026-10-28 的搬迁、核验和清理 |
+| 开始下一阶段开发 | [系统设计定稿](architecture/系统设计定稿.md)：完整合同、阶段顺序与验收条件 |
+| 理解技术选择及拒绝的方案 | [架构决策总览](architecture/架构决策总览.md)、[ADR](adr/)、[设计取舍记录](adr/设计取舍记录.md) |
+| 处理 Agent 修改、并发与内容身份 | [内容演进与实时修改](architecture/内容演进与实时修改协议.md) |
+| 实现正文编辑与保存 | [正文编辑与保存衔接](architecture/正文编辑与保存衔接设计.md) |
+| 实现撤销、选择性撤回与历史恢复 | [历史管理与恢复](architecture/历史管理与恢复设计.md) |
+| 运行、修改或验证旧版 | [应用说明](../legacy/review-board/README.md)、[运行接口](../legacy/review-board/接口.md)、[行为基线与验收](development/旧版运行基线与验收.md) |
+| 查询课程或核对内容来源 | [课程资料入口](../courses/digital-logic/README.md)、[课程基线与审校证据](knowledge/数字逻辑课程基线.md)、[工具命令](../tools/README.md) |
+| 查知识拆分、评级与教材核验方法 | [知识文档索引](knowledge/README.md) |
+| 复验阅读呈现与信息区分 | [阅读场景与视觉验收](development/阅读场景与视觉验收.md)；实际测量保存在 [旧版验收](../legacy/review-board/验收/) |
+| 查工具能力、文献或当时的技术比较 | [研究索引](research/README.md) |
+| 运行原型或追溯性能测量 | [实验索引](../experiments/README.md)：方法、版本、原始结果与限制 |
+| 查知识技能的真实对照结果 | [技能验证](development/知识地图技能验证.md)及其六次运行证据 |
+| 核对项目搬迁与资产整理 | [2026-10-28 迁移记录](development/migration-2026-10-28.md) |
 
-设计已确认不表示新版已交付；当前可运行代码为 [legacy/review-board](../legacy/review-board/README.md)，完整开发课程见 [digital-logic](../courses/digital-logic/README.md)。
+设计、研究、实验和历史验收各自标明效力范围。已完成任务中的有效信息已归入上述文档，原始验收 JSON、截图和必要审校原件随对应主题保留；不再维护独立的任务交接树。

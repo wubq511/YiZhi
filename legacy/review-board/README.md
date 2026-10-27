@@ -55,7 +55,7 @@ API、扩展方法和 02/03/04 的接缝见 [接口.md](接口.md)。原型和�
 python3 legacy/review-board/import_content.py 内容包.json
 ```
 
-并发正式导入须使用此入口。原生 `期中/工具/复习内容.py import` 尚未参与运行时的内容锁，不可与学生或 Agent 修改同时写权威文件。交接细节见 [内容包入口](../../docs/history/legacy-v1/handoffs/work/03/内容包导入入口.md)。
+并发正式导入须使用此入口。底层 `tools/digital-logic/复习内容.py import` 尚未参与运行时的内容锁，不可与学生或 Agent 修改同时写权威文件。具体合同见 [内容包与资料导入](接口.md#6-内容包与资料版本导入)。
 
 ## 验证
 

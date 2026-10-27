@@ -9,7 +9,7 @@
 - [产品规则](PRODUCT.md)、[领域词汇](CONTEXT.md)、[视觉规范](DESIGN.md)。
 - [系统设计定稿](docs/architecture/系统设计定稿.md)：已确认的完整合同、实施顺序和验收条件。
 - [架构决策总览](docs/architecture/架构决策总览.md)与 [ADR](docs/adr/)：选择及依据。
-- [文档索引](docs/README.md)、[目录与维护约定](docs/development/project-layout.md)。
+- [文档索引](docs/README.md)：按开发、知识核对、研究和验收任务查找。
 
 下一阶段从总稿的阶段 I 开始：Electron 宿主、一个课程核心 Worker、SQLite 与一个真实单元的保存恢复闭环。后续阶段仍以完整课程作为内容与迁移基线。
 
@@ -30,15 +30,18 @@ python3 legacy/review-board/start.py
 | 位置 | 内容 |
 | --- | --- |
 | `docs/architecture/`、`docs/adr/` | 当前设计与正式决策 |
-| `docs/knowledge/` | 可复用的知识拆分、粒度和评级规则 |
+| `docs/knowledge/` | 知识方法、课程基线、审校与教材核验依据 |
 | `docs/research/` | 专题调研、技术比较与来源证据 |
-| `docs/history/` | 旧版交付、讨论经过、交接与评测记录 |
+| `docs/development/` | 旧版行为与验收、视觉用例、技能验证、迁移记录 |
 | `experiments/` | 可运行原型、独立实验、原始结果和随附资源 |
 | `legacy/review-board/` | 已有 Python／Web 应用与测试 |
-| `courses/digital-logic/` | 完整课程、知识工具、原文、来源版本和个人状态 |
-| `.agents/skills/` | 产品设计与界面工作的项目技能 |
+| `courses/digital-logic/` | 完整课程知识、派生阅读视图、原文、来源版本和个人状态 |
+| `tools/digital-logic/` | 知识查询、校验、生成器与教材检索工具 |
+| `.agents/skills/` | 课程查询、教材阅读与产品设计技能 |
 | `local/` | 不进入 Git 的本机迁移记录 |
 
-[数字逻辑课程入口](courses/digital-logic/README.md)说明权威数据和维护方法。原始教材、课件、笔记及个人数据库完整保存在本机课程目录，并由 `.gitignore` 排除；Git 只保存它们的清单、知识产物和代码。跨机器完整迁移仍需复制课程资料和个人状态，单独克隆仓库不会包含它们。
+[数字逻辑课程入口](courses/digital-logic/README.md)索引知识与资料；查询和验证命令见 [课程工具](tools/README.md)，课程范围、纠正和证据缺口见 [课程基线](docs/knowledge/数字逻辑课程基线.md)。原始教材、课件、笔记及个人数据库完整保存在本机课程目录，由 `.gitignore` 排除；单独克隆 Git 仓库不会包含它们。完整迁移需停服务后复制课程，运行中备份须使用一致数据库快照。
+
+同一规则只维护一个权威位置，具体约定见 [AGENTS.md](AGENTS.md)。设计讨论与旧交接中的有效内容已归入对应设计、运行接口、课程基线和证据；不再保留平行的历史目录或课程内流程副本。
 
 2026-10-28 的搬迁范围、核验与清理结果见 [迁移记录](docs/development/migration-2026-10-28.md)。

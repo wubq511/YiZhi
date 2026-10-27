@@ -53,4 +53,4 @@ python3 start.py
 - `handwriting.css`：复用相邻 `mux-skill-comparison/excalidraw-runtime/fonts/Xiaolai/` 中的已有中文字体分片；复制样例时需保留这个相对目录关系。
 - [第三方声明](THIRD-PARTY-NOTICES.md) 与 `licenses/`：软件和字体许可。
 
-[设计讨论](../../docs/history/复习系统设计讨论.md#已确认的视觉判断方式与公式编辑) · [演示索引](../README.md)
+[设计讨论](../../docs/adr/设计取舍记录.md) · [演示索引](../README.md)

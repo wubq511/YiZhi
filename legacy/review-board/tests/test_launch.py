@@ -110,9 +110,6 @@ class LaunchTests(unittest.TestCase):
         data.mkdir(parents=True)
         for source in (PROJECT_ROOT / "期中/数据").glob("*.json"):
             shutil.copy2(source, data / source.name)
-        # Copy every tool source, including new local imports such as 复习内容.py.
-        shutil.copytree(PROJECT_ROOT / "期中/工具", self.course / "期中/工具",
-                        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
         self.processes = []
         self.addCleanup(self.close_processes)
         self.client = build_opener(ProxyHandler({}))

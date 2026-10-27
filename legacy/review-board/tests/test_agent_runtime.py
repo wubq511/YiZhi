@@ -158,7 +158,6 @@ class AgentRuntimeTests(unittest.TestCase):
         paths = {"期中/数据/视图布局.json"}
         paths.update(s["path"] for s in data["sources"])
         paths.update(v["path"] for s in data["sources"] for v in s.get("versions", []))
-        paths.update(f"期中/工具/{name}" for name in ("知识地图.py", "地图生成.py", "复习内容.py"))
         for relative in paths:
             destination = cls.template / relative
             destination.parent.mkdir(parents=True, exist_ok=True)

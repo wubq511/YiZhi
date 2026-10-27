@@ -24,10 +24,6 @@ REF = {"sourceId": "SRC-T", "pdfPages": [1], "visualStatus": "verified",
 
 
 def fixture(root):
-    tools = root / "期中/工具"
-    tools.mkdir(parents=True)
-    for name in ("知识地图.py", "地图生成.py", "复习内容.py"):
-        shutil.copy2(PROJECT / "期中/工具" / name, tools / name)
     (root / "source.txt").write_text("Disposable source", encoding="utf-8")
     units = []
     for n in range(1, 4):
@@ -50,7 +46,7 @@ def fixture(root):
         "questionCoverage": [], "pageCoverage": [], "relations": [], "requirementGroups": [],
         "retiredUnits": [], "issues": []}
     path = root / "期中/数据/知识地图.json"
-    path.parent.mkdir()
+    path.parent.mkdir(parents=True)
     path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     (path.parent / "视图布局.json").write_text('{"nodes":[],"groups":[],"edges":[]}', encoding="utf-8")
     return path

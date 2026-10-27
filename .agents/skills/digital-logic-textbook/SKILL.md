@@ -1,0 +1,41 @@
+---
+name: digital-logic-textbook
+description: 在数字逻辑与部件设计课程项目中检索、阅读和引用《数字设计和计算机体系结构（原书第2版）》教材。用户要求查章节、解释书中概念、读取例题或习题、核对公式、电路图和代码时使用；优先使用现有 OCR 检索入口，再按需核对原页。仅处理教师课件、实验文件或不需要教材依据的通用问题时不触发。
+---
+
+# 教材检索与阅读
+
+本 Skill 位于 `<项目根>/.agents/skills/digital-logic-textbook/`。以下命令从 YiZhi 仓库根运行；检索工具在 `tools/digital-logic/textbook/`，已有 OCR 和索引在 `courses/digital-logic/教材/数字设计和计算机体系结构-检索版/`。
+
+## 阅读流程
+
+1. **校验入口**：先读 [教材检索入口](../../../docs/knowledge/教材检索与核验.md)。本会话首次使用时运行 `verify`；原件或检索资料变化后重新验证。失败时查明变更原因，恢复对应资料或依入口说明修复；不能仅为消除校验失败而盲目重建。
+2. **按请求定位**：章节请求用 `toc` 查校准目录、用 `section` 读取；概念用 `search`；习题号用 `search --scope exercises` 并按章号加 `--chapter`，减少同号例题和小节干扰。工具会优先显示题号位置候选及按坐标重排的 OCR；候选和摘录边界仍需原页确认。目录与 OCR 命中是不同证据。原 PDF 自带书签存在错位，以校准目录为准。
+3. **读全所需上下文**：先在原页确认目标题的起始、全部小问和结束，再追踪该题实际引用；同页其他题的引用不属于目标题。若题号位于页末、文本未结束或工具未检测到同页下一题号，继续读取并查看下一页。跨题引用须逐项记录题号/图号、所在页和核对状态，直到本题所需内容齐全；区分本题改变的输入规模等条件与引用题保留的输出定义。整章读取包含习题及面试问题；小节结果按整页截取，可能含相邻小节。只加载当前问题所需的内容。
+4. **查看原页**：公式、反相上划线、上下标、真值表、卡诺图、电路连线、时序图、HDL/汇编/C 代码、精确引文及可疑 OCR，均须 `render` 后实际查看生成的图片。确认影响答案的符号、连接、条件及代码；不能凭 OCR 猜补缺失内容。仅渲染但未查看图片不算完成核对。
+5. **无命中时回退**：习题筛选无命中时先改用 `--scope all`，再尝试同义词、短词及校准目录，定位相关节并查看原页。筛选按页进行，共享边界页也可能含同号面试问题，必须看原页确认。仍未找到时说明已查范围和不确定处，不把 OCR 无命中当作原书没有相关内容的证据。
+6. **引用并收尾**：答案附章节/题号、中文书页和 PDF 页序；对尚未核实的识别内容说明不确定性。删除本次不再需要的临时渲染图，保留原件与检索资料。
+
+## 命令
+
+下列示例从项目根运行；按问题替换编号和页码。渲染输出应选本次任务独立的临时目录。
+
+```bash
+python3 tools/digital-logic/textbook/教材.py verify
+python3 tools/digital-logic/textbook/教材.py toc 2.7
+python3 tools/digital-logic/textbook/教材.py section 2.7
+python3 tools/digital-logic/textbook/教材.py search '5.55' --chapter 5 --scope exercises
+python3 tools/digital-logic/textbook/教材.py read 179-180
+python3 tools/digital-logic/textbook/教材.py render 179-180 --out /tmp/textbook-pages-current-task
+```
+
+- `read` / `render` 默认输入中文书页；输入 PDF 页序时明确加 `--pdf`。生成图片的文件名数字始终是 PDF 页序。
+- 中文书页 1-480 对应 PDF 第 15-494 页，差值为 14。书末索引条目和页边注采用**英文原书页码**，须另行用关键词或章节定位，不能直接加 14。
+- 原图渲染需要 Poppler 的 `pdftoppm`。若不可用，使用当前环境中可用的 PDF 查看/渲染能力检查同一 PDF 页；无法查看时明确尚未核实，不以 OCR 替代精确内容。
+- 常规检索只需要 Python 标准库。完整参数、文件格式和 OCR 局限按需查阅教材入口 README。
+
+## 仅在维护检索资料时
+
+阅读教材无需重新 OCR 或重建索引。需要更正目录时修改 课程检索目录下的 `目录校准.tsv` 后用 `tools/digital-logic/textbook/构建索引.py` 重建；仅在对照原页确认后修正 OCR。原件变更应在新目录重新 OCR 并校准页码，旧 OCR 不能直接套到新原件。
+
+修改检索工具后运行`tools/digital-logic/textbook/test_textbook.py` 和 `tools/digital-logic/textbook/教材.py verify`。校验通过说明文件、页码及定位一致，不代表全书文字已经校对。重建依赖与详细流程见教材入口 README 的“重建”部分。

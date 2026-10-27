@@ -29,11 +29,17 @@ class KnowledgeViewTests(unittest.TestCase):
             self.assertNotIn("KU-073", view["publishedIds"])
 
     def test_view_exposes_canonical_layout_and_reading_order(self):
+        layout_path = self.root / "期中/数据/视图布局.json"
+        layout = json.loads(layout_path.read_text(encoding="utf-8"))
+        selected = next(node for node in layout["nodes"] if node["unitId"] == "KU-001")
+        selected["x"] += 137
+        layout_path.write_text(json.dumps(layout, ensure_ascii=False), encoding="utf-8")
         catalog = KnowledgeCatalog(self.root, self.root / "期中/数据/知识地图.json")
         view = catalog.view()
         self.assertEqual(view["layout"], catalog.graph("all")["layout"])
         nodes = {item["unitId"]: item for item in view["layout"]["nodes"]}
         groups = {item["themeId"]: item for item in view["layout"]["groups"]}
+        self.assertEqual(nodes["KU-001"]["x"], selected["x"])
         self.assertLess(nodes["KU-042"]["x"], nodes["KU-043"]["x"])
         self.assertGreater(nodes["KU-044"]["y"], nodes["KU-042"]["y"])
         self.assertLess(groups["TH-01"]["x"], groups["TH-04"]["x"])

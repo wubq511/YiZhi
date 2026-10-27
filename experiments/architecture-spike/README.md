@@ -66,4 +66,4 @@ node dynamic-performance.mjs
 
 样例保留 React Flow attribution；新增打包运行依赖采用 MIT／ISC 等宽松许可，没有引入 tldraw、Pro 示例或生产授权密钥。[第三方声明](THIRD_PARTY_NOTICES.md)列出打包运行库；既有 [MathLive 许可](../style-math-prototype/vendor/mathlive/LICENSE.txt)和 [Rough.js 许可](../style-math-prototype/vendor/roughjs/LICENSE)随项目保留。
 
-[返回系统架构讨论](../../docs/history/系统架构讨论.md) · [返回演示索引](../README.md)
+[设计取舍记录](../../docs/adr/设计取舍记录.md) · [返回演示索引](../README.md)

@@ -15,7 +15,7 @@ APP = PROJECT / 'legacy/review-board'
 COURSE = PROJECT / 'courses/digital-logic'
 
 graph = json.loads(subprocess.run(
-    ["python3", str(COURSE / "期中/工具/知识地图.py"), "graph", "--view", "main"],
+    ["python3", str(PROJECT / "tools/digital-logic/知识地图.py"), "graph", "--view", "main"],
     cwd=COURSE, check=True, capture_output=True, text=True,
 ).stdout)
 with urllib.request.urlopen("http://127.0.0.1:8769/api/v1/course", timeout=15) as response:

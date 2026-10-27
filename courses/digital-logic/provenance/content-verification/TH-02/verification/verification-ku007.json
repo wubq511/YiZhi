@@ -1,7 +1,0 @@
-{
-  "unit": "KU-007",
-  "script": "verification/check_ku007.py",
-  "checks": 8,
-  "failed": [],
-  "status": "PASS"
-}

@@ -13,7 +13,7 @@ selective undo recognizes the lightweight receipt metadata namespace.
     python3 legacy/review-board/import_content.py path/to/package.json
 
 Relative HTTP package paths are course-relative. Relative CLI paths are resolved
-against its working directory before forwarding. The legacy 期中/工具/复习内容.py
+against its working directory before forwarding. The legacy tools/digital-logic/复习内容.py
 import CLI does NOT acquire .content.lock: concurrent use of that old writer
 still has the known lost-update race. This adapter does not claim to fix it.
 
