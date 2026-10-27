@@ -14,7 +14,8 @@ export interface AgentMutation {
  }>;
 }
 
-export type AgentMutationContext = import('./command-api').CommandBasis & {
+export type AgentMutationContext = Omit<import('./command-api').CommandBasis,'context'> & {
+ context: { layout: import('./consistency-api').ConsistencyContext['layout']; experiments: import('./consistency-api').ConsistencyContext['experiments']; relations: {graph: Pick<import('./shared').CourseGraph,'edges'>;sources:import('./relation-api').RelationSource[]} };
  unitId: string; content: import('./shared').CourseUnit; submittedTarget: import('./agent-api').QuestionSnapshot['target'];
  capabilities: {updates:string;structure:string;layout:string;experiment:string};
 };

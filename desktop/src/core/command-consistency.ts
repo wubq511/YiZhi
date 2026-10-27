@@ -64,7 +64,9 @@ export class CommandConsistency implements ConsistencyPort {
       for(const linked of after.reading.blocks.filter(b=>b.payload.experimentBlockId===block.id)) {
         if(typeof linked.payload.latex!=='string')throw new Error('关联公式正文缺失');
         const display=convertFormula(next.definition,linked.payload.latex);
-        if(display.check!=='verified' || display.outputName!==next.definition.outputName || !equal(formulaOutputs(linked.payload.latex,names),expected))throw new Error('关联公式正文与实验有限域语义不一致');
+        if(display.check!=='verified')throw new Error(`关联公式 ${linked.id} 不在支持的布尔语法内；请以当前输出名和精确变量名，使用¬、·、+的完整等式`);
+        if(display.outputName!==next.definition.outputName)throw new Error(`关联公式输出名 ${display.outputName} 与实验 ${next.definition.outputName} 不一致`);
+        if(!equal(formulaOutputs(linked.payload.latex,names),expected))throw new Error(`关联公式 ${linked.id} 的64组计算不符合来源中的通道索引`);
       }
       if (!equal(actual,expected) || !equal(formula,expected)) throw new Error('独立64组穷举失败：公式／实验与S1高位S0低位的来源语义不一致');
       const previousDefinition = this.experiments.formalDefinition(before.id,block.id);

@@ -152,13 +152,24 @@ test('add-to-board copies renew every hidden child identity and never acquire or
  }finally{await core.close();await rm(root,{recursive:true,force:true});}
 });
 
-test('narrow Agent relation correction preserves reviewed identity and maps fixed citations; equivalent display formula is independently checked with experiment in one group',async()=>{
+for(const display of [true,false])test(`narrow Agent relation correction preserves reviewed identity and maps fixed citations; ${display?'equivalent display formula':'automatic linked formula'} is independently checked with experiment in one group`,async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-narrow-correction-')),core=new CourseService(resolve('dist/worker.cjs'));
  try{
   const {sessionId,citation}=await muxCopy(core,root),conv=await core.agent.create({sessionId,operationId:'conversation'}),task=await core.agent.submit({sessionId,conversationId:conv.id,operationId:'modify',generation:1,intent:'modify',text:'纠正实际4:1副本',target:{unitId:'KU-057'},citationIds:[citation.id]});
   const identity={sessionId,taskId:task.id,attemptId:task.attemptId,generation:1},basis=await core.readAgentMutation(identity),old=(await core.graph(sessionId)).edges.find(e=>e.id==='REL-014')!;
-  const result=await core.applyAgentMutation({...identity,input:{operationId:'necessary',basisId:basis.basisId,conclusionOrMethodChanged:true,updates:[{blockId:'mux-linked-formula',latex:'Z=\\overline{S_1}\\overline{S_0}I_0+\\overline{S_1}S_0I_1+S_1\\overline{S_0}I_2+S_1S_0I_3'}],experiments:[{blockId:muxId,formulaBlockId:'mux-linked-formula',formula:correctFormula,sourceCitationId:citation.id,config:{selectBits:['S1','S0'],dataSignals:['I0','I1','I2','I3']}}],relations:{changes:[{id:'REL-014',value:'第一级S0选择组内通道，第二级S1选择分组，三个2:1构成4:1，索引2S1+S0。',citationIds:[citation.id]}]}} as any});
+  const result=await core.applyAgentMutation({...identity,input:{operationId:'necessary',basisId:basis.basisId,conclusionOrMethodChanged:true,updates:display?[{blockId:'mux-linked-formula',latex:'Z=\\overline{S_1}\\overline{S_0}I_0+\\overline{S_1}S_0I_1+S_1\\overline{S_0}I_2+S_1S_0I_3'}]:[],experiments:[{blockId:muxId,formulaBlockId:'mux-linked-formula',formula:correctFormula,sourceCitationId:citation.id,config:{selectBits:['S1','S0'],dataSignals:['I0','I1','I2','I3']}}],relations:{changes:[{id:'REL-014',value:'第一级S0选择组内通道，第二级S1选择分组，三个2:1构成4:1，索引2S1+S0。',citationIds:[citation.id]}]}} as any});
   assert.equal(result.status,'committed',result.reason);const edge=(await core.graph(sessionId)).edges.find(e=>e.id==='REL-014')!;
   assert.equal(edge.id,old.id);assert.equal(edge.fromUnitId,old.fromUnitId);assert.equal(edge.toUnitId,old.toUnitId);assert.equal(edge.type,old.type);assert.equal(edge.directed,old.directed);assert.deepEqual(edge.sourceRefs.map(r=>[r.sourceId,r.versionId,r.pdfPages]),[[citation.sourceId,citation.versionId,[citation.pdfPageIndex+1]]]);assert.equal(result.related!.definitions[0].proof.assignments,64);
+ }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+
+test('a successful fresh necessary proposal clears a prior read/tool failure; later failures still remain separate pending facts',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-fresh-mutation-')),core=new CourseService(resolve('dist/worker.cjs'));
+ try{
+  const c=await core.open(root),sessionId=c.sessionId,conv=await core.agent.create({sessionId,operationId:'conversation'}),task=await core.agent.submit({sessionId,conversationId:conv.id,operationId:'modify',generation:1,intent:'modify',text:'重读后修正',target:{unitId:c.unit.id}}),identity={sessionId,taskId:task.id,attemptId:task.attemptId,generation:1};
+  await core.recordAgent({...identity,eventId:'read-error',kind:'tool',tool:{name:'yizhi_apply_group',input:{basisId:'expired'},output:{error:'修改依据已释放或无效，请重新读取'},references:[]}});
+  const basis=await core.readAgentMutation(identity),block=c.unit.reading.blocks[0];
+  assert.equal((await core.applyAgentMutation({...identity,input:{basisId:basis.basisId,operationId:'fresh',conclusionOrMethodChanged:false,updates:[{blockId:block.id,text:'新读取后正确保存的措辞。'}]}})).status,'committed');
+  await core.recordAgent({...identity,eventId:'finish',kind:'finish',status:'completed'});const done=(await core.agent.get({sessionId,conversationId:conv.id})).tasks[0];assert.equal(done.status,'completed');assert.equal(done.error,null);assert.equal(done.executorStatus,'completed');assert.equal(done.toolErrors?.[0].error,'修改依据已释放或无效，请重新读取');
  }finally{await core.close();await rm(root,{recursive:true,force:true});}
 });

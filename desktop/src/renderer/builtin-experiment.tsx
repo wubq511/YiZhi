@@ -12,6 +12,7 @@ type Job = { operationId: string; action: (view: ExperimentView) => ExperimentAc
 class ExperimentClient {
   view?: ExperimentView;
   error?: string;
+  notice?: string;
   private jobs: Job[] = [];
   private work?: Promise<boolean>;
   private listeners = new Set<() => void>();
@@ -23,6 +24,7 @@ class ExperimentClient {
   subscribe(fn: () => void) { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; }
   private emit() { for (const fn of this.listeners) fn(); }
   send(action: ExperimentAction | Job['action']) {
+    this.notice=undefined;
     this.jobs.push({ operationId: crypto.randomUUID(), action: typeof action === 'function' ? action : () => action }); this.emit();
     if (!this.error) void this.flush();
   }
@@ -47,8 +49,8 @@ class ExperimentClient {
         try {
           this.view = await this.bridge.experiments.act(command); this.jobs.shift(); this.emit();
         } catch (error) {
-          if (command.action.kind === 'migrate' && /现场已变化|等待当前/.test(String(error))) {
-            this.jobs.shift(); this.view = await this.bridge.experiments.read({sessionId:this.sessionId,instanceId:command.instanceId}); this.emit(); continue;
+          if (['migrate','restart'].includes(command.action.kind) && /现场已变化|等待当前/.test(String(error))) {
+            this.jobs.shift(); this.view = await this.bridge.experiments.read({sessionId:this.sessionId,instanceId:command.instanceId}); if(command.action.kind==='restart')this.notice='现场已变化，请确认当前现场后重新选择是否开始。'; this.emit(); continue;
           }
           this.error = String(error);
           try { this.view = await this.bridge.experiments.read({ sessionId: this.sessionId, instanceId: command.instanceId }); } catch { /* Retain the last confirmed view on transport loss. */ }
@@ -140,13 +142,21 @@ export function BuiltinExperiment({ block, unitId, sessionId, active, disabled, 
     document.addEventListener('visibilitychange', update);
     return () => { observer.disconnect(); document.removeEventListener('visibilitychange', update); client.send({ kind: 'visibility', visible: false }); };
   }, [client, active, client.view?.generation]);
-  const gesture = useRef(false);
-  const beginGesture=()=>{if(!gesture.current){gesture.current=true;client.send({kind:'gesture',active:true});}};
-  const endGesture=()=>{if(gesture.current){gesture.current=false;client.send({kind:'gesture',active:false});}};
-  useEffect(()=>{window.addEventListener('pointerup',endGesture);window.addEventListener('pointercancel',endGesture);window.addEventListener('blur',endGesture);return()=>{window.removeEventListener('pointerup',endGesture);window.removeEventListener('pointercancel',endGesture);window.removeEventListener('blur',endGesture);endGesture();};},[client]);
+  const gestures=useRef(new Set<string>());
+  const gesture=(kind:string,active:boolean)=>{
+    const was=gestures.current.size>0;
+    if(active)gestures.current.add(kind);else gestures.current.delete(kind);
+    const now=gestures.current.size>0;if(was!==now)client.send({kind:'gesture',active:now});
+  };
+  const isInput=(target:EventTarget)=>target instanceof Element && !!target.closest('input, math-field, .builtin-formula-editor');
+  useEffect(()=>{
+    const pointerEnd=()=>gesture('pointer',false),keyEnd=(e:KeyboardEvent)=>gesture(`key:${e.code}`,false),endAll=()=>{if(gestures.current.size){gestures.current.clear();client.send({kind:'gesture',active:false});}};
+    window.addEventListener('pointerup',pointerEnd);window.addEventListener('pointercancel',pointerEnd);window.addEventListener('keyup',keyEnd);window.addEventListener('blur',endAll);
+    return()=>{window.removeEventListener('pointerup',pointerEnd);window.removeEventListener('pointercancel',pointerEnd);window.removeEventListener('keyup',keyEnd);window.removeEventListener('blur',endAll);endAll();};
+  },[client]);
   const v = client.view;
   const title = block.payload.title ?? (block.payload.component === 'kmap' ? '固定卡诺图 · 跨边四格' : '交互 · 多路选择');
-  return <section ref={host} inert={disabled} className="builtin-experiment nodrag nopan" role="region" aria-label={title} onPointerDownCapture={beginGesture} onKeyDownCapture={e=>{if(e.key!=='Tab')beginGesture();}} onKeyUpCapture={endGesture} onCompositionStartCapture={beginGesture} onCompositionEndCapture={endGesture}>
+  return <section ref={host} inert={disabled} className="builtin-experiment nodrag nopan" role="region" aria-label={title} onPointerDownCapture={e=>{if(isInput(e.target))gesture('pointer',true);}} onKeyDownCapture={e=>{if(e.key!=='Tab'&&isInput(e.target))gesture(`key:${e.code}`,true);}} onCompositionStartCapture={()=>gesture('composition',true)} onCompositionEndCapture={()=>gesture('composition',false)}>
     <h3 data-search-field="title">{title}</h3>
 
     {!v ? <p role="status">{client.error ?? '正在恢复实验现场…'}</p> : <>
@@ -161,6 +171,7 @@ export function BuiltinExperiment({ block, unitId, sessionId, active, disabled, 
       <div className="builtin-runtime"><button disabled={v.definition.check !== 'verified' || v.phase === 'pause-incomplete'} onClick={() => client.send({ kind: 'run', running: !v.running })}>{v.running ? '暂停遍历' : '开始遍历输入'}</button><label><input type="checkbox" checked={v.background} onChange={e => client.send({ kind: 'background', enabled: e.target.checked })} />离屏继续运行</label></div>
       <p className="builtin-runtime-state" role="status" aria-label="实验运行状态">{v.phase === 'running' ? '正在遍历' : v.phase === 'pause-incomplete' ? '暂停未完成' : v.phase === 'needs-check' ? '等待公式核对' : '已暂停'} · 模拟时间 {v.state.simulationTime} ms · 已确认 {v.state.step} 步 · 定义 {v.definition.revision}</p>
       <p role="status" aria-label="实验保存状态">{client.error || v.phase === 'pause-incomplete' ? '现场未保存' : client.pending ? '正在保存现场' : '现场已保存'}</p>
+      {client.notice && <p role="status">{client.notice}</p>}
       {client.error && <p className="builtin-error" role="alert">{client.error} 输入仍保留。<button onClick={() => void client.retry()}>重试保存现场</button></p>}
       {v.phase === 'pause-incomplete' && <p className="builtin-error" role="alert">暂停未完成，显示的是最近确认现场。<button onClick={() => void client.recover()}>恢复最近确认现场</button></p>}
     </>}

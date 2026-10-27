@@ -13,6 +13,8 @@ export interface QuestionSnapshot {
 export type AgentTaskStatus = 'running' | 'completed' | 'failed' | 'interrupted' | 'unknown' | 'partial' | 'pending';
 export interface AgentTask {
   id: string; operationId: string; conversationId: string; attemptId: string; generation: number;
+  toolErrors?: Array<{eventId:string;name:string;error:string}>;
+  executorStatus?: 'completed'|'failed'|'interrupted'|'unknown';
   groups?: import('./command-api').GroupResult[]; mutationFailure?: string;
   progress?: { targetId: string; stage: 'read' | 'committed' | 'retained'; sequence: number };
   snapshot: QuestionSnapshot; status: AgentTaskStatus; threadId: string | null; turnId: string | null;

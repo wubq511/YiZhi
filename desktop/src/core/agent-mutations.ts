@@ -25,10 +25,11 @@ export class AgentMutations {
   const ids:string[]=[]; const walk=(bs:ReadingBlock[])=>{for(const b of bs){ids.push(b.id);walk(b.children??[]);}};walk(unit.reading.blocks);
   const basis=this.groups.read({...r,unitId:unit.id,objectIds:ids,context:true});
   // Only directly affected formal edges enter the model context; the Core retains the full validation basis.
-  if(basis.context) basis.context.relations.graph.edges=basis.context.relations.graph.edges.filter(e=>[e.fromUnitId,e.toUnitId].includes(unit.id));
+  const context=basis.context!;
+  const narrowContext={layout:context.layout,experiments:context.experiments,relations:{graph:{edges:context.relations.graph.edges.filter(e=>[e.fromUnitId,e.toUnitId].includes(unit.id))},sources:context.relations.sources}};
   this.agent.mutationProgress(task.id,task.snapshot.target.blockId??unit.id,'read');
-  return {...basis,unitId:unit.id,submittedTarget:task.snapshot.target,content:unit,
-   capabilities:{updates:'root paragraph.text or formula.latex',structure:'root remove/move/copy/insert; opaque children preserved',layout:'target plus returned two neighbors',experiment:'independently verified six-bit 4:1 MUX; existing citation required'}};
+  return {...basis,context:narrowContext,unitId:unit.id,submittedTarget:task.snapshot.target,content:unit,
+   capabilities:{updates:'root paragraph.text or formula.latex',structure:'root remove/move/copy/insert; opaque children preserved',layout:'target plus returned two neighbors',experiment:'independently verified six-bit 4:1 MUX; attached citation required; formulaBlockId writes the linked formula atomically from the same formula parameter'}};
  }
  private operation(taskId:string,operationId:string){if(!id(operationId))throw new Error('工具操作身份无效');return `agent:${taskId}:${hash(operationId).slice(0,24)}`;}
  query(r:AgentIdentity & {operationId:string}){const task=this.active(r);return this.groups.query(this.operation(task.id,r.operationId));}
@@ -50,7 +51,7 @@ export class AgentMutations {
    if(!field||typeof u[field]!=='string'||Object.keys(u).some(k=>!['blockId',field].includes(k))||!original.includes(b.id))throw new Error('只支持已读根段落文字或公式');
    patch.updates.push({blockId:b.id,before:b.payload,after:{...b.payload,[field]:u[field]}});
   }
-  for(const blockId of v.remove??[]){const b=object(blockId);if(!original.includes(blockId)||!['paragraph','formula'].includes(b.kind)||b.children?.length)throw new Error('仅可精简明确的正文段落／公式，不可删除实验或隐藏材料');order=order.filter(i=>i!==blockId);patch.correspondence.push({kind:'delete',sourceId:blockId,targetId:blockId});}
+  for(const blockId of v.remove??[]){const b=object(blockId);if(!original.includes(blockId)||!['paragraph','formula'].includes(b.kind)||(basis.objects.find(o=>o.id===`structure:${blockId}`)?.value.blockIds?.length??0)>0)throw new Error('仅可精简明确的正文段落／公式，不可删除实验或隐藏材料');order=order.filter(i=>i!==blockId);patch.correspondence.push({kind:'delete',sourceId:blockId,targetId:blockId});}
   const place=(blockId:string,beforeId?:string)=>{if(beforeId!==undefined&&!order.includes(beforeId))throw new Error('放置目标不在当前根结构');const at=beforeId===undefined?order.length:order.indexOf(beforeId);order.splice(at,0,blockId);};
   for(const m of v.moves??[]){keys(m,['blockId','beforeId']);object(m.blockId);if(!order.includes(m.blockId)||m.beforeId===m.blockId)throw new Error('移动必须保留原块身份');order=order.filter(i=>i!==m.blockId);place(m.blockId,m.beforeId);patch.correspondence.push({kind:'move',sourceId:m.blockId,targetId:m.blockId});}
   const materialize=(blockId:string):ReadingBlock=>{
@@ -69,6 +70,11 @@ export class AgentMutations {
    if(b.kind!=='interactive'||b.payload.component!=='mux'||!Array.isArray(e.config.dataSignals)||!Array.isArray(e.config.selectBits)||e.config.dataSignals.length!==4||e.config.selectBits.length!==2)throw new Error('仅支持有限4:1 MUX纠错');
    b.payload.config={...b.payload.config,...e.config};
    if(e.inputNames){if(e.inputNames.length>6||e.inputNames.some(n=>!/^I[0-3]$|^S[01]$/.test(n)))throw new Error('实验声明超出有限输入域');b.payload.inputs=Object.fromEntries(e.inputNames.map(n=>[n,b.payload.inputs[n]??0]));}
+   if(e.formulaBlockId && !patch.updates.some(u=>u.blockId===e.formulaBlockId)) {
+    const formula=object(e.formulaBlockId);
+    if(formula.kind!=='formula'||formula.payload.experimentBlockId!==b.id)throw new Error('关联公式必须对应本次实验');
+    patch.updates.push({blockId:formula.id,before:formula.payload,after:{...formula.payload,latex:e.formula}});
+   }
    changes.push({objectId:b.id,value:b});
   }
   const relations=v.relations ? {changes:v.relations.changes.map(c=>{

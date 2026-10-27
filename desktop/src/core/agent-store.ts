@@ -167,6 +167,7 @@ export class AgentStore {
   private message(message: AgentMessage) { this.db.prepare('INSERT INTO agent_messages VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload').run(message.id, message.taskId, JSON.stringify(message)); }
   private finish(task: AgentTask, status: AgentTask['status'], error?: string) {
     const executorCompleted = status === 'completed';
+    if (['completed','failed','interrupted','unknown'].includes(status)) task.executorStatus = status as AgentTask['executorStatus'];
     if (task.snapshot.intent && task.snapshot.intent !== 'question') {
       const committed = task.groups?.some(g => g.status === 'committed' && g.changedObjectIds.length);
       const unfinished = status !== 'completed' || task.mutationFailure || task.groups?.some(g => g.status === 'retained');
@@ -203,11 +204,11 @@ export class AgentStore {
         if (previous?.state !== 'complete') this.message({ id, taskId: task.id, role: 'assistant', itemId: event.itemId,
           text: event.kind === 'message' ? event.text! : (previous?.text ?? '') + event.text!, state: event.kind === 'message' ? 'complete' : 'streaming' });
       } else if (event.kind === 'tool' && event.tool) {
-        if (task.snapshot.intent !== 'question' && (event.tool.output as any)?.error) task.mutationFailure = String((event.tool.output as any).error);
+        if (task.snapshot.intent !== 'question' && (event.tool.output as any)?.error) { task.mutationFailure = String((event.tool.output as any).error).slice(0,2000); task.toolErrors=[...(task.toolErrors??[]),{eventId:event.eventId,name:String(event.tool.name).slice(0,200),error:task.mutationFailure}].slice(-20); }
         this.db.prepare('INSERT INTO agent_tool_recovery VALUES(?,?,?,?,?,?,?,?,?)').run(`${task.attemptId}:${event.eventId}`, task.attemptId,
           'active-recovery', task.id, event.tool.name, JSON.stringify(event.tool.input), JSON.stringify(event.tool.output), hash(event.tool), JSON.stringify(event.tool.references));
       } else if (event.kind === 'finish') {
-        if (!event.status || event.status === 'running') throw new Error('执行器终态无效');
+        if (!event.status || !['completed','failed','interrupted','unknown'].includes(event.status)) throw new Error('执行器终态无效');
         this.finish(task, event.status, event.error);
       } else throw new Error('未知执行器事件');
       if (event.kind !== 'finish') {
@@ -233,6 +234,7 @@ export class AgentStore {
       task.groups ??= [];
       if (task.groups.some(g => g.operationId === result.operationId)) return;
       task.groups.push(result);
+      if(result.status==='committed' && result.changedObjectIds.length)delete task.mutationFailure;
       task.cursor = this.changed(task.conversationId,task.id);
       this.db.prepare('UPDATE agent_tasks SET payload=? WHERE id=?').run(JSON.stringify(task),task.id);
       this.mutationProgress(task.id, result.changedObjectIds.find(id=>!id.includes(':')) ?? task.snapshot.target.blockId ?? task.snapshot.target.unitId, result.status);
