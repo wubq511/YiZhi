@@ -136,6 +136,7 @@ function App() {
   const [reviewFilter, setReviewFilter] = useState<'all' | ReviewStatus>('all');
   const readingRef = useRef<ReadingState | null>(null);
   const readingSession = useRef<string | undefined>(undefined);
+  const navigation = useRef<Promise<void>>(Promise.resolve());
   const writes = useRef<Promise<void>>(Promise.resolve());
   const [readingSave, setReadingSave] = useState<'saved' | 'pending' | 'error'>('saved');
   const readingFailed = useRef(false);
@@ -185,6 +186,8 @@ function App() {
     // A failed course open owns no editable input and must still allow normal exit.
     if (!channel.current) return true;
     setClosing(true);
+    try { await navigation.current; }
+    catch { setClosing(false); return false; }
     await writes.current;
     if (readingFailed.current) { setClosing(false); return false; }
     // A paragraph boundary can persist input before an in-progress navigation animation
@@ -205,7 +208,7 @@ function App() {
   useEffect(() => {
     if (course) setMounted(previous => previous.map(unit => unit.id === course.unit.id ? course.unit : unit));
   }, [course, selected]);
-  const go = async (id: string, nextState?: ReadingState) => {
+  const navigate = async (id: string, nextState?: ReadingState): Promise<void> => {
     if (!course || !graph) return;
     if (composing.current) { setReadError('请先完成中文候选输入，再切换阅读位置。'); return; }
     const position = graph.layout.nodes.find(node => node.unitId === id);
@@ -215,6 +218,9 @@ function App() {
     catch (error) { setSelected(undefined); setReadError((error as Error).message); }
     if (nextState?.camera) await flow.setViewport(nextState.camera, { duration: 0 });
     else await flow.setCenter(position.x + 325, position.y + 250, { zoom: 0.85, duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 180 });
+  };
+  const go = (id: string, nextState?: ReadingState): Promise<void> => {
+    const pending = navigate(id, nextState); navigation.current = pending; return pending;
   };
   useEffect(() => {
     if (!course || !graph || !nodesReady || restored.current) return;
