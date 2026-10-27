@@ -23,6 +23,7 @@ test('manual width and drag remain after collapse and reopen without replacing t
   const root = await mkdtemp(join(tmpdir(), 'yizhi-layout-ui-'));
   const launch = () => electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   let app = await launch();
+  let completed = false;
   try {
     let page = await app.firstWindow();
     await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
@@ -34,26 +35,25 @@ test('manual width and drag remain after collapse and reopen without replacing t
     const width = page.getByRole('slider', { name: '调整位置记数法与权展开宽度' });
     await width.focus(); await page.keyboard.press('ArrowRight');
     await expect.poll(() => page.locator('.reading-layer').first().evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThan(552);
-    await editor.focus(); await editor.press('Home'); await editor.press('Shift+ArrowRight');
+    await page.getByRole('textbox', { name: '连续编辑正文', exact: true }).evaluate((el: any) => { el.editor.commands.setTextSelection({ from: 1, to: 2 }); el.editor.view.focus(); });
+    await expect.poll(() => page.evaluate(() => getSelection()?.toString())).toBe('局');
     const selection = await page.evaluate(() => getSelection()?.toString());
     const move = page.getByRole('button', { name: '移动位置记数法与权展开' });
     const bounds = (await move.boundingBox())!;
     await page.mouse.move(bounds.x + 30, bounds.y + 12); await page.mouse.down();
     await page.mouse.move(bounds.x + 110, bounds.y + 52, { steps: 6 });
-    console.log('dragging');
     const duringDrag = (await page.locator('.reading-layer').first().boundingBox())!;
-    await page.evaluate(async () => {
+    const growth = await page.evaluate(async () => {
       const b = (window as any).yizhi, c = await b.open();
       const target = c.unit.reading.blocks.filter((block: any) => block.kind === 'paragraph')[1].id;
       const a = await b.commands.startAttempt({ sessionId: c.sessionId, taskId: 'growth-during-drag' });
       const basis = await b.commands.read({ sessionId: c.sessionId, attemptId: a.attemptId, objectIds: [target] });
       const original = basis.objects[0].value;
-      await b.commands.commit({ sessionId: c.sessionId, attemptId: a.attemptId, operationId: 'growth-during-drag', basisId: basis.basisId,
+      return b.commands.commit({ sessionId: c.sessionId, attemptId: a.attemptId, operationId: 'growth-during-drag', basisId: basis.basisId,
         changes: [{ objectId: target, value: { ...original, payload: { ...original.payload, text: '拖动中的后台正文持续增高。'.repeat(40) } } }] });
     });
-    console.log('growth submitted');
+    expect(growth.status).toBe('committed');
     await expect(page.getByRole('textbox', { name: '编辑第二段正文', includeHidden: true })).toHaveText('拖动中的后台正文持续增高。'.repeat(40));
-    console.log('growth rendered');
     const afterGrowth = (await page.locator('.reading-layer').first().boundingBox())!;
     expect(afterGrowth.x).toBeCloseTo(duringDrag.x, 1); expect(afterGrowth.y).toBeCloseTo(duringDrag.y, 1);
     await page.mouse.up();
@@ -63,19 +63,22 @@ test('manual width and drag remain after collapse and reopen without replacing t
     expect(await editor.evaluate(el => el.closest('.tiptap') === (window as any).savedEditor)).toBe(true);
     expect(await page.evaluate(() => getSelection()?.toString())).toBe(selection);
     await expect(editor).toHaveText('局部布局保持这个编辑实例与输入');
-    console.log('drag saved, selection checked');
     const material = page.locator('details.material').filter({ hasText: '练习 · 二进制小数与十六进制权展开自测' });
     await reveal(page, material.locator('summary').first());
     await material.locator('summary').first().click();
     await expect(material).not.toHaveAttribute('open');
     await expect(page.getByRole('status', { name: '阅读状态' })).toHaveText('阅读位置已保存');
     expect(await page.evaluate(async () => { const b = (window as any).yizhi; const c = await b.open(); return (await b.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-001'); })).toEqual(saved);
-    console.log('closing', await page.getByRole('status', { name: '保存状态' }).innerText());
-    await app.close(); console.log('closed'); app = await launch(); page = await app.firstWindow();
+    await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
+    await app.close(); app = await launch(); page = await app.firstWindow();
     await expect(page.getByRole('textbox', { name: '编辑首段正文' })).toHaveText('局部布局保持这个编辑实例与输入');
     const reopened = await page.evaluate(async () => { const b = (window as any).yizhi; const c = await b.open(); return (await b.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-001'); });
-    expect(reopened).toEqual(saved);
-  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+    expect(reopened).toEqual(saved); completed = true;
+  } finally {
+    if (!completed) { const died = new Promise<void>(done => app.process().once('exit', () => done())); app.process().kill('SIGKILL'); await died; }
+    else await app.close();
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test('actual producer follows only actual changes, student takeover cancels motion until explicit return, completion never jumps', async () => {
@@ -123,21 +126,28 @@ test('actual producer follows only actual changes, student takeover cancels moti
     await expect(page.getByRole('status', { name: '画板定位' })).toBeHidden();
     expect(await matrix()).toEqual(beforeEnd);
     await expect(page.getByRole('button', { name: '返回并继续跟随', exact: true })).toHaveCount(0);
-    await expect(page.getByRole('status', { name: '修改跟随' })).toHaveCount(0);
+    await expect(page.getByRole('status', { name: '修改跟随' })).toHaveText('可控修改已结束');
+    await expect(page.getByRole('button', { name: '查看修改结果', exact: true })).toBeVisible();
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
 test('growth displaces the local chain while the current reading anchor and student pan compose at unchanged zoom', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-anchor-ui-'));
-  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  const launch = () => electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  let app = await launch();
   try {
-    const page = await app.firstWindow();
+    let page = await app.firstWindow();
     await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     await expect(page.getByRole('textbox', { name: '编辑首段正文' })).toBeVisible();
     const nav = page.getByRole('navigation', { name: '课程目录' });
     await nav.getByRole('button', { name: '非十进制与十进制互转', exact: true }).click();
     const heading = page.getByRole('heading', { name: '非十进制与十进制互转', exact: true });
     await expect(heading).toBeVisible();
+    const width = page.getByRole('slider', { name: '调整非十进制与十进制互转宽度' });
+    await width.focus(); await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('status', { name: '布局状态' })).toHaveText('布局已保存');
+    const baseline = await page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return (await b.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-002'); });
+    expect(baseline.y).toBe(168); expect(baseline.width).toBe(674);
     const before = (await heading.boundingBox())!;
     const matrix = () => page.locator('.react-flow__viewport').evaluate(el => { const m = new DOMMatrixReadOnly(getComputedStyle(el).transform); return { x: m.e, y: m.f, zoom: m.a }; });
     const viewport = await matrix();
@@ -159,6 +169,11 @@ test('growth displaces the local chain while the current reading anchor and stud
     await expect.poll(async () => Math.abs((await heading.boundingBox())!.y - (before.y - actualPan))).toBeLessThan(3);
     expect((await matrix()).zoom).toBe(viewport.zoom);
     await expect(page.getByRole('status', { name: '修改跟随' })).toHaveCount(0);
+    const finalY = (await heading.boundingBox())!.y;
+    await app.close(); app = await launch(); page = await app.firstWindow();
+    await expect(page.getByRole('status', { name: '画板定位' })).toBeHidden();
+    const restoredHeading = page.getByRole('heading', { name: '非十进制与十进制互转', exact: true });
+    await expect.poll(async () => Math.abs((await restoredHeading.boundingBox())!.y - finalY)).toBeLessThan(3);
     await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t09-anchor.png' });
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });

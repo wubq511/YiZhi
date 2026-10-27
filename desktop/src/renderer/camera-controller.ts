@@ -9,6 +9,7 @@ export class CameraController {
   constructor(private port: CameraPort, private changed: (state: FollowState) => void) {}
   private cancel() { this.generation++; if (this.frame !== undefined) cancelAnimationFrame(this.frame); this.frame = undefined; }
   private change(state: FollowState) { this.state = state; this.changed(state); }
+  restore(ended: boolean) { this.cancel(); this.change(ended ? 'finished' : 'paused'); }
   takeover() { this.cancel(); if (this.state === 'following') this.change('paused'); }
   start() { this.cancel(); this.change('following'); }
   finish() { this.cancel(); if (this.state !== 'idle') this.change('finished'); }

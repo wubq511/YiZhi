@@ -69,6 +69,8 @@ export interface ReviewSnapshot {
 export interface ReviewPrompt { id: string; unitId: string; contentRevision: number; stateVersion: number; semanticVersion: 1 }
 export type ReviewPromptResult = 'adjusted' | 'kept' | 'stale';
 export interface ReadingState {
+  pinnedUnitId?: 'KU-001';
+  modification?: { targetId: string; ended: boolean };
   unitId: string;
   expanded: Record<string, boolean>;
   returnStack: Array<{ unitId: string; blockId: string; scrollTop: number; camera?: { x: number; y: number; zoom: number } }>;

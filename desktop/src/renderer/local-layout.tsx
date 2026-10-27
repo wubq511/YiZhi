@@ -4,9 +4,10 @@ import { projectLayout, type LayoutNode, type LayoutPlacement, type LayoutSizes 
 import type { CameraController } from './camera-controller';
 import './local-layout.css';
 
-export function useLocalLayout(graph: CourseGraph | undefined, activeId: string | undefined, camera: CameraController, enabled: boolean) {
+export function useLocalLayout(graph: CourseGraph | undefined, activeId: string | undefined, camera: CameraController, enabled: boolean, ready = true) {
   const [sizes, setSizes] = useState<LayoutSizes>({});
   const [gesture, setGesture] = useState<LayoutPlacement>();
+  const measured = useRef<LayoutSizes>({});
   const pending = useRef<LayoutSizes>({}), frame = useRef<number | undefined>(undefined);
   const measure = useCallback((id: string, width: number, height: number) => {
     pending.current[id] = { width, height };
@@ -23,12 +24,24 @@ export function useLocalLayout(graph: CourseGraph | undefined, activeId: string 
   const previous = useRef<{ id?: string; fixed?: string; nodes: LayoutNode[] }>({ nodes: [] });
   useLayoutEffect(() => {
     const old = previous.current.nodes.find(n => n.unitId === activeId), next = placements.find(n => n.unitId === activeId);
-    if (enabled && manual.current !== activeId && previous.current.fixed !== activeId && previous.current.id === activeId && old && next && gesture?.unitId !== activeId && (old.x !== next.x || old.y !== next.y))
+    if (ready && enabled && manual.current !== activeId && previous.current.fixed !== activeId && previous.current.id === activeId && old && next && gesture?.unitId !== activeId && (old.x !== next.x || old.y !== next.y))
       camera.compensate(next.x - old.x, next.y - old.y);
+    measured.current = sizes;
     manual.current = undefined;
     previous.current = { id: activeId, fixed: gesture?.unitId, nodes: placements };
-  }, [placements, activeId, enabled, camera, gesture]);
-  return { placements, measure, gesture: setGesture, manual: (id: string) => { manual.current = id; } };
+  }, [placements, activeId, enabled, ready, camera, gesture, sizes]);
+  const waitForMeasurements = async (ids: string[]) => {
+    let unchanged = 0, last = measured.current;
+    for (let attempt = 0; attempt < 60; attempt++) {
+      await new Promise<void>(done => requestAnimationFrame(() => done()));
+      if (ids.every(id => measured.current[id]) && frame.current === undefined && last === measured.current) unchanged++;
+      else unchanged = 0;
+      last = measured.current;
+      if (unchanged >= 2) return;
+    }
+    throw new Error('阅读尺寸尚未就绪');
+  };
+  return { placements, measure, waitForMeasurements, gesture: setGesture, manual: (id: string) => { manual.current = id; } };
 }
 
 export function ReadingSurface({ id, name, position, baseline, measure, gesture, commit, takeover, children, active, articleRef }: {

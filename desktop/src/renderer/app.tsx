@@ -158,14 +158,14 @@ function App() {
     bounds: () => ({ width: boardRef.current?.clientWidth ?? 800, height: boardRef.current?.clientHeight ?? 600 }),
     reduced: () => matchMedia('(prefers-reduced-motion: reduce)').matches,
     target: () => {
-      const element = boardRef.current?.querySelector<HTMLElement>(`[data-block-id="${workTarget.current}"]`);
+      const element = boardRef.current?.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(workTarget.current)}"]`);
       if (!element) return;
       const rect = element.getBoundingClientRect(), board = boardRef.current!.getBoundingClientRect(), view = flow.getViewport();
       return { x: (rect.left - board.left - view.x) / view.zoom, y: (rect.top - board.top - view.y) / view.zoom, width: rect.width / view.zoom, height: rect.height / view.zoom };
     },
   }, setFollowState), [flow]);
   useEffect(() => () => camera.dispose(), [camera]);
-  const local = useLocalLayout(graph, selected?.id, camera, viewport.zoom >= .55);
+  const local = useLocalLayout(graph, selected?.id, camera, viewport.zoom >= .55, cameraReady);
   const placementsRef = useRef(local.placements); placementsRef.current = local.placements;
   const [layoutSave, setLayoutSave] = useState<'saved' | 'pending' | 'error'>('saved');
   const layoutPending = useRef(new Map<string, LayoutPlacement>());
@@ -220,6 +220,8 @@ function App() {
       channel.current = new ParagraphSaveChannel(window.yizhi, opened, setState, { onSnapshot: setCourse });
       setCourse(opened);
       const [loadedGraph, savedReading, reviewSnapshot] = await Promise.all([window.yizhi.graph(opened.sessionId), window.yizhi.readingState(opened.sessionId), window.yizhi.reviewStates(opened.sessionId)]);
+      if (savedReading?.pinnedUnitId === 'KU-001' || savedReading?.modification) setMounted([opened.unit]);
+      if (savedReading?.modification) { workTarget.current = savedReading.modification.targetId; camera.restore(savedReading.modification.ended); }
       setGraph(loadedGraph); setReview(reviewSnapshot); readingRef.current = savedReading; restored.current = false; setReading(savedReading);
     } catch (error) { setLoadError((error as Error).message); }
   };
@@ -258,7 +260,7 @@ function App() {
     const position = placementsRef.current.find(node => node.unitId === id);
     if (!position) return;
     setReadError(undefined);
-    try { const unit = await window.yizhi.readUnit(course.sessionId, id); persist(nextState ?? { ...(readingRef.current ?? { expanded: {}, returnStack: [], scrollTop: 0 }), unitId: id, scrollTop: 0 }); setSelected(unit); setMounted(previous => previous.some(item => item.id === id) ? previous : [...previous.filter(item => item.id === 'KU-001'), unit]); }
+    try { const unit = await window.yizhi.readUnit(course.sessionId, id); persist(nextState ?? { ...(readingRef.current ?? { expanded: {}, returnStack: [], scrollTop: 0 }), unitId: id, scrollTop: 0, pinnedUnitId: mounted.some(item => item.id === 'KU-001') || id === 'KU-001' ? 'KU-001' : undefined }); setSelected(unit); setMounted(previous => previous.some(item => item.id === id) ? previous : [...previous.filter(item => item.id === 'KU-001'), unit]); }
     catch (error) { setSelected(undefined); setReadError((error as Error).message); }
     if (nextState?.camera) await flow.setViewport(nextState.camera, { duration: 0 });
     else await flow.setCenter(position.x + 325, position.y + 250, { zoom: 0.85, duration: 0 });
@@ -268,7 +270,11 @@ function App() {
     restored.current = true;
     requestAnimationFrame(() => requestAnimationFrame(async () => {
       try {
-        if (reading) await go(reading.unitId, reading);
+        if (reading) {
+          await go(reading.unitId, reading);
+          await local.waitForMeasurements([...new Set([reading.unitId, ...(reading.pinnedUnitId || reading.modification ? ['KU-001'] : [])])]);
+          if (reading.camera) await flow.setViewport(reading.camera, { duration: 0 });
+        }
         else await flow.fitView({ duration: 0 });
         // Expose navigation after the restored viewport reaches the DOM, so initial
         // placement cannot overwrite an early student gesture or navigation.
@@ -290,7 +296,7 @@ function App() {
       const current = flow.getViewport();
       if (event.ctrlKey || event.metaKey) {
         const rect = board.getBoundingClientRect(); const px = event.clientX - rect.left, py = event.clientY - rect.top;
-        const zoom = Math.max(.04, Math.min(2, current.zoom * Math.exp(-event.deltaY * .002)));
+        const zoom = Math.max(.04, Math.min(2, current.zoom * Math.exp(-event.deltaY * .001)));
         const ratio = zoom / current.zoom;
         void flow.setViewport({ x: px - (px - current.x) * ratio, y: py - (py - current.y) * ratio, zoom });
       } else camera.pan(-(event.shiftKey ? event.deltaY : event.deltaX), -(event.shiftKey ? 0 : event.deltaY));
@@ -337,10 +343,11 @@ function App() {
 
       {course && <ControlledProducer course={course} narrow={narrow} onOpenChange={setProducerOpen} started={async () => {
         camera.start();
+        persist({ ...(readingRef.current ?? { unitId: 'KU-001', expanded: {}, returnStack: [], scrollTop: 0 }), modification: { targetId: workTarget.current, ended: false } });
         if (!mounted.some(unit => unit.id === 'KU-001')) { setMounted(previous => [...previous.filter(item => item.id === selected?.id), course.unit]); }
         // Mounting/snapshot alignment never emits an old delta; only the user's new request starts following.
         requestAnimationFrame(() => camera.updated());
-      }} advanced={() => camera.updated()} ended={() => camera.finish()} prepare={async () => {
+      }} advanced={() => camera.updated()} ended={() => { camera.finish(); if (readingRef.current) persist({ ...readingRef.current, modification: { targetId: workTarget.current, ended: true } }); }} prepare={async () => {
         if (composing.current) throw new Error('请先完成中文候选输入，再运行可控修改。');
         producerRunning.current = true; setProducerBusy(true);
         if (!await channel.current?.flush()) throw new Error('学生输入尚未保存，请先重试保存。');
