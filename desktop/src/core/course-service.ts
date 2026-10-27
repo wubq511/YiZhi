@@ -1,3 +1,4 @@
+import { searchClient } from '../search-api';
 import { migrationClient } from '../migration-api';
 import { drawingClient } from '../drawing-api';
 import { annotationClient } from '../annotation-api';
@@ -13,6 +14,7 @@ import type { CourseGraph, CourseUnit, ReadingState, OpenedCourse, SaveParagraph
 
 /** One instance belongs to the application host, shared by all its windows/courses. */
 export class CourseService {
+  readonly search = searchClient((action, payload) => this.request(action, payload));
   readonly migration = migrationClient((action, payload) => this.request(action, payload));
   readonly drawings = drawingClient((action, payload) => this.request(action, payload));
   readonly annotations = annotationClient((action, payload) => this.request(action, payload));

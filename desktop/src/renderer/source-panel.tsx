@@ -1,3 +1,5 @@
+import type { SearchHit } from '../search-api';
+import { paintFrame } from './search-location';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { SourcePage, SourceCitation, SourceReadingContext, SourceList, CiteSource, PrintedPage } from '../sources-api';
@@ -5,7 +7,8 @@ import { ParsingSection } from './parsing-section';
 import { SourcePdf, type SourceSelection } from './source-pdf';
 import './source-panel.css';
 
-export interface SourcePanelHandle { flush(): Promise<boolean>; openCitation(citation: SourceCitation): void; openVersion(versionId: string, pdfPageIndex: number): void }
+export interface SourceScene { open: boolean; context: SourceReadingContext | null }
+export interface SourcePanelHandle { capture(): SourceScene; restore(scene: SourceScene): Promise<void>; openSearch(hit: SearchHit): Promise<void>; flush(): Promise<boolean>; openCitation(citation: SourceCitation): void; openVersion(versionId: string, pdfPageIndex: number): void }
 export const SourcePanel = forwardRef<SourcePanelHandle, { sessionId: string; narrow: boolean; target?: CiteSource['target']; onOpenChange(open: boolean): void; onCitationsChange(citations: SourceCitation[]): void; onQuestion?(citation: SourceCitation): void }>(function SourcePanel({ sessionId, narrow, target, onOpenChange, onCitationsChange, onQuestion }, ref) {
   const api = window.yizhi.sources;
   const [open, setOpen] = useState(false), [list, setList] = useState<SourceList>({ generation: 1, versions: [], intents: [], readingSeq: 0 });
@@ -13,6 +16,7 @@ export const SourcePanel = forwardRef<SourcePanelHandle, { sessionId: string; na
   const [versionId, setVersionId] = useState(''), [pageIndex, setPageIndex] = useState(0), [scale, setScale] = useState(1.2);
   const [page, setPage] = useState<SourcePage>(), [citations, setCitations] = useState<SourceCitation[]>([]);
   const [selection, setSelection] = useState<SourceSelection | null>(null), [regionMode, setRegionMode] = useState(false);
+  const [searchHit, setSearchHit] = useState<SearchHit>();
   const [activeCitation, setActiveCitation] = useState<SourceCitation | null>(null);
   const [ready, setReady] = useState(false), [reload, setReload] = useState(0), [printed, setPrinted] = useState('');
   const [printedTarget, setPrintedTarget] = useState(''), [printedMatches, setPrintedMatches] = useState<PrintedPage[]>([]);
@@ -53,7 +57,20 @@ export const SourcePanel = forwardRef<SourcePanelHandle, { sessionId: string; na
     setContextStatus('pending'); clearTimeout(timer.current); timer.current = setTimeout(() => void saveLatest(), 200);
   };
   const flush = async () => { await saveLatest(); await writes.current; return !failed.current && !actionInFlight.current; };
-  useImperativeHandle(ref, () => ({ flush, openCitation, openVersion: (id: string, index: number) => { choose(id,index); setOpen(true); } }));
+  useImperativeHandle(ref, () => ({ flush, openCitation, openVersion: (id: string, index: number) => { choose(id,index); setOpen(true); },
+    capture: () => ({ open, context: context.current ? { ...context.current, scrollTop: scroller.current?.scrollTop ?? context.current.scrollTop, scrollLeft: scroller.current?.scrollLeft ?? context.current.scrollLeft } : null }),
+    async restore(scene) {
+      if (!await flush()) throw new Error('原文位置尚未保存');
+      setSearchHit(undefined); setOpen(scene.open);
+      if (scene.context) { choose(scene.context.versionId, scene.context.pdfPageIndex, scene.context.scale); persist(scene.context); }
+      else if (context.current) persist({ ...context.current, open: false });
+      await paintFrame();
+    },
+    async openSearch(hit) {
+      if (!await flush()) throw new Error('原文位置尚未保存');
+      await refresh(); setOpen(true); choose(hit.versionId!, hit.pdfPageIndex!); setSearchHit(hit);
+    }
+  }));
   const run = async (action: () => Promise<void>) => {
     if (actionInFlight.current) return;
     retryAction.current = action; actionInFlight.current = true; setBusy(true); setError('');
@@ -62,7 +79,7 @@ export const SourcePanel = forwardRef<SourcePanelHandle, { sessionId: string; na
     finally { actionInFlight.current = false; setBusy(false); }
   };
   const choose = (id: string, index = 0, nextScale = scale) => {
-    setVersionId(id); setPageIndex(index); setScale(nextScale); setSelection(null); setReady(false); setRegionMode(false); setActiveCitation(null); setPage(undefined); restored.current = false;
+    setSearchHit(undefined); setVersionId(id); setPageIndex(index); setScale(nextScale); setSelection(null); setReady(false); setRegionMode(false); setActiveCitation(null); setPage(undefined); restored.current = false;
     setReload(value => value + 1);
     persist({ open: true, versionId: id, pdfPageIndex: index, scrollTop: 0, scrollLeft: 0, scale: nextScale, target: context.current?.target ?? target });
   };
@@ -142,7 +159,7 @@ export const SourcePanel = forwardRef<SourcePanelHandle, { sessionId: string; na
     <div ref={scroller} className="source-scroll" tabIndex={0} aria-label="原页阅读区" onScroll={event => {
       if (!restored.current || !context.current || !ready) return;
       persist({ ...context.current, scrollTop: event.currentTarget.scrollTop, scrollLeft: event.currentTarget.scrollLeft });
-    }}>{page && version && <SourcePdf sessionId={sessionId} version={version} page={page} scale={scale} regionMode={regionMode} citation={activeCitation} onSelection={setSelection} onReady={pageReady} onError={error => setRenderError(error.message)} />}</div>
+    }}>{page && version && <SourcePdf sessionId={sessionId} version={version} page={page} scale={scale} regionMode={regionMode} citation={activeCitation} searchHit={searchHit} onSelection={setSelection} onReady={pageReady} onError={error => setRenderError(error.message)} />}</div>
     {page && version && <div className="source-selection"><p>{page.projection.text.length ? '选取实际文本层中的文字，或拖动框选原页区域。' : '本页没有可靠文本层。可保留实际原页或框选区域，不会生成精确选文。'}</p>
       <button disabled={!ready || busy} aria-pressed={regionMode} onClick={() => { setRegionMode(!regionMode); setSelection(null); }}>选取页面区域</button>
       <button disabled={!ready || busy} onMouseDown={event => event.preventDefault()} onClick={() => {
@@ -158,6 +175,7 @@ export const SourcePanel = forwardRef<SourcePanelHandle, { sessionId: string; na
         });
       }}>带此选段向 Agent 提问</button>}
     </div>}
+    {searchHit && <blockquote className="source-search-quote">搜索原文：{searchHit.quote}</blockquote>}
     <div className="source-context-status" role="status" aria-label="原文位置保存">{contextStatus === 'saved' ? '原文位置已保存' : contextStatus === 'pending' ? '正在保存原文位置' : '原文位置未保存'}{contextStatus === 'error' && <button onClick={() => { failed.current = false; setContextStatus('pending'); void saveLatest(); }}>重试保存原文位置</button>}</div>
     <details className="source-citations" open={!!citations.length}><summary>保留的原文与出处 · {citations.length}</summary>{citations.map(citation => <section key={citation.id}>
       {citation.quote ? <blockquote>{citation.quote}</blockquote> : <p>{citation.textStatus === 'no-text-layer' ? '无可靠文本层 · ' : ''}{citation.region ? '原页选区' : '整页出处'}</p>}

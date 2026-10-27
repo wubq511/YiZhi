@@ -1,4 +1,5 @@
 import { drawingMethods } from '../drawing-api';
+import { searchMethods } from '../search-api';
 import { annotationMethods } from '../annotation-api';
 import {registerExtensionProtocol,extensionNavigation} from './extension-protocol';
 import { AgentRuntime } from '../agent/executor';
@@ -69,6 +70,7 @@ else {
       ipcMain.handle(`parsing:${method}`, (event, request) => { checkSender(event); return core.parsing[method](request); });
     }
     for (const method of drawingMethods) ipcMain.handle(`drawings:${method}`, (event, request) => { checkSender(event); return core.drawings[method](request); });
+    for (const method of searchMethods) ipcMain.handle(`search:${method}`, (event, request) => { checkSender(event); return core.search[method](request); });
     for (const method of annotationMethods) ipcMain.handle(`annotations:${method}`, (event, request) => { checkSender(event); return core.annotations[method](request); });
     for (const method of ['open','read','act'] as const) ipcMain.handle(`extensions:${method}`, (event,payload) => {checkSender(event);return core.extensions[method](payload);});
     ipcMain.handle('course:open', async event => { checkSender(event); const opened = await core.open(courseDirectory); activeSessionId = opened.sessionId; return opened; });
