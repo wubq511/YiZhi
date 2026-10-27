@@ -48,6 +48,11 @@ else {
     ipcMain.handle('course:reading-state', async (event, sessionId: string) => { checkSender(event); return core.readingState(sessionId); });
     ipcMain.handle('course:set-reading-state', async (event, sessionId: string, state) => { checkSender(event); return core.setReadingState(sessionId, state); });
     ipcMain.handle('course:save', async (event, command: SaveParagraph) => { checkSender(event); return core.save(command); });
+    ipcMain.handle('course:saveDraft', (event, input) => { checkSender(event); return core.saveDraft(input); });
+    ipcMain.handle('course:commitEdit', (event, command) => { checkSender(event); return core.commitEdit(command); });
+    ipcMain.handle('course:queryOperation', (event, input) => { checkSender(event); return core.queryOperation(input.sessionId, input.operationId); });
+    ipcMain.handle('course:readEvents', (event, input) => { checkSender(event); return core.readEvents(input.sessionId, input.after, input.limit); });
+    ipcMain.handle('course:read', (event, input) => { checkSender(event); return core.read(input.sessionId); });
     for (const method of ['startAttempt', 'read', 'commit', 'stop', 'query', 'candidates', 'history'] as const) {
       ipcMain.handle(`commands:${method}`, (event, payload) => { checkSender(event); return core.commands[method](payload); });
     }

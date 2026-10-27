@@ -15,7 +15,7 @@ button:disabled { opacity: .55; cursor: default; }
 .app-header { display: flex; align-items: center; flex-wrap: wrap; gap: 24px; padding: 16px 28px; min-height: 70px; border-bottom: 1px solid var(--border); font-size: .875rem; }
 .brand { font-size: 21px; font-weight: 600; }
 .save-area { display: flex; align-items: center; gap: 12px; margin-left: auto; font-size: .8125rem; }
-.saved { color: #286b58; } .pending, .saving { color: #41627e; } .error { color: #a13737; }
+.saved { color: #286b58; } .draft, .pending, .saving { color: #41627e; } .error { color: #a13737; }
 .save-error { color: #a13737; background: #fdf0f0; padding: 12px 28px; font-size: .875rem; border-bottom: 1px solid #d9a3a3; overflow-wrap: anywhere; }
 .workspace { display: grid; grid-template-columns: 224px minmax(0, 1fr); flex: 1; min-height: 0; }
 nav { padding: 24px 16px; border-right: 1px solid var(--border); background: #f6f6f9; font-size: .8125rem; }

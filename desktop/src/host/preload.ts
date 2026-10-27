@@ -16,6 +16,11 @@ const bridge: DesktopBridge = {
   readingState: sessionId => invoke('course:reading-state', sessionId),
   setReadingState: (sessionId, state) => ipcRenderer.invoke('course:set-reading-state', sessionId, state),
   save: command => invoke('course:save', command),
+  saveDraft: input => invoke('course:saveDraft', input),
+  commitEdit: command => invoke('course:commitEdit', command),
+  queryOperation: (sessionId, operationId) => invoke('course:queryOperation', { sessionId, operationId }),
+  readEvents: (sessionId, after, limit = 64) => invoke('course:readEvents', { sessionId, after, limit }),
+  read: sessionId => invoke('course:read', { sessionId }),
   onCloseRequested(listener) {
     const handler = async (_event: Electron.IpcRendererEvent, requestId: number) => {
       let saved = false;

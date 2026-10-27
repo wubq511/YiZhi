@@ -146,18 +146,22 @@ function App() {
     if (current && (current.expanded[key] ?? (key.endsWith(':hint') || key.endsWith(':answer') ? false : true)) !== value)
       persist({ ...current, expanded: { ...current.expanded, [key]: value } });
   };
+  const secondEditor = useRef<HTMLDivElement>(null);
+  const secondId = useRef<string | undefined>(undefined);
   const composing = useRef(false);
   const load = async () => {
     setLoadError(undefined);
     try {
       const opened = await window.yizhi.open();
-      channel.current = new ParagraphSaveChannel(window.yizhi, opened, setState);
+      channel.current?.dispose();
+      secondId.current = opened.unit.reading.blocks.filter(b => b.kind === 'paragraph')[1]?.id;
+      channel.current = new ParagraphSaveChannel(window.yizhi, opened, setState, { onSnapshot: setCourse });
       setCourse(opened);
       const [loadedGraph, savedReading] = await Promise.all([window.yizhi.graph(opened.sessionId), window.yizhi.readingState(opened.sessionId)]);
       setGraph(loadedGraph); readingRef.current = savedReading; restored.current = false; setReading(savedReading);
     } catch (error) { setLoadError((error as Error).message); }
   };
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { void load(); return () => channel.current?.dispose(); }, []);
   useEffect(() => window.yizhi.onCloseRequested(async () => {
     if (producerRunning.current) return false;
     if (composing.current) {
@@ -174,7 +178,10 @@ function App() {
     return saved;
   }), []);
   useEffect(() => {
-    if (course && editor.current && !editor.current.dataset.initialized) { editor.current.textContent = editedText.current ?? String(course.unit.reading.blocks[0].payload.text); editor.current.dataset.initialized = "yes"; }
+    if (course && editor.current && document.activeElement !== editor.current) editor.current.textContent = channel.current?.text(course.editableBlockId) ?? String(course.unit.reading.blocks.find(block => block.id === course.editableBlockId)?.payload.text ?? '');
+    const second = course?.unit.reading.blocks.find(block => block.id === secondId.current);
+    if (second && secondEditor.current && document.activeElement !== secondEditor.current) secondEditor.current.textContent = channel.current?.text(second.id) ?? String(second.payload.text);
+    if (course) setMounted(previous => previous.map(unit => unit.id === course.unit.id ? course.unit : unit));
   }, [course, selected]);
   const go = async (id: string, nextState?: ReadingState) => {
     if (!course || !graph) return;
@@ -231,7 +238,16 @@ function App() {
     }
     return [...groups.entries()].map(([id, group]) => ({ id, source: group.source, target: group.target, label: `${group.type} · ${group.count} 条已有关系`, markerEnd: group.directed ? { type: MarkerType.ArrowClosed } : undefined, animated: false }));
   }, [graph, relationView, viewport.zoom]);
-  const status = { saved: '已保存', pending: '待保存', saving: '正在保存…', error: '未保存' }[state.status];
+  const splitFirst = async () => {
+    if (!channel.current || !course || composing.current) return;
+    if (!await channel.current.flush()) return;
+    const length = Array.from(editor.current?.innerText ?? '').length;
+    if (length < 2) return;
+    channel.current.edit({ changes: [], splits: [{ blockId: course.editableBlockId,
+      newBlockId: crypto.randomUUID(), offset: Math.floor(length / 2) }] });
+    if (await channel.current.flush()) setCourse(await window.yizhi.read(course.sessionId));
+  };
+  const status = { draft: '草稿已保留', saved: '已保存', pending: '待保存', saving: '正在保存…', error: '未保存' }[state.status];
   return <>
     <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
       {course && <ControlledProducer course={course} narrow={narrow} onOpenChange={setProducerOpen} prepare={async () => {
@@ -240,7 +256,8 @@ function App() {
         if (!await channel.current?.flush()) throw new Error('学生输入尚未保存，请先重试保存。');
       }} committed={async () => {
         const current = await window.yizhi.open();
-        channel.current = new ParagraphSaveChannel(window.yizhi, current, setState);
+        channel.current?.dispose();
+        channel.current = new ParagraphSaveChannel(window.yizhi, current, setState, { onSnapshot: setCourse });
         setCourse(current);
         editedText.current = String(current.unit.reading.blocks[0].payload.text);
         if (editor.current) editor.current.textContent = editedText.current;
@@ -264,8 +281,8 @@ function App() {
         {course && mounted.map(unit => { const position = graph?.layout.nodes.find(node => node.unitId === unit.id); if (!position) return null; return <div key={unit.id} className="reading-layer" style={{ transform: `translate(${viewport.x + position.x * viewport.zoom}px, ${viewport.y + position.y * viewport.zoom}px) scale(${viewport.zoom})`, visibility: viewport.zoom >= 0.55 && selected?.id === unit.id ? 'visible' : 'hidden' }}>
           <article id="unit" ref={element => { if (selected?.id === unit.id) articleRef.current = element; }} onScroll={event => { const current = readingRef.current; if (current && current.unitId === unit.id && Math.abs(current.scrollTop - event.currentTarget.scrollTop) > 2) persist({ ...current, scrollTop: event.currentTarget.scrollTop }); }} className="nodrag nopan nowheel"><RoughFrame id={unit.id} />
             <h1>{unit.name}</h1><p className="unit-meta">课程重要性 {unit.rating.stars} / 5 · {unit.id}</p><p className="outcome">{unit.outcome}</p>
-            {unit.id === 'KU-001' && <ReadingBoundary><div className="editable-section"><label id="editor-label">首段正文 <span>可直接编辑，自动保存</span></label><div ref={editor} role="textbox" aria-label="编辑首段正文" aria-multiline="true" contentEditable={!closing && !producerBusy} suppressContentEditableWarning className="paragraph-editor" onInput={event => { editedText.current = event.currentTarget.innerText; if (!composing.current) channel.current?.input(event.currentTarget.innerText); }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => { composing.current = false; editedText.current = event.currentTarget.innerText; channel.current?.input(event.currentTarget.innerText); }} /></div></ReadingBoundary>}
-            {unit.reading.blocks.slice(unit.id === 'KU-001' ? 1 : 0).map(block => <ReadingBoundary key={block.id}><Block block={block} reading={reading} updateReading={updateReading} onSource={button => { sourceTrigger.current = button; setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!; void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} /></ReadingBoundary>)}
+            {unit.id === 'KU-001' && <ReadingBoundary><div className="editable-section"><label id="editor-label">首段正文 <span>可直接编辑，自动保存</span></label><div ref={editor} role="textbox" aria-label="编辑首段正文" aria-multiline="true" contentEditable={!closing && !producerBusy} suppressContentEditableWarning className="paragraph-editor" onInput={event => { editedText.current = event.currentTarget.innerText; if (!composing.current) channel.current?.input(event.currentTarget.innerText); }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => { composing.current = false; editedText.current = event.currentTarget.innerText; channel.current?.input(event.currentTarget.innerText); }} /></div><button disabled={closing || producerBusy} onClick={() => void splitFirst()}>拆分首段为两段</button></ReadingBoundary>}
+            {unit.reading.blocks.slice(unit.id === 'KU-001' ? 1 : 0).map(block => <ReadingBoundary key={block.id}>{unit.id === 'KU-001' && block.id === secondId.current ? <div className="editable-section"><label>第二段正文 <span>可直接编辑，自动保存</span></label><div ref={secondEditor} role="textbox" aria-label="编辑第二段正文" aria-multiline="true" contentEditable={!closing && !producerBusy} suppressContentEditableWarning className="paragraph-editor" onInput={event => { if (!composing.current) channel.current?.edit({ changes: [{ blockId: block.id, text: event.currentTarget.innerText }] }); }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => { composing.current = false; channel.current?.edit({ changes: [{ blockId: block.id, text: event.currentTarget.innerText }] }); }} /></div> : <Block block={block} reading={reading} updateReading={updateReading} onSource={button => { sourceTrigger.current = button; setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!; void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} />}</ReadingBoundary>)}
 
             <footer>来源：既有数字逻辑课程单元的独立副本。编辑保留原有知识身份。</footer>
           </article>

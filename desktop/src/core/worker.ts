@@ -2,12 +2,17 @@ import { parentPort } from 'node:worker_threads';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, realpathSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { randomUUID, createHash } from 'node:crypto';
 import { CommandGroups } from './command-groups';
-import type { CourseUnit, OpenedCourse, SaveParagraph, SaveReceipt } from '../shared';
+import { randomUUID } from 'node:crypto';
+import type { OpenedCourse, SaveParagraph, SaveReceipt, EditCommand } from '../shared';
+
+import { initializeSaveStore, readDrafts, saveDraft, eventCursor, commitEdit, queryOperation, history, confirmedInput, readEvents } from './save-store';
 
 const EDITABLE = 'RB-TH-01-01-what-is-positional-notation';
-interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; courseId: string; latestInput: number; groups: CommandGroups }
+interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; courseId: string;
+  // T03 constructs its observer on this same connection; both student save entry points call it in-transaction.
+  groups: CommandGroups;
+}
 const courses = new Map<string, Course>();
 function session(id: string): Course {
   const course = [...courses.values()].find(course => course.sessionId === id);
@@ -17,7 +22,8 @@ function session(id: string): Course {
 function snapshot(course: Course): OpenedCourse {
   const row = course.db.prepare('SELECT payload, revision FROM units WHERE id = ?').get('KU-001')!;
   return { courseId: course.courseId, sessionId: course.sessionId, revision: Number(row.revision),
-    confirmedInputSeq: course.latestInput, editableBlockId: EDITABLE, unit: JSON.parse(String(row.payload)),
+    drafts: readDrafts(course.db), eventCursor: eventCursor(course.db),
+    confirmedInputSeq: confirmedInput(course.db, course.sessionId), editableBlockId: EDITABLE, unit: JSON.parse(String(row.payload)),
     runtime: { node: process.versions.node, electron: process.versions.electron,
       sqlite: String(course.db.prepare('SELECT sqlite_version() AS version').get()!.version),
       pragmas: {
@@ -62,47 +68,22 @@ function open(directory: string): OpenedCourse {
         db.exec('COMMIT');
       } catch (error) { db.exec('ROLLBACK'); throw error; }
     }
-    const course: Course = { db, owner, sessionId: randomUUID(), latestInput: 0, groups: new CommandGroups(db),
+    initializeSaveStore(db);
+    const course: Course = { db, owner, sessionId: randomUUID(), groups: new CommandGroups(db),
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     const result = snapshot(course);
     courses.set(canonical, course);
     return result;
   } catch (error) { db?.close(); owner.close(); throw error; }
 }
+function commit(course: Course, command: EditCommand) {
+  return commitEdit(course.db, command, () => course.groups.observe());
+}
 function save(command: SaveParagraph): SaveReceipt {
-  if (!command || typeof command.sessionId !== 'string' || typeof command.operationId !== 'string' ||
-    command.operationId.length < 1 || command.operationId.length > 160 || command.blockId !== EDITABLE ||
-    !Number.isSafeInteger(command.inputSeq) || command.inputSeq < 1 ||
-    !Number.isSafeInteger(command.baseRevision) || command.baseRevision < 1 ||
-    typeof command.text !== 'string' || command.text.length > 100_000) throw new Error('无效的段落保存请求');
-  const course = session(command.sessionId);
-  const digest = createHash('sha256').update(JSON.stringify(command)).digest('hex');
-  const previous = course.db.prepare('SELECT digest, receipt FROM operations WHERE id=?').get(command.operationId);
-  if (previous) {
-    if (previous.digest !== digest) throw new Error('同一操作不能换用不同内容');
-    return JSON.parse(String(previous.receipt));
-  }
-  if (command.inputSeq <= course.latestInput) throw new Error('输入序号已过期');
-  const current = snapshot(course);
-  if (current.revision !== command.baseRevision) throw new Error('正文版本已变化，输入仍保留，请重新核对');
-  const unit: CourseUnit = current.unit;
-  const paragraph = unit.reading.blocks.find(block => block.id === EDITABLE)!;
-  if (paragraph.kind !== 'paragraph') throw new Error('当前内容不能作为普通段落保存');
-  const before = paragraph.payload.text;
-  paragraph.payload.text = command.text;
-  const receipt: SaveReceipt = { operationId: command.operationId, sessionId: command.sessionId,
-    inputSeq: command.inputSeq, revision: current.revision + 1, blockId: EDITABLE };
-  course.db.exec('BEGIN IMMEDIATE');
-  try {
-    course.db.prepare('UPDATE units SET payload=?, revision=? WHERE id=?')
-      .run(JSON.stringify(unit), receipt.revision, unit.id);
-    course.db.prepare('INSERT INTO operations VALUES (?, ?, ?, ?, ?, ?)')
-      .run(command.operationId, digest, JSON.stringify(receipt), unit.id, before, command.text);
-    course.groups.observe();
-    course.db.exec('COMMIT');
-  } catch (error) { course.db.exec('ROLLBACK'); throw error; }
-  course.latestInput = command.inputSeq;
-  return receipt;
+  if (!command || command.blockId !== EDITABLE) throw new Error('无效的段落保存请求');
+  return commit(session(command.sessionId), { sessionId: command.sessionId,
+    inputSeq: command.inputSeq, baseRevision: command.baseRevision, operationId: command.operationId,
+    complete: true, changes: [{ blockId: command.blockId, text: command.text }] });
 }
 parentPort!.on('message', ({ id, action, payload }) => {
   try {
@@ -127,6 +108,15 @@ parentPort!.on('message', ({ id, action, payload }) => {
         value = JSON.parse(readFileSync(join(__dirname, `fixtures/unit-${payload.unitId.slice(3)}.json`), 'utf8'));
       else throw new Error('该单元正文尚未加入课程副本');
     }
+    else if (action === 'saveDraft') value = saveDraft(session(payload.sessionId).db, payload);
+    else if (action === 'commitEdit') value = commit(session(payload.sessionId), payload);
+    else if (action === 'queryOperation') value = queryOperation(session(payload.sessionId).db, payload.operationId);
+    else if (action === 'readEvents') {
+      const course = session(payload.sessionId);
+      value = readEvents(course.db, payload.after, payload.limit) ?? { kind: 'reset', reason: 'cursor-expired',
+        cursor: eventCursor(course.db), snapshot: snapshot(course) };
+    }
+    else if (action === 'history') value = history(session(payload.sessionId).db);
     else if (action === 'save') value = save(payload);
     else if (action.startsWith('commands:')) value = session(payload.sessionId).groups.dispatch(action, payload);
     else if (action === 'close') {

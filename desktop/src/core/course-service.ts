@@ -1,6 +1,6 @@
 import { Worker } from 'node:worker_threads';
 import { commandClient } from '../command-api';
-import type { CourseGraph, CourseUnit, OpenedCourse, ReadingState, SaveParagraph, SaveReceipt } from '../shared';
+import type { CourseGraph, CourseUnit, ReadingState, OpenedCourse, SaveParagraph, SaveReceipt, DraftInput, DraftReceipt, EditCommand, EditReceipt, EditHistory, EventPage } from '../shared';
 
 /** One instance belongs to the application host, shared by all its windows/courses. */
 export class CourseService {
@@ -44,6 +44,11 @@ export class CourseService {
   readingState(sessionId: string): Promise<ReadingState | null> { return this.request('readingState', { sessionId }); }
   setReadingState(sessionId: string, state: ReadingState): Promise<void> { return this.request('setReadingState', { sessionId, state }); }
   save(command: SaveParagraph): Promise<SaveReceipt> { return this.request('save', command); }
+  saveDraft(input: DraftInput): Promise<DraftReceipt> { return this.request('saveDraft', input); }
+  commitEdit(command: EditCommand): Promise<EditReceipt> { return this.request('commitEdit', command); }
+  queryOperation(sessionId: string, operationId: string): Promise<SaveReceipt | null> { return this.request('queryOperation', { sessionId, operationId }); }
+  history(sessionId: string): Promise<EditHistory[]> { return this.request('history', { sessionId }); }
+  readEvents(sessionId: string, after: number, limit = 64): Promise<EventPage> { return this.request('readEvents', { sessionId, after, limit }); }
   close(): Promise<void> {
     if (this.closing) return this.closing;
     if (this.stopped) return Promise.resolve();

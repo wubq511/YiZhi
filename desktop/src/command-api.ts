@@ -8,7 +8,7 @@ export interface ObjectChange { objectId: string; value: Record<string, any> }
 export interface GroupCommand { sessionId: string; attemptId: string; operationId: string; basisId: string; changes: ObjectChange[] }
 export interface GroupResult {
   operationId: string; attemptId: string; status: 'committed' | 'retained';
-  revision?: number; changedObjectIds: string[]; reason?: string;
+  revision?: number; cursor?: number; changedObjectIds: string[]; reason?: string;
 }
 export interface GroupHistory {
   operationId: string; attemptId: string; taskId: string; generation: number; revision: number; committedAt: string;
