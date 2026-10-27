@@ -54,6 +54,9 @@ else {
     };
     registerSourceProtocols(core, join(__dirname, 'renderer'));
     registerSourceIPC(core, checkSender);
+    for (const method of ['start','continue','stop','get','list','artifact','artifacts','correct','query'] as const) {
+      ipcMain.handle(`parsing:${method}`, (event, request) => { checkSender(event); return core.parsing[method](request); });
+    }
     ipcMain.handle('course:open', async event => { checkSender(event); const opened = await core.open(courseDirectory); activeSessionId = opened.sessionId; return opened; });
     ipcMain.handle('course:graph', async (event, sessionId: string) => { checkSender(event); return core.graph(sessionId); });
     ipcMain.handle('course:read-unit', async (event, sessionId: string, unitId: string) => { checkSender(event); return core.readUnit(sessionId, unitId); });

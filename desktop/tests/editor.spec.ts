@@ -14,6 +14,12 @@ async function finish(app: ElectronApplication) {
   } else await app.close();
 }
 
+async function snapshotClipboard(app: ElectronApplication) {
+  // macOS may expose one empty platform item after clear(), while ClipboardItem requires a MIME type.
+  return app.evaluateHandle(async ({ clipboard, ClipboardItem }) => Promise.all((await clipboard.read()).filter(item => item.types.length > 0).map(async item =>
+    new ClipboardItem(Object.fromEntries(await Promise.all(item.types.map(async type => [type, await item.getType(type)])))))));
+}
+
 test('independent producer range update survives student Undo and complete SQLite reopen', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-editor-ranges-'));
   const launch = () => electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
@@ -61,10 +67,15 @@ test('copy assigns fresh identities recursively, an explicit internal move keeps
       patch: { updates: [], structure: { parentId: c.unit.id, before: ids, after: [ids[0], unknown.id, ...ids.slice(1)], inserted: [unknown] }, correspondence: [] } });
   } finally { await service.close(); }
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
-  const clipboard = await app.evaluateHandle(async ({ clipboard, ClipboardItem }) => Promise.all((await clipboard.read()).map(async item =>
-    new ClipboardItem(Object.fromEntries(await Promise.all(item.types.map(async type => [type, await item.getType(type)])))))));
+  let clipboard: Awaited<ReturnType<typeof snapshotClipboard>> | undefined;
   try {
     const page = await app.firstWindow();
+    await page.getByRole('status', { name: '保存状态' }).waitFor();
+    clipboard = await snapshotClipboard(app);
+    await app.evaluate(({ clipboard }) => clipboard.clear());
+    const emptyClipboard = await snapshotClipboard(app);
+    expect(await emptyClipboard.evaluate(items => items.length)).toBe(0);
+    await emptyClipboard.dispose();
     await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     const first = page.getByRole('textbox', { name: '编辑首段正文', exact: true });
     await first.fill('复制与移动');
@@ -106,9 +117,14 @@ test('copy assigns fresh identities recursively, an explicit internal move keeps
     await page.getByRole('button', { name: '重做正文', exact: true }).click();
     await expect.poll(async () => (await page.evaluate(() => (window as any).yizhi.open())).unit.reading.blocks.filter((b: any) => b.kind === 'formula').length).toBe(count + 1);
   } finally {
-    await app.evaluate(async ({ clipboard }, saved) => clipboard.write(saved), clipboard);
-    await clipboard.dispose();
-    await finish(app); await rm(root, { recursive: true, force: true });
+    try {
+      if (clipboard) await app.evaluate(async ({ clipboard }, saved) => {
+        if (saved.length) await clipboard.write(saved); else clipboard.clear();
+      }, clipboard);
+    } finally {
+      await clipboard?.dispose();
+      await finish(app); await rm(root, { recursive: true, force: true });
+    }
   }
 });
 
