@@ -83,20 +83,22 @@ export async function flushBuiltinExperiments(bridge: DesktopBridge, sessionId: 
   try { await bridge.experiments.pauseAll({ sessionId }); return true; } catch { await Promise.all(owned.map(c => c.poll())); return false; }
 }
 
-function FormulaEditor({ initial, changed, done }: { initial: string; changed: (latex: string) => void; done: () => void }) {
+function FormulaEditor({ initial, changed, done, composition }: { initial: string; changed: (latex: string) => void; done: () => void; composition?: (active: boolean) => void }) {
   const host = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const field = new MathfieldElement(); field.mathVirtualKeyboardPolicy = 'manual';
     field.setAttribute('aria-label', '实验公式内容'); field.value = initial.replace(/¬/g, '\\neg ').replace(/·/g, '\\cdot ');
     const input = () => changed(field.getValue('latex'));
     field.addEventListener('input', input);
+    const composing = () => composition?.(true), composed = () => composition?.(false);
+    field.addEventListener('compositionstart', composing); field.addEventListener('compositionend', composed);
     field.addEventListener('keydown', event => {
       if ((event.metaKey || event.ctrlKey) && ['z', 'y'].includes(event.key.toLowerCase())) {
         event.preventDefault(); event.stopImmediatePropagation(); field.executeCommand(event.shiftKey || event.key.toLowerCase() === 'y' ? 'redo' : 'undo'); input();
       }
     }, true);
     host.current!.append(field); field.focus();
-    return () => { field.removeEventListener('input', input); field.remove(); };
+    return () => { field.removeEventListener('input', input); field.removeEventListener('compositionstart', composing); field.removeEventListener('compositionend', composed); composition?.(false); field.remove(); };
   }, []);
   return <div className="builtin-formula-editor"><div ref={host} /><button onClick={done}>完成公式编辑</button></div>;
 }
@@ -115,7 +117,7 @@ function Diagram({ v }: { v: ExperimentView }) {
     <text x="265" y={data.length * 38 + 47} textAnchor="middle">{(d.kind === 'mux' ? d.config.selectBits : d.config.addressBits).map((n: string) => `${n}=${v.state.inputs[n]}`).join(' · ')}</text>
   </svg>;
 }
-export function BuiltinExperiment({ block, unitId, sessionId, active, disabled }: { block: ReadingBlock; unitId: string; sessionId: string; active: boolean; disabled: boolean }) {
+export function BuiltinExperiment({ block, unitId, sessionId, active, disabled, composition }: { block: ReadingBlock; unitId: string; sessionId: string; active: boolean; disabled: boolean; composition?: (active: boolean) => void }) {
   const client = clientFor(window.yizhi, sessionId, unitId, block.id);
   const [, paint] = useState(0);
   const host = useRef<HTMLElement>(null);
@@ -144,7 +146,7 @@ export function BuiltinExperiment({ block, unitId, sessionId, active, disabled }
       <fieldset disabled={v.phase === 'pause-incomplete'}><legend>实验输入</legend>{Object.entries(localInputs ?? v.state.inputs).map(([n, value]) => <label key={n}><input type="checkbox" aria-label={n === 'showCorners' ? '显示跨边四格' : n} checked={!!value} onChange={event => {
         const next = { ...(localInputs ?? v.state.inputs), [n]: Number(event.target.checked) }; setLocalInputs(next); client.send({ kind: 'inputs', inputs: next });
       }} />{n === 'showCorners' ? '显示跨边四格' : `${n} = ${value}`}</label>)}</fieldset>
-      <div className="builtin-formula"><span>本实验公式</span>{editing ? <FormulaEditor initial={formula ?? v.definition.formula} changed={latex => { setFormula(latex); client.send(current => ({ kind: 'formula', formula: latex, baseRevision: current.definition.revision })); }} done={() => setEditing(false)} /> : <><p role="math" aria-label="本实验公式">{v.definition.formula}</p><button onClick={() => { setFormula(v.definition.formula); setEditing(true); }}>编辑实验公式</button></>}</div>
+      <div className="builtin-formula"><span>本实验公式</span>{editing ? <FormulaEditor composition={composition} initial={formula ?? v.definition.formula} changed={latex => { setFormula(latex); client.send(current => ({ kind: 'formula', formula: latex, baseRevision: current.definition.revision })); }} done={() => setEditing(false)} /> : <><p role="math" aria-label="本实验公式">{v.definition.formula}</p><button onClick={() => { setFormula(v.definition.formula); setEditing(true); }}>编辑实验公式</button></>}</div>
       <p className="builtin-grammar">{v.definition.kind === 'mux' ? '可转换：0、1、声明变量及非／与／或；每一路须能化为常量或单个输入（含取反）。' : v.definition.kind === 'decoder' ? '可转换：Y0–Y7 的八个布尔等式（分号分隔），须与当前 74LS138 定义等价。' : '可转换：与 ¬C 等价的三变量布尔式。'}</p>
       {v.definition.check === 'needs-check' ? <p className="builtin-error" role="status">公式需要核对；当前不显示计算结果。</p> : <><Diagram v={v} />{v.definition.kind === 'mux' && <p className="builtin-result" role="status" aria-label="MUX 输出">输出 {v.definition.outputName} = {v.result?.output}</p>}{v.definition.kind === 'decoder' && <p className="builtin-result" role="status" aria-label="译码器输出">{v.result?.enabled ? `选中 Y${v.result.selected}` : '未使能'} · Y0–Y7 = {v.result?.outputs?.join('')}</p>}</>}
       <div className="builtin-runtime"><button disabled={v.definition.check !== 'verified' || v.phase === 'pause-incomplete'} onClick={() => client.send({ kind: 'run', running: !v.running })}>{v.running ? '暂停遍历' : '开始遍历输入'}</button><label><input type="checkbox" checked={v.background} onChange={e => client.send({ kind: 'background', enabled: e.target.checked })} />离屏继续运行</label></div>

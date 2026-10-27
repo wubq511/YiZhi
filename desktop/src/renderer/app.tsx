@@ -51,7 +51,7 @@ function ReadingBoundary({ children }: { children: React.ReactNode }) {
   return <div data-reading-block ref={ref} inert={!visible && !focused} onFocus={() => setFocused(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>{children}</div>;
 }
 
-function Block({ block, onReference, reading, updateReading, onSource, experiment }: { block: ReadingBlock; experiment: { unitId: string; sessionId: string; active: boolean; disabled: boolean }; onReference: (id: string, blockId: string) => void; reading: ReadingState | null; updateReading: (key: string, value: boolean) => void; onSource: (button: HTMLButtonElement) => void }) {
+function Block({ block, onReference, reading, updateReading, onSource, experiment }: { block: ReadingBlock; experiment: { unitId: string; sessionId: string; active: boolean; disabled: boolean; composition?: (active: boolean) => void }; onReference: (id: string, blockId: string) => void; reading: ReadingState | null; updateReading: (key: string, value: boolean) => void; onSource: (button: HTMLButtonElement) => void }) {
   const payload = block.payload;
   const children = block.children?.map(child => <ReadingBoundary key={child.id}><Block block={child} experiment={experiment} onReference={onReference} onSource={onSource} reading={reading} updateReading={updateReading} /></ReadingBoundary>);
   if (block.kind === 'paragraph') return <p>{payload.text}</p>;
@@ -315,10 +315,10 @@ function App() {
             <SourceReferences citations={sourceCitations.filter(citation => citation.target?.unitId === unit.id)} onOpen={citation => sourcesPanel.current?.openCitation(citation)} />
             {unit.id === 'KU-001' && channel.current ? <ContinuousUnitEditor course={course} channel={channel.current} disabled={closing || producerBusy}
               composition={active => { composing.current = active; }} controller={instance => { continuous.current = instance; }}
-              renderBlock={block => <ReadingBoundary><Block block={block} experiment={{ unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing }} reading={reading} updateReading={updateReading}
+              renderBlock={block => <ReadingBoundary><Block block={block} experiment={{ unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing, composition: active => { composing.current = active; } }} reading={reading} updateReading={updateReading}
                 onSource={button => { sourceTrigger.current = button; setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;
                   void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} /></ReadingBoundary>} />
-              : unit.reading.blocks.map(block => <ReadingBoundary key={block.id}><Block block={block} experiment={{ unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing }} reading={reading} updateReading={updateReading}
+              : unit.reading.blocks.map(block => <ReadingBoundary key={block.id}><Block block={block} experiment={{ unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing, composition: active => { composing.current = active; } }} reading={reading} updateReading={updateReading}
                 onSource={button => { sourceTrigger.current = button; setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;
                   void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} /></ReadingBoundary>)}
 

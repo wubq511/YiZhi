@@ -181,7 +181,7 @@ test('supported 2:1 uses its ordered single selector for all eight inputs; fixed
   } finally { await service.close(); await rm(root, { recursive: true, force: true }); }
 });
 
-test('parsing and built-in experiments cannot reuse each other\'s durable operation identity', async () => {
+test('parsing, Agent conversations and built-ins share durable operation identities', async () => {
   const { sourceFixture } = await import('./source-fixture');
   const root = await mkdtemp(join(tmpdir(), 'yizhi-builtin-parsing-'));
   const service = new CourseService(resolve('dist/worker.cjs'));
@@ -190,6 +190,9 @@ test('parsing and built-in experiments cannot reuse each other\'s durable operat
     const v = await service.experiments.open({ sessionId, unitId: 'KU-057', blockId: muxId });
     const action = { kind: 'inputs' as const, inputs: v.state.inputs };
     await service.experiments.act({ sessionId, instanceId: v.instanceId, generation: v.generation, operationId: 'experiment-identity', action });
+    await assert.rejects(service.agent.create({ sessionId, operationId: 'experiment-identity' }), /操作身份/);
+    await service.agent.create({ sessionId, operationId: 'agent-identity' });
+    await assert.rejects(service.experiments.act({ sessionId, instanceId: v.instanceId, generation: v.generation, operationId: 'agent-identity', action }), /操作身份/);
     const path = join(root, 'new-source.pdf'); await sourceFixture(path);
     const source = await service.sources.importFile({ sessionId, generation: 1, operationId: 'source-for-parse', path, title: 'Public test fixture' });
     await assert.rejects(service.parsing.start({ sessionId, generation: 1, operationId: 'experiment-identity', versionId: source.version.versionId }), /操作身份/);
