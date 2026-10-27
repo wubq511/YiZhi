@@ -1,5 +1,5 @@
 import type { SaveBridge, OpenedCourse, DraftInput, EditCommand, SaveReceipt, TextChange, ParagraphSplit } from '../shared';
-import { composePatch, patchTargets, type ContentPatch, type FormulaDraft } from '../editor-api';
+import { composePatch, equal, patchTargets, type ContentPatch, type FormulaDraft } from '../editor-api';
 export type SaveState = { status: 'saved' | 'draft' | 'pending' | 'saving' | 'error'; error?: string;
   inputSeq?: number; confirmedInputSeq?: number; draftInputSeq?: number };
 export interface EditorDelta { changes: TextChange[]; splits?: ParagraphSplit[]; complete?: boolean;
@@ -21,6 +21,7 @@ export class ParagraphSaveChannel {
   private splits: (ParagraphSplit & { seq: number })[] = [];
   private patches: { seq: number; patch: ContentPatch }[] = [];
   private formulaDrafts: FormulaDraft[] = [];
+  private structured = false;
   private replacesDraft?: DraftInput['replacesDraft'];
   private command?: EditCommand;
   private running?: Promise<boolean>;
@@ -82,6 +83,38 @@ export class ParagraphSaveChannel {
   }
   /** Recoverable local input. Reading this never replaces a live editor's DOM or Undo. */
   text(blockId: string): string | undefined { return this.changes.get(blockId)?.text; }
+  /** Activate the continuous adapter before its first input; retain the original formal basis of old drafts. */
+  useContentPatches() {
+    if (this.structured) return;
+    this.structured = true;
+    const before = this.course.unit.reading.blocks, after = structuredClone(before);
+    const converted = new Set<string>();
+    for (const change of this.changes.values()) {
+      const block = after.find(b => b.id === change.blockId && b.kind === 'paragraph' && !b.children?.length);
+      if (block) { block.payload.text = change.text; converted.add(block.id); }
+    }
+    const convertedSplits = new Set<ParagraphSplit>();
+    const correspondence: ContentPatch['correspondence'] = [];
+    for (const split of this.splits) {
+      const index = after.findIndex(b => b.id === split.blockId && b.kind === 'paragraph' && !b.children?.length);
+      if (index < 0 || after.some(b => b.id === split.newBlockId)) continue;
+      const block = after[index], text = Array.from(String(block.payload.text));
+      if (split.offset < 0 || split.offset > text.length) continue;
+      const next = { ...structuredClone(block), id: split.newBlockId, payload: { text: text.slice(split.offset).join('') } };
+      block.payload.text = text.slice(0, split.offset).join(''); after.splice(index + 1, 0, next);
+      convertedSplits.add(split); converted.add(block.id);
+      correspondence.push({ kind: 'split', sourceId: block.id, targetId: next.id, offset: split.offset });
+    }
+    if (!converted.size && !convertedSplits.size) return;
+    const old = new Map(before.map(b => [b.id, b]));
+    let patch: ContentPatch = { updates: after.filter(b => old.has(b.id) && !equal(old.get(b.id)!.payload, b.payload))
+      .map(b => ({ blockId: b.id, before: old.get(b.id)!.payload, after: b.payload })), correspondence,
+      ...(convertedSplits.size ? { structure: { parentId: this.course.unit.id, before: before.map(b => b.id), after: after.map(b => b.id), inserted: after.filter(b => !old.has(b.id)) } } : {}) };
+    for (const pending of this.patches) patch = composePatch(patch, pending.patch);
+    this.patches = [{ seq: this.sequence, patch }];
+    for (const id of converted) this.changes.delete(id);
+    this.splits = this.splits.filter(split => !convertedSplits.has(split));
+  }
   /** Initial recovery projection only. Live editors reconcile snapshots through range transactions. */
   recovery() { return { patch: this.patches.reduce<ContentPatch | undefined>((p, n) => composePatch(p, n.patch), undefined),
     formulaDrafts: structuredClone(this.formulaDrafts) }; }

@@ -111,3 +111,25 @@ test('in-flight editor receipt covers only its input while the pending union com
     assert.equal((await service.history(c.sessionId)).length, 2);
   } finally { release(); channel?.dispose(); await service.close(); await rm(root, { recursive: true, force: true }); }
 });
+
+test('a retained legacy text/split draft can continue as structural editor input without losing its original basis or hidden objects', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-editor-legacy-'));
+  let service = new CourseService(resolve('dist/worker.cjs'));
+  let channel: ParagraphSaveChannel | undefined;
+  try {
+    const c = await service.open(root), first = c.unit.reading.blocks[0];
+    await service.saveDraft({ sessionId: c.sessionId, inputSeq: 12, baseRevision: 1, complete: false,
+      changes: [{ blockId: first.id, text: '甲乙丙丁' }], splits: [{ blockId: first.id, newBlockId: 'legacy-tail', offset: 2 }] });
+    await service.close(); service = new CourseService(resolve('dist/worker.cjs'));
+    const reopened = await service.open(root);
+    channel = new ParagraphSaveChannel(service, reopened, () => {}, { pollMs: 0 });
+    channel.useContentPatches();
+    channel.edit({ changes: [], patch: { updates: [{ blockId: first.id, before: { ...first.payload, text: '甲乙' }, after: { ...first.payload, text: '修正输入' } }], correspondence: [] } });
+    assert.equal(await channel.flush(), true);
+    const expected = structuredClone(c.unit);
+    expected.reading.blocks[0].payload.text = '修正输入';
+    expected.reading.blocks.splice(1, 0, { id: 'legacy-tail', kind: 'paragraph', payload: { text: '丙丁' }, role: first.role, sourceRefs: first.sourceRefs });
+    assert.deepEqual((await service.read(reopened.sessionId)).unit, expected);
+    assert.deepEqual((await service.read(reopened.sessionId)).drafts, []);
+  } finally { channel?.dispose(); await service.close(); await rm(root, { recursive: true, force: true }); }
+});

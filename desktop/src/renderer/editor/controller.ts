@@ -21,6 +21,7 @@ export class ContinuousEditor {
   private composing = false;
   private pending?: OpenedCourse;
   constructor(element: HTMLElement, private course: OpenedCourse, private channel: ParagraphSaveChannel, private options: EditorOptions) {
+    channel.useContentPatches();
     const recovered = structuredClone(course.unit.reading.blocks);
     const recovery = channel.recovery();
     for (const block of recovered) if (block.kind === 'paragraph') block.payload.text = channel.text(block.id) ?? block.payload.text;
