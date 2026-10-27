@@ -33,6 +33,7 @@ export async function legacyFixture(root: string) {
     Object.values(value).forEach(localRefs);
   } };
   localRefs(knowledge);
+  (last.reading.blocks[2] as any).sourceRefs[0].pdfPages = [2,1];
   await writeFile(join(root, '课程.json'), JSON.stringify(manifest));
   await writeFile(join(root, 'data/map.json'), JSON.stringify(knowledge));
   await writeFile(join(root, 'data/layout.json'), JSON.stringify(layout));

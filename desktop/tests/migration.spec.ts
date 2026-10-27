@@ -39,7 +39,8 @@ test('converted last unit and actual fixed image/source PDF remain readable offl
     const registered=await page.evaluate(async()=>{const c=await window.yizhi.open();return window.yizhi.sources.page({sessionId:c.sessionId,versionId:'VER-TEST',pdfPageIndex:0});});
     expect(registered.projection.text).toContain('Fixed legacy source');
     // Exercise the actual fixed version entry, existing PDF.js canvas and text layer.
-    await page.getByRole('button',{name:'原文资料',exact:true}).click();
+    const fixedPage=article.getByRole('button',{name:'查看固定原页',exact:true});
+    await reveal(page,fixedPage); await fixedPage.click();
     await expect(page.locator('.source-pdf .textLayer')).toContainText('Fixed legacy source');
     await expect(page.locator('.source-pdf canvas')).toBeVisible();
     await page.screenshot({path:test.info().outputPath('fixture-offline.png')});
