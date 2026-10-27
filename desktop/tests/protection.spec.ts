@@ -43,6 +43,7 @@ test('actual cross-paragraph selection holds the shown basis while independent f
     expect(await page.evaluate(() => getSelection()!.toString())).toBe(selected);
     const capture = await editor.evaluate((el: any) => el.editor.storage.courseSelection.capture());
     expect(capture.formalRevision).toBe(before.revision);
+    expect(capture.fragments.every((f: any) => f.formalRevision === before.revision)).toBe(true);
     expect(capture.fragments.map((f: any) => f.blockId)).toEqual(before.unit.reading.blocks.filter((b: any) => b.kind === 'paragraph').slice(0, 2).map((b: any) => b.id));
     expect(capture.fragments[0].projection.text).toBe(before.unit.reading.blocks[0].payload.text);
     expect(capture.fragments[0].quote.length).toBeGreaterThan(0);

@@ -6,6 +6,8 @@ import { join, resolve } from 'node:path';
 import { CourseService } from '../src/core/course-service';
 import { ParagraphSaveChannel } from '../src/renderer/save-channel';
 import { DatabaseSync } from 'node:sqlite';
+import { createHash } from 'node:crypto';
+import { sourceFixture } from './source-fixture';
 
 test('current paragraph protection retains its producer while an independent group commits; release rechecks the saved student basis', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-protection-'));
@@ -87,6 +89,29 @@ test('a real final SQLite rejection rolls automatic integration, receipt, event 
     assert.equal((await api.history({ sessionId: c.sessionId })).length, 1);
     assert.deepEqual(await api.recheck({ sessionId: c.sessionId }), []);
   } finally { fault?.close(); await service.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('internally generated integration operations obey the same source and conversation identity fence as direct IPC writes', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-integration-fence-'));
+  const service = new CourseService(resolve('dist/worker.cjs'));
+  try {
+    const c = await service.open(join(root, 'course')), a = c.unit.reading.blocks[0], api = service.commands;
+    const path = join(root, 'source.pdf'); await sourceFixture(path);
+    for (const domain of ['source', 'conversation']) {
+      const candidateId = `fenced-${domain}`, operationId = `integrate-${createHash('sha256').update(candidateId).digest('hex')}`;
+      const attempt = await api.startAttempt({ sessionId: c.sessionId, taskId: candidateId });
+      const basis = await api.read({ sessionId: c.sessionId, attemptId: attempt.attemptId, objectIds: [a.id] });
+      await api.protect({ sessionId: c.sessionId, editorId: candidateId, sequence: 1, blockIds: [a.id], mode: 'editing', inputSeq: 0 });
+      await api.commit({ sessionId: c.sessionId, attemptId: attempt.attemptId, basisId: basis.basisId, operationId: candidateId,
+        changes: [{ objectId: a.id, value: { ...basis.objects.find(o => o.id === a.id)!.value, payload: { ...a.payload, text: a.payload.text + ' 提交候选' } } }] });
+      if (domain === 'source') await service.sources.importFile({ sessionId: c.sessionId, generation: 1, operationId, path, title: 'Operation fence evidence' });
+      else await service.agent.create({ sessionId: c.sessionId, operationId });
+      await api.protect({ sessionId: c.sessionId, editorId: candidateId, sequence: 2, blockIds: [], mode: 'editing', inputSeq: 0 });
+      await assert.rejects(api.recheck({ sessionId: c.sessionId }), /操作身份/);
+      assert.deepEqual((await service.read(c.sessionId)).unit, c.unit);
+      await api.resolveCandidate({ sessionId: c.sessionId, candidateId, basisRevision: 1, choice: 'current' });
+    }
+  } finally { await service.close(); await rm(root, { recursive: true, force: true }); }
 });
 
 test('leave rechecks real prerequisites and attempt eligibility, asks only incompatible groups, and never splits a necessary consistency group', async () => {

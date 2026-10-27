@@ -18,7 +18,7 @@ const record = (value: unknown): value is Record<string, any> => !!value && type
 /** All methods run synchronously in the host-owned Worker on its course connection. */
 export class CommandGroups {
   private protections = new Map<string, EditorProtection>();
-  constructor(private db: DatabaseSync, private graph: CourseGraph) {
+  constructor(private db: DatabaseSync, private graph: CourseGraph, private fenceOperation: (operationId: string) => void = () => {}) {
     db.exec(`
       CREATE TABLE IF NOT EXISTS cg_objects(id TEXT PRIMARY KEY, kind TEXT NOT NULL, value TEXT NOT NULL, version INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS cg_attempts(id TEXT PRIMARY KEY, task_id TEXT NOT NULL, generation INTEGER NOT NULL, status TEXT NOT NULL);
@@ -174,6 +174,7 @@ export class CommandGroups {
       command.changes.some(change => !record(change) || !validId(change.objectId) || !record(change.value)) ||
       new Set(command.changes.map(change => change.objectId)).size !== command.changes.length || json(command).length > 1_000_000)
       throw new Error('无效或重复的一致修改组写入范围');
+    this.fenceOperation(command.operationId);
     return this.transaction(() => {
       this.observe();
       if (this.db.prepare('SELECT 1 FROM operations WHERE id=?').get(command.operationId)) throw new Error('操作身份已用于正文修改');

@@ -89,7 +89,10 @@ function open(directory: string): OpenedCourse {
     };
     const graph = JSON.parse(readFileSync(join(__dirname, 'fixtures/graph.json'), 'utf8')) as CourseGraph;
     initializeReviewState(db);
-    const groups = new CommandGroups(db, graph);
+    const groups = new CommandGroups(db, graph, operationId => {
+      sources.fenceOperation('commands:commit', operationId);
+      agent.fence('commands:commit', operationId);
+    });
     const sources = new Sources(db, canonical, sourceUnit);
     const relationCatalog = JSON.parse(readFileSync(join(__dirname, 'fixtures/relation-catalog.json'), 'utf8'));
     const relations = new FormalRelations(db, graph, { retiredUnitIds: relationCatalog.retiredUnitIds,
@@ -132,7 +135,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
   try {
     if (payload?.operationId) {
       const course = session(payload.sessionId);
-      course.sources.fenceOperation(action, payload.operationId);
+      course.sources.fenceOperation(action === 'commands:resolveInput' ? 'commitEdit' : action, payload.operationId);
       course.agent.fence(action, payload.operationId);
     }
     let value: unknown;
