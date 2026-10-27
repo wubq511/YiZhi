@@ -1,3 +1,6 @@
+import { initializeLayout, layoutGraph, saveLayout } from './local-layout';
+import { projectLayout } from '../layout';
+
 import { BuiltinExperiments } from './builtin-experiments';
 import { AgentStore } from './agent-store';
 import { parentPort, workerData } from 'node:worker_threads';
@@ -81,6 +84,7 @@ function open(directory: string): OpenedCourse {
       } catch (error) { db.exec('ROLLBACK'); throw error; }
     }
     initializeSaveStore(db);
+    initializeLayout(db);
     const sourceUnit = (id: string) => {
       const row = db!.prepare('SELECT payload FROM units WHERE id=?').get(id);
       if (row) return JSON.parse(String(row.payload));
@@ -152,11 +156,14 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       if (!encoded || encoded.length > 100000) throw new Error('阅读状态无效');
       session(payload.sessionId).db.prepare('INSERT INTO reading_state(id,payload) VALUES(1,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload').run(encoded);
     }
+    else if (action === 'setLayout') { const course = session(payload.sessionId); saveLayout(course.db, course.graph, payload.updates); }
+    else if (action === 'projectLayout') { const course = session(payload.sessionId); value = projectLayout(layoutGraph(course.db, course.graph).layout.nodes, payload.sizes, payload.fixed); }
     else if (action === 'reviewStates') { const course = session(payload.sessionId); value = reviewSnapshot(course.db, course.graph); }
     else if (action === 'setReviewStatus') { const course = session(payload.sessionId); value = transaction(course.db, () => setReviewStatus(course.db, course.graph, payload.unitId, payload.status)); }
     else if (action === 'confirmReviewPrompt') { const course = session(payload.sessionId); value = transaction(course.db, () => confirmReviewPrompt(course.db, course.graph, payload.promptId, payload.adjust)); }
     else if (action === 'graph') {
-      value = session(payload.sessionId).relations.graph();
+      const course = session(payload.sessionId);
+      value = layoutGraph(course.db, course.relations.graph());
     } else if (action === 'readUnit') {
       const course = session(payload.sessionId);
       if (payload.unitId === 'KU-001') value = snapshot(course).unit;
@@ -185,7 +192,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action === 'history') value = history(session(payload.sessionId).db);
     else if (action === 'save') value = save(payload);
     else if (action === 'relations:prerequisites') value = session(payload.sessionId).relations.prerequisites(payload.unitId);
-    else if (action === 'relations:read') value = session(payload.sessionId).relations.read(payload);
+    else if (action === 'relations:read') { const course = session(payload.sessionId); const basis = course.relations.read(payload); value = { ...basis, graph: layoutGraph(course.db, basis.graph) }; }
     else if (action === 'relations:commit') value = session(payload.sessionId).relations.commit(payload);
     else if (action === 'relations:query') value = session(payload.sessionId).relations.query(payload.operationId);
     else if (action.startsWith('commands:')) value = session(payload.sessionId).groups.dispatch(action, payload);

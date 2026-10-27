@@ -1,0 +1,7 @@
+.layout-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 24px; font: 13px system-ui, sans-serif; color: #68717a; }
+.layout-controls button, .layout-controls [role="slider"] { background: #fff; color: #345d88; border: 1px solid #e5e5eb; border-radius: 6px; padding: 8px 12px; touch-action: none; cursor: move; user-select: none; }
+.layout-controls [role="slider"] { cursor: ew-resize; }
+.layout-controls [role="slider"]:hover, .layout-controls button:hover { background: #eeedff; }
+.layout-controls [role="slider"]:focus-visible { outline: 2px solid #6965db; outline-offset: 3px; }
+.follow-control { position: absolute; z-index: 6; bottom: 24px; left: 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 8px 12px; background: #fff; border: 1px solid #e5e5eb; border-radius: 8px; font: 13px system-ui, sans-serif; }
+.layout-save-error { color: #a13737; }

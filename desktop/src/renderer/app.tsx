@@ -1,5 +1,10 @@
+import { CameraController, type FollowState } from './camera-controller';
+import { useLocalLayout, ReadingSurface } from './local-layout';
+import type { LayoutPlacement } from '../layout';
 import { BuiltinExperiment, flushBuiltinExperiments } from './builtin-experiment';
+
 import { AgentPanel, type AgentPanelHandle } from './agent-panel';
+
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { ReactFlow, ReactFlowProvider, MiniMap, useReactFlow, MarkerType, type Viewport } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -122,6 +127,7 @@ function App() {
   useEffect(() => { if (narrow && relationsOpen) { setDirectory(false); relationPanel.current?.querySelector<HTMLButtonElement>('button')?.focus(); } }, [narrow, relationsOpen]);
   const [relationView, setRelationView] = useState("main");
   const [course, setCourse] = useState<OpenedCourse>();
+  const sessionRef = useRef<string | undefined>(undefined); sessionRef.current = course?.sessionId;
   useRelationEvents(course?.sessionId, setGraph);
   const [loadError, setLoadError] = useState<string>();
   const [state, setState] = useState<SaveState>({ status: 'saved' });
@@ -141,6 +147,46 @@ function App() {
   const readingSequence = useRef(0);
   const restored = useRef(false);
   const articleRef = useRef<HTMLElement | null>(null);
+  const [followState, setFollowState] = useState<FollowState>('idle');
+  const workTarget = useRef('RB-TH-01-03-expansion-terms');
+  const camera = useMemo(() => new CameraController({
+    get: () => flow.getViewport(), set: next => { void flow.setViewport(next, { duration: 0 }); },
+    bounds: () => ({ width: boardRef.current?.clientWidth ?? 800, height: boardRef.current?.clientHeight ?? 600 }),
+    reduced: () => matchMedia('(prefers-reduced-motion: reduce)').matches,
+    target: () => {
+      const element = boardRef.current?.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(workTarget.current)}"]`);
+      if (!element) return;
+      const rect = element.getBoundingClientRect(), board = boardRef.current!.getBoundingClientRect(), view = flow.getViewport();
+      return { x: (rect.left - board.left - view.x) / view.zoom, y: (rect.top - board.top - view.y) / view.zoom, width: rect.width / view.zoom, height: rect.height / view.zoom };
+    },
+  }, setFollowState), [flow]);
+  useEffect(() => () => camera.dispose(), [camera]);
+  const local = useLocalLayout(graph, selected?.id, camera, viewport.zoom >= .55, cameraReady);
+  const placementsRef = useRef(local.placements); placementsRef.current = local.placements;
+  const [layoutSave, setLayoutSave] = useState<'saved' | 'pending' | 'error'>('saved');
+  const layoutPending = useRef(new Map<string, LayoutPlacement>());
+  const layoutWrites = useRef<Promise<void>>(Promise.resolve());
+  const saveLayout = () => {
+    if (!course) return;
+    setLayoutSave('pending');
+    layoutWrites.current = layoutWrites.current.then(async () => {
+      const updates = [...layoutPending.current.values()];
+      if (!updates.length) return;
+      try {
+        await window.yizhi.setLayout(course.sessionId, updates);
+        for (const update of updates) if (layoutPending.current.get(update.unitId) === update) layoutPending.current.delete(update.unitId);
+        setLayoutSave(layoutPending.current.size ? 'pending' : 'saved');
+      } catch { setLayoutSave('error'); }
+    });
+  };
+  const place = (placement: LayoutPlacement) => {
+    const old = graph?.layout.nodes.find(node => node.unitId === placement.unitId);
+    if (old?.x !== placement.x || old?.y !== placement.y) local.manual(placement.unitId);
+    // Update only the explicit object, never persist displaced neighbours.
+    setGraph(current => current && ({ ...current, layout: { ...current.layout, nodes: current.layout.nodes.map(node => node.unitId === placement.unitId ? { ...node, ...placement } : node) } }));
+    layoutPending.current.set(placement.unitId, placement); saveLayout();
+  };
+
   const persist = (next: ReadingState) => {
     readingRef.current = next; setReading(next);
     if (course) {
@@ -170,6 +216,8 @@ function App() {
       channel.current = new ParagraphSaveChannel(window.yizhi, opened, setState, { onSnapshot: setCourse });
       setCourse(opened);
       const [loadedGraph, savedReading, reviewSnapshot] = await Promise.all([window.yizhi.graph(opened.sessionId), window.yizhi.readingState(opened.sessionId), window.yizhi.reviewStates(opened.sessionId)]);
+      if (savedReading?.pinnedUnitId === 'KU-001' || savedReading?.modification) setMounted([opened.unit]);
+      if (savedReading?.modification) { workTarget.current = savedReading.modification.targetId; camera.restore(savedReading.modification.ended); }
       setGraph(loadedGraph); setReview(reviewSnapshot); readingRef.current = savedReading; restored.current = false; setReading(savedReading);
     } catch (error) { setLoadError((error as Error).message); }
   };
@@ -184,7 +232,15 @@ function App() {
     if (!channel.current) return true;
     setClosing(true);
     await writes.current;
+    await layoutWrites.current;
+    if (layoutPending.current.size) { setClosing(false); return false; }
     if (readingFailed.current) { setClosing(false); return false; }
+    // A zero-duration viewport update can reach the DOM before onMoveEnd. The close
+    // barrier records the actual final camera instead of dropping that last gesture.
+    if (readingRef.current && sessionRef.current) {
+      try { await window.yizhi.setReadingState(sessionRef.current, { ...readingRef.current, camera: flow.getViewport() }); }
+      catch { readingFailed.current = true; setReadingSave('error'); setClosing(false); return false; }
+    }
     if (sourcesPanel.current && !await sourcesPanel.current.flush()) { setClosing(false); return false; }
     const current = await window.yizhi.open();
     if (!await flushBuiltinExperiments(window.yizhi, current.sessionId)) { setReadError('实验现场尚未确认，请返回实验重试保存或恢复最近确认现场。'); setClosing(false); return false; }
@@ -198,21 +254,27 @@ function App() {
   }, [course, selected]);
   const go = async (id: string, nextState?: ReadingState) => {
     if (!course || !graph) return;
+    camera.takeover();
     if (composing.current) { setReadError('请先完成中文候选输入，再切换阅读位置。'); return; }
-    const position = graph.layout.nodes.find(node => node.unitId === id);
+    const position = placementsRef.current.find(node => node.unitId === id);
     if (!position) return;
     setReadError(undefined);
-    try { const unit = await window.yizhi.readUnit(course.sessionId, id); persist(nextState ?? { ...(readingRef.current ?? { expanded: {}, returnStack: [], scrollTop: 0 }), unitId: id, scrollTop: 0 }); setSelected(unit); setDirectoryTheme(unit.theme.id); setMounted(previous => previous.some(item => item.id === id) ? previous : [...previous.filter(item => item.id === 'KU-001'), unit]); }
+    try { const unit = await window.yizhi.readUnit(course.sessionId, id); persist(nextState ?? { ...(readingRef.current ?? { expanded: {}, returnStack: [], scrollTop: 0 }), unitId: id, scrollTop: 0, pinnedUnitId: mounted.some(item => item.id === 'KU-001') || id === 'KU-001' ? 'KU-001' : undefined }); setSelected(unit); setDirectoryTheme(unit.theme.id); setMounted(previous => previous.some(item => item.id === id) ? previous : [...previous.filter(item => item.id === 'KU-001'), unit]); }
+
     catch (error) { setSelected(undefined); setReadError((error as Error).message); }
     if (nextState?.camera) await flow.setViewport(nextState.camera, { duration: 0 });
-    else await flow.setCenter(position.x + 325, position.y + 250, { zoom: 0.85, duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 180 });
+    else await flow.setCenter(position.x + 325, position.y + 250, { zoom: 0.85, duration: 0 });
   };
   useEffect(() => {
     if (!course || !graph || !nodesReady || restored.current) return;
     restored.current = true;
     requestAnimationFrame(() => requestAnimationFrame(async () => {
       try {
-        if (reading) await go(reading.unitId, reading);
+        if (reading) {
+          await go(reading.unitId, reading);
+          await local.waitForMeasurements([...new Set([reading.unitId, ...(reading.pinnedUnitId || reading.modification ? ['KU-001'] : [])])]);
+          if (reading.camera) await flow.setViewport(reading.camera, { duration: 0 });
+        }
         else await flow.fitView({ duration: 0 });
         // Expose navigation after the restored viewport reaches the DOM, so initial
         // placement cannot overwrite an early student gesture or navigation.
@@ -229,23 +291,24 @@ function App() {
     const wheel = (event: WheelEvent) => {
       const target = event.target as HTMLElement;
       if (target.closest('.board-tools, .relations-panel, .source-dialog, .react-flow__minimap, .table-scroll, input, select, textarea, .mux, .builtin-formula-editor, math-field')) return;
-      if (!target.closest('.reading-layer') && !event.shiftKey) return;
+
       event.preventDefault(); event.stopPropagation();
+      camera.takeover();
       const current = flow.getViewport();
       if (event.ctrlKey || event.metaKey) {
         const rect = board.getBoundingClientRect(); const px = event.clientX - rect.left, py = event.clientY - rect.top;
-        const zoom = Math.max(.04, Math.min(2, current.zoom * Math.exp(-event.deltaY * .002)));
+        const zoom = Math.max(.04, Math.min(2, current.zoom * Math.exp(-event.deltaY * .001)));
         const ratio = zoom / current.zoom;
         void flow.setViewport({ x: px - (px - current.x) * ratio, y: py - (py - current.y) * ratio, zoom });
-      } else void flow.setViewport({ ...current, x: current.x - (event.shiftKey ? event.deltaY : event.deltaX), y: current.y - (event.shiftKey ? 0 : event.deltaY) });
+      } else camera.pan(-(event.shiftKey ? event.deltaY : event.deltaX), -(event.shiftKey ? 0 : event.deltaY));
     };
     board.addEventListener('wheel', wheel, { passive: false, capture: true });
     return () => board.removeEventListener('wheel', wheel, true);
-  }, [flow]);
+  }, [flow, camera]);
   const nodes = useMemo(() => graph ? [
     ...graph.layout.groups.map(group => ({ id: group.themeId, position: { x: group.x, y: group.y }, data: { label: group.title }, width: group.width, height: group.height, style: { width: group.width, height: group.height, fontSize: 50, border: "1px solid #bbc9d5", background: "#fff", opacity: viewport.zoom < 0.35 ? 1 : 0.35 }, selectable: false, draggable: false })),
-    ...graph.nodes.map(node => { const pos = graph.layout.nodes.find(item => item.unitId === node.id)!; return { id: node.id, position: { x: pos.x, y: pos.y }, data: { label: node.name }, width: pos.width, height: pos.height, style: { width: pos.width, height: pos.height, opacity: viewport.zoom >= 0.35 ? 1 : 0, pointerEvents: viewport.zoom >= 0.35 ? "auto" as const : "none" as const }, draggable: false, focusable: viewport.zoom >= 0.35 && pos.x * viewport.zoom + viewport.x + pos.width * viewport.zoom > 0 && pos.y * viewport.zoom + viewport.y + pos.height * viewport.zoom > 0 && pos.x * viewport.zoom + viewport.x < (boardRef.current?.clientWidth ?? 0) && pos.y * viewport.zoom + viewport.y < (boardRef.current?.clientHeight ?? 0) }; })
-  ] : [], [graph, viewport.zoom]);
+    ...graph.nodes.map(node => { const pos = local.placements.find(item => item.unitId === node.id)!; return { id: node.id, position: { x: pos.x, y: pos.y }, data: { label: node.name }, width: pos.width, height: pos.height, style: { width: pos.width, height: pos.height, opacity: viewport.zoom >= 0.35 ? 1 : 0, pointerEvents: viewport.zoom >= 0.35 ? "auto" as const : "none" as const }, draggable: false, focusable: viewport.zoom >= 0.35 && pos.x * viewport.zoom + viewport.x + pos.width * viewport.zoom > 0 && pos.y * viewport.zoom + viewport.y + pos.height * viewport.zoom > 0 && pos.x * viewport.zoom + viewport.x < (boardRef.current?.clientWidth ?? 0) && pos.y * viewport.zoom + viewport.y < (boardRef.current?.clientHeight ?? 0) }; })
+  ] : [], [graph, local.placements, viewport]);
   const edges = useMemo(() => {
     if (!graph) return [];
     const visible = graph.edges.filter(edge => relationView === 'all' || edge.view === relationView);
@@ -280,7 +343,13 @@ function App() {
       {course && <AgentPanel ref={agentPanel} sessionId={course.sessionId} narrow={narrow} target={{ unitId: selected?.id ?? course.unit.id }} targetName={selected?.name ?? course.unit.name} sourceOpen={sourcesOpen} onOpenChange={value => { setAgentOpen(value); if (value && narrow) setDirectory(false); }} openCitation={citation => sourcesPanel.current?.openCitation(citation)} />}
       {!cameraReady && !loadError && <span role="status" aria-label="画板定位">正在定位画板…</span>}
 
-      {course && <ControlledProducer course={course} narrow={narrow} onOpenChange={setProducerOpen} prepare={async () => {
+      {course && <ControlledProducer course={course} narrow={narrow} onOpenChange={setProducerOpen} started={async () => {
+        camera.start();
+        persist({ ...(readingRef.current ?? { unitId: 'KU-001', expanded: {}, returnStack: [], scrollTop: 0 }), modification: { targetId: workTarget.current, ended: false } });
+        if (!mounted.some(unit => unit.id === 'KU-001')) { setMounted(previous => [...previous.filter(item => item.id === selected?.id), course.unit]); }
+        // Mounting/snapshot alignment never emits an old delta; only the user's new request starts following.
+        requestAnimationFrame(() => camera.updated());
+      }} advanced={() => camera.updated()} ended={() => { camera.finish(); if (readingRef.current) persist({ ...readingRef.current, modification: { targetId: workTarget.current, ended: true } }); }} prepare={async () => {
         if (composing.current) throw new Error('请先完成中文候选输入，再运行可控修改。');
         producerRunning.current = true; setProducerBusy(true);
         if (!await channel.current?.flush()) throw new Error('学生输入尚未保存，请先重试保存。');
@@ -291,7 +360,7 @@ function App() {
         setCourse(current);
         setMounted(previous => previous.map(item => item.id === current.unit.id ? current.unit : item));
       }} settled={() => { producerRunning.current = false; setProducerBusy(false); }} />}
-      <div className="save-area" inert={narrow && producerOpen}><span role="status" aria-label="阅读状态">{readingSave === "error" ? "阅读位置未保存" : readingSave === "pending" ? "正在保存阅读位置" : "阅读位置已保存"}</span>{readingSave === "error" && <button onClick={() => { if (readingRef.current) { readingFailed.current = false; persist(readingRef.current); } }}>重试保存阅读位置</button>}<span role="status" aria-label="保存状态" aria-live="polite" className={state.status}>{course ? status : '正在打开课程…'}</span>
+      <div className="save-area" inert={narrow && producerOpen}><span role="status" aria-label="布局状态" className={layoutSave === 'error' ? 'layout-save-error' : ''}>{layoutSave === 'saved' ? '布局已保存' : layoutSave === 'pending' ? '正在保存布局' : '布局未保存'}</span>{layoutSave === 'error' && <button onClick={saveLayout}>重试保存布局</button>}<span role="status" aria-label="阅读状态">{readingSave === "error" ? "阅读位置未保存" : readingSave === "pending" ? "正在保存阅读位置" : "阅读位置已保存"}</span>{readingSave === "error" && <button onClick={() => { if (readingRef.current) { readingFailed.current = false; persist(readingRef.current); } }}>重试保存阅读位置</button>}<span role="status" aria-label="保存状态" aria-live="polite" className={state.status}>{course ? status : '正在打开课程…'}</span>
 
         {state.status === 'error' && <button onClick={() => void channel.current?.flush()}>重试保存</button>}
       </div>
@@ -301,19 +370,23 @@ function App() {
       {directory && <nav ref={navRef} inert={sourceOpen || (narrow && (relationsOpen || producerOpen))} aria-label="课程目录" onKeyDown={event => trap(event, closeDirectory)}><h2>课程目录</h2>{narrow && <button onClick={closeDirectory}>关闭目录</button>}
         <label className="review-filter">复习状态筛选 <select aria-label="复习状态筛选" value={reviewFilter} onChange={event => setReviewFilter(event.target.value as typeof reviewFilter)}><option value="all">全部单元</option><option value="pending">待复习</option><option value="weak">薄弱</option><option value="mastered">已掌握</option></select></label>
         {graph?.groups.map(group => { const counts = review?.themes[group.id]; const matches = graph.nodes.filter(node => node.themeId === group.id && (reviewFilter === 'all' ? (directoryTheme ?? selected?.theme.id) === group.id : review?.units[node.id]?.status === reviewFilter)); return <div key={group.id}><button aria-label={group.name} className="directory-theme" onClick={() => { setDirectoryTheme(group.id); const first = matches[0] ?? graph.nodes.find(node => node.themeId === group.id); if (first) { void go(first.id); if (narrow) closeDirectory(); } }}>{group.name}{counts ? <span aria-hidden="true"> · 待复习 {counts.pending} / 薄弱 {counts.weak} / 已掌握 {counts.mastered}</span> : ''}</button>{matches.map(node => <button aria-label={node.name} className="directory-unit" key={node.id} onClick={() => { void go(node.id); if (narrow) closeDirectory(); }}>{node.name}{review ? <span aria-hidden="true"> · {{ pending: '待复习', weak: '薄弱', mastered: '已掌握' }[review.units[node.id].status]}</span> : ''}</button>)}</div>; })}</nav>}
-      <main ref={boardRef} className="board" aria-label="知识画板" role="region" inert={narrow && ((directory && !relationsOpen) || producerOpen)}>
-        <div className="board-background" inert={sourceOpen || (narrow && relationsOpen)}><ReactFlow nodes={nodes} edges={edges} onInit={() => setNodesReady(true)} onEdgeClick={(_event, edge) => { setRelationFocus(edge.id); setRelationsOpen(true); }} minZoom={0.04} maxZoom={2} nodesDraggable={false} panOnScroll zoomOnScroll={false} zoomOnPinch panOnDrag={tool === "select" ? [1] : [0, 1]} selectionOnDrag={tool === "select"} panActivationKeyCode="Space" onMove={(_event, next) => setViewport(next)} onMoveEnd={(_event, next) => { const current = readingRef.current; if (current) persist({ ...current, camera: next }); }} onNodeClick={(_event, node) => { const first = graph?.nodes.find(item => item.id === node.id || item.themeId === node.id); if (first) void go(first.id); }}>
+      <main onWheelCapture={event => { if (!((event.target as HTMLElement).closest('.board-tools, .relations-panel, .source-dialog, input, select, textarea, .mux, .builtin-formula-editor, math-field'))) camera.takeover(); }} onPointerDownCapture={event => { const target = event.target as HTMLElement; if (target.closest('.react-flow__pane, .react-flow__minimap, .board-tools')) camera.takeover(); }} ref={boardRef} className="board" aria-label="知识画板" role="region" inert={narrow && ((directory && !relationsOpen) || producerOpen)}>
+        <div className="board-background" inert={sourceOpen || (narrow && relationsOpen)}><ReactFlow nodes={nodes} edges={edges} onInit={() => setNodesReady(true)} onEdgeClick={(_event, edge) => { setRelationFocus(edge.id); setRelationsOpen(true); }} minZoom={0.04} maxZoom={2} nodesDraggable={false} panOnScroll zoomOnScroll={false} zoomOnPinch panOnDrag={tool === "select" ? [1] : [0, 1]} selectionOnDrag={tool === "select"} panActivationKeyCode="Space" onMoveStart={event => { if (event) camera.takeover(); }} onMove={(event, next) => { if (event) camera.takeover(); setViewport(next); }} onMoveEnd={(_event, next) => { const current = readingRef.current; if (current) persist({ ...current, camera: next }); }} onNodeClick={(_event, node) => { const first = graph?.nodes.find(item => item.id === node.id || item.themeId === node.id); if (first) void go(first.id); }}>
+
+
 
           {minimap && <MiniMap ariaLabel="小地图" nodeColor="#7798bc" nodeStrokeColor="#345d88" maskColor="rgba(105,101,219,.12)" pannable zoomable />}
         </ReactFlow>
-        <div className="board-tools">{reading?.returnStack.length ? <button onClick={() => { const previous = reading.returnStack[reading.returnStack.length - 1]; void go(previous.unitId, { ...reading, unitId: previous.unitId, scrollTop: previous.scrollTop, camera: previous.camera, returnStack: reading.returnStack.slice(0, -1) }); }}>返回引用位置</button> : null}<button ref={directoryButton} onClick={() => setDirectory(!directory)}>{directory ? '收起目录' : '展开目录'}</button><button onClick={() => setMinimap(!minimap)}>{minimap ? '收起小地图' : '展开小地图'}</button><button onClick={() => void flow.fitView({ duration: 0 })}>全图</button><button aria-pressed={tool === "read"} onClick={() => setTool("read")}>阅读工具</button><button aria-pressed={tool === "select"} onClick={() => setTool("select")}>选择工具</button><button aria-pressed={tool === "hand"} onClick={() => setTool("hand")}>手形工具</button><button ref={relationButton} onClick={() => setRelationsOpen(!relationsOpen)}>{relationsOpen ? "关闭关系" : "查看关系"}</button><label>关系 <select aria-label="关系范围" value={relationView} onChange={event => setRelationView(event.target.value)}><option value="main">主关系</option><option value="auxiliary">辅助关系</option><option value="all">全部关系</option></select></label></div>
+        <div className="board-tools">{reading?.returnStack.length ? <button onClick={() => { const previous = reading.returnStack[reading.returnStack.length - 1]; void go(previous.unitId, { ...reading, unitId: previous.unitId, scrollTop: previous.scrollTop, camera: previous.camera, returnStack: reading.returnStack.slice(0, -1) }); }}>返回引用位置</button> : null}<button ref={directoryButton} onClick={() => setDirectory(!directory)}>{directory ? '收起目录' : '展开目录'}</button><button onClick={() => setMinimap(!minimap)}>{minimap ? '收起小地图' : '展开小地图'}</button><button onClick={() => { camera.takeover(); void flow.fitView({ duration: 0 }); }}>全图</button><button aria-pressed={tool === "read"} onClick={() => setTool("read")}>阅读工具</button><button aria-pressed={tool === "select"} onClick={() => setTool("select")}>选择工具</button><button aria-pressed={tool === "hand"} onClick={() => setTool("hand")}>手形工具</button><button ref={relationButton} onClick={() => setRelationsOpen(!relationsOpen)}>{relationsOpen ? "关闭关系" : "查看关系"}</button><label>关系 <select aria-label="关系范围" value={relationView} onChange={event => setRelationView(event.target.value)}><option value="main">主关系</option><option value="auxiliary">辅助关系</option><option value="all">全部关系</option></select></label></div>
         {loadError && <div className="load-error" role="alert"><h1>课程未打开</h1><p>{loadError}</p><button onClick={() => void load()}>重新打开课程</button></div>}
         {readError && <div className="read-error" role="status">{readError}</div>}
-        {course && mounted.map(unit => { const position = graph?.layout.nodes.find(node => node.unitId === unit.id); if (!position) return null; return <div key={unit.id} className="reading-layer" style={{ transform: `translate(${viewport.x + position.x * viewport.zoom}px, ${viewport.y + position.y * viewport.zoom}px) scale(${viewport.zoom})`, visibility: viewport.zoom >= 0.55 && selected?.id === unit.id ? 'visible' : 'hidden' }}>
-          <article id="unit" data-agent-unit={unit.id} ref={element => { if (selected?.id === unit.id) articleRef.current = element; }} onScroll={event => { const current = readingRef.current; if (current && current.unitId === unit.id && Math.abs(current.scrollTop - event.currentTarget.scrollTop) > 2) persist({ ...current, scrollTop: event.currentTarget.scrollTop }); }} className="nodrag nopan nowheel"><RoughFrame id={unit.id} />
+        {course && mounted.map(unit => { const position = local.placements.find(node => node.unitId === unit.id); if (!position) return null; return <div key={unit.id} className="reading-layer" data-unit-id={unit.id} style={{ width: position.width >= 360 ? position.width : 650, transform: `translate(${viewport.x + position.x * viewport.zoom}px, ${viewport.y + position.y * viewport.zoom}px) scale(${viewport.zoom})`, visibility: viewport.zoom >= 0.55 ? 'visible' : 'hidden' }}>
+          <ReadingSurface id={unit.id} name={unit.name} position={position} baseline={graph!.layout.nodes.find(node => node.unitId === unit.id)!} active={selected?.id === unit.id} articleRef={articleRef} measure={local.measure} gesture={local.gesture} commit={place} takeover={() => camera.takeover()}>
+            <RoughFrame id={unit.id} />
+
             <h1>{unit.name}</h1><p className="unit-meta">课程重要性 {unit.rating.stars} / 5 · {unit.id}</p>{review && <ReviewControls unitId={unit.id} snapshot={review} change={status => void changeReview(unit.id, status)} confirm={(id, adjust) => void confirmReview(id, adjust)} />}<p className="outcome">{unit.outcome}</p>
             <SourceReferences citations={sourceCitations.filter(citation => citation.target?.unitId === unit.id)} onOpen={citation => sourcesPanel.current?.openCitation(citation)} />
-            {unit.id === 'KU-001' && channel.current ? <ContinuousUnitEditor course={course} channel={channel.current} disabled={closing || producerBusy}
+            {unit.id === 'KU-001' && channel.current ? <ContinuousUnitEditor course={course} channel={channel.current} disabled={closing || producerBusy || !cameraReady}
               composition={active => { composing.current = active; }} controller={instance => { continuous.current = instance; }}
               renderBlock={block => <ReadingBoundary><Block block={block} experiment={{ unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing, composition: active => { composing.current = active; } }} reading={reading} updateReading={updateReading}
                 onSource={button => { sourceTrigger.current = button; setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;
@@ -324,8 +397,9 @@ function App() {
 
 
             <footer>来源：既有数字逻辑课程单元的独立副本。编辑保留原有知识身份。</footer>
-          </article>
+          </ReadingSurface>
         </div>; })}</div>
+        {followState !== 'idle' && <div className="follow-control"><span role="status" aria-label="修改跟随">{followState === 'following' ? '正在跟随可控修改' : followState === 'paused' ? '已由你控制视野' : '可控修改已结束'}</span>{followState !== 'following' && <button onClick={() => { camera.resume(); }}>{followState === 'finished' ? '查看修改结果' : '返回并继续跟随'}</button>}</div>}
         {relationsOpen && graph && course && <RelationsPanel graph={graph} sessionId={course.sessionId} view={relationView} narrow={narrow} panelRef={relationPanel} onClose={closeRelations} onKeyDown={event => trap(event, closeRelations)} onGraph={setGraph} focusId={relationFocus} />}
         {sourceOpen && <section ref={sourceDialog} className="source-dialog" role="dialog" aria-modal="true" aria-label="TI 74153 原页" onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); closeSource(); } else if (event.key === 'Tab') { event.preventDefault(); sourceDialog.current?.querySelector<HTMLButtonElement>('button')?.focus(); } }}><button onClick={closeSource}>返回正文</button><h2>TI 74153 原页 · 第 1 页</h2><img src="./ti74153-1.png" alt="TI 74153 手册第 1 页" /></section>}
       </main>
