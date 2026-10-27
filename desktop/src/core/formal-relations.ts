@@ -98,6 +98,20 @@ export class FormalRelations {
     return transaction(this.db, () => {
       const previous = parse(this.db.prepare('SELECT result FROM cg_candidates WHERE id=?').get(command.operationId)!.result);
       if (previous.status === 'committed') return previous;
+      const { receipt, changes } = this.applyInTransaction(command);
+      const revision = receipt.revision;
+      this.db.prepare('UPDATE cg_candidates SET result=? WHERE id=?').run(json(receipt), command.operationId);
+      this.db.prepare('INSERT INTO cg_history VALUES (?, ?)').run(command.operationId, json({ operationId: command.operationId,
+        domain: 'formal-relation', actor: command.attemptId ? 'agent' : 'student', attemptId: command.attemptId,
+        taskId: command.attemptId ? String(this.db.prepare('SELECT task_id FROM cg_attempts WHERE id=?').get(command.attemptId)!.task_id) : undefined,
+        generation: this.generation(), revision, committedAt: new Date().toISOString(), changes }));
+      return receipt;
+    });
+  }
+  /** Caller owns the necessary group's transaction and its common receipt/history. */
+  applyInTransaction(command: RelationCommand): { receipt: RelationReceipt; changes: GroupHistory['changes'] } {
+    if (!this.db.isTransaction) throw new Error('正式关系组需要已有事务');
+    validateRelationCommand(command);
       this.eligible(command.attemptId);
       const basis = this.db.prepare('SELECT * FROM formal_relation_bases WHERE id=?').get(command.basisId);
       if (basis && (basis.attempt_id ?? undefined) !== command.attemptId) throw new Error('正式关系读取与提交的尝试身份不一致');
@@ -141,12 +155,6 @@ export class FormalRelations {
         generation: this.generation(), changedObjectIds: changes.map(change => change.objectId), cursor: 0 };
       receipt.cursor = appendEvent(this.db, { type: 'relations.committed', operationId: receipt.operationId, revision,
         changedObjectIds: receipt.changedObjectIds });
-      this.db.prepare('UPDATE cg_candidates SET result=? WHERE id=?').run(json(receipt), command.operationId);
-      this.db.prepare('INSERT INTO cg_history VALUES (?, ?)').run(command.operationId, json({ operationId: command.operationId,
-        domain: 'formal-relation', actor: command.attemptId ? 'agent' : 'student', attemptId: command.attemptId,
-        taskId: command.attemptId ? String(this.db.prepare('SELECT task_id FROM cg_attempts WHERE id=?').get(command.attemptId)!.task_id) : undefined,
-        generation: this.generation(), revision, committedAt: new Date().toISOString(), changes }));
-      return receipt;
-    });
+      return { receipt, changes };
   }
 }

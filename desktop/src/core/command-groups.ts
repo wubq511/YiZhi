@@ -1,3 +1,6 @@
+import type { ConsistencyPort } from './command-consistency';
+import { applyContentPatch, validatePatch } from './editor-store';
+import { patchTargets } from '../editor-api';
 import { syncAnnotations } from './annotations';
 import { readDrafts, draftScopes, draftReadVersions, draftVersion, transaction, appendEvent, eventCursor } from './save-store';
 import { randomUUID, createHash } from 'node:crypto';
@@ -19,7 +22,7 @@ const record = (value: unknown): value is Record<string, any> => !!value && type
 /** All methods run synchronously in the host-owned Worker on its course connection. */
 export class CommandGroups {
   private protections = new Map<string, EditorProtection>();
-  constructor(private db: DatabaseSync, private graph: CourseGraph, private fenceOperation: (operationId: string) => void = () => {}) {
+  constructor(private db: DatabaseSync, private graph: CourseGraph, private fenceOperation: (operationId: string) => void = () => {}, private loadUnit?: (id: string) => CourseUnit | undefined, private consistency?: ConsistencyPort) {
     db.exec(`
       CREATE TABLE IF NOT EXISTS cg_objects(id TEXT PRIMARY KEY, kind TEXT NOT NULL, value TEXT NOT NULL, version INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS cg_attempts(id TEXT PRIMARY KEY, task_id TEXT NOT NULL, generation INTEGER NOT NULL, status TEXT NOT NULL);
@@ -35,6 +38,8 @@ export class CommandGroups {
     if (!db.prepare('PRAGMA table_info(cg_bases)').all().some(row => row.name === 'read_values'))
       db.exec("ALTER TABLE cg_bases ADD COLUMN read_values TEXT NOT NULL DEFAULT '[]'");
     db.exec("UPDATE cg_bases SET read_values='[]' WHERE attempt_id IN (SELECT id FROM cg_attempts WHERE status<>'running')");
+    if (!db.prepare('PRAGMA table_info(cg_bases)').all().some(r => r.name === 'unit_id')) db.exec("ALTER TABLE cg_bases ADD COLUMN unit_id TEXT NOT NULL DEFAULT 'KU-001'");
+    if (!db.prepare('PRAGMA table_info(cg_bases)').all().some(r => r.name === 'domain_basis')) db.exec('ALTER TABLE cg_bases ADD COLUMN domain_basis TEXT');
     this.observe();
   }
   protect(input: EditorProtection) {
@@ -51,18 +56,27 @@ export class CommandGroups {
     this.protections.set(input.editorId, structuredClone(input));
   }
   private protectedWrites(ids: string[]) {
-    const { unit } = this.unit();
+    for (const row of this.db.prepare('SELECT payload FROM units').all()) {
+    const unit: CourseUnit = parse(row.payload);
     for (const protection of this.protections.values()) {
       if (protection.mode !== 'editing') continue;
       const { direct, ancestors } = draftScopes(unit, { changes: protection.blockIds.map(blockId => ({ blockId, text: '' })) } as any);
       if (ids.some(id => direct.has(id) || ancestors.has(id))) return true;
     }
+    }
     return false;
   }
   private transaction<T>(run: () => T): T { return transaction(this.db, run); }
   private generation() { return Number(this.db.prepare("SELECT value FROM metadata WHERE key='generation'").get()!.value); }
-  private unit(): { unit: CourseUnit; revision: number } {
-    const row = this.db.prepare("SELECT payload, revision FROM units WHERE id='KU-001'").get()!;
+  private unit(unitId = 'KU-001'): { unit: CourseUnit; revision: number } {
+    let row = this.db.prepare('SELECT payload, revision FROM units WHERE id=?').get(unitId);
+    if (!row) {
+      const unit = this.loadUnit?.(unitId);
+      if (!unit || unit.id !== unitId || !this.graph.nodes.some(n => n.id === unitId)) throw new Error('该知识单元正文尚未加入课程副本');
+      this.db.prepare('INSERT INTO units VALUES(?,?,1)').run(unitId,json(unit));
+      row = this.db.prepare('SELECT payload,revision FROM units WHERE id=?').get(unitId);
+    }
+    row = row!;
     return { unit: parse(row.payload), revision: Number(row.revision) };
   }
   private put(id: string, kind: string, value: unknown) {
@@ -71,7 +85,6 @@ export class CommandGroups {
   }
   /** Called inside every formal unit write transaction, including the student save path. */
   observe(explicitDependencies = new Set<string>()): GroupHistory['changes'] {
-    const { unit } = this.unit();
     syncAnnotations(this.db);
     const changed = new Set<string>();
     const memberships = new Map<string, string[]>();
@@ -86,7 +99,11 @@ export class CommandGroups {
         walk(children ?? [], block.id);
       }
     };
-    walk(unit.reading.blocks, unit.id);
+    for (const row of this.db.prepare('SELECT payload FROM units').all()) { const unit: CourseUnit = parse(row.payload); walk(unit.reading.blocks, unit.id); }
+    for (const row of this.db.prepare("SELECT id,value FROM cg_objects WHERE kind='block'").all()) if (!memberships.has(String(row.id))) {
+      this.put(String(row.id), 'block', { id: String(row.id), retired: true });
+      if (!parse(row.value).retired) changed.add(String(row.id));
+    }
     for (const row of this.db.prepare("SELECT id, value FROM cg_objects WHERE kind IN ('reference', 'dependency')").all()) {
       const relation = parse(row.value);
       for (const id of new Set([relation.sourceBlockId, relation.dependentBlockId, relation.fromBlockId, relation.toBlockId])) {
@@ -134,13 +151,14 @@ export class CommandGroups {
     return this.transaction(() => {
       const attempt = this.attempt(request.attemptId);
       if (attempt.status !== 'running' || attempt.generation !== this.generation()) throw new Error('任务尝试已停止或失效，请明确继续并重新读取');
+      const { unit } = this.unit(request.unitId);
       this.observe();
-      const { unit } = this.unit();
       const parents = new Map<string, string>();
       const walk = (blocks: ReadingBlock[], parentId: string) => {
         for (const block of blocks) { parents.set(block.id, parentId); walk(block.children ?? [], block.id); }
       };
-      walk(unit.reading.blocks, unit.id);
+      const roots = new Set<string>();
+      for (const row of this.db.prepare('SELECT payload FROM units').all()) { const current = parse(row.payload); roots.add(current.id); walk(current.reading.blocks,current.id); }
       const ids = new Set(request.objectIds);
       const relations = this.db.prepare("SELECT id, value FROM cg_objects WHERE kind IN ('reference', 'dependency')").all();
       // A fixed point includes transitive prerequisites and their structure without reading unrelated siblings.
@@ -152,7 +170,7 @@ export class CommandGroups {
           ids.add(`relations:${ancestor}`);
           ancestor = parents.get(ancestor)!;
         }
-        if (ancestor === unit.id) ids.add(`structure:${unit.id}`);
+        if (roots.has(ancestor)) ids.add(`structure:${ancestor}`);
         for (const row of relations) {
           const relation = parse(row.value);
           const endpoints = [relation.sourceBlockId, relation.dependentBlockId, relation.fromBlockId, relation.toBlockId].filter(Boolean);
@@ -164,20 +182,30 @@ export class CommandGroups {
       }
       const objects = [...ids].map(id => this.object(id));
       const basisId = randomUUID(), generation = this.generation();
-      this.db.prepare('INSERT INTO cg_bases(id, attempt_id, generation, versions, draft_versions, read_values) VALUES (?, ?, ?, ?, ?, ?)')
+      this.db.prepare('INSERT INTO cg_bases(id, attempt_id, generation, versions, draft_versions, read_values, unit_id) VALUES (?, ?, ?, ?, ?, ?, ?)')
         .run(basisId, request.attemptId, generation, json(objects.map(object => [object.id, object.version])),
-          json(draftReadVersions(this.db, ids)), json(objects));
-      return { basisId, generation, objects };
+          json(draftReadVersions(this.db, ids)), json(objects), unit.id);
+      const context = request.context ? this.consistency?.read(request) : undefined;
+      if (context) this.db.prepare('UPDATE cg_bases SET domain_basis=? WHERE id=?').run(json({ layout:context.layout, relations: {basisId:context.relations.basisId,generation:context.relations.generation,revision:context.relations.revision}, experiments:context.experiments.map(e=>({blockId:e.blockId,signature:e.signature})) }),basisId);
+      return { basisId, generation, objects, ...(context ? { context } : {}) };
     });
+  }
+  mutationBasis(attemptId: string, basisId: string) {
+    const row = this.db.prepare('SELECT * FROM cg_bases WHERE id=? AND attempt_id=?').get(basisId,attemptId);
+    if (!row || Number(row.generation) !== this.generation() || !parse(row.read_values).length) throw new Error('修改依据已释放或无效，请重新读取');
+    return { unitId: String(row.unit_id), objects: parse(row.read_values) as CommandObject[] };
   }
   commit(command: GroupCommand): GroupResult {
     if (!validId(command.operationId) || !validId(command.attemptId) || !validId(command.basisId) ||
-      !Array.isArray(command.changes) || command.changes.length < 1 || command.changes.length > 100 ||
+      !Array.isArray(command.changes) || (command.changes.length < 1 && !command.patch && !command.bundle) || command.changes.length > 100 ||
       command.changes.some(change => !record(change) || !validId(change.objectId) || !record(change.value)) ||
       new Set(command.changes.map(change => change.objectId)).size !== command.changes.length || json(command).length > 1_000_000)
       throw new Error('无效或重复的一致修改组写入范围');
+    if (command.patch) validatePatch(command.patch);
     this.fenceOperation(command.operationId);
-    return this.transaction(() => {
+    const nested = this.db.isTransaction;
+    let publish: (() => void) | undefined; let committed!: GroupResult;
+    try { committed = this.transaction(() => {
       this.observe();
       if (this.db.prepare('SELECT 1 FROM operations WHERE id=?').get(command.operationId)) throw new Error('操作身份已用于正文修改');
       const previous = this.db.prepare('SELECT * FROM cg_candidates WHERE id=?').get(command.operationId);
@@ -196,9 +224,9 @@ export class CommandGroups {
       if (attempt.status !== 'running' || attempt.generation !== this.generation())
         return retain('任务尝试已停止、中断或代际失效；候选已保留，旧回调不能重新取得资格');
       const basis = this.db.prepare('SELECT * FROM cg_bases WHERE id=?').get(command.basisId);
-      if (!basis || basis.attempt_id !== command.attemptId || Number(basis.generation) !== this.generation())
+      if (!basis || basis.unit_id !== (command.unitId ?? 'KU-001') || basis.attempt_id !== command.attemptId || Number(basis.generation) !== this.generation())
         return retain('读取凭据或课程代际已失效，请重新读取并整合；旧候选已保留');
-      if (this.protectedWrites(command.changes.map(c => c.objectId)))
+      if (this.protectedWrites([...command.changes.map(c => c.objectId), ...patchTargets(command.patch)]))
         return retain('等待当前编辑结束；同处或共同祖先候选已保留');
       const versions = new Map<string, number>(parse(basis.versions));
       for (const [id, version] of versions) {
@@ -210,9 +238,9 @@ export class CommandGroups {
       for (const id of draftKeys) if ((draftBasis[id] ?? 0) !== draftVersion(this.db, id))
         return retain(`学生输入依据已变化：${id}。请重新读取并整合；候选已保留`);
       const scope = new Set([...versions.keys(), ...command.changes.map(change => change.objectId)]);
-      const writes = new Set(command.changes.map(change => change.objectId));
+      const writes = new Set([...command.changes.map(change => change.objectId), ...patchTargets(command.patch)]);
       if (readDrafts(this.db).some(draft => {
-        const { direct, ancestors } = draftScopes(this.unit().unit, draft.input);
+        const { direct, ancestors } = draftScopes(this.unit(command.unitId).unit, draft.input);
         return [...direct].some(id => scope.has(id)) || [...ancestors].some(id => writes.has(id));
       }))
         return retain('读取或写入范围存在学生草稿，请先整合最新输入；候选已保留');
@@ -238,7 +266,8 @@ export class CommandGroups {
             return retain('来源已改写，需共同更新依赖内容或标为需要核对；候选已保留');
         }
       }
-      const { unit, revision } = this.unit();
+      const { unit, revision } = this.unit(command.unitId);
+      const beforeUnit = structuredClone(unit);
       const changes: GroupHistory['changes'] = [];
       for (const change of command.changes) {
         const before = this.object(change.objectId);
@@ -280,13 +309,31 @@ export class CommandGroups {
         changes.push({ objectId: change.objectId, before: before.version ? before.value : null, after: change.value,
           beforeVersion: before.version, afterVersion: before.version + 1 });
       }
+      if (command.patch) {
+        const needed = patchTargets(command.patch).filter(id => !command.patch!.structure?.inserted.some(b => b.id === id));
+        if (needed.some(id => !versions.has(id))) throw new Error('结构修改的必要对象尚未读取');
+        const applied = applyContentPatch(this.db, unit, command.patch);
+        const before = new Map(applied.before.map(b => [b.id, b])), after = new Map(applied.after.map(b => [b.id, b]));
+        for (const id of new Set([...before.keys(), ...after.keys()])) changes.push({ objectId: id,
+          before: before.get(id) ?? null, after: after.get(id) ?? null,
+          beforeVersion: versions.get(id) ?? 0, afterVersion: (versions.get(id) ?? 0) + 1 });
+        if (applied.structure) changes.push({ objectId: `structure:${unit.id}`, before: { blockIds: applied.structure.before }, after: { blockIds: applied.structure.after },
+          beforeVersion: versions.get(`structure:${unit.id}`)!, afterVersion: versions.get(`structure:${unit.id}`)! + 1 });
+      }
+      let related: GroupResult['related'];
+      if (command.bundle) {
+        if (!basis.domain_basis || !this.consistency) throw new Error('必要领域的读取依据缺失');
+        const applied = this.consistency.apply(command,beforeUnit,unit,parse(basis.domain_basis));
+        changes.push(...applied.changes); related=applied.receipt; publish=applied.publish;
+      }
       const nextRevision = revision + (changes.length ? 1 : 0);
       this.db.prepare('UPDATE units SET payload=?, revision=? WHERE id=?').run(json(unit), nextRevision, unit.id);
+      if (command.patch) syncAnnotations(this.db, command.patch);
       changes.push(...this.observe(new Set(command.changes.filter(change => change.objectId.startsWith('dependency:')).map(change => change.objectId))));
       const result: GroupResult = { operationId: command.operationId, attemptId: command.attemptId,
-        status: 'committed', revision: nextRevision, changedObjectIds: changes.map(change => change.objectId) };
+        status: 'committed', unitId: unit.id, ...(related ? {related} : {}), revision: nextRevision, changedObjectIds: changes.map(change => change.objectId) };
       if (changes.length && command.semanticImpact)
-        result.reviewPrompt = recordSemanticImpact(this.db, this.graph, command.semanticImpact, unit.id, nextRevision);
+        { const prompt = recordSemanticImpact(this.db, this.graph, command.semanticImpact, unit.id, nextRevision); if (prompt) result.reviewPrompt = prompt; }
       result.cursor = changes.length ? appendEvent(this.db, { type: 'group.committed', operationId: result.operationId,
         revision: nextRevision, changedObjectIds: result.changedObjectIds }) : eventCursor(this.db);
       // Successful request bodies are already represented by changed-object history; keep only dedupe facts here.
@@ -298,9 +345,21 @@ export class CommandGroups {
           committedAt: new Date().toISOString(), changes };
         this.db.prepare('INSERT INTO cg_history VALUES (?, ?)').run(command.operationId, json(history));
       }
+      this.consistency?.committed?.(result);
       this.releaseReadValues(command.basisId);
       return result;
-    });
+    }); } catch (error) {
+      if ((!command.patch && !command.bundle) || nested) throw error;
+      return this.transaction(() => {
+        const old = this.db.prepare('SELECT digest,result FROM cg_candidates WHERE id=?').get(command.operationId);
+        if (old) { if (old.digest !== digest(command)) throw error; return parse(old.result); }
+        const result: GroupResult = { operationId: command.operationId, attemptId: command.attemptId, status: 'retained', changedObjectIds: [], reason: (error as Error).message };
+        this.db.prepare('INSERT INTO cg_candidates VALUES(?,?,?,?)').run(command.operationId, digest(command), json(command), json(result));
+        return result;
+      });
+    }
+    if (committed.status === 'committed') publish?.();
+    return committed;
   }
   query(operationId: string): GroupResult | null {
     const row = this.db.prepare('SELECT result FROM cg_candidates WHERE id=?').get(operationId);
@@ -337,6 +396,7 @@ export class CommandGroups {
       const objectIds = command.changes.map(c => c.objectId), candidateId = command.operationId;
       const result = (status: CandidateCheck['status'], reason: string): CandidateCheck => ({ candidateId, status, reason, objectIds,
         ...(status === 'conflict' ? { parts: command.changes.map(c => ({ objectId: c.objectId, current: this.object(c.objectId).value, incoming: c.value })) } : {}) });
+      if (command.patch || command.bundle) return result('needs-reread', '结构一致组需要生产者重读后完整整合');
       const attempt = this.attempt(command.attemptId);
       if (attempt.status !== 'running' || attempt.generation !== this.generation()) return result('ineligible', '任务已停止或失效；保留候选供查阅');
       if (this.protectedWrites(objectIds)) return result('waiting', '等待当前编辑结束');
@@ -394,7 +454,7 @@ export class CommandGroups {
       }
       const attempt = this.attempt(command.attemptId);
       if (attempt.status !== 'running' || attempt.generation !== this.generation()) throw new Error('任务已停止或失效，不能采用其候选');
-      if (this.protectedWrites(command.changes.map(c => c.objectId))) throw new Error('请先结束该处编辑');
+      if (this.protectedWrites([...command.changes.map(c => c.objectId), ...patchTargets(command.patch)])) throw new Error('请先结束该处编辑');
       const row = this.db.prepare('SELECT read_values FROM cg_bases WHERE id=?').get(command.basisId);
       const original: CommandObject[] = row ? parse(row.read_values) : [];
       if (!original.length) throw new Error('读取依据已失效，需要生产者重新读取');

@@ -3,7 +3,7 @@ import type { CourseGraph } from '../shared';
 import type { LayoutPlacement } from '../layout';
 import { transaction } from './save-store';
 export function initializeLayout(db: DatabaseSync) {
-  db.exec('CREATE TABLE IF NOT EXISTS layout_baseline(unit_id TEXT PRIMARY KEY, x REAL NOT NULL, y REAL NOT NULL, width REAL NOT NULL)');
+  db.exec('CREATE TABLE IF NOT EXISTS layout_baseline(unit_id TEXT PRIMARY KEY, x REAL NOT NULL, y REAL NOT NULL, width REAL NOT NULL); CREATE TABLE IF NOT EXISTS layout_versions(unit_id TEXT PRIMARY KEY, version INTEGER NOT NULL)');
 }
 export function layoutGraph(db: DatabaseSync, graph: CourseGraph): CourseGraph {
   const saved = new Map(db.prepare('SELECT * FROM layout_baseline').all().map(row => [String(row.unit_id), row]));
@@ -21,6 +21,12 @@ export function saveLayout(db: DatabaseSync, graph: CourseGraph, updates: Layout
   }
   transaction(db, () => {
     const statement = db.prepare('INSERT INTO layout_baseline VALUES(?,?,?,?) ON CONFLICT(unit_id) DO UPDATE SET x=excluded.x,y=excluded.y,width=excluded.width');
-    for (const node of updates) statement.run(node.unitId, node.x, node.y, node.width);
+    const before = layoutGraph(db, graph).layout.nodes;
+    for (const node of updates) {
+      const old = before.find(n => n.unitId === node.unitId)!;
+      if (old.x === node.x && old.y === node.y && old.width === node.width) continue;
+      statement.run(node.unitId, node.x, node.y, node.width);
+      db.prepare('INSERT INTO layout_versions VALUES(?,1) ON CONFLICT(unit_id) DO UPDATE SET version=version+1').run(node.unitId);
+    }
   });
 }

@@ -31,7 +31,7 @@ class ExperimentClient {
     if (!this.view || this.pending || this.error) return;
     try {
       const v = await this.bridge.experiments.read({ sessionId: this.sessionId, instanceId: this.view.instanceId });
-      if (!this.pending && (!this.view || v.version >= this.view.version)) { this.view = v; this.emit(); }
+      if (!this.pending && (!this.view || v.version >= this.view.version)) { this.view = v; this.emit(); if(v.pendingDefinition && !v.gesture && !v.migrationError && !this.pending) this.send({kind:'migrate',baseVersion:v.version}); }
     } catch (error) { this.error = String(error); this.emit(); }
   }
   async flush(): Promise<boolean> {
@@ -47,6 +47,9 @@ class ExperimentClient {
         try {
           this.view = await this.bridge.experiments.act(command); this.jobs.shift(); this.emit();
         } catch (error) {
+          if (command.action.kind === 'migrate' && /现场已变化|等待当前/.test(String(error))) {
+            this.jobs.shift(); this.view = await this.bridge.experiments.read({sessionId:this.sessionId,instanceId:command.instanceId}); this.emit(); continue;
+          }
           this.error = String(error);
           try { this.view = await this.bridge.experiments.read({ sessionId: this.sessionId, instanceId: command.instanceId }); } catch { /* Retain the last confirmed view on transport loss. */ }
           this.emit(); return false;
@@ -137,11 +140,16 @@ export function BuiltinExperiment({ block, unitId, sessionId, active, disabled, 
     document.addEventListener('visibilitychange', update);
     return () => { observer.disconnect(); document.removeEventListener('visibilitychange', update); client.send({ kind: 'visibility', visible: false }); };
   }, [client, active, client.view?.generation]);
+  const gesture = useRef(false);
+  const beginGesture=()=>{if(!gesture.current){gesture.current=true;client.send({kind:'gesture',active:true});}};
+  const endGesture=()=>{if(gesture.current){gesture.current=false;client.send({kind:'gesture',active:false});}};
+  useEffect(()=>{window.addEventListener('pointerup',endGesture);window.addEventListener('pointercancel',endGesture);window.addEventListener('blur',endGesture);return()=>{window.removeEventListener('pointerup',endGesture);window.removeEventListener('pointercancel',endGesture);window.removeEventListener('blur',endGesture);endGesture();};},[client]);
   const v = client.view;
   const title = block.payload.title ?? (block.payload.component === 'kmap' ? '固定卡诺图 · 跨边四格' : '交互 · 多路选择');
-  return <section ref={host} inert={disabled} className="builtin-experiment nodrag nopan" role="region" aria-label={title}>
+  return <section ref={host} inert={disabled} className="builtin-experiment nodrag nopan" role="region" aria-label={title} onPointerDownCapture={beginGesture} onKeyDownCapture={e=>{if(e.key!=='Tab')beginGesture();}} onKeyUpCapture={endGesture} onCompositionStartCapture={beginGesture} onCompositionEndCapture={endGesture}>
     <h3>{title}</h3>
     {!v ? <p role="status">{client.error ?? '正在恢复实验现场…'}</p> : <>
+      {v.pendingDefinition && <div role="status" aria-label="实验定义迁移"><p>正式定义 {v.pendingDefinition.revision} 已保存；当前现场仍采用定义 {v.definition.revision}。{v.gesture ? '本次操作结束后迁移。' : v.migrationError ?? '正在接续兼容现场。'}</p>{v.migrationError && <button onClick={()=>client.send({kind:'restart',baseVersion:v.version})}>按新定义重新开始</button>}</div>}
       <p className="builtin-scope">{v.definition.kind === 'mux' ? '仅演示通道选择；不模拟器件使能端。' : v.definition.kind === 'decoder' ? '74LS138 式：使能满足时，仅选中输出为低电平。' : '固定 A / BC 示例，列按格雷顺序排列；不改变函数或自动化简。'}</p>
       <fieldset disabled={v.phase === 'pause-incomplete'}><legend>实验输入</legend>{Object.entries(localInputs ?? v.state.inputs).map(([n, value]) => <label key={n}><input type="checkbox" aria-label={n === 'showCorners' ? '显示跨边四格' : n} checked={!!value} onChange={event => {
         const next = { ...(localInputs ?? v.state.inputs), [n]: Number(event.target.checked) }; setLocalInputs(next); client.send({ kind: 'inputs', inputs: next });

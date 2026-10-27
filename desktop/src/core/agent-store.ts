@@ -88,7 +88,8 @@ export class AgentStore {
   }
   saveDraft(request: any) {
     if (!text(request.text) || !Number.isSafeInteger(request.seq) || request.seq < 1) throw new Error('输入草稿无效');
-    const context = { ...(request.target ? { target: request.target } : {}), citationIds: request.citationIds ?? [] };
+    const context = { ...(request.intent ? {intent: request.intent} : {}), ...(request.target ? { target: request.target } : {}), citationIds: request.citationIds ?? [] };
+    if (request.intent !== undefined && !['question','modify','add-to-board'].includes(request.intent)) throw new Error('请求意图无效');
     if (!Array.isArray(context.citationIds) || context.citationIds.length > 8 || context.citationIds.some((id: unknown) => !valid(id) || !this.sources.citations().some(c => c.id === id)) ||
       context.target && (!valid(context.target.unitId) || context.target.blockId !== undefined && !valid(context.target.blockId) || context.target.selectedText !== undefined && !text(context.target.selectedText, 10_000))) throw new Error('提问草稿目标或出处无效');
     return transaction(this.db, () => {
@@ -111,6 +112,7 @@ export class AgentStore {
     return this.operation(request, 'agent:submit', () => {
       this.conversation(request.conversationId);
       if (request.generation !== this.generation()) throw new Error('课程代际已变化');
+      if (request.intent !== undefined && !['question','modify','add-to-board'].includes(request.intent)) throw new Error('请求意图无效');
       if (!text(request.text) || !request.text.trim() || !valid(request.target?.unitId) ||
         (request.model !== undefined && !valid(request.model)) || !Array.isArray(request.citationIds ?? []) || (request.citationIds?.length ?? 0) > 8) throw new Error('问题或目标无效');
       const existing = this.get(request.sessionId, request.conversationId).tasks.find(t => t.status === 'running');
@@ -130,7 +132,7 @@ export class AgentStore {
         if (!citation) throw new Error('来源引用不存在');
         return { citation, version: this.sources.version(citation.versionId) };
       });
-      const snapshot: QuestionSnapshot = { text: request.text, target: { ...request.target, unitName: unit.name, revision: String(revision),
+      const snapshot: QuestionSnapshot = { intent: request.intent ?? 'question', text: request.text, target: { ...request.target, unitName: unit.name, revision: String(revision),
         ...(block ? { blockVersion: Number(this.db.prepare('SELECT version FROM cg_objects WHERE id=?').get(block.id)?.version ?? 1) } : {}) }, citations };
       const id = randomUUID(), attemptId = randomUUID(), createdAt = new Date().toISOString();
       // Same shared qualification table and generation as all producer commits, created atomically with the task.
@@ -164,7 +166,12 @@ export class AgentStore {
   }
   private message(message: AgentMessage) { this.db.prepare('INSERT INTO agent_messages VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload').run(message.id, message.taskId, JSON.stringify(message)); }
   private finish(task: AgentTask, status: AgentTask['status'], error?: string) {
-    task.status = status; task.error = error ?? null;
+    if (task.snapshot.intent && task.snapshot.intent !== 'question') {
+      const committed = task.groups?.some(g => g.status === 'committed' && g.changedObjectIds.length);
+      const unfinished = status !== 'completed' || task.mutationFailure || task.groups?.some(g => g.status === 'retained');
+      status = committed ? unfinished ? 'partial' : 'completed' : 'pending';
+    }
+    task.status = status; task.error = error ?? task.mutationFailure ?? null;
     for (const row of this.db.prepare('SELECT payload FROM agent_messages WHERE task_id=?').all(task.id)) {
       const message = parse(row.payload) as AgentMessage;
       if (message.role === 'assistant') { message.state = status === 'completed' && message.state === 'complete' ? 'complete' : 'partial'; this.message(message); }
@@ -194,6 +201,7 @@ export class AgentStore {
         if (previous?.state !== 'complete') this.message({ id, taskId: task.id, role: 'assistant', itemId: event.itemId,
           text: event.kind === 'message' ? event.text! : (previous?.text ?? '') + event.text!, state: event.kind === 'message' ? 'complete' : 'streaming' });
       } else if (event.kind === 'tool' && event.tool) {
+        if (task.snapshot.intent !== 'question' && (event.tool.output as any)?.error) task.mutationFailure = String((event.tool.output as any).error);
         this.db.prepare('INSERT INTO agent_tool_recovery VALUES(?,?,?,?,?,?,?,?,?)').run(`${task.attemptId}:${event.eventId}`, task.attemptId,
           'active-recovery', task.id, event.tool.name, JSON.stringify(event.tool.input), JSON.stringify(event.tool.output), hash(event.tool), JSON.stringify(event.tool.references));
       } else if (event.kind === 'finish') {
@@ -205,6 +213,27 @@ export class AgentStore {
         this.db.prepare('UPDATE agent_tasks SET payload=? WHERE id=?').run(JSON.stringify(task), task.id);
       }
       this.db.prepare('INSERT INTO agent_deliveries VALUES(?,?,?)').run(task.attemptId, event.eventId, digest); return task;
+    });
+  }
+  mutationProgress(taskId: string, targetId: string, stage: 'read' | 'committed' | 'retained') {
+    return transaction(this.db, () => {
+      const task = this.task(taskId);
+      task.progress = { targetId, stage, sequence: (task.progress?.sequence ?? 0) + 1 };
+      task.cursor = this.changed(task.conversationId,task.id);
+      this.db.prepare('UPDATE agent_tasks SET payload=? WHERE id=?').run(JSON.stringify(task),task.id);
+    });
+  }
+  group(result: import('../command-api').GroupResult) {
+    return transaction(this.db, () => {
+      const row = this.db.prepare('SELECT id FROM agent_tasks WHERE attempt_id=?').get(result.attemptId);
+      if (!row) return;
+      const task = this.task(String(row.id));
+      task.groups ??= [];
+      if (task.groups.some(g => g.operationId === result.operationId)) return;
+      task.groups.push(result);
+      task.cursor = this.changed(task.conversationId,task.id);
+      this.db.prepare('UPDATE agent_tasks SET payload=? WHERE id=?').run(JSON.stringify(task),task.id);
+      this.mutationProgress(task.id, result.changedObjectIds.find(id=>!id.includes(':')) ?? task.snapshot.target.blockId ?? task.snapshot.target.unitId, result.status);
     });
   }
   dispatch(action: string, p: any) {

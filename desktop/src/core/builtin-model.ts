@@ -120,3 +120,9 @@ export function convertFormula(d: BuiltinDefinition, formula: string): BuiltinDe
   } catch { /* Preserve every unsupported or incomplete edit, never reuse an old result. */ }
   return next;
 }
+
+/** Finite formula evaluation, independent of the MUX configuration's indexing path. */
+export function formulaOutputs(formula: string, names: string[]): number[] {
+  const parts = formula.split('='); if (parts.length > 2) throw new Error('有限校验要求一个完整布尔等式');
+  const fn = expression(parts.at(-1)!, names); return assignments(names).map(fn);
+}

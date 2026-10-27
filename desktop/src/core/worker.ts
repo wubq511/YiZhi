@@ -1,3 +1,5 @@
+import { AgentMutations } from './agent-mutations';
+import { CommandConsistency } from './command-consistency';
 import { Annotations } from './annotations';
 import { initializeLayout, layoutGraph, saveLayout } from './local-layout';
 import { projectLayout } from '../layout';
@@ -32,6 +34,7 @@ interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; cou
   parsing: Parsing;
   relations: FormalRelations;
   agent: AgentStore;
+  mutations: AgentMutations;
 }
 const courses = new Map<string, Course>();
 function session(id: string): Course {
@@ -100,22 +103,25 @@ function open(directory: string): OpenedCourse {
     const graph = JSON.parse(readFileSync(join(__dirname, 'fixtures/graph.json'), 'utf8')) as CourseGraph;
     initializeReviewState(db);
     const annotations = new Annotations(db);
+    let consistency!: CommandConsistency;
     const groups = new CommandGroups(db, graph, operationId => {
       annotations.fence('commands:commit', operationId);
       sources.fenceOperation('commands:commit', operationId);
       agent.fence('commands:commit', operationId);
       experiments.fenceOperation('commands:commit', operationId);
       extensions.fence('commands:commit', operationId);
-    });
+    }, sourceUnit, { read: request => consistency.read(request), apply: (...args) => consistency.apply(...args), committed: result => agent.group(result) });
     const sources = new Sources(db, canonical, sourceUnit);
     const relationCatalog = JSON.parse(readFileSync(join(__dirname, 'fixtures/relation-catalog.json'), 'utf8'));
     const relations = new FormalRelations(db, graph, { retiredUnitIds: relationCatalog.retiredUnitIds,
       get sources() { return sources.relationCatalog(relationCatalog.sources); } });
     const experiments = new BuiltinExperiments(db, sourceUnit);
+    consistency = new CommandConsistency(db,graph,relations,experiments,sources);
     const extensions = new Extensions(db, canonical);
     const parsing = new Parsing(db, canonical, sources, run => { queue = queue.then(run).catch(error => { console.error(error); }); }, workerData?.parseScheduling);
     const agent = new AgentStore(db, sources, sourceUnit);
-    const course: Course = { db, owner, agent, annotations, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
+    const mutations = new AgentMutations(db,groups,agent,sourceUnit);
+    const course: Course = { db, owner, agent, mutations, annotations, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     const result = snapshot(course);
     courses.set(canonical, course);
@@ -183,7 +189,8 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       value = layoutGraph(course.db, course.relations.graph());
     } else if (action === 'readUnit') {
       const course = session(payload.sessionId);
-      if (payload.unitId === 'KU-001') value = snapshot(course).unit;
+      const stored = course.db.prepare('SELECT payload FROM units WHERE id=?').get(payload.unitId);
+      if (stored) value = JSON.parse(String(stored.payload));
       else if (['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-035', 'KU-055', 'KU-057', 'KU-062'].includes(payload.unitId))
         value = JSON.parse(readFileSync(join(__dirname, `fixtures/unit-${payload.unitId.slice(3)}.json`), 'utf8'));
       else throw new Error('该单元正文尚未加入课程副本');
@@ -224,6 +231,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action === 'commands:resolveInput') { const c = session(payload.sessionId); value = resolveInput(c.db, payload, () => c.groups.observe()); }
     else if (action.startsWith('commands:')) value = session(payload.sessionId).groups.dispatch(action, payload);
     else if (action.startsWith('annotations:')) value = session(payload.sessionId).annotations.dispatch(action, payload);
+    else if (action.startsWith('agentMutation:')) { const m=session(payload.sessionId).mutations; value=action==='agentMutation:read'?m.read(payload):action==='agentMutation:apply'?m.apply(payload):m.query(payload); }
     else if (action.startsWith('agent:')) value = session(payload.sessionId).agent.dispatch(action, payload);
     else if (action.startsWith('parsing:')) value = await session(payload.sessionId).parsing.dispatch(action, payload);
     else if (action.startsWith('sources:')) value = await session(payload.sessionId).sources.dispatch(action, payload);

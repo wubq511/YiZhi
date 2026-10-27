@@ -1,3 +1,4 @@
+import type { AgentIntent } from '../agent-mutation-api';
 import { AgentProse } from './agent-prose';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -5,14 +6,18 @@ import type { AgentTask, Conversation, ConversationView, ExecutorStatus, Questio
 import type { SourceCitation } from '../sources-api';
 import './agent-panel.css';
 export interface AgentPanelHandle { flush(): Promise<boolean>; attachCitation(citation: SourceCitation): void }
-const taskLabel: Record<AgentTask['status'], string> = { running: '正在回答', completed: '回答已完成', failed: '回答失败', interrupted: '回答已中断', unknown: '执行结果未知' };
+const taskLabel: Record<AgentTask['status'], string> = { running: '正在回答', completed: '回答已完成', failed: '回答失败', interrupted: '回答已中断', unknown: '执行结果未知', partial: '部分完成 · 已提交组保留', pending: '待处理 · 候选尚未正式保存' };
 export const AgentPanel = forwardRef<AgentPanelHandle, {
   sessionId: string; narrow: boolean; target: QuestionTarget; targetName: string; sourceOpen: boolean;
+  prepareMutation(): Promise<void>; onMutation(task: AgentTask, phase: 'start' | 'progress' | 'finish'): Promise<void>;
   onOpenChange(open: boolean): void; openCitation(citation: SourceCitation): void;
-}>(function AgentPanel({ sessionId, narrow, target, targetName, sourceOpen, onOpenChange, openCitation }, ref) {
+}>(function AgentPanel({ sessionId, narrow, target, targetName, sourceOpen, onOpenChange, openCitation, prepareMutation, onMutation }, ref) {
   const api = window.yizhi.agent;
   const [open, setOpen] = useState(false), [conversations, setConversations] = useState<Conversation[]>([]);
   const [view, setView] = useState<ConversationView>(), [executor, setExecutor] = useState<ExecutorStatus>();
+  const [intent, setIntent] = useState<AgentIntent>('question');
+  const intentRef = useRef<AgentIntent>('question'), tracked = useRef(new Map<string,{conversationId:string;sequence:number}>());
+  const callbacks = useRef({onMutation}); callbacks.current = {onMutation};
   const [model, setModel] = useState(''), [generation, setGeneration] = useState(1);
   const [attachments, setAttachments] = useState<SourceCitation[]>([]), [selection, setSelection] = useState<QuestionTarget>();
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [draftState, setDraftState] = useState('草稿已保存');
@@ -35,7 +40,7 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
     if (dirty.current && current.current && !failed.current) {
       const id = current.current, text = draft.current, target = chosenTarget.current, citationIds = chosenCitations.current.map(c => c.id), inputSeq = ++seq.current; dirty.current = false;
       writes.current = writes.current.then(async () => {
-        try { await api.saveDraft({ sessionId, conversationId: id, seq: inputSeq, text, target, citationIds }); if (id === current.current && !dirty.current) setDraftState('草稿已保存'); }
+        try { await api.saveDraft({ sessionId, conversationId: id, seq: inputSeq, text, target, citationIds, intent: intentRef.current }); if (id === current.current && !dirty.current) setDraftState('草稿已保存'); }
         catch (error) { failed.current = true; dirty.current = true; setDraftState('草稿未保存'); setError((error as Error).message); }
       });
     }
@@ -51,6 +56,7 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
     const next = await api.get({ sessionId, conversationId: id }); await api.select({ sessionId, conversationId: id });
     const citations = next.draft.citationIds.length ? await window.yizhi.sources.citations({ sessionId }) : [];
     chosenTarget.current = next.draft.target; chosenCitations.current = citations.filter(c => next.draft.citationIds.includes(c.id));
+    intentRef.current = next.draft.intent ?? 'question'; setIntent(intentRef.current);
     current.current = id; draft.current = next.draft.text; seq.current = next.draft.seq; dirty.current = false; retrySubmit.current = null;
     if (composer.current) composer.current.value = next.draft.text;
     setView(next); setAttachments(chosenCitations.current); setSelection(chosenTarget.current); setError(''); setDraftState('草稿已保存');
@@ -61,6 +67,19 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
     void list().then(state => state.selectedId ? loadConversation(state.selectedId) : state.conversations[0] ? loadConversation(state.conversations[0].id) : create()).catch(error => setError(error.message));
     return () => { active.current = false; clearTimeout(timer.current); clearTimeout(deadline.current); };
   }, [sessionId]);
+  useEffect(() => {
+    let working = false, stopped = false;
+    const interval = setInterval(async () => {
+      if (working || !tracked.current.size) return; working = true;
+      try { for (const [taskId, seen] of tracked.current) {
+        const latest = await api.get({sessionId,conversationId:seen.conversationId}), task = latest.tasks.find(t=>t.id===taskId);
+        if (!task || stopped) continue;
+        if ((task.progress?.sequence ?? 0) > seen.sequence) { seen.sequence = task.progress!.sequence; await callbacks.current.onMutation(task,'progress'); }
+        if (task.status !== 'running') { tracked.current.delete(task.id); await callbacks.current.onMutation(task,'finish'); }
+      } } catch(error) { if(!stopped) setError((error as Error).message); } finally {working=false;}
+    },200);
+    return ()=>{stopped=true;clearInterval(interval);};
+  },[sessionId]);
   useEffect(() => { if (!open) return; let cancelled = false;
     void api.status().then(status => { if (cancelled) return; setExecutor(status); setModel(old => old || status.models.find(m => m.isDefault)?.model || status.models[0]?.model || ''); });
     const interval = setInterval(() => void refresh().catch(error => setError(error.message)), 350);
@@ -87,9 +106,13 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
   const send = async () => {
     if (!await flush() || !current.current || composing.current) return;
     const request = retrySubmit.current ?? { sessionId, conversationId: current.current, operationId: crypto.randomUUID(), generation,
-      text: draft.current, target: selection ?? attachments.at(-1)?.target ?? target, citationIds: attachments.map(c => c.id), ...(model ? { model } : {}) };
+      intent: intentRef.current, text: draft.current, target: selection ?? attachments.at(-1)?.target ?? target, citationIds: attachments.map(c => c.id), ...(model ? { model } : {}) };
     retrySubmit.current = request;
-    await api.submit(request); retrySubmit.current = null;
+    if (request.intent && request.intent !== 'question') await prepareMutation();
+    const submitted = await api.submit(request); retrySubmit.current = null;
+    if (submitted.snapshot.intent && submitted.snapshot.intent !== 'question' && submitted.status === 'running' && !tracked.current.has(submitted.id)) {
+      tracked.current.set(submitted.id,{conversationId:submitted.conversationId,sequence:0}); await onMutation(submitted,'start');
+    }
     draft.current = ''; if (composer.current) composer.current.value = ''; dirty.current = false;
     chosenTarget.current = undefined; chosenCitations.current = []; setAttachments([]); setSelection(undefined); await refresh();
   };
@@ -118,17 +141,17 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
             <button onClick={() => openCitation(citation)}>{version.title} · PDF 第 {citation.pdfPageIndex + 1} 页 · 印刷页 {citation.printedPage?.label ?? '未核对'}</button>
           </section>)}</div>}
         </section>; })}
-        {view?.tasks.map(task => <div className="agent-task" role="status" aria-label="回答状态" key={task.id}>{taskLabel[task.status]}{task.status === 'completed' && view.messages.some(m => m.taskId === task.id && m.state === 'partial') ? ' · 部分消息未确认' : ''}{task.error && <p>{task.error}</p>}</div>)}
+        {view?.tasks.map(task => <div className="agent-task" role="status" aria-label="回答状态" key={task.id}>{task.status === 'running' && task.snapshot.intent && task.snapshot.intent !== 'question' ? '正在修改 · 以正式回执为准' : taskLabel[task.status]}{task.groups?.map(group => <section key={group.operationId}>{group.status === 'committed' ? `正式保存 · ${group.changedObjectIds.length} 个变化对象` : `草稿候选 · ${group.reason}`}<details><summary>保存回执</summary><p>{group.operationId}</p><p>{group.changedObjectIds.join('、')}</p></details></section>)}{task.groups?.some(g=>g.status==='committed' && g.changedObjectIds.length>0) && <button onClick={() => void onMutation(task,'progress').then(()=>document.dispatchEvent(new CustomEvent('yizhi-view-agent-result',{detail:task.progress?.targetId ?? task.snapshot.target.unitId})))}>查看实际修改</button>}{task.status === 'completed' && view.messages.some(m => m.taskId === task.id && m.state === 'partial') ? ' · 部分消息未确认' : ''}{task.error && <p>{task.error}</p>}</div>)}
       </div>
       <div className="agent-composer">
         <p className="agent-target">提问目标：{selection ? `${selection.unitId} · 已选正文` : attachments.at(-1)?.target ? `${attachments.at(-1)!.target!.unitId} · 来源关联单元` : targetName}</p>
         {selection && <div className="agent-attachment"><blockquote>{selection.selectedText}</blockquote><button onClick={() => { chosenTarget.current = undefined; setSelection(undefined); markDirty(); }}>移除正文选文</button></div>}
         {attachments.map(c => <div className="agent-attachment" key={c.id}>{c.quote ? <blockquote>{c.quote}</blockquote> : <p>原页／选区 · 无精确选文</p>}<span>PDF 第 {c.pdfPageIndex + 1} 页 · 固定版本</span><button onClick={() => { chosenCitations.current = chosenCitations.current.filter(item => item.id !== c.id); setAttachments(chosenCitations.current); markDirty(); }}>移除出处</button></div>)}
-        <label htmlFor="agent-composer">只读提问</label><textarea id="agent-composer" ref={composer} aria-label="学习对话草稿" defaultValue={draft.current} disabled={busy} placeholder="哪里还没理解？" onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; if (dirty.current) void flush(); }} onInput={event => {
+        <label>请求方式<select aria-label="Agent 请求方式" value={intent} disabled={busy} onChange={e=>{intentRef.current=e.target.value as AgentIntent;setIntent(intentRef.current);markDirty();}}><option value="question">只读提问</option><option value="modify">修改正文与整理</option><option value="add-to-board">加入画板</option></select></label><label htmlFor="agent-composer">{intent === 'question' ? '只读提问' : '明确修改请求'}</label><textarea id="agent-composer" ref={composer} aria-label="学习对话草稿" defaultValue={draft.current} disabled={busy} placeholder="哪里还没理解？" onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; if (dirty.current) void flush(); }} onInput={event => {
           draft.current = event.currentTarget.value; markDirty();
         }} />
         <div className="agent-send"><label>模型 <select aria-label="问答模型" value={model} onChange={e => setModel(e.target.value)} disabled={!executor?.available || busy}>{executor?.models.map(m => <option key={m.model} value={m.model}>{m.displayName || m.model}</option>)}</select></label>
-          <button className="primary" disabled={busy || !executor?.available || view?.tasks.some(t => t.status === 'running')} onClick={() => void guard(async () => { if (!current.current) await create(); await send(); })}>发送问题</button></div>
+          <button className="primary" disabled={busy || !executor?.available || view?.tasks.some(t => t.status === 'running')} onClick={() => void guard(async () => { if (!current.current) await create(); await send(); })}>{intent === 'question' ? '发送问题' : '发送修改请求'}</button></div>
         <p role="status" aria-label="对话草稿保存">{draftState}</p>
         {!executor ? <p role="status">正在检测本机执行器…</p> : !executor.available ? <p role="status">生成暂不可用：{executor.error} 已保存对话仍可阅读。</p> : <details className="executor-details"><summary>本机 Codex CLI · 已连接</summary><p>{executor.version}</p><p>{executor.path}</p></details>}
         {error && <div role="alert" className="agent-error"><p>{error}</p>{failed.current && <button onClick={() => { failed.current = false; void flush(); }}>重试保存对话草稿</button>}{retrySubmit.current && <button onClick={() => void guard(send)}>核对并重试原问题</button>}</div>}
