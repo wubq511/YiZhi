@@ -1,5 +1,6 @@
 import { DescriptionRuntime } from '../agent/description-search';
 import { drawingMethods } from '../drawing-api';
+import { registerExchangeIPC } from './exchange-ipc';
 import { searchMethods } from '../search-api';
 import { annotationMethods } from '../annotation-api';
 import {registerExtensionProtocol,extensionNavigation} from './extension-protocol';
@@ -68,6 +69,7 @@ else {
     registerExtensionProtocol(core);
     registerSourceProtocols(core, join(__dirname, 'renderer'));
     registerSourceIPC(core, checkSender);
+    registerExchangeIPC(core, checkSender);
     registerAgentIPC(core, agent, checkSender);
     ipcMain.handle('description:status', event => { checkSender(event); return description.status(); });
     for (const method of ['start', 'get', 'cancel'] as const) ipcMain.handle(`description:${method}`, (event, request) => { checkSender(event); return description[method](request); });

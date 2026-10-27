@@ -37,6 +37,11 @@ export class Search {
     }
     for (const id of unitIds) db.prepare("INSERT OR IGNORE INTO search_entities(scope,id) VALUES('knowledge',?)").run(id);
   }
+  /** Newly registered authority rows are already dirtied by the existing SQLite triggers. */
+  includeImportedUnits(ids: string[], totalUnits: number) {
+    this.unitIds = [...new Set([...this.unitIds, ...ids])];
+    this.totalUnits = totalUnits;
+  }
   private entity(scope: SearchScope, id: string): Entity | undefined {
     return this.db.prepare('SELECT * FROM search_entities WHERE scope=? AND id=?').get(scope, id) as unknown as Entity | undefined;
   }
