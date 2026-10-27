@@ -24,3 +24,8 @@
 # because the recorded measurements identify those exact artifacts.
 /apps/*/dist/
 /apps/*/build/
+
+# Formal desktop runtime build/test outputs
+/desktop/dist/
+/desktop/test-results/
+/desktop/playwright-report/
