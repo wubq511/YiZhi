@@ -1,3 +1,4 @@
+import { AgentStore } from './agent-store';
 import { parentPort } from 'node:worker_threads';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, realpathSync, readFileSync } from 'node:fs';
@@ -18,6 +19,7 @@ interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; cou
   groups: CommandGroups;
   sources: Sources;
   relations: FormalRelations;
+  agent: AgentStore;
 }
 const courses = new Map<string, Course>();
 function session(id: string): Course {
@@ -88,7 +90,8 @@ function open(directory: string): OpenedCourse {
     const relationCatalog = JSON.parse(readFileSync(join(__dirname, 'fixtures/relation-catalog.json'), 'utf8'));
     const relations = new FormalRelations(db, graph, { retiredUnitIds: relationCatalog.retiredUnitIds,
       get sources() { return sources.relationCatalog(relationCatalog.sources); } });
-    const course: Course = { db, owner, sessionId: randomUUID(), graph, groups, relations, sources,
+    const agent = new AgentStore(db, sources, sourceUnit);
+    const course: Course = { db, owner, agent, sessionId: randomUUID(), graph, groups, relations, sources,
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     const result = snapshot(course);
     courses.set(canonical, course);
@@ -106,10 +109,27 @@ function save(command: SaveParagraph): SaveReceipt {
 }
 // Async validation/import shares the SAME ordered command boundary with saves, stop and close.
 let queue = Promise.resolve();
-parentPort!.on('message', message => { queue = queue.then(() => dispatch(message)); });
+const sourceReads = new Set<Promise<void>>();
+let draining = false;
+parentPort!.on('message', message => {
+  if (draining) { parentPort!.postMessage({ id: message.id, ok: false, error: '课程核心正在退出' }); return; }
+  if (message.action === 'close') draining = true;
+  if (message.action === 'sources:page') {
+    // Immutable source bytes may parse asynchronously while short core requests continue.
+    // Start after prior ordered writes; only close drains these read-only operations.
+    queue = queue.then(() => {
+      const pending = dispatch(message); sourceReads.add(pending);
+      void pending.finally(() => sourceReads.delete(pending));
+    });
+  } else queue = queue.then(() => dispatch(message));
+});
 async function dispatch({ id, action, payload }: { id: number; action: string; payload: any }) {
   try {
-    if (payload?.operationId) session(payload.sessionId).sources.fenceOperation(action, payload.operationId);
+    if (payload?.operationId) {
+      const course = session(payload.sessionId);
+      course.sources.fenceOperation(action, payload.operationId);
+      course.agent.fence(action, payload.operationId);
+    }
     let value: unknown;
     if (action === 'open') value = open(payload.directory);
     else if (action === 'read') value = snapshot(session(payload.sessionId));
@@ -148,8 +168,10 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action === 'relations:commit') value = session(payload.sessionId).relations.commit(payload);
     else if (action === 'relations:query') value = session(payload.sessionId).relations.query(payload.operationId);
     else if (action.startsWith('commands:')) value = session(payload.sessionId).groups.dispatch(action, payload);
+    else if (action.startsWith('agent:')) value = session(payload.sessionId).agent.dispatch(action, payload);
     else if (action.startsWith('sources:')) value = await session(payload.sessionId).sources.dispatch(action, payload);
     else if (action === 'close') {
+      await Promise.all(sourceReads);
       for (const course of courses.values()) { course.db.close(); course.owner.close(); }
       courses.clear();
     } else throw new Error('未知课程命令');

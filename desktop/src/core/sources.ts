@@ -288,6 +288,7 @@ export class Sources {
       return { bytes, total: version.byteLength, mediaType: version.mediaType };
     } finally { closeSync(fd); }
   }
+  citations(): SourceCitation[] { return this.db.prepare('SELECT payload FROM source_citations ORDER BY rowid').all().map(row => JSON.parse(String(row.payload))); }
   async dispatch(action: string, payload: any) {
     if (action === 'sources:importFile') return this.importFile(payload);
     if (action === 'sources:list') return this.list(payload.sessionId);
@@ -297,7 +298,7 @@ export class Sources {
     if (action === 'sources:mapPrintedPage') return this.mapPrintedPage(payload);
     if (action === 'sources:locatePrintedPage') return this.locatePrintedPage(payload);
     if (action === 'sources:cite') return this.cite(payload);
-    if (action === 'sources:citations') return this.db.prepare('SELECT payload FROM source_citations ORDER BY rowid').all().map(row => JSON.parse(String(row.payload)));
+    if (action === 'sources:citations') return this.citations();
     if (action === 'sources:setUpdateIntent') return this.setUpdateIntent(payload);
     if (action === 'sources:query') {
       const row = this.db.prepare('SELECT receipt FROM source_operations WHERE id=?').get(payload.operationId);
