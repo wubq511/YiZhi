@@ -45,8 +45,27 @@ export interface SaveReceipt {
 export interface DesktopBridge extends SaveBridge {
   commands: import('./command-api').CommandAPI;
   open(): Promise<OpenedCourse>;
+  graph(sessionId: string): Promise<CourseGraph>;
+  readUnit(sessionId: string, unitId: string): Promise<CourseUnit>;
+  readingState(sessionId: string): Promise<ReadingState | null>;
+  setReadingState(sessionId: string, state: ReadingState): Promise<void>;
   save(command: SaveParagraph): Promise<SaveReceipt>;
   onCloseRequested(listener: () => Promise<boolean>): () => void;
+}
+export interface ReadingState {
+  unitId: string;
+  expanded: Record<string, boolean>;
+  returnStack: Array<{ unitId: string; blockId: string; scrollTop: number; camera?: { x: number; y: number; zoom: number } }>;
+  camera?: { x: number; y: number; zoom: number };
+  scrollTop: number;
+}
+export interface CourseGraph {
+  nodes: Array<{ id: string; name: string; kind: string; themeId: string; themeName: string; stars: number }>;
+  groups: Array<{ id: string; name: string }>;
+  edges: Array<{ id: string; fromUnitId: string; toUnitId: string; type: string; directed: boolean; view: string; value: string; sourceRefs: Array<{ sourceId: string; pdfPages?: number[]; note?: string }>; requirementGroupId?: string }>;
+  requirementGroups: Array<{ id: string; targetUnitId: string; mode: "all" | "any"; unitIds: string[]; relationIds: string[]; value: string }>;
+  conditions: Record<string, { required: string[]; groups: string[] }>;
+  layout: { nodes: Array<{ unitId: string; x: number; y: number; width: number; height: number }>; groups: Array<any> };
 }
 
 /** A delta over a named formal revision, not an old whole-unit snapshot. */

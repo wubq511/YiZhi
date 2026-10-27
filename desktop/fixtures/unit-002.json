@@ -1,0 +1,1102 @@
+{
+  "aliases": [
+    "按权相加",
+    "除基取余",
+    "乘基取整"
+  ],
+  "id": "KU-002",
+  "internals": [
+    {
+      "kind": "method",
+      "text": "整数除基取余，余数逆序排列；小数乘基取整，整数顺序排列"
+    },
+    {
+      "kind": "condition",
+      "text": "小数转换可能不能满足有限位精度，按题目精度停止"
+    },
+    {
+      "kind": "example",
+      "text": "1010_2=10_10；167_8=119_10；0.42_8=0.53125_10；11_10=1011_2"
+    }
+  ],
+  "kind": "method",
+  "name": "非十进制与十进制互转",
+  "outcome": "能把二/八/十六进制数转成十进制，并把十进制整数和小数转成指定进制。",
+  "questionTypes": [
+    "数制转换"
+  ],
+  "rating": {
+    "evidence": {
+      "exerciseExamples": [],
+      "homeworkDirect": [
+        {
+          "basis": "stem",
+          "label": "1.13(a)",
+          "questionId": "Q-002"
+        },
+        {
+          "basis": "stem",
+          "label": "1.13(c)",
+          "questionId": "Q-003"
+        },
+        {
+          "basis": "stem",
+          "label": "1.17(a)",
+          "questionId": "Q-008"
+        },
+        {
+          "basis": "stem",
+          "label": "1.17(c)",
+          "questionId": "Q-009"
+        },
+        {
+          "basis": "stem",
+          "label": "1.65(c)",
+          "questionId": "Q-032"
+        }
+      ],
+      "referenceItems": [
+        {
+          "id": "REF-001",
+          "kind": "basic-type-list",
+          "label": "二进制基本题型（习题课 P2）"
+        }
+      ],
+      "support": [
+        {
+          "basis": "agent-analysis",
+          "label": "补充题 2(a)",
+          "questionId": "Q-038"
+        },
+        {
+          "basis": "agent-analysis",
+          "label": "补充题 2(b)",
+          "questionId": "Q-039"
+        }
+      ]
+    },
+    "rationale": "习题课明确列出数制转换，且多道作业直接要求二/八/十六进制与十进制互转。",
+    "stars": 5,
+    "supportAdjustment": null
+  },
+  "reading": {
+    "blocks": [
+      {
+        "id": "RB-TH-01-20-method-overview",
+        "kind": "paragraph",
+        "payload": {
+          "text": "进制互转的两条主线由权展开式 N_r = Σ aᵢ·rⁱ（见 KU-001）直接决定：从 r 进制求十进制值，就是把右边算完，用「按权相加法」；从十进制求 r 进制，就是已知和反推各位数码，整数部分用「除基取余法」，小数部分用「乘基取整法」。常用方法分别对应这三个方向：非十进制转十进制按权相加，十进制整数转 r 进制用除基取余，十进制纯小数转 r 进制用乘基取整。先辨认方向，再选合适的方法；这些是便于操作的算法，并不排除用位权等价关系反向求数码。混合小数（如 11.375₁₀）必须整数、小数分开各自转换，再合起来写。本单元所有方法对二、八、十六进制通用，基数 r 分别取 2、8、16，十六进制数码 A~F 先按 KU-001 的对应表换成 10~15 再参与运算。课件 C01 第 30 页给按权相加的五个算式（例 5），第 31 页给基数乘除法的完整算式（除 2 取余、乘 2 取整，并说明八/十六进制同理），第 32、33 页分别给整数除基取余与小数乘基取整的推导。"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 30 页例 5 按权相加算式与第 31 页基数乘除法算式",
+            "pdfPages": [
+              30,
+              31
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-21-weights-addition-formula",
+        "kind": "formula",
+        "payload": {
+          "latex": "(a_{n-1}\\cdots a_1 a_0)_{r} = a_{n-1}\\,r^{n-1} + \\cdots + a_1\\,r^{1} + a_0\\,r^{0}"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "按权相加：逐位乘 r 的幂后求和，第 30 页例 5 的通式",
+            "pdfPages": [
+              30
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-22a-example-Q002-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "四位二进制数 1010 各位权从左到右为 2³=8、2²=4、2¹=2、2⁰=1。",
+                "按权相加：1010₂ = 1×2³ + 0×2² + 1×2¹ + 0×2⁰ = 8 + 0 + 2 + 0。",
+                "求和得 10，故 1010₂ = (10)₁₀。"
+              ]
+            },
+            "role": "core",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-22-example-Q002",
+        "kind": "example",
+        "payload": {
+          "answerNature": "derived-solution",
+          "hint": "从最高位起写权 2³、2²、2¹、2⁰，逐位「数码×权」后求和。",
+          "questionId": "Q-002",
+          "title": "例题 · 1010₂ 转十进制（习题 1.13(a)）"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "作业首页题号清单与教材 P23 习题 1.13(a) 原页",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          },
+          {
+            "note": "第 30 页例 5 同型算式 1010₂=8+2=10",
+            "pdfPages": [
+              30
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-23a-example-Q003-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "11110000 是八位二进制数，各位权从左到右为 2⁷、2⁶、2⁵、2⁴、2³、2²、2¹、2⁰。",
+                "四个 1 位于权 2⁷、2⁶、2⁵、2⁴，四个 0 所在位贡献为 0。",
+                "按权相加：11110000₂ = 1×2⁷ + 1×2⁶ + 1×2⁵ + 1×2⁴ = 128 + 64 + 32 + 16。",
+                "求和得 240，故 11110000₂ = (240)₁₀。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-23-example-Q003",
+        "kind": "example",
+        "payload": {
+          "answerNature": "derived-solution",
+          "hint": "八个二进制位的权从 2⁷ 到 2⁰；只有数码 1 的位才贡献非零项。",
+          "questionId": "Q-003",
+          "title": "例题 · 11110000₂ 转十进制（习题 1.13(c)）"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "作业首页题号清单与教材 P23 习题 1.13(c) 原页",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          },
+          {
+            "note": "第 30 页按权相加算式",
+            "pdfPages": [
+              30
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-24a-example-Q008-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "十六进制数码对应：A=10（B~F 依次为 11~15）。",
+                "按权相加：A5₁₆ = 10×16¹ + 5×16⁰ = 160 + 5。",
+                "求和得 165，故 A5₁₆ = (165)₁₀。"
+              ]
+            },
+            "role": "core",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-24-example-Q008",
+        "kind": "example",
+        "payload": {
+          "answerNature": "derived-solution",
+          "hint": "先把字母 A 换成十进制值 10，再按十六进制权展开。",
+          "questionId": "Q-008",
+          "title": "例题 · A5₁₆ 转十进制（习题 1.17(a)）"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "作业首页题号清单与教材 P23 习题 1.17(a) 原页",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          },
+          {
+            "note": "第 30 页例 5 同型算式 1C4₁₆=256+192+4=452",
+            "pdfPages": [
+              30
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-25a-example-Q009-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "十六进制数码对应：F=15。",
+                "按权相加：FFFF₁₆ = 15×16³ + 15×16² + 15×16¹ + 15×16⁰ = 15×(4096 + 256 + 16 + 1)。",
+                "括号内为 4369，故 FFFF₁₆ = 15×4369 = (65535)₁₀。",
+                "验算：n 位全 1 的二进制数等于 2ⁿ−1，FFFF₁₆ = 1111111111111111₂（每位 F 对应 4 个 1），2¹⁶−1 = 65535 ✓。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-25-example-Q009",
+        "kind": "example",
+        "payload": {
+          "answerNature": "derived-solution",
+          "hint": "F=15；四位全是 F 时可提公因子 15×(16³+16²+16¹+16⁰)，并用 2¹⁶−1 验算。",
+          "questionId": "Q-009",
+          "title": "例题 · FFFF₁₆ 转十进制（习题 1.17(c)）"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "作业首页题号清单与教材 P23 习题 1.17(c) 原页",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          },
+          {
+            "note": "第 30 页十六进制按权相加算式",
+            "pdfPages": [
+              30
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-26-int-div-steps",
+        "kind": "steps",
+        "payload": {
+          "items": [
+            "第 1 步：写出十进制整数 N 与目标基数 r。",
+            "第 2 步：用 r 去除 N，记下商 Q 和余数 a₀（a₀ ∈ {0,…,r−1}，即 r 进制表示的最低位）。",
+            "第 3 步：继续用 r 除商 Q，得新商与新余数 a₁；如此反复，直到商为 0 为止。",
+            "第 4 步：把全部余数按「最后一个余数在最左」的顺序排列，即先得的是低位、后得的是高位（余数逆序读出）。",
+            "原理（第 32 页推导）：N = r·Q + a₀，对 Q 反复套用即 N = a₀ + a₁r + a₂r² + …，恰好是 N 的 r 进制权展开式，所以余数就是各位数码。"
+          ]
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 31 页整数除 2 取余算式与第 32 页 N=2Q+a₀ 推导及 11→1011 竖式",
+            "pdfPages": [
+              31,
+              32
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-27a-example-11-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "11 ÷ 2 = 5 余 1（最低位 a₀=1）。",
+                "5 ÷ 2 = 2 余 1（a₁=1）。",
+                "2 ÷ 2 = 1 余 0（a₂=0）。",
+                "1 ÷ 2 = 0 余 1（a₃=1，商为 0，停止）。",
+                "余数自下而上（逆序）排列得 1011，故 11₁₀ = (1011)₂。验算：按权相加 1011₂ = 8+2+1 = 11 ✓。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-27-example-11-to-1011",
+        "kind": "example",
+        "payload": {
+          "answerNature": "authored-example",
+          "hint": "第 32 页竖式：11→5(余1)→2(余1)→1(余0)→0(余1)，余数自下而上读。",
+          "problem": "用除基取余法把十进制整数 11 转换成二进制数，写出每一步的商和余数。",
+          "title": "例题 · 11₁₀ 转二进制（除 2 取余竖式）"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "第 31 页除 2 取余算式与第 32 页 11→1011 竖式原页",
+            "pdfPages": [
+              31,
+              32
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-28-frac-mul-steps",
+        "kind": "steps",
+        "payload": {
+          "items": [
+            "第 1 步：写出十进制纯小数 F 与目标基数 r。",
+            "第 2 步：用 r 乘 F，记下乘积的整数部分 b₁（只能是 0 或 1，…，r−1，即 r 进制小数第一位）与小数部分 F₁。",
+            "第 3 步：继续用 r 乘小数部分 F₁，取整数部分得 b₂；如此反复，直到小数部分变为 0（转换终止）或达到题目要求的位数。",
+            "第 4 步：把取得的整数部分按先后顺序排列在小数点后，即先得的是高位（整数部分顺序读出）。",
+            "原理（第 33 页推导）：小数 F = b₁·r⁻¹ + 余下部分，逐次乘 r 把 b₁、b₂、… 逐位「提到」整数位置，与按权展开的小数部分一一对应。"
+          ]
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 31 页小数乘 2 取整算式与第 33 页 0.625→0.101 推导原页",
+            "pdfPages": [
+              31,
+              33
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-29a-example-0625-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "0.625 × 2 = 1.25，取整数部分 1（b₁=1），剩余小数 0.25。",
+                "0.25 × 2 = 0.5，取整数部分 0（b₂=0），剩余小数 0.5。",
+                "0.5 × 2 = 1.0，取整数部分 1（b₃=1），剩余小数 0，转换终止。",
+                "整数部分按取得顺序排列在小数点后得 0.101，故 0.625₁₀ = (0.101)₂。验算：按权相加 0.101₂ = 0.5 + 0.125 = 0.625 ✓。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-29-example-0625-to-0101",
+        "kind": "example",
+        "payload": {
+          "answerNature": "authored-example",
+          "hint": "第 33 页竖式：0.625×2=1.25、0.25×2=0.5、0.5×2=1.0，整数部分依次是 1、0、1。",
+          "problem": "用乘基取整法把十进制小数 0.625 转换成二进制数，写出每一步的整数部分与剩余小数。",
+          "title": "例题 · 0.625₁₀ 转二进制（乘 2 取整竖式）"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "第 31 页乘 2 取整算式与第 33 页 0.625→0.101 竖式原页",
+            "pdfPages": [
+              31,
+              33
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-30a-example-042-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "小数点后第 1 位的权是 8⁻¹ = 0.125，第 2 位的权是 8⁻² = 0.015625。",
+                "按权相加：0.42₈ = 4×8⁻¹ + 2×8⁻² = 4×0.125 + 2×0.015625 = 0.5 + 0.03125。",
+                "求和得 0.53125，故 0.42₈ = (0.53125)₁₀（与课件第 30 页例 5 一致）。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-30-example-042-oct",
+        "kind": "example",
+        "payload": {
+          "answerNature": "authored-example",
+          "hint": "小数两位的权是 8⁻¹=0.125 和 8⁻²=0.015625。",
+          "problem": "用按权相加法把八进制小数 0.42 转换成十进制数。",
+          "title": "例题 · 0.42₈ 转十进制（小数按权相加）"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "第 30 页例 5 原式 0.42₈=0.5+0.03125=0.53125",
+            "pdfPages": [
+              30
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-31-precision-callout",
+        "kind": "callout",
+        "payload": {
+          "text": "精度边界与易错点：① 乘基取整可能永远取不尽——0.4₁₀ 转二进制时乘 2 的整数部分循环出现 0、1、1、0、…（前 8 位 01100110，之后无限循环），这类小数在二进制中无法写成有限位；转换到「小数部分恰好为 0」只对特殊值成立（如 0.625），一般按题目要求的位数停止。② 有限小数的判定条件：十进制分数约分后分母的质因子必须全落在目标基数的质因子内——目标为 2、8、16（质因子只有 2）时，分母只能是 2 的幂（0.5、0.25、0.75、0.8125 有限；0.4、0.6、0.1 无限循环）。③ 除基取余的余数必须逆序读（先得低位），乘基取整的整数部分必须顺序读（先得高位）——两个方向相反，混用是最常见错误。④ 混合小数分两部分分别转换后再合写，整数部分除到商 0、小数部分乘到精度满足。⑤ 十六进制转换时先把 A~F 换成 10~15 再乘除；反过来余数/整数部分超过 9 时写成对应字母（10=A、11=B、…、15=F）。"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 31 页 0.4→0.0110… 无限小数算式（满足精度为止）原页",
+            "pdfPages": [
+              31
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-32a-example-Q032-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "按 BCD 定义（习题 1.64：十进制数字用 4 位二进制码表示，如 37₁₀ = 0011 0111_BCD）分组译码：10010101_BCD 按 4 位一组分为 1001 | 0101，即 9 | 5，故该 BCD 码表示十进制数 95。",
+                "用除 2 取余法把 95 转为二进制：95 ÷ 2 = 47 余 1；47 ÷ 2 = 23 余 1；23 ÷ 2 = 11 余 1；11 ÷ 2 = 5 余 1；5 ÷ 2 = 2 余 1；2 ÷ 2 = 1 余 0；1 ÷ 2 = 0 余 1。",
+                "余数逆序排列得 1011111，故 10010101_BCD = (1011111)₂（验算：64+16+8+4+2+1 = 95 ✓）。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-32-example-Q032",
+        "kind": "example",
+        "payload": {
+          "answerNature": "derived-solution",
+          "hint": "BCD 用 4 位二进制表示 1 位十进制数字：先按 4 位一组译回十进制，再对得到的十进制数用除 2 取余。",
+          "questionId": "Q-032",
+          "title": "例题 · 10010101_BCD 转二进制（习题 1.65(c)，BCD 定义见习题 1.64）"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "作业首页题号清单与教材 P25 习题 1.65(c) 及 1.64 BCD 定义原页；原页数字为 10010101（与地图 taskSummary 旧记 01101001 不同，以原页为准）",
+            "pdfPages": [
+              1,
+              5
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          },
+          {
+            "note": "第 31/32 页除 2 取余法用于第二步 95→二进制",
+            "pdfPages": [
+              31,
+              32
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-33a-exercise-selftest-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "① 45 ÷ 2 = 22 余 1；22 ÷ 2 = 11 余 0；11 ÷ 2 = 5 余 1；5 ÷ 2 = 2 余 1；2 ÷ 2 = 1 余 0；1 ÷ 2 = 0 余 1；余数逆序得 101101，故 45₁₀ = (101101)₂。按 4 位分组 0010 1101 得 2D，故 45₁₀ = (2D)₁₆。",
+                "② 0.68₁₆ = 6×16⁻¹ + 8×16⁻² = 6×0.0625 + 8×0.00390625 = 0.375 + 0.03125 = 0.40625₁₀。反算：0.40625×16 = 6.5，取整 6，余 0.5；0.5×16 = 8.0，取整 8，余 0，终止，故 0.40625₁₀ = (0.68)₁₆ ✓。",
+                "③ 45 ÷ 16 = 2 余 13（13=D，即最低位）；2 ÷ 16 = 0 余 2（最高位）；余数逆序得 2D，故 45₁₀ = (2D)₁₆，与 ① 按 4 位分组的结果一致 ✓。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": [
+              {
+                "note": "题型对应第 30 页例 5 的 0.68₁₆ 按权相加与第 31 页基数乘除法",
+                "pdfPages": [
+                  30,
+                  31
+                ],
+                "sourceId": "SRC-C01",
+                "versionId": "VER-SRC-C01-42c5e893c129",
+                "visualStatus": "verified"
+              }
+            ]
+          }
+        ],
+        "id": "RB-TH-01-33-exercise-selftest",
+        "kind": "exercise",
+        "payload": {
+          "answerNature": "self-test",
+          "hint": "① 45 连除 2 的余数逆序排列；③ 45 ÷ 16 = 2 余 13，13 对应字母 D；② 0.68₁₆ = 6×0.0625 + 8×0.00390625。",
+          "problem": "① 用除基取余法把 45₁₀ 转成二进制数，再把结果写成十六进制数（连除 16 或按 4 位分组均可）；② 用乘基取整法把 0.68₁₆ 换个方向自测：先按权相加求 0.68₁₆ 的十进制值，再用乘 16 取整把该十进制值转回十六进制小数；③ 用除 16 取余法把 45₁₀ 直接转成十六进制。",
+          "title": "练习 · 三个方向各练一题（自测）"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "题型对应第 30 页例 5 与第 31 页基数乘除法算式",
+            "pdfPages": [
+              30,
+              31
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-34-next-unit-reference",
+        "kind": "knowledge-reference",
+        "payload": {
+          "intent": "十进制转八/十六进制的快捷路径：先按本单元除 2 取余/乘 2 取整转成二进制，再按 3 位、4 位分组转八/十六进制（或反向），见 KU-003《二进制、八进制与十六进制互转》。",
+          "targetUnitId": "KU-003"
+        },
+        "role": "supplement",
+        "sourceRefs": []
+      }
+    ],
+    "coverage": [
+      {
+        "coreBlockIds": [
+          "RB-TH-01-20-method-overview",
+          "RB-TH-01-21-weights-addition-formula",
+          "RB-TH-01-22-example-Q002",
+          "RB-TH-01-24-example-Q008",
+          "RB-TH-01-26-int-div-steps",
+          "RB-TH-01-28-frac-mul-steps",
+          "RB-TH-01-31-precision-callout"
+        ],
+        "goal": "能把二/八/十六进制数转成十进制，并把十进制整数和小数转成指定进制（KU-002 outcome）",
+        "materials": [
+          {
+            "blockIds": [
+              "RB-TH-01-23-example-Q003",
+              "RB-TH-01-25-example-Q009",
+              "RB-TH-01-27-example-11-to-1011",
+              "RB-TH-01-29-example-0625-to-0101",
+              "RB-TH-01-30-example-042-oct",
+              "RB-TH-01-32-example-Q032"
+            ],
+            "kind": "example",
+            "status": "verified"
+          },
+          {
+            "blockIds": [
+              "RB-TH-01-33-exercise-selftest"
+            ],
+            "kind": "exercise",
+            "status": "verified"
+          },
+          {
+            "blockIds": [
+              "RB-TH-01-26-int-div-steps",
+              "RB-TH-01-28-frac-mul-steps"
+            ],
+            "kind": "method",
+            "status": "verified"
+          },
+          {
+            "blockIds": [
+              "RB-TH-01-26-int-div-steps",
+              "RB-TH-01-28-frac-mul-steps"
+            ],
+            "kind": "derivation",
+            "status": "verified"
+          },
+          {
+            "kind": "figure",
+            "reason": "本单元原页均为文字算式页（按权相加、除基取余竖式、乘基取整竖式），无电路图/卡诺图/波形图需要绘制；除法与乘法竖式已在 steps 块逐行复现",
+            "status": "not-applicable"
+          },
+          {
+            "kind": "interactive",
+            "reason": "进制互转为纯数值方法，复习画板现有 mux/decoder/kmap 组件均不适用",
+            "status": "not-applicable"
+          }
+        ],
+        "note": "已逐页目视核对 C01 第 30、31、32、33 页渲染图（pages/c01-p30-30.png、c01-p31-31.png、c01-p32-32.png、c01-p33-33.png）与 HW01 第 1、3、5 页渲染图（pages/hw01-p01-1.png、hw01-p03-3.png、hw01-p05-5.png，其中 hw01-p05 经放大裁剪二次确认 1.65(c) 数字）。勘误：地图 Q-032 taskSummary 写 01101001_BCD，原页实为 10010101_BCD → 95₁₀ → 1011111₂，正文与 questionUpdates 均以原页为准（未改权威地图）。全部数值经 content-audit.py 独立计算复核（1010₂=10、11110000₂=240、A5₁₆=165、FFFF₁₆=65535、10010101_BCD→95→1011111₂、11→1011、0.625→0.101、0.42₈=0.53125、0.4 无限循环前 8 位 01100110、0.68₁₆=0.40625、45→101101₂/2D₁₆ 等）。",
+        "readingStatus": "passed",
+        "sourceRefs": [
+          {
+            "note": "按权相加（例 5）、基数乘除法算式、整数除基取余与小数乘基取整推导的全部原页",
+            "pdfPages": [
+              30,
+              31,
+              32,
+              33
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          },
+          {
+            "note": "作业首页题号清单、教材 P23（1.13/1.17）与教材 P25（1.64/1.65(c)）原页",
+            "pdfPages": [
+              1,
+              3,
+              5
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "visualStatus": "verified"
+      }
+    ],
+    "revision": 1,
+    "schemaVersion": "review-reading-1",
+    "status": "complete"
+  },
+  "sourceRefs": [
+    {
+      "note": "非十进制与十进制互转：按权相加法把二/八/十六进制转为十进制",
+      "pdfPages": [
+        30
+      ],
+      "sourceId": "SRC-C01",
+      "versionId": "VER-SRC-C01-42c5e893c129",
+      "visualStatus": "verified"
+    },
+    {
+      "note": "非十进制与十进制互转：十进制整数除基取余、小数乘基取整",
+      "pdfPages": [
+        31,
+        32,
+        33
+      ],
+      "sourceId": "SRC-C01",
+      "versionId": "VER-SRC-C01-42c5e893c129",
+      "visualStatus": "verified"
+    }
+  ],
+  "summary": "非十进制转十进制用按权相加；十进制整数用除基取余，小数用乘基取整。",
+  "themeId": "TH-01",
+  "theme": {
+    "id": "TH-01",
+    "lessonId": "L01",
+    "name": "数制与数制转换",
+    "coreOutcome": "能在十进制、二进制、八进制、十六进制之间准确转换，并按权解释一个数的值。",
+    "sourceRefs": [
+      {
+        "sourceId": "SRC-C01",
+        "pdfPages": [
+          20,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34
+        ],
+        "visualStatus": "verified",
+        "note": "主题范围页；具体单元拆分见 units",
+        "versionId": "VER-SRC-C01-42c5e893c129"
+      }
+    ],
+    "rating": {
+      "stars": 5,
+      "rationale": "主题核心的多类数制转换被习题课基本题型明确列出，并被多次作业直接考查。"
+    }
+  },
+  "questions": [
+    {
+      "id": "MAP-001",
+      "questionId": "Q-002",
+      "unitId": "KU-002",
+      "role": "direct",
+      "basis": "stem",
+      "note": "按权展开求和，属于非十进制转十进制的直接操作",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-002",
+        "kind": "homework",
+        "label": "1.13(a)",
+        "parentId": "Q-001",
+        "questionTypes": [
+          "数制转换"
+        ],
+        "solution": "据题干推导（教材习题无官方答案）：按权相加 1010₂ = 1×2³ + 0×2² + 1×2¹ + 0×2⁰ = 8 + 0 + 2 + 0 = (10)₁₀。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "教材 P23 的 1.13(a)",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "将下列无符号二进制数转化为十进制数。a) 1010₂",
+        "taskSummary": "将 1010₂ 转换为十进制。"
+      },
+      "unit": {
+        "id": "KU-002",
+        "name": "非十进制与十进制互转",
+        "kind": "method",
+        "themeId": "TH-01",
+        "themeName": "数制与数制转换",
+        "stars": 5,
+        "questionTypes": [
+          "数制转换"
+        ]
+      }
+    },
+    {
+      "id": "MAP-003",
+      "questionId": "Q-003",
+      "unitId": "KU-002",
+      "role": "direct",
+      "basis": "stem",
+      "note": "按权展开求和",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-003",
+        "kind": "homework",
+        "label": "1.13(c)",
+        "parentId": "Q-001",
+        "questionTypes": [
+          "数制转换"
+        ],
+        "solution": "据题干推导（教材习题无官方答案）：按权相加 11110000₂ = 1×2⁷ + 1×2⁶ + 1×2⁵ + 1×2⁴ = 128 + 64 + 32 + 16 = (240)₁₀。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "教材 P23 的 1.13(c)",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "将下列无符号二进制数转化为十进制数。c) 11110000₂",
+        "taskSummary": "将 11110000₂ 转换为十进制。"
+      },
+      "unit": {
+        "id": "KU-002",
+        "name": "非十进制与十进制互转",
+        "kind": "method",
+        "themeId": "TH-01",
+        "themeName": "数制与数制转换",
+        "stars": 5,
+        "questionTypes": [
+          "数制转换"
+        ]
+      }
+    },
+    {
+      "id": "MAP-009",
+      "questionId": "Q-008",
+      "unitId": "KU-002",
+      "role": "direct",
+      "basis": "stem",
+      "note": "按权展开求和",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-008",
+        "kind": "homework",
+        "label": "1.17(a)",
+        "parentId": "Q-007",
+        "questionTypes": [
+          "数制转换"
+        ],
+        "solution": "据题干推导（教材习题无官方答案）：A = 10，按权相加 A5₁₆ = 10×16¹ + 5×16⁰ = 160 + 5 = (165)₁₀。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "教材 P23 的 1.17(a)",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "将下列十六进制数转换为十进制数。a) A5₁₆",
+        "taskSummary": "将 A5₁₆ 转换为十进制。"
+      },
+      "unit": {
+        "id": "KU-002",
+        "name": "非十进制与十进制互转",
+        "kind": "method",
+        "themeId": "TH-01",
+        "themeName": "数制与数制转换",
+        "stars": 5,
+        "questionTypes": [
+          "数制转换"
+        ]
+      }
+    },
+    {
+      "id": "MAP-011",
+      "questionId": "Q-009",
+      "unitId": "KU-002",
+      "role": "direct",
+      "basis": "stem",
+      "note": "按权展开求和",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-009",
+        "kind": "homework",
+        "label": "1.17(c)",
+        "parentId": "Q-007",
+        "questionTypes": [
+          "数制转换"
+        ],
+        "solution": "据题干推导（教材习题无官方答案）：F = 15，按权相加 FFFF₁₆ = 15×16³ + 15×16² + 15×16¹ + 15×16⁰ = 15×(4096 + 256 + 16 + 1) = 15×4369 = (65535)₁₀ = 2¹⁶ − 1。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "教材 P23 的 1.17(c)",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "将下列十六进制数转换为十进制数。c) FFFF₁₆",
+        "taskSummary": "将 FFFF₁₆ 转换为十进制。"
+      },
+      "unit": {
+        "id": "KU-002",
+        "name": "非十进制与十进制互转",
+        "kind": "method",
+        "themeId": "TH-01",
+        "themeName": "数制与数制转换",
+        "stars": 5,
+        "questionTypes": [
+          "数制转换"
+        ]
+      }
+    },
+    {
+      "id": "MAP-035",
+      "questionId": "Q-032",
+      "unitId": "KU-002",
+      "role": "direct",
+      "basis": "stem",
+      "note": "先按 BCD 读出十进制，再完成十进制到二进制转换",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-032",
+        "kind": "homework",
+        "label": "1.65(c)",
+        "parentId": "Q-029",
+        "questionTypes": [
+          "数制转换"
+        ],
+        "solution": "据题干推导（教材习题无官方答案）：BCD 每 4 位二进制表示 1 位十进制数字，10010101_BCD 按 4 位一组为 1001 | 0101，即 9 | 5，表示十进制 95；用除 2 取余法：95 → 47(余1) → 23(余1) → 11(余1) → 5(余1) → 2(余1) → 1(余0) → 0(余1)，余数逆序得 (1011111)₂。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "教材 P25 的 1.65(c)",
+            "pdfPages": [
+              1,
+              5
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "回答下列与 BCD 系统相关的问题（BCD 定义见习题 1.64）。c) 将 10010101_BCD 转换为二进制数。",
+        "taskSummary": "将 10010101_BCD 转换为二进制。"
+      },
+      "unit": {
+        "id": "KU-002",
+        "name": "非十进制与十进制互转",
+        "kind": "method",
+        "themeId": "TH-01",
+        "themeName": "数制与数制转换",
+        "stars": 5,
+        "questionTypes": [
+          "数制转换"
+        ]
+      }
+    },
+    {
+      "id": "MAP-043",
+      "questionId": "Q-038",
+      "unitId": "KU-002",
+      "role": "support",
+      "basis": "agent-analysis",
+      "note": "先确认二进制数值",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-038",
+        "kind": "homework",
+        "label": "补充题 2(a)",
+        "parentId": "Q-037",
+        "questionTypes": [
+          "数制转换"
+        ],
+        "solution": "据题干推导（原作业无官方答案）：(111110)₂ = (62)₁₀。8421 码：6→0110，2→0010，得 0110 0010。格雷码按 G = B⊕(B≫1)：G5..G0 = 1, 1⊕1=0, 1⊕1=0, 1⊕1=0, 1⊕1=0, 0⊕1=1，得 (100001)_Gray。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "作业补充题 2(a)",
+            "pdfPages": [
+              1
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "用 8421 码和格雷码表示 (111110)₂。",
+        "taskSummary": "用 8421 码和格雷码表示 111110₂。"
+      },
+      "unit": {
+        "id": "KU-002",
+        "name": "非十进制与十进制互转",
+        "kind": "method",
+        "themeId": "TH-01",
+        "themeName": "数制与数制转换",
+        "stars": 5,
+        "questionTypes": [
+          "数制转换"
+        ]
+      }
+    },
+    {
+      "id": "MAP-046",
+      "questionId": "Q-039",
+      "unitId": "KU-002",
+      "role": "support",
+      "basis": "agent-analysis",
+      "note": "先确认二进制数值",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-039",
+        "kind": "homework",
+        "label": "补充题 2(b)",
+        "parentId": "Q-037",
+        "questionTypes": [
+          "数制转换"
+        ],
+        "solution": "据题干推导（原作业无官方答案）：(1100110)₂ = (102)₁₀。8421 码：1→0001，0→0000，2→0010，得 0001 0000 0010。格雷码按 G = B⊕(B≫1)：G6..G0 = 1, 1⊕1=0, 0⊕1=1, 0⊕0=0, 1⊕0=1, 1⊕1=0, 0⊕1=1，得 (1010101)_Gray。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "作业补充题 2(b)",
+            "pdfPages": [
+              1
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "用 8421 码和格雷码表示 (1100110)₂。",
+        "taskSummary": "用 8421 码和格雷码表示 1100110₂。"
+      },
+      "unit": {
+        "id": "KU-002",
+        "name": "非十进制与十进制互转",
+        "kind": "method",
+        "themeId": "TH-01",
+        "themeName": "数制与数制转换",
+        "stars": 5,
+        "questionTypes": [
+          "数制转换"
+        ]
+      }
+    }
+  ],
+  "relations": [
+    {
+      "id": "REL-028",
+      "fromUnitId": "KU-001",
+      "toUnitId": "KU-002",
+      "type": "requires",
+      "directed": true,
+      "value": "按权相加与除基、乘基都围绕位权和基数展开，先理解权展开可减少对两套转换规则的机械记忆。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C01",
+          "pdfPages": [
+            20,
+            30,
+            31,
+            32,
+            33
+          ],
+          "visualStatus": "verified",
+          "note": "位权与数制转换",
+          "versionId": "VER-SRC-C01-42c5e893c129"
+        }
+      ],
+      "view": "auxiliary",
+      "status": "approved"
+    }
+  ]
+}

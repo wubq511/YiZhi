@@ -1,0 +1,576 @@
+{
+  "aliases": [
+    "bit",
+    "Byte",
+    "Nibble",
+    "Word",
+    "GB",
+    "MB"
+  ],
+  "id": "KU-004",
+  "internals": [
+    {
+      "kind": "definition",
+      "text": "1 Byte=8 bit，1 Nibble=4 bit，Word 宽度取决于处理器结构"
+    },
+    {
+      "kind": "condition",
+      "text": "厂商 MB、GB 在教材 1.47 中分别按 10^6、10^9 字节定义，换算时先采用题目约定"
+    },
+    {
+      "kind": "example",
+      "text": "教材 1.47 的 50GB 硬盘可用音乐空间换算"
+    }
+  ],
+  "kind": "concept",
+  "name": "位、字节与存储容量单位",
+  "outcome": "能说明 bit、Byte、Nibble、Word 的关系，并按十进制或二进制容量单位换算存储容量。",
+  "questionTypes": [
+    "基础支撑"
+  ],
+  "rating": {
+    "evidence": {
+      "exerciseExamples": [],
+      "homeworkDirect": [
+        {
+          "basis": "stem",
+          "label": "1.47",
+          "questionId": "Q-022"
+        }
+      ],
+      "referenceItems": [],
+      "support": []
+    },
+    "rationale": "课后作业直接考查：1.47。",
+    "stars": 4,
+    "supportAdjustment": null
+  },
+  "reading": {
+    "blocks": [
+      {
+        "id": "RB-TH-01-60-units-overview",
+        "kind": "paragraph",
+        "payload": {
+          "text": "bit（位）是二进制信息的最小单位，一个 bit 只能取 0 或 1。课件 C01 第 22 页分三段给出定义：① bit 是「二进制数字」这一最小信息单位；② Byte（字节）是把 8 个 bit 作为一组形成的单位，Nibble（半字节）则是 4 个 bit 一组、即半个字节——页面上用示例数 10010110 演示：对整个 8 位标注 byte（字节）、对其中 4 位一组标注 nibble（半字节），并同时标出最高/最低有效位（most/least significant bit）；对多位十六进制示例 CEBF9AD7 则标注最高/最低有效字节（most/least significant byte）；③ Word（字）的大小取决于微处理器的结构，例如 32 位微处理器使用 32 位字。四者的换算链为：1 Byte = 8 bit = 2 Nibble，1 Nibble = 4 bit，1 Word = 字长（随处理器而定）。两个常用对应关系：1 个 Nibble 恰好对应 1 位十六进制数码（2⁴=16），1 个 Byte 恰好对应 2 位十六进制数码——这正是 KU-003 分组互转中「按 4 位一组」的单位基础。"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 22 页标题「bit, Byte, Nibble, Word」三段定义原页；Nibble↔十六进制的对应由 2⁴=16 推出并引用 KU-003 分组表",
+            "pdfPages": [
+              22
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-61-unit-relation-table",
+        "kind": "table",
+        "payload": {
+          "columns": [
+            "单位",
+            "含义与大小",
+            "与 bit 的关系",
+            "与相邻单位的关系",
+            "原页示例"
+          ],
+          "rows": [
+            [
+              "bit（位）",
+              "二进制信息最小单位，取 0 或 1",
+              "1 bit",
+              "—",
+              "任意一位 0 或 1"
+            ],
+            [
+              "Nibble（半字节）",
+              "4 个 bit 一组，即半个字节",
+              "4 bit",
+              "1 Byte = 2 Nibble",
+              "10010110 的高 4 位 1001 或低 4 位 0110"
+            ],
+            [
+              "Byte（字节）",
+              "8 个 bit 一组",
+              "8 bit",
+              "= 2 Nibble",
+              "10010110 整体（8 位一组）"
+            ],
+            [
+              "Word（字）",
+              "处理器一次处理的位宽，取决于微处理器结构",
+              "32 位机即 32 bit",
+              "—",
+              "32 位微处理器使用 32 位字"
+            ]
+          ]
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 22 页原页三段定义与 10010110/CEBF9AD7 示例标注；「1 Byte = 2 Nibble」等换算关系按 8/4 位定义核对",
+            "pdfPages": [
+              22
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-62-significance-callout",
+        "kind": "callout",
+        "payload": {
+          "text": "最高/最低有效位与有效字节（课件 p22 原页标注规则）：对一个二进制数，最左边的位权最大、称最高有效位（most significant bit），最右边的位权最小、称最低有效位（least significant bit）——示例 10010110 中最左的 1 是最高有效位、最右的 0 是最低有效位。把 8 位看作字节、多位数据按字节切分后，同样的「最靠左权最大」规则升级到字节：示例 CEBF9AD7 中 CE 是最高有效字节（most significant byte）、D7 是最低有效字节（least significant byte）。使用边界：① 「有效」是比较位权用的相对概念，必须先说清按位看还是按字节（或半字节）看；② 半字节是十六进制的天然单位——1 位十六进制数码恰占 1 个 Nibble，所以「按 4 位分组」转十六进制（KU-003）就是按半字节切分；③ Word 宽度不固定，说「一个字」必须先指明处理器字长，32 位机的 1 字 = 4 字节，16 位机的 1 字 = 2 字节，不能脱离处理器谈字的绝对大小。"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 22 页 10010110 的 most/least significant bit 标注与 CEBF9AD7 的 most/least significant byte 标注原页；16 位机 1 字=2 字节为字长定义的直接推论，不对应单独原页文字",
+            "pdfPages": [
+              22
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-63-capacity-units-table",
+        "kind": "table",
+        "payload": {
+          "columns": [
+            "口径",
+            "单位",
+            "1 单位 = 多少字节",
+            "换算要点"
+          ],
+          "rows": [
+            [
+              "十进制（厂商口径）",
+              "KB",
+              "10³ = 1000 字节",
+              "比 2¹⁰ 少 2.4%；小文件常用"
+            ],
+            [
+              "十进制（厂商口径）",
+              "MB",
+              "10⁶ = 1000000 字节",
+              "教材 1.47 明确：硬盘厂商用 MB 表示 10⁶ 字节"
+            ],
+            [
+              "十进制（厂商口径）",
+              "GB",
+              "10⁹ = 1000000000 字节",
+              "教材 1.47 明确：硬盘厂商用 GB 表示 10⁹ 字节；Q-022 题设"
+            ],
+            [
+              "二进制（2 的幂口径）",
+              "KiB（俗称 K）",
+              "2¹⁰ = 1024 字节",
+              "每级比十进制口径多 2.4%"
+            ],
+            [
+              "二进制（2 的幂口径）",
+              "MiB（俗称 M）",
+              "2²⁰ = 1048576 字节",
+              "比 10⁶ 多 4.9%"
+            ],
+            [
+              "二进制（2 的幂口径）",
+              "GiB（俗称 G）",
+              "2³⁰ = 1073741824 字节",
+              "比 10⁹ 多 7.4%；操作系统常按此口径显示容量"
+            ]
+          ]
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "bookPages": [
+              24
+            ],
+            "note": "教材 P24 习题 1.47 题面原页：「硬盘盘制造商使用 MB 字节表示 10⁶ 字节，使用 GB 表示 10⁹ 字节」——厂商十进制口径出自此处；二进制 2 的幂口径（KiB/MiB/GiB 名称与定义）为通行约定，非原页文字，数值经独立换算核对",
+            "pdfPages": [
+              38
+            ],
+            "sourceId": "SRC-TB",
+            "versionId": "VER-SRC-TB-d1bc6409752a",
+            "visualStatus": "verified"
+          },
+          {
+            "note": "作业首页清单含 1.47；作业第 4 页（教材书页 24）1.47 题面原文",
+            "pdfPages": [
+              1,
+              4
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-64a-example-50gb-two-bases-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "厂商口径（题设口径）：50GB = 50×10⁹ 字节 = 50000000000 字节 = 5×10¹⁰ 字节，即 500 亿字节。",
+                "二进制口径：50×2³⁰ = 50×1073741824 = 53687091200 字节，约 5.369×10¹⁰ 字节。",
+                "差值：53687091200 − 50000000000 = 3687091200 字节 ≈ 3.69×10⁹ 字节 ≈ 3.69GB（按厂商口径），即同样标称 50G，二进制口径比十进制口径多约 7.4% 的字节。",
+                "结论：同一名义容量在两种口径下字节总数不同，所以容量换算必须先看题目/厂商采用哪种定义——这正是教材 1.47（Q-022）先给出厂商定义的原因。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-64-example-50gb-two-bases",
+        "kind": "example",
+        "payload": {
+          "answerNature": "authored-example",
+          "hint": "先按厂商定义乘出来，再按 2³⁰ 乘一遍，最后相减；记住 2³⁰ = 1073741824。",
+          "problem": "一块标称 50GB 的硬盘（厂商按 GB = 10⁹ 字节计）：它的总字节数是多少？若改按二进制口径把「50G」理解为 50×2³⁰ 字节，字节数又是多少？两种口径相差多少？",
+          "title": "例 · 50GB 硬盘的两种口径换算"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "50GB 题设与厂商 MB/GB 定义取自 1.47 原页（作业第 4 页 = 教材书页 24）；两口径对比为本片段编制的教学例题（authored-example），全部数值经独立换算核对",
+            "pdfPages": [
+              1,
+              4
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          },
+          {
+            "bookPages": [
+              24
+            ],
+            "note": "教材 P24 习题 1.47 题面原页",
+            "pdfPages": [
+              38
+            ],
+            "sourceId": "SRC-TB",
+            "versionId": "VER-SRC-TB-d1bc6409752a",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-65a-example-Q022-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "厂商定义 1GB=10⁹字节，所以50GB=50×10⁹=50000000000字节，也就是50000MB。",
+                "若以二进制容量单位统计，1GiB=2³⁰=1073741824字节，因此50000000000÷1073741824≈46.57GiB。部分系统把这个二进制读数仍标成GB，容易造成标称50GB却显示约46.57的疑惑。",
+                "这不是丢失了约3.43GB的数据，而是单位大小不同。题目没有给出文件系统开销，所以不额外扣除空间，也不假设每首音乐的大小。",
+                "答案：总容量5×10¹⁰字节，等价于约46.57GiB；按题设十进制单位仍为50GB。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-65-example-Q022",
+        "kind": "example",
+        "payload": {
+          "answerNature": "derived-solution",
+          "hint": "先按厂商定义算总字节数，再按每GiB=2³⁰字节换算。题目未另设文件系统开销或音乐文件大小。",
+          "problem": "硬盘制造商使用 MB 表示 10⁶ 字节，使用 GB 表示 10⁹ 字节。在一个 50GB 硬盘上能用于存储音乐的空间有多大？",
+          "questionId": "Q-022",
+          "title": "例题 · 50GB 硬盘能存多少音乐（习题 1.47）"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "作业首页题号清单含 1.47；作业第 4 页（教材书页 24）1.47 题面原文：「硬盘盘制造商使用 MB 字节表示 10⁶ 字节，使用 GB 表示 10⁹ 字节。在一个 50GB 字节的硬盘上真正能用于存储音乐的空间有多大？」（黄色高亮）",
+            "pdfPages": [
+              1,
+              4
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          },
+          {
+            "bookPages": [
+              24
+            ],
+            "note": "教材 P24 习题 1.47 原页，与作业第 4 页为同一页（1.26–1.52）",
+            "pdfPages": [
+              38
+            ],
+            "sourceId": "SRC-TB",
+            "versionId": "VER-SRC-TB-d1bc6409752a",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-66a-exercise-selftest-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "① 32÷8 = 4 个字节；32÷4 = 8 个半字节。（与教材 1.43「在一个 32 位字中有多少个字节？多少个半字节？」同型。）",
+                "② 5×10¹⁰ ÷ 2³⁰ = 50000000000 ÷ 1073741824 ≈ 46.57，即约 46.57 GiB。",
+                "③ 1 MiB = 2²⁰ = 1048576 字节 > 10⁶ = 1000000 字节，大 48576 字节；即厂商口径的「1M 字节」比二进制口径的 1 MiB 少约 4.6%。",
+                "记忆锚点：2¹⁰ = 1024、2²⁰ = 1048576、2³⁰ = 1073741824；相邻口径比 1024/1000 ≈ 1.024，每升一级放大 2.4%，到 GB 级累计约 7.4%。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-66-exercise-selftest",
+        "kind": "exercise",
+        "payload": {
+          "answerNature": "self-test",
+          "hint": "① 1 Byte = 8 bit、1 Nibble = 4 bit，做两次除法；② 总字节数除以 2³⁰ = 1073741824；③ 先写出 2²⁰ 的精确值再相减。",
+          "problem": "① 一个 32 位字里有多少个字节？多少个半字节？② 5×10¹⁰ 字节按 2³⁰ 字节的二进制口径约合多少 GiB（保留两位小数）？③ 1 MiB 与 10⁶ 字节哪个大？大多少？",
+          "title": "练习 · 单位关系与口径换算（自测）"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "① 用到第 22 页 1 Byte = 8 bit、1 Nibble = 4 bit、32 位微处理器使用 32 位字的原页定义",
+            "pdfPages": [
+              22
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          },
+          {
+            "note": "① 与作业第 4 页（教材书页 24）同页习题 1.43 同型，本题为自编 self-test，数值经独立换算核对",
+            "pdfPages": [
+              1,
+              4
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-67-next-unit-reference",
+        "kind": "knowledge-reference",
+        "payload": {
+          "intent": "bit/Byte/Nibble 的分组视角是二进制运算与移位讨论的单位基础，无符号二进制的加减乘除与溢出判断见 KU-005《无符号二进制四则运算》。",
+          "targetUnitId": "KU-005"
+        },
+        "role": "supplement",
+        "sourceRefs": []
+      }
+    ],
+    "coverage": [
+      {
+        "coreBlockIds": [
+          "RB-TH-01-60-units-overview",
+          "RB-TH-01-61-unit-relation-table",
+          "RB-TH-01-62-significance-callout",
+          "RB-TH-01-63-capacity-units-table"
+        ],
+        "goal": "能说明 bit、Byte、Nibble、Word 的关系，并按十进制或二进制容量单位换算存储容量（KU-004 outcome）",
+        "materials": [
+          {
+            "blockIds": [
+              "RB-TH-01-64-example-50gb-two-bases",
+              "RB-TH-01-65-example-Q022"
+            ],
+            "kind": "example",
+            "status": "verified"
+          },
+          {
+            "blockIds": [
+              "RB-TH-01-66-exercise-selftest"
+            ],
+            "kind": "exercise",
+            "status": "verified"
+          },
+          {
+            "blockIds": [
+              "RB-TH-01-64-example-50gb-two-bases"
+            ],
+            "kind": "derivation",
+            "status": "verified"
+          },
+          {
+            "kind": "figure",
+            "reason": "本单元原页为文字定义页（bit/Byte/Nibble/Word 三段说明、有效位标注与 1.47 题面），无电路图/卡诺图/波形图需要绘制；示例标注已在 callout/table 块逐项复现",
+            "status": "not-applicable"
+          },
+          {
+            "kind": "interactive",
+            "reason": "单位定义与容量换算为纯概念和数值换算，复习画板现有 mux/decoder/kmap 组件均不适用",
+            "status": "not-applicable"
+          }
+        ],
+        "note": "已逐页目视核对四页渲染图：C01 第 22 页（pages/c01-p22-22.png）、HW01 第 1 页（pages/hw01-p01-1.png）、HW01 第 4 页（pages/hw01-p04-4.png，= 教材书页 24）、教材 PDF 第 38 页（pages/tb-p38.png，与 HW01 第 4 页同页）。C01 p22 的三段定义（bit／Byte 与 Nibble 8 位一组／Word 取决于处理器结构）、10010110 的 most/least significant bit 标注、CEBF9AD7 的 most/least significant byte 标注均照原页复现；1.47 题面原文「硬盘盘制造商使用 MB 字节表示 10⁶ 字节，使用 GB 表示 10⁹ 字节。在一个 50GB 字节的硬盘上真正能用于存储音乐的空间有多大？」与两页一致，Q-022 原为空 stem，按原页实文补齐（去掉原页冗余的「盘」「字节」赘字并通顺化），solution 以「据题干推导」给出（教材习题无官方答案），并明确题面未给音乐文件大小、所求即总字节数本身。全部数值（5×10¹⁰ 字节 = 50000MB、50×2³⁰ = 53687091200、差 3687091200 ≈ 3.69GB、5×10¹⁰/2³⁰ ≈ 46.57 GiB、1 MiB = 1048576 比 10⁶ 大 48576、32 位字 = 4 字节 = 8 半字节等）经 content-audit.py 独立计算复核。",
+        "readingStatus": "passed",
+        "sourceRefs": [
+          {
+            "note": "bit、Byte、Nibble、Word 定义与最高/最低有效位（字节）标注的全部原页",
+            "pdfPages": [
+              22
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          },
+          {
+            "note": "作业首页题号清单（含 1.47）与教材书页 24 的 1.47 题面原页",
+            "pdfPages": [
+              1,
+              4
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          },
+          {
+            "bookPages": [
+              24
+            ],
+            "note": "教材 PDF 第 38 页 = 书页 24，习题 1.47 的 MB/GB 十进制定义",
+            "pdfPages": [
+              38
+            ],
+            "sourceId": "SRC-TB",
+            "versionId": "VER-SRC-TB-d1bc6409752a",
+            "visualStatus": "verified"
+          }
+        ],
+        "visualStatus": "verified"
+      }
+    ],
+    "revision": 1,
+    "schemaVersion": "review-reading-1",
+    "status": "complete"
+  },
+  "sourceRefs": [
+    {
+      "note": "位、字节与存储容量单位：bit、Byte、Nibble、Word 与有效位概念",
+      "pdfPages": [
+        22
+      ],
+      "sourceId": "SRC-C01",
+      "versionId": "VER-SRC-C01-42c5e893c129",
+      "visualStatus": "verified"
+    },
+    {
+      "note": "作业 1.47 的 50GB 硬盘容量换算",
+      "pdfPages": [
+        1,
+        4
+      ],
+      "sourceId": "SRC-HW01",
+      "versionId": "VER-SRC-HW01-dc627c3cb036",
+      "visualStatus": "verified"
+    },
+    {
+      "bookPages": [
+        24
+      ],
+      "note": "教材 1.47 的 MB/GB 十进制定义",
+      "pdfPages": [
+        38
+      ],
+      "sourceId": "SRC-TB",
+      "versionId": "VER-SRC-TB-d1bc6409752a",
+      "visualStatus": "verified"
+    }
+  ],
+  "summary": "bit 是二进制位，8 位为一字节；容量单位按题目约定使用十进制或二进制倍数。",
+  "themeId": "TH-01",
+  "theme": {
+    "id": "TH-01",
+    "lessonId": "L01",
+    "name": "数制与数制转换",
+    "coreOutcome": "能在十进制、二进制、八进制、十六进制之间准确转换，并按权解释一个数的值。",
+    "sourceRefs": [
+      {
+        "sourceId": "SRC-C01",
+        "pdfPages": [
+          20,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34
+        ],
+        "visualStatus": "verified",
+        "note": "主题范围页；具体单元拆分见 units",
+        "versionId": "VER-SRC-C01-42c5e893c129"
+      }
+    ],
+    "rating": {
+      "stars": 5,
+      "rationale": "主题核心的多类数制转换被习题课基本题型明确列出，并被多次作业直接考查。"
+    }
+  },
+  "questions": [
+    {
+      "id": "MAP-025",
+      "questionId": "Q-022",
+      "unitId": "KU-004",
+      "role": "direct",
+      "basis": "stem",
+      "note": "容量单位换算与 10 进制/2 进制定义差异",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-022",
+        "kind": "homework",
+        "label": "1.47",
+        "questionTypes": [
+          "基础支撑"
+        ],
+        "solution": "据题干推导：按厂商定义50GB=50×10⁹=5×10¹⁰字节=50000MB。换成每单位2³⁰字节的二进制容量读数，5×10¹⁰/2³⁰≈46.57GiB（部分系统习惯把该数值仍标作GB）。二者表示同一总字节数；题面未给出文件系统开销，不另扣除空间或假设音乐文件大小。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "教材 P24 的 1.47",
+            "pdfPages": [
+              1,
+              4
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "硬盘制造商使用 MB 表示 10⁶ 字节，使用 GB 表示 10⁹ 字节。在一个 50GB 硬盘上能用于存储音乐的空间有多大？",
+        "taskSummary": "按厂商 10^9 字节/GB、10^6 字节/MB 的定义，计算 50GB 硬盘的可用存储空间。"
+      },
+      "unit": {
+        "id": "KU-004",
+        "name": "位、字节与存储容量单位",
+        "kind": "concept",
+        "themeId": "TH-01",
+        "themeName": "数制与数制转换",
+        "stars": 4,
+        "questionTypes": [
+          "基础支撑"
+        ]
+      }
+    }
+  ],
+  "relations": []
+}

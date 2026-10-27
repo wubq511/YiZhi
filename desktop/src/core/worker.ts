@@ -54,6 +54,7 @@ function open(directory: string): OpenedCourse {
     if (version !== 0 && version !== 1) throw new Error('不支持的课程格式，拒绝写入');
     db.exec(`BEGIN IMMEDIATE;
       CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY, value TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS reading_state(id INTEGER PRIMARY KEY CHECK(id=1), payload TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS units(id TEXT PRIMARY KEY, payload TEXT NOT NULL, revision INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS operations(id TEXT PRIMARY KEY, digest TEXT NOT NULL, receipt TEXT NOT NULL,
         unit_id TEXT NOT NULL REFERENCES units(id), before_text TEXT NOT NULL, after_text TEXT NOT NULL);
@@ -89,6 +90,24 @@ parentPort!.on('message', ({ id, action, payload }) => {
     let value: unknown;
     if (action === 'open') value = open(payload.directory);
     else if (action === 'read') value = snapshot(session(payload.sessionId));
+    else if (action === 'readingState') {
+      const row = session(payload.sessionId).db.prepare('SELECT payload FROM reading_state WHERE id=1').get();
+      value = row ? JSON.parse(String(row.payload)) : null;
+    } else if (action === 'setReadingState') {
+      const encoded = JSON.stringify(payload.state);
+      if (!encoded || encoded.length > 100000) throw new Error('阅读状态无效');
+      session(payload.sessionId).db.prepare('INSERT INTO reading_state(id,payload) VALUES(1,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload').run(encoded);
+    }
+    else if (action === 'graph') {
+      session(payload.sessionId);
+      value = JSON.parse(readFileSync(join(__dirname, 'fixtures/graph.json'), 'utf8'));
+    } else if (action === 'readUnit') {
+      const course = session(payload.sessionId);
+      if (payload.unitId === 'KU-001') value = snapshot(course).unit;
+      else if (['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-055', 'KU-057'].includes(payload.unitId))
+        value = JSON.parse(readFileSync(join(__dirname, `fixtures/unit-${payload.unitId.slice(3)}.json`), 'utf8'));
+      else throw new Error('该单元正文尚未加入课程副本');
+    }
     else if (action === 'saveDraft') value = saveDraft(session(payload.sessionId).db, payload);
     else if (action === 'commitEdit') value = commit(session(payload.sessionId), payload);
     else if (action === 'queryOperation') value = queryOperation(session(payload.sessionId).db, payload.operationId);

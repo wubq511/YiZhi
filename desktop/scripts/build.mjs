@@ -19,6 +19,7 @@ try {
   await build({ entryPoints: ['src/renderer/app.tsx'], outfile: 'dist/renderer/app.js', bundle: true,
     platform: 'browser', target: 'chrome140', loader: { '.woff': 'file', '.woff2': 'file', '.ttf': 'file' } });
   await copyFile('src/renderer/index.html', 'dist/renderer/index.html');
+  await copyFile('src/renderer/assets/ti74153-1.png', 'dist/renderer/ti74153-1.png');
 } catch (error) { throw error; }
 await mkdir('dist/fixtures', { recursive: true });
 for (const file of await readdir('fixtures')) await copyFile(`fixtures/${file}`, `dist/fixtures/${file}`);

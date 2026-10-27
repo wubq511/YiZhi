@@ -43,6 +43,10 @@ else {
         throw new Error('未知课程窗口');
     };
     ipcMain.handle('course:open', async event => { checkSender(event); return core.open(courseDirectory); });
+    ipcMain.handle('course:graph', async (event, sessionId: string) => { checkSender(event); return core.graph(sessionId); });
+    ipcMain.handle('course:read-unit', async (event, sessionId: string, unitId: string) => { checkSender(event); return core.readUnit(sessionId, unitId); });
+    ipcMain.handle('course:reading-state', async (event, sessionId: string) => { checkSender(event); return core.readingState(sessionId); });
+    ipcMain.handle('course:set-reading-state', async (event, sessionId: string, state) => { checkSender(event); return core.setReadingState(sessionId, state); });
     ipcMain.handle('course:save', async (event, command: SaveParagraph) => { checkSender(event); return core.save(command); });
     ipcMain.handle('course:saveDraft', (event, input) => { checkSender(event); return core.saveDraft(input); });
     ipcMain.handle('course:commitEdit', (event, command) => { checkSender(event); return core.commitEdit(command); });

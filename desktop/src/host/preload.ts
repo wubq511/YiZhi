@@ -11,6 +11,10 @@ async function invoke(channel: string, argument?: unknown) {
 const bridge: DesktopBridge = {
   commands: commandClient(invoke),
   open: () => invoke('course:open'),
+  graph: sessionId => invoke('course:graph', sessionId),
+  readUnit: (sessionId, unitId) => ipcRenderer.invoke('course:read-unit', sessionId, unitId),
+  readingState: sessionId => invoke('course:reading-state', sessionId),
+  setReadingState: (sessionId, state) => ipcRenderer.invoke('course:set-reading-state', sessionId, state),
   save: command => invoke('course:save', command),
   saveDraft: input => invoke('course:saveDraft', input),
   commitEdit: command => invoke('course:commitEdit', command),

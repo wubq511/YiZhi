@@ -18,3 +18,10 @@
 - Xiaolai：Copyright © 2020 LXGW，[OFL 原文](licenses/Xiaolai-OFL.txt)。
 - Excalifont：Copyright (c) 2024 by Excalidraw，[OFL 原文及内嵌元数据](licenses/Excalifont-OFL.txt)。许可根据 [Excalidraw 官方字体源码](https://github.com/excalidraw/excalidraw/blob/master/packages/excalidraw/fonts/Excalifont/index.ts)中的完整字体元数据核对。
 - KaTeX 字体：[OFL 原文](licenses/KaTeX-fonts-OFL.txt)；打包时须同时保留 KaTeX 的字体许可与 Electron 完整许可文件。
+
+| 依赖 | 版本 | 许可 |
+| --- | --- | --- |
+| @xyflow/react | 12.12.0 | MIT |
+| roughjs | 4.6.6 | MIT |
+
+器件样本中的 TI 74153 手册原页复制自已有实验资源；其来源版本和文件摘要见 `fixtures/t04-provenance.json`。该来源页仍保留其原始身份，并非新绘制材料。

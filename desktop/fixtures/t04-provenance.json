@@ -1,0 +1,27 @@
+{
+  "source": "courses/digital-logic/期中/数据/知识地图.json",
+  "queries": [
+    "python3 tools/digital-logic/知识地图.py graph --view all",
+    "python3 tools/digital-logic/知识地图.py get KU-002",
+    "python3 tools/digital-logic/知识地图.py get KU-057",
+    "python3 tools/digital-logic/知识地图.py get KU-003",
+    "python3 tools/digital-logic/知识地图.py get KU-004",
+    "python3 tools/digital-logic/知识地图.py get KU-055",
+    "python3 tools/digital-logic/知识地图.py related KU-044 --depth 1",
+    "python3 tools/digital-logic/知识地图.py get KU-005",
+    "python3 tools/digital-logic/知识地图.py get KU-006"
+  ],
+  "figureSource": "experiments/architecture-spike/source-pages/SRC-TI74153/VER-SRC-TI74153-72557fe3909b/1.png",
+  "sha256": {
+    "fixtures/graph.json": "0b1eb16d606d7830a0d4747e7d6523268a07f83beeec8eb3bc267282c532ec78",
+    "fixtures/unit-002.json": "0c610280897127ae0d692e2f3e74072510b2148af2e1d41684f5fdb811fa337a",
+    "fixtures/unit-057.json": "3cfd110a45d93a94fda85dc5ddb038c11ee5bfc17ce925253924ad3ed497005b",
+    "src/renderer/assets/ti74153-1.png": "c53b1b6173fe1e938c08d6ff40f543a3e64d6e8a1855d011216188db3ff1b601",
+    "fixtures/unit-003.json": "066a23964b73c8fac39d49bc1d86a826405b7776e7dd7e797973df9fbee0aafb",
+    "fixtures/unit-004.json": "5f0863f511936ed3648fa16d3cc95a31c416034da0479c129ab08d37d1859deb",
+    "fixtures/unit-055.json": "0119b45dafaa4ac7413f29a62bdaca1d1202fb963ba65109abea3c01d702111d",
+    "fixtures/unit-005.json": "454ad901900ce5b506fca1f8ccde05737f209a11830a3f512746fc1c8db45d5c",
+    "fixtures/unit-006.json": "505407ffe21880f000546c4c88e1a2f85bd93e4a4f50216aa1fbe4b19c686388"
+  },
+  "graphNote": "graph --view all output augmented with conditions and requirementGroups from related KU-044"
+}

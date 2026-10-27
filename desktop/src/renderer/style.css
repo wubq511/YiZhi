@@ -57,3 +57,27 @@ pre { white-space: pre-wrap; font-size: 1rem; }
 @media (max-width: 950px) { .workspace { grid-template-columns: 184px minmax(0, 1fr); } main { padding: 28px 24px 60px; } }
 @media (max-width: 760px) { .workspace { display: block; } nav { display: none; } main { height: 100%; } .app-header { gap: 12px; padding: 14px 20px; } }
 @media (prefers-reduced-motion: reduce) { main { scroll-behavior: auto; } }
+.board-workspace { display: flex; }
+.board-workspace nav { flex: 0 0 224px; overflow-y: auto; }
+.directory-theme { display: block; width: 100%; text-align: left; margin: 3px 0; background: transparent; color: #27343e; line-height: 1.5; }
+.board { position: relative; flex: 1; min-width: 0; overflow: hidden; padding: 0; }
+.board-tools { position: absolute; z-index: 5; top: 12px; left: 12px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; }
+.board-tools button, .board-tools select { background: #fff; border: 1px solid #e5e5eb; }
+.reading-layer { position: absolute; z-index: 3; left: 0; top: 0; transform-origin: 0 0; width: 650px; pointer-events: none; }
+.reading-layer article { pointer-events: auto; width: 650px; max-width: none; padding: 35px 38px; background: white; border: 1.5px solid #7798bc; }
+.read-error { position: absolute; top: 55px; left: 12px; background: #f0f5fa; padding: 12px; z-index: 5; }
+.react-flow__node { font-family: var(--hand); color: #27343e; }
+@media (max-width: 760px) { .board-workspace { display: flex; } .board-workspace nav { display: block; flex-basis: 180px; } .board { height: auto; } }
+.reading-layer article { max-height: 82vh; overflow: auto; overscroll-behavior: contain; }
+.reading-layer article { position: relative; border: 0; }
+.rough-frame { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+figure { margin: 30px 0; } figure img, figure svg { display: block; max-width: 100%; height: auto; } figcaption { font-size: 18px; color: #41627e; }
+.mux { background: #f0f5fc; padding: 16px; border-radius: 9px; } .mux label { display: inline-flex; gap: 5px; margin: 8px; font-family: system-ui, sans-serif; font-size: 16px; }
+.relations-panel { position: absolute; z-index: 6; right: 0; top: 0; bottom: 0; width: min(330px, 90%); overflow-y: auto; background: #fff; border-left: 1px solid #e5e5eb; padding: 20px; font-size: 14px; line-height: 1.7; }
+.relations-panel section { border-top: 1px solid #e5e5eb; padding: 12px 0; } .relations-panel h2 { font-size: 20px; } .relations-panel h3 { font-size: 15px; }
+@media (max-width: 760px) { .board-workspace { position: relative; } .board-workspace nav { position: absolute; z-index: 20; inset: 0 auto 0 0; width: min(280px, 90%); box-shadow: 0 8px 30px #27343e26; } }
+.directory-unit { display: block; width: 100%; padding-left: 22px; background: transparent; color: #345d88; text-align: left; line-height: 1.5; }
+.reading-layer article { max-height: none; overflow: visible; }
+.board-background { position: absolute; inset: 0; }
+.source-dialog { position: absolute; z-index: 30; inset: 12px; padding: 20px; background: #fff; box-shadow: 0 8px 30px #27343e26; overflow: auto; } .source-dialog img { display: block; max-width: 100%; margin: 16px auto; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; } }
