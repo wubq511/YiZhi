@@ -101,6 +101,8 @@ test('actual IPC pause failure shows incomplete and confirmed recovery can run a
     await reveal(page, recovery); await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t12-pause-incomplete.png' }); await recovery.click();
     await expect(lab.getByRole('status', { name: '实验保存状态' })).toHaveText('现场已保存');
     expect((await read()).state).toEqual(confirmed);
+    // Recovery removes the error section; locate the run control in the current read projection.
+    await reveal(page, lab.getByRole('button', { name: '开始遍历输入', exact: true, includeHidden: true }));
     await lab.getByRole('button', { name: '开始遍历输入', exact: true }).click();
     await expect.poll(async () => (await read()).state.step).toBeGreaterThan(confirmed.step);
     await app.close();
