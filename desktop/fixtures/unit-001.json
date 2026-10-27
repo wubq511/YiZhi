@@ -1,0 +1,816 @@
+{
+  "aliases": [
+    "按权展开",
+    "基数",
+    "位权"
+  ],
+  "id": "KU-001",
+  "internals": [
+    {
+      "kind": "formula",
+      "text": "N_r = a_{n-1}r^{n-1}+...+a_0r^0+a_{-1}r^{-1}+...+a_{-m}r^{-m}"
+    },
+    {
+      "kind": "condition",
+      "text": "二进制 k_i∈{0,1}，八进制 k_i∈{0..7}，十六进制 k_i∈{0..9,A..F}"
+    },
+    {
+      "kind": "example",
+      "text": "26.75_10、101.011_2、67.731_8、8AE6_16 的权展开"
+    }
+  ],
+  "kind": "concept",
+  "name": "位置记数法与权展开",
+  "outcome": "能写出任意进制数的位权展开式并解释基数与位权的含义。",
+  "questionTypes": [
+    "数制转换"
+  ],
+  "rating": {
+    "evidence": {
+      "exerciseExamples": [],
+      "homeworkDirect": [],
+      "referenceItems": [
+        {
+          "id": "REF-001",
+          "kind": "basic-type-list",
+          "label": "二进制基本题型（习题课 P2）"
+        }
+      ],
+      "support": [
+        {
+          "basis": "agent-analysis",
+          "label": "1.13(a)",
+          "questionId": "Q-002"
+        },
+        {
+          "basis": "agent-analysis",
+          "label": "1.13(c)",
+          "questionId": "Q-003"
+        },
+        {
+          "basis": "agent-analysis",
+          "label": "1.17(a)",
+          "questionId": "Q-008"
+        },
+        {
+          "basis": "agent-analysis",
+          "label": "1.17(c)",
+          "questionId": "Q-009"
+        }
+      ]
+    },
+    "rationale": "习题课参考条目 REF-001 直接相关，课件有相应讲解；尚无独立例题或作业直接证据。",
+    "stars": 4,
+    "supportAdjustment": null
+  },
+  "reading": {
+    "blocks": [
+      {
+        "id": "RB-TH-01-01-what-is-positional-notation",
+        "kind": "paragraph",
+        "payload": {
+          "text": "位置记数法（positional notation）用一个数字串表示数值时，每个数字携带两部分信息：它自己的值（系数），以及它所处的位置。同一个数字放在不同位置代表的值不同——十进制 222 中三个 2 依次代表 200、20、2，区别只在于位置。位置由「基数的幂」刻画：基数为 r 的记数系统中，从小数点向左第 i 位（从 0 数起）的权是 r^i，向右第 i 位的权是 r^(-i)。基数的含义由此确定：r 进制用 r 个不同数码（0 到 r-1），且逢 r 进一。本课程常用的四种：二进制 r=2 用 {0,1}，八进制 r=8 用 {0..7}，十进制 r=10 用 {0..9}，十六进制 r=16 用 {0..9,A..F}，其中 A、B、C、D、E、F 依次是 10 到 15。C01 第 20 页课件原页给出位置记数法总述与示例，第 28、29 页逐条列出二、八、十六进制的基数、数码集合与进位规则，第 30 页给出按权展开求值的算式。"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "位置记数法定义、四种进制的基数与数码集合、逢 r 进一规则",
+            "pdfPages": [
+              20,
+              28,
+              29
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-02-expansion-formula",
+        "kind": "formula",
+        "payload": {
+          "latex": "N_r = a_{n-1}\\,r^{\\,n-1} + \\cdots + a_1\\,r^{\\,1} + a_0\\,r^{\\,0} + a_{-1}\\,r^{\\,-1} + \\cdots + a_{-m}\\,r^{\\,-m} = \\sum_{i=-m}^{n-1} a_i \\, r^{\\,i}"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "权展开式 N_r 及按权相加求值",
+            "pdfPages": [
+              20,
+              30
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-03-expansion-terms",
+        "kind": "paragraph",
+        "payload": {
+          "text": "读这个公式要抓四点。① a_i 是第 i 位系数（数码），r 是基数，两者都用十进制值参与运算；② n 是整数部分位数，最高位权为 r^(n-1)，m 是小数部分位数，最低位权为 r^(-m)；③ 整数部分每一位的权从左到右依次除以 r，小数部分每一位的权从左到右依次乘以 1/r；④ 求数值 N_r（十进制值）就是把每一位「系数×权」全部加起来，即课件第 30 页的按权相加法。可见「按权展开求十进制值」本身就是权展开定义的直接应用，后续的进制互转（KU-002）只是这一公式的正向和逆向使用。"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "按权相加法把二/八/十六进制数转为十进制",
+            "pdfPages": [
+              30
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-04-digit-range-table",
+        "kind": "table",
+        "payload": {
+          "columns": [
+            "进制",
+            "基数 r",
+            "数码集合",
+            "每个数码可取值",
+            "进位规则"
+          ],
+          "rows": [
+            [
+              "二进制",
+              "2",
+              "0、1",
+              "0 或 1",
+              "逢二进一"
+            ],
+            [
+              "八进制",
+              "8",
+              "0~7",
+              "0 到 7 的整数",
+              "逢八进一"
+            ],
+            [
+              "十进制",
+              "10",
+              "0~9",
+              "0 到 9 的整数",
+              "逢十进一"
+            ],
+            [
+              "十六进制",
+              "16",
+              "0~9、A~F",
+              "0 到 15，A=10、B=11、C=12、D=13、E=14、F=15",
+              "逢十六进一"
+            ]
+          ]
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "二、八、十六进制的基数、数码与进位规则原页",
+            "pdfPages": [
+              28,
+              29
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-05-boundary-callout",
+        "kind": "callout",
+        "payload": {
+          "text": "使用边界与易错点：① 十六进制的 A~F 是数码而不是字母变量，A5₁₆ 是一个两位数，不是 A 乘 5；② 小数点的权方向相反——小数点后第一位的权是 r^(-1)，不是 r^1；③ 系数 a_i 必须小于基数，若写出的某一位数码超出该进制数码集合（如二进制里出现 2），这个数就不是合法的该进制表示；④ 下标 r 标明进制，缺省下标按十进制处理；⑤ 权展开只依赖「数码×基数幂」，与数码符号写法无关，因此 8AE6₁₆ 这类含字母的数同样直接展开。"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "十六进制数码含 A~F、小数位权方向等原页内容",
+            "pdfPages": [
+              20,
+              29
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-06-weights-table",
+        "kind": "table",
+        "payload": {
+          "columns": [
+            "位置（自小数点向左）",
+            "二进制权",
+            "八进制权",
+            "十进制权",
+            "十六进制权"
+          ],
+          "rows": [
+            [
+              "位 5",
+              32,
+              32768,
+              100000,
+              1048576
+            ],
+            [
+              "位 4",
+              16,
+              4096,
+              10000,
+              65536
+            ],
+            [
+              "位 3",
+              8,
+              512,
+              1000,
+              4096
+            ],
+            [
+              "位 2",
+              4,
+              64,
+              100,
+              256
+            ],
+            [
+              "位 1",
+              2,
+              8,
+              10,
+              16
+            ],
+            [
+              "位 0",
+              1,
+              1,
+              1,
+              1
+            ],
+            [
+              "位 -1",
+              0.5,
+              0.125,
+              0.1,
+              0.0625
+            ],
+            [
+              "位 -2",
+              0.25,
+              0.015625,
+              0.01,
+              0.00390625
+            ],
+            [
+              "位 -3",
+              0.125,
+              0.001953125,
+              0.001,
+              0.000244140625
+            ]
+          ]
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "各进制位权数值表",
+            "pdfPages": [
+              29,
+              30
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-08-example-26-75-ans",
+            "kind": "paragraph",
+            "payload": {
+              "text": "26.75₁₀ = 2×10¹ + 6×10⁰ + 7×10⁻¹ + 5×10⁻²。逐位核对：2×10=20，6×1=6，7×0.1=0.7，5×0.01=0.05，合计 20+6+0.7+0.05=26.75 ✓。这道例题的真正价值在于说明：权展开对十进制同样适用，二进制等只是把 10 换成别的基数。"
+            },
+            "role": "core",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-07-example-26-75",
+        "kind": "example",
+        "payload": {
+          "answerNature": "authored-example",
+          "hint": "26.75 = 2×10 + 6×1 + 7×0.1 + 5×0.01，注意小数点后第一位的权是 10 的 -1 次幂。",
+          "problem": "把十进制数 26.75 按权展开写出每一位的系数与权，并验证各位之和等于原数。",
+          "title": "例题 · 26.75₁₀ 的权展开"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 30 页按权相加示例（26.75₁₀ 权展开）",
+            "pdfPages": [
+              30
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-10-example-101-011-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "写权：整数部分 1、0、1 依次位于权 2²、2¹、2⁰（即 4、2、1）；小数部分 0、1、1 依次位于权 2⁻¹、2⁻²、2⁻³（即 0.5、0.25、0.125）。",
+                "按权展开：101.011₂ = 1×2² + 0×2¹ + 1×2⁰ + 0×2⁻¹ + 1×2⁻² + 1×2⁻³。",
+                "逐项计算：4 + 0 + 1 + 0 + 0.25 + 0.125。",
+                "求和得 5.375，故 101.011₂ = 5.375₁₀。"
+              ]
+            },
+            "role": "core",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-09-example-101-011",
+        "kind": "example",
+        "payload": {
+          "answerNature": "authored-example",
+          "hint": "整数三位、小数三位。小数部分的权从左到右是 2⁻¹=0.5、2⁻²=0.25、2⁻³=0.125。",
+          "problem": "写出二进制数 101.011 的权展开式，并求它的十进制值。",
+          "title": "例题 · 101.011₂ 的权展开与求值"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 30 页二进制按权相加示例",
+            "pdfPages": [
+              30
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-12-example-oct-hex-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "① 67.731₈ = 6×8¹ + 7×8⁰ + 7×8⁻¹ + 3×8⁻² + 1×8⁻³ = 48 + 7 + 0.875 + 0.046875 + 0.001953125 = 55.923828125₁₀。",
+                "② 8AE6₁₆：A→10，E→14，故展开为 8×16³ + 10×16² + 14×16¹ + 6×16⁰。",
+                "逐项计算：8×4096=32768，10×256=2560，14×16=224，6×1=6。",
+                "求和得 32768+2560+224+6=35558，故 8AE6₁₆ = 35558₁₀。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-11-example-oct-hex",
+        "kind": "example",
+        "payload": {
+          "answerNature": "authored-example",
+          "hint": "十六进制先把字母换成十进制值：8AE6 逐位是 8、10、14、6。",
+          "problem": "① 写出八进制数 67.731 的权展开式；② 写出十六进制数 8AE6 的权展开式，并求两者的十进制值。",
+          "title": "例题 · 八进制与十六进制的权展开"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "第 30 页八进制 67.731 与十六进制 8AE6 权展开示例",
+            "pdfPages": [
+              30
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-14-exercise-binary-ans",
+            "kind": "paragraph",
+            "payload": {
+              "text": "① 11.01₂ = 1×2¹ + 1×2⁰ + 0×2⁻¹ + 1×2⁻² = 2 + 1 + 0 + 0.25 = 3.25₁₀。② 1C4₁₆ = 1×16² + 12×16¹ + 4×16⁰ = 256 + 192 + 4 = 452₁₀（C=12）。易错提醒：②若把 C 当作未知数、把最高位权错当 16³，或漏掉 16⁰ 位会算错；①若把 0×2⁻¹ 这一项直接丢掉，只要其余位正确结果不受影响，但展开式不完整。"
+            },
+            "role": "core",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-13-exercise-binary",
+        "kind": "exercise",
+        "payload": {
+          "answerNature": "self-test",
+          "hint": "① 11.01 的小数两位权是 0.5 和 0.25；② 1C4 是三位十六进制数，最高位权是 16²=256，C 对应 12。",
+          "problem": "① 写出 11.01₂ 的权展开式并求十进制值；② 写出 1C4₁₆ 的权展开式并求十进制值。",
+          "title": "练习 · 二进制小数与十六进制权展开自测"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "题型同第 30 页按权相加示例",
+            "pdfPages": [
+              30
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-16-exercise-hex-ans",
+            "kind": "paragraph",
+            "payload": {
+              "text": "8AE6₁₆ = 8×16³ + 10×16² + 14×16¹ + 6×16⁰ = 32768 + 2560 + 224 + 6 = 35558₁₀。用到的权依次是 16³=4096、16²=256、16¹=16、16⁰=1。若结果不是 35558，优先检查 E 是否按 14 处理、16² 是否按 256 计算这两个易错点。"
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-15-exercise-hex",
+        "kind": "exercise",
+        "payload": {
+          "answerNature": "self-test",
+          "hint": "先替换字母：A=10，E=14；再套 N_r = Σ aᵢ·16ⁱ。",
+          "problem": "不查表，直接按权展开计算 8AE6₁₆ 的十进制值，并说明每一步用到的权。",
+          "title": "练习 · 8AE6₁₆ 复算自测"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "题型同第 30 页十六进制按权相加示例",
+            "pdfPages": [
+              30
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-17-next-unit-reference",
+        "kind": "knowledge-reference",
+        "payload": {
+          "intent": "权展开的逆向使用：把十进制数转换成 r 进制（除基取余、乘基取整）与二进制数直接按权相加求十进制值，见 KU-002《进制转换与按权相加》。",
+          "targetUnitId": "KU-002"
+        },
+        "role": "supplement",
+        "sourceRefs": []
+      }
+    ],
+    "coverage": [
+      {
+        "coreBlockIds": [
+          "RB-TH-01-01-what-is-positional-notation",
+          "RB-TH-01-02-expansion-formula",
+          "RB-TH-01-03-expansion-terms",
+          "RB-TH-01-04-digit-range-table",
+          "RB-TH-01-05-boundary-callout",
+          "RB-TH-01-07-example-26-75",
+          "RB-TH-01-09-example-101-011",
+          "RB-TH-01-13-exercise-binary"
+        ],
+        "goal": "能写出任意进制数的位权展开式并解释基数与位权的含义（KU-001 outcome）",
+        "materials": [
+          {
+            "blockIds": [
+              "RB-TH-01-11-example-oct-hex"
+            ],
+            "kind": "example",
+            "status": "verified"
+          },
+          {
+            "blockIds": [
+              "RB-TH-01-15-exercise-hex"
+            ],
+            "kind": "exercise",
+            "status": "verified"
+          },
+          {
+            "kind": "figure",
+            "reason": "本单元为权展开概念，C01 第 20/28/29/30 页均为文字算式页，无电路图或卡诺图类图示需要绘制",
+            "status": "not-applicable"
+          },
+          {
+            "kind": "interactive",
+            "reason": "位置记数法为纯概念单元，复习画板现有 mux/decoder/kmap 组件均不适用",
+            "status": "not-applicable"
+          }
+        ],
+        "note": "已逐页目视核对 C01 第 20、28、29、30 页渲染图（pages/c01-p20-20.png、c01-p28-28.png、c01-p29-29.png、c01-p30-30.png）：权展开公式、四种进制数码集合、按权相加示例数值均与正文一致；全部算式值经 content-audit.py 独立枚举复核通过（content-audit.json，含 8AE6₁₆=35558、101.011₂=5.375、67.731₈=55.923828125、1C4₁₆=452 等）。本单元无 direct 正式题（Q-002/003/008/009 为 support 角色挂在 KU-002），故 questionUpdates 为空。",
+        "readingStatus": "passed",
+        "sourceRefs": [
+          {
+            "note": "位置记数法、各进制数码与进位规则、按权相加示例的全部原页",
+            "pdfPages": [
+              20,
+              28,
+              29,
+              30
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ],
+        "visualStatus": "verified"
+      }
+    ],
+    "revision": 1,
+    "schemaVersion": "review-reading-1",
+    "status": "complete"
+  },
+  "sourceRefs": [
+    {
+      "note": "位置记数法与权展开：位置记数法、权展开与各进制示例",
+      "pdfPages": [
+        20
+      ],
+      "sourceId": "SRC-C01",
+      "versionId": "VER-SRC-C01-42c5e893c129",
+      "visualStatus": "verified"
+    },
+    {
+      "note": "位置记数法与权展开：位置记数法、权展开与各进制示例",
+      "pdfPages": [
+        28,
+        29
+      ],
+      "sourceId": "SRC-C01",
+      "versionId": "VER-SRC-C01-42c5e893c129",
+      "visualStatus": "verified"
+    },
+    {
+      "note": "位置记数法与权展开：按权相加法把二/八/十六进制转为十进制",
+      "pdfPages": [
+        30
+      ],
+      "sourceId": "SRC-C01",
+      "versionId": "VER-SRC-C01-42c5e893c129",
+      "visualStatus": "verified"
+    }
+  ],
+  "summary": "位置记数法用系数乘基数的幂表示数值，是进制转换与编码解释的基础。",
+  "themeId": "TH-01",
+  "theme": {
+    "id": "TH-01",
+    "lessonId": "L01",
+    "name": "数制与数制转换",
+    "coreOutcome": "能在十进制、二进制、八进制、十六进制之间准确转换，并按权解释一个数的值。",
+    "sourceRefs": [
+      {
+        "sourceId": "SRC-C01",
+        "pdfPages": [
+          20,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34
+        ],
+        "visualStatus": "verified",
+        "note": "主题范围页；具体单元拆分见 units",
+        "versionId": "VER-SRC-C01-42c5e893c129"
+      }
+    ],
+    "rating": {
+      "stars": 5,
+      "rationale": "主题核心的多类数制转换被习题课基本题型明确列出，并被多次作业直接考查。"
+    }
+  },
+  "questions": [
+    {
+      "id": "MAP-002",
+      "questionId": "Q-002",
+      "unitId": "KU-001",
+      "role": "support",
+      "basis": "agent-analysis",
+      "note": "按权展开需要先识别各位权值",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-002",
+        "kind": "homework",
+        "label": "1.13(a)",
+        "parentId": "Q-001",
+        "questionTypes": [
+          "数制转换"
+        ],
+        "solution": "据题干推导（教材习题无官方答案）：按权相加 1010₂ = 1×2³ + 0×2² + 1×2¹ + 0×2⁰ = 8 + 0 + 2 + 0 = (10)₁₀。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "教材 P23 的 1.13(a)",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "将下列无符号二进制数转化为十进制数。a) 1010₂",
+        "taskSummary": "将 1010₂ 转换为十进制。"
+      },
+      "unit": {
+        "id": "KU-001",
+        "name": "位置记数法与权展开",
+        "kind": "concept",
+        "themeId": "TH-01",
+        "themeName": "数制与数制转换",
+        "stars": 4,
+        "questionTypes": [
+          "数制转换"
+        ]
+      }
+    },
+    {
+      "id": "MAP-004",
+      "questionId": "Q-003",
+      "unitId": "KU-001",
+      "role": "support",
+      "basis": "agent-analysis",
+      "note": "按权展开需要先识别各位权值",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-003",
+        "kind": "homework",
+        "label": "1.13(c)",
+        "parentId": "Q-001",
+        "questionTypes": [
+          "数制转换"
+        ],
+        "solution": "据题干推导（教材习题无官方答案）：按权相加 11110000₂ = 1×2⁷ + 1×2⁶ + 1×2⁵ + 1×2⁴ = 128 + 64 + 32 + 16 = (240)₁₀。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "教材 P23 的 1.13(c)",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "将下列无符号二进制数转化为十进制数。c) 11110000₂",
+        "taskSummary": "将 11110000₂ 转换为十进制。"
+      },
+      "unit": {
+        "id": "KU-001",
+        "name": "位置记数法与权展开",
+        "kind": "concept",
+        "themeId": "TH-01",
+        "themeName": "数制与数制转换",
+        "stars": 4,
+        "questionTypes": [
+          "数制转换"
+        ]
+      }
+    },
+    {
+      "id": "MAP-010",
+      "questionId": "Q-008",
+      "unitId": "KU-001",
+      "role": "support",
+      "basis": "agent-analysis",
+      "note": "十六进制各位权值",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-008",
+        "kind": "homework",
+        "label": "1.17(a)",
+        "parentId": "Q-007",
+        "questionTypes": [
+          "数制转换"
+        ],
+        "solution": "据题干推导（教材习题无官方答案）：A = 10，按权相加 A5₁₆ = 10×16¹ + 5×16⁰ = 160 + 5 = (165)₁₀。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "教材 P23 的 1.17(a)",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "将下列十六进制数转换为十进制数。a) A5₁₆",
+        "taskSummary": "将 A5₁₆ 转换为十进制。"
+      },
+      "unit": {
+        "id": "KU-001",
+        "name": "位置记数法与权展开",
+        "kind": "concept",
+        "themeId": "TH-01",
+        "themeName": "数制与数制转换",
+        "stars": 4,
+        "questionTypes": [
+          "数制转换"
+        ]
+      }
+    },
+    {
+      "id": "MAP-012",
+      "questionId": "Q-009",
+      "unitId": "KU-001",
+      "role": "support",
+      "basis": "agent-analysis",
+      "note": "十六进制各位权值",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-009",
+        "kind": "homework",
+        "label": "1.17(c)",
+        "parentId": "Q-007",
+        "questionTypes": [
+          "数制转换"
+        ],
+        "solution": "据题干推导（教材习题无官方答案）：F = 15，按权相加 FFFF₁₆ = 15×16³ + 15×16² + 15×16¹ + 15×16⁰ = 15×(4096 + 256 + 16 + 1) = 15×4369 = (65535)₁₀ = 2¹⁶ − 1。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "教材 P23 的 1.17(c)",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "将下列十六进制数转换为十进制数。c) FFFF₁₆",
+        "taskSummary": "将 FFFF₁₆ 转换为十进制。"
+      },
+      "unit": {
+        "id": "KU-001",
+        "name": "位置记数法与权展开",
+        "kind": "concept",
+        "themeId": "TH-01",
+        "themeName": "数制与数制转换",
+        "stars": 4,
+        "questionTypes": [
+          "数制转换"
+        ]
+      }
+    }
+  ],
+  "relations": [
+    {
+      "id": "REL-028",
+      "fromUnitId": "KU-001",
+      "toUnitId": "KU-002",
+      "type": "requires",
+      "directed": true,
+      "value": "按权相加与除基、乘基都围绕位权和基数展开，先理解权展开可减少对两套转换规则的机械记忆。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C01",
+          "pdfPages": [
+            20,
+            30,
+            31,
+            32,
+            33
+          ],
+          "visualStatus": "verified",
+          "note": "位权与数制转换",
+          "versionId": "VER-SRC-C01-42c5e893c129"
+        }
+      ],
+      "view": "auxiliary",
+      "status": "approved"
+    }
+  ]
+}
