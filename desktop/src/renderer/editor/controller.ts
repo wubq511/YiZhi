@@ -29,7 +29,6 @@ export class ContinuousEditor {
   private previous: ReadingBlock[];
   private drafts = new Map<string, string>();
   private composing = false;
-  private pending?: OpenedCourse;
   private editorId = crypto.randomUUID();
   private protectionSequence = 0;
   private protectionWork = Promise.resolve();
@@ -286,7 +285,13 @@ export class ContinuousEditor {
       const incoming = next.find(b => b.id === node.attrs.block.id)!;
       if (!incoming) { blocked = true; continue; }
       const displayed = current.find(b => b.id === incoming.id);
-      if (equal(displayed, incoming)) { this.shown.set(incoming.id, { revision: snapshot.revision, version: snapshot.blockVersions?.[incoming.id], block: structuredClone(incoming) }); continue; }
+      if (equal(displayed, incoming)) {
+        // A held selection retains its creation context even when an unrelated formal
+        // revision arrives. A new own acknowledgement can still confirm its draft projection.
+        if (!this.protectedIds.has(incoming.id) || !equal(this.shown.get(incoming.id)?.block, incoming))
+          this.shown.set(incoming.id, { revision: snapshot.revision, version: snapshot.blockVersions?.[incoming.id], block: structuredClone(incoming) });
+        continue;
+      }
       if (this.protectedIds.has(incoming.id) || this.drafts.has(incoming.id) || this.channel.pendingTargets().has(incoming.id)) { blocked = true; continue; }
       if (node.type.name === 'paragraph' && incoming.kind === 'paragraph') {
         const range = textRange(node.textContent, String(incoming.payload.text)), points = Array.from(node.textContent);
@@ -297,7 +302,6 @@ export class ContinuousEditor {
       this.shown.set(incoming.id, { revision: snapshot.revision, version: snapshot.blockVersions?.[incoming.id], block: structuredClone(incoming) });
     }
     if (tr.docChanged) this.editor.view.dispatch(tr.setMeta('external', true).setMeta('addToHistory', false));
-    this.pending = blocked ? snapshot : undefined;
     return !blocked;
   }
   async finish() { if (this.composing) return false; this.engaged = false; this.setProtection([], 'editing'); await this.settleProtection(); return this.channel.progress().inputSeq <= this.channel.progress().durableInputSeq; }

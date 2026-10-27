@@ -97,7 +97,7 @@ test('internally generated integration operations obey the same source and conve
   try {
     const c = await service.open(join(root, 'course')), a = c.unit.reading.blocks[0], api = service.commands;
     const path = join(root, 'source.pdf'); await sourceFixture(path);
-    for (const domain of ['source', 'conversation']) {
+    for (const domain of ['source', 'conversation', 'experiment']) {
       const candidateId = `fenced-${domain}`, operationId = `integrate-${createHash('sha256').update(candidateId).digest('hex')}`;
       const attempt = await api.startAttempt({ sessionId: c.sessionId, taskId: candidateId });
       const basis = await api.read({ sessionId: c.sessionId, attemptId: attempt.attemptId, objectIds: [a.id] });
@@ -105,7 +105,13 @@ test('internally generated integration operations obey the same source and conve
       await api.commit({ sessionId: c.sessionId, attemptId: attempt.attemptId, basisId: basis.basisId, operationId: candidateId,
         changes: [{ objectId: a.id, value: { ...basis.objects.find(o => o.id === a.id)!.value, payload: { ...a.payload, text: a.payload.text + ' 提交候选' } } }] });
       if (domain === 'source') await service.sources.importFile({ sessionId: c.sessionId, generation: 1, operationId, path, title: 'Operation fence evidence' });
-      else await service.agent.create({ sessionId: c.sessionId, operationId });
+      else if (domain === 'conversation') await service.agent.create({ sessionId: c.sessionId, operationId });
+      else {
+        const unit = await service.readUnit(c.sessionId, 'KU-057');
+        const block = unit.reading.blocks.find(b => b.kind === 'interactive')!;
+        const view = await service.experiments.open({ sessionId: c.sessionId, unitId: unit.id, blockId: block.id });
+        await service.experiments.act({ sessionId: c.sessionId, instanceId: view.instanceId, generation: view.generation, operationId, action: { kind: 'pause' } });
+      }
       await api.protect({ sessionId: c.sessionId, editorId: candidateId, sequence: 2, blockIds: [], mode: 'editing', inputSeq: 0 });
       await assert.rejects(api.recheck({ sessionId: c.sessionId }), /操作身份/);
       assert.deepEqual((await service.read(c.sessionId)).unit, c.unit);

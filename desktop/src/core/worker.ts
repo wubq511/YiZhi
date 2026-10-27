@@ -94,6 +94,7 @@ function open(directory: string): OpenedCourse {
     const groups = new CommandGroups(db, graph, operationId => {
       sources.fenceOperation('commands:commit', operationId);
       agent.fence('commands:commit', operationId);
+      experiments.fenceOperation('commands:commit', operationId);
     });
     const sources = new Sources(db, canonical, sourceUnit);
     const relationCatalog = JSON.parse(readFileSync(join(__dirname, 'fixtures/relation-catalog.json'), 'utf8'));
@@ -142,9 +143,10 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
   try {
     if (payload?.operationId) {
       const course = session(payload.sessionId);
-      course.sources.fenceOperation(action === 'commands:resolveInput' ? 'commitEdit' : action, payload.operationId);
-      course.agent.fence(action, payload.operationId);
-      course.experiments.fenceOperation(action, payload.operationId);
+      const fencedAction = action === 'commands:resolveInput' ? 'commitEdit' : action;
+      course.sources.fenceOperation(fencedAction, payload.operationId);
+      course.agent.fence(fencedAction, payload.operationId);
+      course.experiments.fenceOperation(fencedAction, payload.operationId);
     }
     let value: unknown;
     if (action === 'open') value = open(payload.directory);
