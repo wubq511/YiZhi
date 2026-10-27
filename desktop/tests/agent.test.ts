@@ -121,6 +121,9 @@ test('failed durable registration creates no ghost request and operation/generat
     await assert.rejects(core.recordAgent({ ...event, eventId: 'after-stop', kind: 'delta', itemId: 'x', text: 'No' }), /停止或失效/);
     const saved = await core.save({ sessionId, operationId: 'student-save', inputSeq: 1, baseRevision: 1, blockId: opened.editableBlockId, text: 'student text' });
     await assert.rejects(core.agent.create({ sessionId, operationId: saved.operationId }), /操作身份/);
+    await assert.rejects(core.parsing.start({ sessionId, generation: 1, operationId: 'parser-reservation', versionId: 'missing-source' }), /未登记/);
+    await assert.rejects(core.agent.create({ sessionId, operationId: 'parser-reservation' }), /操作身份/);
+    await assert.rejects(core.parsing.start({ sessionId, generation: 1, operationId: 'question', versionId: 'missing-source' }), /操作身份/);
   } finally { fault?.close(); await core.close(); await rm(root, { recursive: true, force: true }); }
 });
 

@@ -70,6 +70,7 @@ test('Agent sidebar keeps drafts, native composer Undo, fixed source selection a
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(660, 600));
     await expect(page.getByRole('dialog', { name: 'Agent 学习对话' })).toBeVisible();
     await expect(page.getByRole('textbox', { name: '学习对话草稿' })).toBeFocused();
+    if (process.env.YIZHI_EVIDENCE_DIR) await page.screenshot({ path: join(process.env.YIZHI_EVIDENCE_DIR, 't16-agent-narrow.png') });
   } finally { await app?.close(); await rm(root, { recursive: true, force: true }); }
 });
 

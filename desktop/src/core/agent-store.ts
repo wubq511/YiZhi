@@ -36,7 +36,8 @@ export class AgentStore {
       if (this.db.prepare('SELECT 1 FROM operations WHERE id=?').get(operationId) ||
           this.db.prepare('SELECT 1 FROM cg_candidates WHERE id=?').get(operationId) ||
           this.db.prepare('SELECT 1 FROM source_operations WHERE id=?').get(operationId) ||
-          this.db.prepare('SELECT 1 FROM source_imports WHERE id=?').get(operationId)) throw new Error('操作身份已用于其他课程操作');
+          this.db.prepare('SELECT 1 FROM source_imports WHERE id=?').get(operationId) ||
+          this.db.prepare('SELECT 1 FROM parse_operations WHERE id=?').get(operationId)) throw new Error('操作身份已用于其他课程操作');
     } else if (this.db.prepare('SELECT 1 FROM agent_operations WHERE id=?').get(operationId)) throw new Error('操作身份已用于学习对话');
   }
   private generation() { return Number(this.db.prepare("SELECT value FROM metadata WHERE key='generation'").get()!.value); }
