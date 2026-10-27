@@ -8,7 +8,7 @@ import { SourcePdf, type SourceSelection } from './source-pdf';
 import './source-panel.css';
 
 export interface SourceScene { open: boolean; context: SourceReadingContext | null }
-export interface SourcePanelHandle { capture(): SourceScene; restore(scene: SourceScene): Promise<void>; openSearch(hit: SearchHit): Promise<void>; flush(): Promise<boolean>; openCitation(citation: SourceCitation): void }
+export interface SourcePanelHandle { capture(): SourceScene; restore(scene: SourceScene): Promise<void>; openSearch(hit: SearchHit): Promise<void>; flush(): Promise<boolean>; openCitation(citation: SourceCitation): void; openVersion(versionId: string, pdfPageIndex: number): void }
 export const SourcePanel = forwardRef<SourcePanelHandle, { sessionId: string; narrow: boolean; target?: CiteSource['target']; onOpenChange(open: boolean): void; onCitationsChange(citations: SourceCitation[]): void; onQuestion?(citation: SourceCitation): void }>(function SourcePanel({ sessionId, narrow, target, onOpenChange, onCitationsChange, onQuestion }, ref) {
   const api = window.yizhi.sources;
   const [open, setOpen] = useState(false), [list, setList] = useState<SourceList>({ generation: 1, versions: [], intents: [], readingSeq: 0 });
@@ -57,7 +57,7 @@ export const SourcePanel = forwardRef<SourcePanelHandle, { sessionId: string; na
     setContextStatus('pending'); clearTimeout(timer.current); timer.current = setTimeout(() => void saveLatest(), 200);
   };
   const flush = async () => { await saveLatest(); await writes.current; return !failed.current && !actionInFlight.current; };
-  useImperativeHandle(ref, () => ({ flush, openCitation,
+  useImperativeHandle(ref, () => ({ flush, openCitation, openVersion: (id: string, index: number) => { choose(id,index); setOpen(true); },
     capture: () => ({ open, context: context.current ? { ...context.current, scrollTop: scroller.current?.scrollTop ?? context.current.scrollTop, scrollLeft: scroller.current?.scrollLeft ?? context.current.scrollLeft } : null }),
     async restore(scene) {
       if (!await flush()) throw new Error('原文位置尚未保存');

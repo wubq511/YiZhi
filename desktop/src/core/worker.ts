@@ -1,4 +1,5 @@
 import { Search } from './search';
+import { snapshotLegacy, convertLegacy, legacyContent, candidateResource } from './migration';
 import { Annotations } from './annotations';
 import { initializeLayout, layoutGraph, saveLayout } from './local-layout';
 import { projectLayout } from '../layout';
@@ -8,7 +9,7 @@ import { BuiltinExperiments } from './builtin-experiments';
 import { AgentStore } from './agent-store';
 import { parentPort, workerData } from 'node:worker_threads';
 import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync, realpathSync, readFileSync } from 'node:fs';
+import { mkdirSync, realpathSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { FormalRelations } from './formal-relations';
 import { CommandGroups } from './command-groups';
@@ -44,7 +45,7 @@ function session(id: string): Course {
 }
 function snapshot(course: Course): OpenedCourse {
   const row = course.db.prepare('SELECT payload, revision FROM units WHERE id = ?').get('KU-001')!;
-  return { courseId: course.courseId, sessionId: course.sessionId, revision: Number(row.revision),
+  return { contentScope: course.db.prepare("SELECT value FROM metadata WHERE key='content-scope'").get()?.value === 'content-candidate' ? 'content-candidate' : undefined, courseId: course.courseId, sessionId: course.sessionId, revision: Number(row.revision),
     blockVersions: Object.fromEntries(course.db.prepare("SELECT id, version FROM cg_objects WHERE kind='block'").all().map(r => [String(r.id), Number(r.version)])),
     drafts: readDrafts(course.db), eventCursor: eventCursor(course.db),
     confirmedInputSeq: confirmedInput(course.db, course.sessionId), editableBlockId: EDITABLE, unit: JSON.parse(String(row.payload)),
@@ -57,6 +58,7 @@ function snapshot(course: Course): OpenedCourse {
       } } };
 }
 function open(directory: string): OpenedCourse {
+  if (existsSync(join(directory, '课程.json')) && !existsSync(join(directory, 'course.sqlite'))) throw new Error('这是旧版课程，请从停止写入的一致副本转换到新目录');
   mkdirSync(directory, { recursive: true });
   const canonical = realpathSync(directory);
   const existing = courses.get(canonical);
@@ -76,6 +78,7 @@ function open(directory: string): OpenedCourse {
     db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL; PRAGMA busy_timeout=1000');
     const version = Number(db.prepare('PRAGMA user_version').get()!.user_version);
     if (version !== 0 && version !== 1) throw new Error('不支持的课程格式，拒绝写入');
+    if (db.prepare("SELECT 1 FROM sqlite_master WHERE name='metadata'").get() && db.prepare("SELECT 1 FROM metadata WHERE key='content-scope'").get() && !existsSync(join(canonical,'content-candidate.json'))) throw new Error('内容候选缺少完成标记，拒绝打开');
     db.exec(`BEGIN IMMEDIATE;
       CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY, value TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS reading_state(id INTEGER PRIMARY KEY CHECK(id=1), payload TEXT NOT NULL);
@@ -97,10 +100,11 @@ function open(directory: string): OpenedCourse {
     const sourceUnit = (id: string) => {
       const row = db!.prepare('SELECT payload FROM units WHERE id=?').get(id);
       if (row) return JSON.parse(String(row.payload));
-      if (['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-035', 'KU-055', 'KU-057', 'KU-062'].includes(id))
+      if (!db!.prepare("SELECT 1 FROM metadata WHERE key='content-scope'").get() && ['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-035', 'KU-055', 'KU-057', 'KU-062'].includes(id))
         return JSON.parse(readFileSync(join(__dirname, `fixtures/unit-${id.slice(3)}.json`), 'utf8'));
     };
-    const graph = JSON.parse(readFileSync(join(__dirname, 'fixtures/graph.json'), 'utf8')) as CourseGraph;
+    const storedGraph = db.prepare("SELECT value FROM metadata WHERE key='course-graph'").get();
+    const graph = JSON.parse(storedGraph ? String(storedGraph.value) : readFileSync(join(__dirname, 'fixtures/graph.json'), 'utf8')) as CourseGraph;
     initializeReviewState(db);
     const annotations = new Annotations(db);
     const groups = new CommandGroups(db, graph, operationId => {
@@ -111,14 +115,15 @@ function open(directory: string): OpenedCourse {
       extensions.fence('commands:commit', operationId);
     });
     const sources = new Sources(db, canonical, sourceUnit);
-    const relationCatalog = JSON.parse(readFileSync(join(__dirname, 'fixtures/relation-catalog.json'), 'utf8'));
+    const storedCatalog = db.prepare("SELECT value FROM metadata WHERE key='relation-catalog'").get();
+    const relationCatalog = JSON.parse(storedCatalog ? String(storedCatalog.value) : readFileSync(join(__dirname, 'fixtures/relation-catalog.json'), 'utf8'));
     const relations = new FormalRelations(db, graph, { retiredUnitIds: relationCatalog.retiredUnitIds,
       get sources() { return sources.relationCatalog(relationCatalog.sources); } });
     const experiments = new BuiltinExperiments(db, sourceUnit);
     const extensions = new Extensions(db, canonical);
     const parsing = new Parsing(db, canonical, sources, run => { queue = queue.then(run).catch(error => { console.error(error); }); }, workerData?.parseScheduling);
     const agent = new AgentStore(db, sources, sourceUnit);
-    const readableUnitIds = [...new Set([...db.prepare('SELECT id FROM units').all().map(r => String(r.id)), 'KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-035', 'KU-055', 'KU-057', 'KU-062'])];
+    const readableUnitIds = [...new Set([...db.prepare('SELECT id FROM units').all().map(r => String(r.id)), ...(!db.prepare("SELECT 1 FROM metadata WHERE key='content-scope'").get() ? ['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-035', 'KU-055', 'KU-057', 'KU-062'] : [])])];
     const search = new Search(db, sourceUnit, readableUnitIds, graph.nodes.length, sources);
     const course: Course = { db, owner, agent, search, unit: sourceUnit, annotations, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
@@ -168,7 +173,11 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       course.extensions.fence(fencedAction, payload.operationId);
     }
     let value: unknown;
-    if (action === 'open') value = open(payload.directory);
+    if (action === 'migration:snapshot') value = await snapshotLegacy(payload);
+    else if (action === 'migration:convert') value = await convertLegacy(payload, workerData?.migrationScheduling);
+    else if (action === 'migration:content') value = legacyContent(session(payload.sessionId).db);
+    else if (action === 'migration:resource') { const c=session(payload.sessionId); const directory=[...courses.entries()].find(([,v])=>v===c)![0]; value=candidateResource(c.db,directory,payload.asset); }
+    else if (action === 'open') value = open(payload.directory);
     else if (action === 'read') value = snapshot(session(payload.sessionId));
     else if (action === 'readingState') {
       const row = session(payload.sessionId).db.prepare('SELECT payload FROM reading_state WHERE id=1').get();
