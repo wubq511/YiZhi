@@ -1,3 +1,4 @@
+import { readDrafts, draftScopes, draftReadVersions, draftVersion, transaction, appendEvent, eventCursor } from './save-store';
 import { randomUUID, createHash } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import type { CourseUnit, ReadingBlock } from '../shared';
@@ -21,13 +22,11 @@ export class CommandGroups {
       INSERT OR IGNORE INTO metadata VALUES ('generation', '1');
       UPDATE cg_attempts SET status='interrupted' WHERE status='running';
     `);
+    if (!db.prepare('PRAGMA table_info(cg_bases)').all().some(row => row.name === 'draft_versions'))
+      db.exec("ALTER TABLE cg_bases ADD COLUMN draft_versions TEXT NOT NULL DEFAULT '{}'");
     this.observe();
   }
-  private transaction<T>(run: () => T): T {
-    this.db.exec('BEGIN IMMEDIATE');
-    try { const value = run(); this.db.exec('COMMIT'); return value; }
-    catch (error) { this.db.exec('ROLLBACK'); throw error; }
-  }
+  private transaction<T>(run: () => T): T { return transaction(this.db, run); }
   private generation() { return Number(this.db.prepare("SELECT value FROM metadata WHERE key='generation'").get()!.value); }
   private unit(): { unit: CourseUnit; revision: number } {
     const row = this.db.prepare("SELECT payload, revision FROM units WHERE id='KU-001'").get()!;
@@ -131,8 +130,9 @@ export class CommandGroups {
       }
       const objects = [...ids].map(id => this.object(id));
       const basisId = randomUUID(), generation = this.generation();
-      this.db.prepare('INSERT INTO cg_bases VALUES (?, ?, ?, ?)').run(basisId, request.attemptId, generation,
-        json(objects.map(object => [object.id, object.version])));
+      this.db.prepare('INSERT INTO cg_bases(id, attempt_id, generation, versions, draft_versions) VALUES (?, ?, ?, ?, ?)')
+        .run(basisId, request.attemptId, generation, json(objects.map(object => [object.id, object.version])),
+          json(draftReadVersions(this.db, ids)));
       return { basisId, generation, objects };
     });
   }
@@ -166,6 +166,18 @@ export class CommandGroups {
       for (const [id, version] of versions) {
         if (this.object(id).version !== version) return retain(`读取依据已变化：${id}。请重新读取并整合；旧候选已保留`);
       }
+      const draftBasis = parse(basis.draft_versions) as Record<string, number>;
+      const draftKeys = new Set([...versions.keys(), ...command.changes.map(change =>
+        `draft-under:${change.objectId.startsWith('structure:') ? change.objectId.slice('structure:'.length) : change.objectId}`)]);
+      for (const id of draftKeys) if ((draftBasis[id] ?? 0) !== draftVersion(this.db, id))
+        return retain(`学生输入依据已变化：${id}。请重新读取并整合；候选已保留`);
+      const scope = new Set([...versions.keys(), ...command.changes.map(change => change.objectId)]);
+      const writes = new Set(command.changes.map(change => change.objectId));
+      if (readDrafts(this.db).some(draft => {
+        const { direct, ancestors } = draftScopes(this.unit().unit, draft.input);
+        return [...direct].some(id => scope.has(id)) || [...ancestors].some(id => writes.has(id));
+      }))
+        return retain('读取或写入范围存在学生草稿，请先整合最新输入；候选已保留');
       if (command.changes.some(change => !versions.has(change.objectId)))
         return retain('写入范围尚未读取，请重新读取后整合；旧候选已保留');
       for (const change of command.changes) {
@@ -235,6 +247,8 @@ export class CommandGroups {
       changes.push(...this.observe(new Set(command.changes.filter(change => change.objectId.startsWith('dependency:')).map(change => change.objectId))));
       const result: GroupResult = { operationId: command.operationId, attemptId: command.attemptId,
         status: 'committed', revision: nextRevision, changedObjectIds: changes.map(change => change.objectId) };
+      result.cursor = changes.length ? appendEvent(this.db, { type: 'group.committed', operationId: result.operationId,
+        revision: nextRevision, changedObjectIds: result.changedObjectIds }) : eventCursor(this.db);
       // Successful request bodies are already represented by changed-object history; keep only dedupe facts here.
       this.db.prepare('INSERT INTO cg_candidates VALUES (?, ?, ?, ?)').run(command.operationId, digest(command), '{}', json(result));
       if (changes.length) {

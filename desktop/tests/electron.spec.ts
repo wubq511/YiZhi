@@ -126,3 +126,42 @@ test('real Electron IPC saves, retains failed input, retries, drains quit, reope
     expect(await reopened.evaluate(() => document.documentElement.scrollWidth <= globalThis.innerWidth)).toBe(true);
   } finally { fault?.close(); await app?.close(); await rm(root, { recursive: true, force: true }); }
 });
+
+test('two actual IPC editors save both paragraphs, split once and recover an unfinished draft after abrupt host death', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-electron-t02-'));
+  let app: ElectronApplication | undefined;
+  const launch = () => electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`],
+    env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  try {
+    app = await launch();
+    let window = await app.firstWindow();
+    const first = window.getByRole('textbox', { name: '编辑首段正文' });
+    const second = window.getByRole('textbox', { name: '编辑第二段正文' });
+    await first.fill('甲乙丙丁');
+    await second.fill('多段输入不能只保存最后一段 📝');
+    await expect(window.getByRole('status')).toHaveText('已保存');
+    await window.getByRole('button', { name: '拆分首段为两段' }).click();
+    await expect(first).toHaveText('甲乙');
+    const committed = await window.evaluate(() => (window as any).yizhi.open());
+    expect(committed.unit.reading.blocks.filter((b: any) => b.kind === 'paragraph').map((b: any) => b.payload.text))
+      .toEqual(['甲乙', '丙丁', '多段输入不能只保存最后一段 📝']);
+    // Persist incomplete input over actual preload IPC, then kill the host without its close barrier.
+    await window.evaluate(async () => {
+      const bridge = (window as any).yizhi;
+      const course = await bridge.open();
+      await bridge.saveDraft({ sessionId: course.sessionId, inputSeq: course.confirmedInputSeq + 1,
+        baseRevision: course.revision, complete: false,
+        changes: [{ blockId: course.editableBlockId, text: '未完成的输入 \\frac{' }] });
+    });
+    const proc = app.process();
+    const died = new Promise<void>(done => proc.once('exit', () => done()));
+    proc.kill('SIGKILL'); await died;
+    app = await launch();
+    window = await app.firstWindow();
+    await expect(window.getByRole('textbox', { name: '编辑首段正文' })).toHaveText('未完成的输入 \\frac{');
+    await expect(window.getByRole('status')).toHaveText('草稿已保留');
+    await window.getByRole('textbox', { name: '编辑首段正文' }).fill('修正后继续保存');
+    await expect(window.getByRole('status')).toHaveText('已保存');
+    await window.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t02-electron.png', fullPage: true });
+  } finally { await app?.close(); await rm(root, { recursive: true, force: true }); }
+});
