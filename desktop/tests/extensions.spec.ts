@@ -173,6 +173,8 @@ test('an actual confirmation disk fault stops browser steps and offers explicit 
   await expect(lab.getByRole('status',{name:'扩展保存状态'})).toHaveText('暂停未完成');
   const confirmed=(await read()).state,issued=await frame.evaluate(()=>(window as any).__issuedSteps);
   await page.waitForTimeout(700);expect(await frame.evaluate(()=>(window as any).__issuedSteps)).toBe(issued);expect((await read()).state).toEqual(confirmed);
+  await page.getByRole('button',{name:'奇偶校验扩展实验',exact:true}).click();
+  await expect(lab).toBeVisible();
   fault.exec('DROP TRIGGER extension_ui_disk_fault');fault.close();fault=undefined;
   await lab.getByRole('button',{name:'恢复最近确认现场',exact:true}).click();await expect(lab.getByRole('status',{name:'扩展保存状态'})).toHaveText('现场已保存');expect((await read()).state).toEqual(confirmed);
   await app.close();

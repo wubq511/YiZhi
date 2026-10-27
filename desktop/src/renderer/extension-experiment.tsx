@@ -42,5 +42,5 @@ function Lab({sessionId,active,disabled}:{sessionId:string;active:boolean;disabl
 }
 export function ExtensionExperiment(props:{sessionId:string;active:boolean;disabled:boolean}){
  const [open,setOpen]=useState(false);
- return <div className="extension-entry"><button aria-expanded={open} onClick={()=>setOpen(!open)}>奇偶校验扩展实验</button>{open&&<Lab {...props}/>}</div>;
+ return <div className="extension-entry"><button aria-expanded={open} disabled={props.disabled} onClick={async()=>{if(!open||await flushExtensions(props.sessionId))setOpen(!open);}}>奇偶校验扩展实验</button>{open&&<Lab {...props}/>}</div>;
 }
