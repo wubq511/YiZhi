@@ -32,7 +32,7 @@ export class AgentMutations {
    capabilities:{updates:'root paragraph.text or formula.latex',structure:'root remove/move/copy/insert; opaque children preserved',layout:'target plus returned two neighbors',experiment:'independently verified six-bit 4:1 MUX; attached citation required; formulaBlockId writes the linked formula atomically from the same formula parameter'}};
  }
  private operation(taskId:string,operationId:string){if(!id(operationId))throw new Error('工具操作身份无效');return `agent:${taskId}:${hash(operationId).slice(0,24)}`;}
- query(r:AgentIdentity & {operationId:string}){const task=this.active(r);return this.groups.query(this.operation(task.id,r.operationId));}
+ query(r:AgentIdentity & {operationId:string}){const task=this.agent.facts(r);return this.groups.query(this.operation(task.id,r.operationId));}
  apply(r:AgentIdentity & {input:AgentMutation}) {
   const task=this.active(r),v=r.input;
   keys(v,['operationId','basisId','conclusionOrMethodChanged','updates','remove','moves','copies','insert','layout','relations','experiments']);

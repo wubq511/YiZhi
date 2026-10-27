@@ -254,7 +254,11 @@ function App() {
     } catch (error) { setLoadError((error as Error).message); }
   };
   useEffect(() => { void load(); return () => channel.current?.dispose(); }, []);
+  useEffect(()=>window.yizhi.onCloseCancelled(()=>{document.body.inert=false;setClosing(false);}),[]);
   useEffect(() => window.yizhi.onCloseRequested(async () => {
+    // Freeze all input surfaces, including portals, before taking any async tail snapshot.
+    document.body.inert=true;
+    const saveWindow=async()=>{
     if (producerRunning.current) return false;
     if (composing.current) {
       setState({ status: 'error', error: '请先完成中文候选输入，再关闭窗口。' });
@@ -286,6 +290,9 @@ function App() {
     if (saved && continuous.current && !await continuous.current.finish()) { setClosing(false); return false; }
     if (!saved) setClosing(false);
     return saved;
+    };
+    try {const saved=await saveWindow();if(!saved){document.body.inert=false;setClosing(false);}return saved;}
+    catch(error){document.body.inert=false;setClosing(false);setReadError((error as Error).message);return false;}
   }), []);
   useEffect(() => {
     if (course) setMounted(previous => previous.map(unit => unit.id === course.unit.id ? course.unit : unit));
@@ -494,6 +501,7 @@ function App() {
         {state.status === 'error' && <button onClick={() => void channel.current?.flush()}>重试保存</button>}
       </div>
     </header>
+    {course?.inputRecovery?.unconfirmedTail && <div className="save-error" role="status">{course.inputRecovery.detail}</div>}
     {state.error && <div className="save-error" role="alert">{state.error}{!state.error.includes('冲突部分') && ' 输入仍保留，请重试保存。'}</div>}
     <div className="workspace board-workspace" inert={(!cameraReady && !loadError) || (narrow && (sourcesOpen || agentOpen || notesOpen || exchangeOpen || searchOpen))} aria-busy={!cameraReady && !loadError}>
       {directory && <nav ref={navRef} inert={sourceOpen || (narrow && (relationsOpen || producerOpen))} aria-label="课程目录" onKeyDown={event => trap(event, closeDirectory)}><h2>课程目录</h2>{narrow && <button onClick={closeDirectory}>关闭目录</button>}
