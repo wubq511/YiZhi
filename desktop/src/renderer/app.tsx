@@ -5,6 +5,7 @@ import 'katex/dist/katex.min.css';
 import './style.css';
 import type { DesktopBridge, OpenedCourse, ReadingBlock } from '../shared';
 import { ParagraphSaveChannel, type SaveState } from './save-channel';
+import { ControlledProducer } from './controlled-producer';
 declare global { interface Window { yizhi: DesktopBridge } }
 
 function Block({ block }: { block: ReadingBlock }) {
@@ -33,6 +34,8 @@ function App() {
   const [loadError, setLoadError] = useState<string>();
   const [state, setState] = useState<SaveState>({ status: 'saved' });
   const [closing, setClosing] = useState(false);
+  const [producerBusy, setProducerBusy] = useState(false);
+  const producerRunning = useRef(false);
   const channel = useRef<ParagraphSaveChannel | undefined>(undefined);
   const editor = useRef<HTMLDivElement>(null);
   const composing = useRef(false);
@@ -46,6 +49,7 @@ function App() {
   };
   useEffect(() => { void load(); }, []);
   useEffect(() => window.yizhi.onCloseRequested(async () => {
+    if (producerRunning.current) return false;
     if (composing.current) {
       setState({ status: 'error', error: '请先完成中文候选输入，再关闭窗口。' });
       return false;
@@ -63,7 +67,16 @@ function App() {
   const status = { saved: '已保存', pending: '待保存', saving: '正在保存…', error: '未保存' }[state.status];
   return <>
     <header className="app-header"><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
-      <div className="save-area"><span role="status" aria-live="polite" className={state.status}>{course ? status : '正在打开课程…'}</span>
+      {course && <ControlledProducer course={course} prepare={async () => {
+        if (composing.current) throw new Error('请先完成中文候选输入，再运行可控修改。');
+        producerRunning.current = true; setProducerBusy(true);
+        if (!await channel.current?.flush()) throw new Error('学生输入尚未保存，请先重试保存。');
+      }} committed={async () => {
+        const current = await window.yizhi.open();
+        channel.current = new ParagraphSaveChannel(window.yizhi, current, setState);
+        setCourse(current);
+      }} settled={() => { producerRunning.current = false; setProducerBusy(false); }} />}
+      <div className="save-area"><span role="status" aria-label="保存状态" aria-live="polite" className={state.status}>{course ? status : '正在打开课程…'}</span>
         {state.status === 'error' && <button onClick={() => void channel.current?.flush()}>重试保存</button>}
       </div>
     </header>
@@ -81,7 +94,7 @@ function App() {
             <p className="outcome">{course.unit.outcome}</p>
             <div className="editable-section"><label id="editor-label">首段正文 <span>可直接编辑，自动保存</span></label>
               <div ref={editor} role="textbox" aria-label="编辑首段正文" aria-multiline="true"
-                contentEditable={!closing} suppressContentEditableWarning className="paragraph-editor"
+                contentEditable={!closing && !producerBusy} suppressContentEditableWarning className="paragraph-editor"
                 onInput={event => { if (!composing.current) channel.current?.input(event.currentTarget.innerText); }}
                 onCompositionStart={() => { composing.current = true; }}
                 onCompositionEnd={event => { composing.current = false; channel.current?.input(event.currentTarget.innerText); }} />

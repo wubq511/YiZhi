@@ -1,8 +1,10 @@
 import { Worker } from 'node:worker_threads';
+import { commandClient } from '../command-api';
 import type { OpenedCourse, SaveParagraph, SaveReceipt } from '../shared';
 
 /** One instance belongs to the application host, shared by all its windows/courses. */
 export class CourseService {
+  readonly commands = commandClient((action, payload) => this.request(action, payload));
   private readonly worker: Worker;
   private sequence = 0;
   private pending = new Map<number, { resolve(value: any): void; reject(error: Error): void }>();

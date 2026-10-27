@@ -44,6 +44,9 @@ else {
     };
     ipcMain.handle('course:open', async event => { checkSender(event); return core.open(courseDirectory); });
     ipcMain.handle('course:save', async (event, command: SaveParagraph) => { checkSender(event); return core.save(command); });
+    for (const method of ['startAttempt', 'read', 'commit', 'stop', 'query', 'candidates', 'history'] as const) {
+      ipcMain.handle(`commands:${method}`, (event, payload) => { checkSender(event); return core.commands[method](payload); });
+    }
     ipcMain.on('window:close-result', async (event, result) => {
       checkSender(event);
       if (!result || result.requestId !== pendingClose || typeof result.saved !== 'boolean') return;
