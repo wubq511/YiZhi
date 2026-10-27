@@ -20,7 +20,7 @@ test('Agent sidebar keeps drafts, native composer Undo, fixed source selection a
     await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     await expect.poll(() => page.evaluate(async () => { const b = (window as any).yizhi; const c = await b.open(); return (await b.readingState(c.sessionId))?.camera?.zoom; })).toBe(0.85);
     const original = await page.evaluate(async () => { const b = (window as any).yizhi; const c = await b.open(); return { body: c.unit, state: await b.readingState(c.sessionId) }; });
-    await page.getByRole('textbox', { name: '编辑首段正文' }).evaluate(element => { const range = document.createRange(); const node = element.firstChild!; const at = node.textContent!.indexOf('位置记数法'); range.setStart(node, at); range.setEnd(node, at + 5); const selection = window.getSelection()!; selection.removeAllRanges(); selection.addRange(range); document.dispatchEvent(new Event('mouseup')); });
+    await page.getByRole('textbox', { name: '编辑首段正文' }).evaluate(element => { const range = document.createRange(); const node = element.firstChild!; const at = node.textContent!.indexOf('位置记数法'); range.setStart(node, at); range.setEnd(node, at + 5); const selection = window.getSelection()!; selection.removeAllRanges(); selection.addRange(range); element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true })); });
     await openAgent(page);
     await expect(page.locator('.agent-attachment')).toContainText('位置记数法');
     const composer = page.getByRole('textbox', { name: '学习对话草稿' });

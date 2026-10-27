@@ -1,3 +1,4 @@
+import type { SearchHit } from '../../search-api';
 import { codePointOffset, utf16Offset, type AnnotationSelection, type PersonalNote, type FormulaEditProof, type TextEditProof } from '../../annotation-api';
 import { formulaModel } from './formula-selection';
 import type { MathfieldElement } from 'mathlive';
@@ -83,13 +84,23 @@ export class ContinuousEditor {
           : tr.docChanged || (tr.selectionSet && !tr.selection.eq(oldState.selection)) ? DecorationSet.empty : previous;
       } }, props: { decorations(state) { return this.getState(state); } },
     })] });
+    const searchHighlights = Extension.create({ name: 'courseSearchHighlights', addProseMirrorPlugins: () => [new Plugin<DecorationSet>({
+      state: { init: () => DecorationSet.empty, apply(tr, previous, oldState) {
+        const location = tr.getMeta('searchLocation') as { blockFrom: number; blockTo: number; from: number; to: number } | undefined;
+        if (location) return DecorationSet.create(tr.doc, [
+          Decoration.node(location.blockFrom, location.blockTo, { 'data-search-current': 'true' }),
+          Decoration.inline(location.from, location.to, { class: 'search-exact-match' }),
+        ]);
+        return tr.getMeta('clearSearchLocation') || tr.docChanged || tr.selectionSet && !tr.selection.eq(oldState.selection) ? DecorationSet.empty : previous;
+      } }, props: { decorations(state) { return this.getState(state); } },
+    })] });
     const drawingHighlights = Extension.create({ name: 'drawingTextHighlights', addProseMirrorPlugins: () => [new Plugin<DecorationSet>({
       state: { init: () => DecorationSet.empty, apply(tr, previous) {
         const ranges = tr.getMeta('drawingLocations') as Array<{ from: number; to: number }> | undefined;
         return ranges ? DecorationSet.create(tr.doc, ranges.map(r => Decoration.inline(r.from,r.to,{class:'drawing-text-highlight'}))) : previous.map(tr.mapping,tr.doc);
       } }, props: { decorations(state) { return this.getState(state); } },
     })] });
-    this.editor = new Editor({ element, extensions: [...baseExtensions, opaque, formula, highlights, drawingHighlights],
+    this.editor = new Editor({ element, extensions: [...baseExtensions, opaque, formula, highlights, drawingHighlights, searchHighlights],
       content: { type: 'doc', content: recovered.map(project) },
       editorProps: { attributes: { role: 'textbox', 'aria-label': '连续编辑正文', 'aria-multiline': 'true', class: 'continuous-prose nodrag nopan' },
         transformPasted: freshClipboard,
@@ -179,6 +190,20 @@ export class ContinuousEditor {
         projection, from, to, quote: field.getValue([from, to]),
       })) };
   }
+  /** Editor-owned decorations survive PM's DOM reconciliation; search does not edit content. */
+  revealSearch(hit: SearchHit): boolean {
+    if (hit.field !== 'text') return false;
+    let location: { blockFrom: number; blockTo: number; from: number; to: number } | undefined;
+    this.editor.state.doc.forEach((node, pos) => {
+      if (node.type.name !== 'paragraph' || node.attrs.block.id !== hit.blockId) return;
+      if (node.textContent !== hit.text || Array.from(node.textContent).slice(hit.start, hit.end).join('') !== hit.quote) throw new Error('当前显示版本不同，请重新搜索');
+      location = { blockFrom: pos, blockTo: pos + node.nodeSize, from: pos + 1 + utf16Offset(node.textContent, hit.start), to: pos + 1 + utf16Offset(node.textContent, hit.end) };
+    });
+    if (!location) return false;
+    this.editor.view.dispatch(this.editor.state.tr.setSelection(TextSelection.create(this.editor.state.doc, location.from, location.to)).setMeta('searchLocation', location).setMeta('addToHistory', false));
+    this.editor.view.focus(); return true;
+  }
+  clearSearch() { this.editor.view.dispatch(this.editor.state.tr.setMeta('clearSearchLocation', true).setMeta('addToHistory', false)); }
   async revealAnnotation(note: PersonalNote) {
     if (note.current.status !== 'attached') throw new Error('此批注待重新关联，请先选择新的片段。');
     const locations = note.current.fragments;
