@@ -118,11 +118,31 @@ test('MathLive owns inner Undo once, incomplete input survives host death separa
   let app = await launch();
   try {
     let page = await app.firstWindow();
+    await expect(page).toHaveURL(/^yizhi-app:\/\/app\//);
+    const fontLoads = new Set<string>(), fontFailures: string[] = [];
+    page.on('response', response => { if (response.url().includes('/mathlive-fonts/')) {
+      if (response.ok()) fontLoads.add(response.url()); else fontFailures.push(response.url());
+    } });
+    page.on('requestfailed', request => { if (request.url().includes('/mathlive-fonts/')) fontFailures.push(request.url()); });
     await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     await page.getByRole('textbox', { name: '编辑首段正文', exact: true }).fill('保留正文与公式的独立撤销。');
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     await page.locator('.editor-formula').first().getByRole('button', { name: '编辑公式', exact: true }).click();
     let field = page.locator('math-field').first();
+    // MathLive intentionally reuses existing KaTeX font families. Also decode its bundled fallback
+    // through the real registered origin, rather than assuming it always makes a second request.
+    const fonts = await page.evaluate(async () => {
+      const bundled = await new FontFace('T05MathLiveAsset', 'url(./mathlive-fonts/KaTeX_Main-Regular.woff2)').load();
+      const main = await document.fonts.load('16px KaTeX_Main');
+      const math = await document.fonts.load('italic 16px KaTeX_Math');
+      return { bundled: bundled.status, main: main.map(f => f.status), math: math.map(f => f.status), failed: document.body.classList.contains('ML__fonts-did-not-load') };
+    });
+    expect(fonts.bundled).toBe('loaded');
+    expect(fonts.main.length).toBeGreaterThan(0); expect(fonts.main.every(s => s === 'loaded')).toBe(true);
+    expect(fonts.math.length).toBeGreaterThan(0); expect(fonts.math.every(s => s === 'loaded')).toBe(true);
+    expect(fonts.failed).toBe(false);
+    await expect.poll(() => fontLoads.size).toBeGreaterThan(0);
+    expect(fontFailures).toEqual([]);
     await field.evaluate((el: any) => { el.executeCommand('selectAll'); el.executeCommand(['insert', 'x+1']); });
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     await field.press('ArrowRight'); await field.press('+'); await field.press('2');
@@ -194,11 +214,7 @@ test('continuous editor saves split/merge and cross-paragraph replacement throug
     const original = await page.evaluate(() => (window as any).yizhi.open());
     const first = page.getByRole('textbox', { name: '编辑首段正文', exact: true });
     await first.fill('甲乙丙丁');
-    await editor.evaluate(el => {
-      (el as HTMLElement).focus();
-      const range = document.createRange(); range.setStart(el.querySelector('p')!.firstChild!, 2); range.collapse(true);
-      const selection = getSelection()!; selection.removeAllRanges(); selection.addRange(range);
-    });
+    await editor.evaluate((el: any) => { el.editor.commands.setTextSelection(3); el.editor.view.focus(); });
     await page.keyboard.press('Enter');
     await expect(first).toHaveText('甲乙');
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
@@ -209,13 +225,9 @@ test('continuous editor saves split/merge and cross-paragraph replacement throug
     await expect(first).toHaveText('甲乙丙丁');
     await page.keyboard.press('Meta+z');
     await expect(editor.locator('p[data-block-id]').nth(1)).toHaveText('丙丁');
-    // A real DOM range across two paragraphs, followed by keyboard replacement.
-    await editor.evaluate(el => {
-      (el as HTMLElement).focus();
-      const ps = el.querySelectorAll('p[data-block-id]');
-      const range = document.createRange(); range.setStart(ps[0].firstChild!, 1); range.setEnd(ps[1].firstChild!, 1);
-      const selection = getSelection()!; selection.removeAllRanges(); selection.addRange(range);
-    });
+    // The public selection command installs a real native range across both paragraphs.
+    await editor.evaluate((el: any) => { el.editor.commands.setTextSelection({ from: 2, to: 6 }); el.editor.view.focus(); });
+    expect(await page.evaluate(() => getSelection()!.toString().replace(/\n/g, ''))).toBe('乙丙');
     await page.keyboard.insertText('跨段');
     await expect(first).toHaveText('甲跨段丁');
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
