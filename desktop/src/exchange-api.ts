@@ -5,6 +5,7 @@ export const exchangeExcludes = [
   'review-state',
   'layout',
   'reading-state',
+  'personal-drawings',
   'drafts',
   'conversations',
   'tasks',
