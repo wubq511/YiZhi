@@ -1,3 +1,4 @@
+import { Exchange } from './exchange';
 import { snapshotLegacy, convertLegacy, legacyContent, candidateResource } from './migration';
 import { Annotations } from './annotations';
 import { initializeLayout, layoutGraph, saveLayout } from './local-layout';
@@ -25,6 +26,7 @@ import { initializeReviewState, reviewSnapshot, setReviewStatus, confirmReviewPr
 const EDITABLE = 'RB-TH-01-01-what-is-positional-notation';
 interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; courseId: string; graph: CourseGraph;
   // T03 constructs its observer on this same connection; both student save entry points call it in-transaction.
+  exchange: Exchange;
   annotations: Annotations;
   groups: CommandGroups;
   sources: Sources;
@@ -42,7 +44,7 @@ function session(id: string): Course {
 }
 function snapshot(course: Course): OpenedCourse {
   const row = course.db.prepare('SELECT payload, revision FROM units WHERE id = ?').get('KU-001')!;
-  return { contentScope: course.db.prepare("SELECT value FROM metadata WHERE key='content-scope'").get()?.value === 'content-candidate' ? 'content-candidate' : undefined, courseId: course.courseId, sessionId: course.sessionId, revision: Number(row.revision),
+  return { resourceAssets: course.db.prepare('SELECT asset FROM exchange_resources ORDER BY asset').all().map(r => String(r.asset)), contentScope: course.db.prepare("SELECT value FROM metadata WHERE key='content-scope'").get()?.value === 'content-candidate' ? 'content-candidate' : undefined, courseId: course.courseId, sessionId: course.sessionId, revision: Number(row.revision),
     blockVersions: Object.fromEntries(course.db.prepare("SELECT id, version FROM cg_objects WHERE kind='block'").all().map(r => [String(r.id), Number(r.version)])),
     drafts: readDrafts(course.db), eventCursor: eventCursor(course.db),
     confirmedInputSeq: confirmedInput(course.db, course.sessionId), editableBlockId: EDITABLE, unit: JSON.parse(String(row.payload)),
@@ -105,6 +107,7 @@ function open(directory: string): OpenedCourse {
     initializeReviewState(db);
     const annotations = new Annotations(db);
     const groups = new CommandGroups(db, graph, operationId => {
+      exchange.fence('commands:commit', operationId);
       annotations.fence('commands:commit', operationId);
       sources.fenceOperation('commands:commit', operationId);
       agent.fence('commands:commit', operationId);
@@ -120,7 +123,8 @@ function open(directory: string): OpenedCourse {
     const extensions = new Extensions(db, canonical);
     const parsing = new Parsing(db, canonical, sources, run => { queue = queue.then(run).catch(error => { console.error(error); }); }, workerData?.parseScheduling);
     const agent = new AgentStore(db, sources, sourceUnit);
-    const course: Course = { db, owner, agent, annotations, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
+    const exchange = new Exchange(db, canonical, graph, () => relations.graph(), () => ({ sources: sources.relationCatalog(relationCatalog.sources), retiredUnitIds: relationCatalog.retiredUnitIds }));
+    const course: Course = { exchange, db, owner, agent, annotations, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     const result = snapshot(course);
     courses.set(canonical, course);
@@ -161,6 +165,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     if (payload?.operationId) {
       const course = session(payload.sessionId);
       const fencedAction = action === 'commands:resolveInput' ? 'commitEdit' : action;
+      course.exchange.fence(fencedAction, payload.operationId);
       course.annotations.fence(fencedAction, payload.operationId);
       course.sources.fenceOperation(fencedAction, payload.operationId);
       course.agent.fence(fencedAction, payload.operationId);
@@ -168,7 +173,16 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       course.extensions.fence(fencedAction, payload.operationId);
     }
     let value: unknown;
-    if (action === 'migration:snapshot') value = await snapshotLegacy(payload);
+    if (action.startsWith('exchange:')) {
+      const exchange = session(payload.sessionId).exchange;
+      if (action === 'exchange:available') value = exchange.available();
+      else if (action === 'exchange:exportPackage') value = exchange.exportPackage(payload);
+      else if (action === 'exchange:inspect') value = exchange.inspect(payload.directory);
+      else if (action === 'exchange:importPackage') { value = await exchange.importPackage(payload); exchange.refresh(); }
+      else if (action === 'exchange:query') value = exchange.query(payload.operationId);
+      else throw new Error('未知交换接口');
+    }
+    else if (action === 'migration:snapshot') value = await snapshotLegacy(payload);
     else if (action === 'migration:convert') value = await convertLegacy(payload, workerData?.migrationScheduling);
     else if (action === 'migration:content') value = legacyContent(session(payload.sessionId).db);
     else if (action === 'migration:resource') { const c=session(payload.sessionId); const directory=[...courses.entries()].find(([,v])=>v===c)![0]; value=candidateResource(c.db,directory,payload.asset); }

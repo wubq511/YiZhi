@@ -17,6 +17,7 @@ export interface CourseUnit {
 }
 export interface OpenedCourse {
   contentScope?: 'content-candidate';
+  resourceAssets?: string[];
   courseId: string;
   sessionId: string;
   revision: number;
@@ -47,6 +48,7 @@ export interface SaveReceipt {
   basedOnRevision?: number;
 }
 export interface DesktopBridge extends SaveBridge {
+  exchange: import('./exchange-api').ExchangeBridge;
   annotations: import('./annotation-api').AnnotationAPI;
   extensions: Omit<import('./extensions-api').ExtensionsAPI, 'resource'>;
   experiments: import('./experiments-api').ExperimentsAPI;
@@ -122,6 +124,7 @@ export interface EditHistory {
   committedAt: string | null;
 }
 export type SaveEventData =
+  { type: 'exchange.imported'; operationId: string; unitIds: string[] } |
   { type: 'annotation.changed'; noteId: string } |
   { type: 'agent.changed'; conversationId: string; taskId?: string } |
   { type: 'parse.changed'; taskId: string; attemptId: string; kind: string; artifactId?: string } |

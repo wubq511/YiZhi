@@ -1,3 +1,4 @@
+import { exchangeClient } from '../exchange-api';
 import { migrationClient } from '../migration-api';
 import { annotationClient } from '../annotation-api';
 import { extensionsClient } from '../extensions-api';
@@ -12,6 +13,7 @@ import type { CourseGraph, CourseUnit, ReadingState, OpenedCourse, SaveParagraph
 
 /** One instance belongs to the application host, shared by all its windows/courses. */
 export class CourseService {
+  readonly exchange = exchangeClient((action, payload) => this.request(action, payload));
   readonly migration = migrationClient((action, payload) => this.request(action, payload));
   readonly annotations = annotationClient((action, payload) => this.request(action, payload));
   readonly extensions = extensionsClient((action, payload) => this.request(action, payload));

@@ -16,7 +16,7 @@ export function useRelationEvents(sessionId: string | undefined, onGraph: (graph
       try {
         const page = await window.yizhi.readEvents(sessionId, cursor);
         if (disposed) return;
-        if (page.kind === 'reset' || page.events.some(e => e.type === 'relations.committed')) {
+        if (page.kind === 'reset' || page.events.some(e => e.type === 'relations.committed' || e.type === 'exchange.imported')) {
           const graph = await window.yizhi.graph(sessionId);
           if (!disposed) onGraph(graph);
         }
