@@ -1,3 +1,4 @@
+import { drawingClient } from '../drawing-api';
 import { searchClient } from '../search-api';
 import { annotationClient } from '../annotation-api';
 import {extensionsClient} from '../extensions-api';
@@ -17,6 +18,7 @@ async function invoke(channel: string, argument?: unknown) {
   }
 }
 const bridge: DesktopBridge = {
+  drawings: drawingClient(invoke),
   search: searchClient(invoke),
   annotations: annotationClient(invoke),
   extensions: (() => { const {resource, ...api}=extensionsClient(invoke); return api; })(),
