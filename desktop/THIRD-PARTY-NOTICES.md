@@ -23,5 +23,10 @@
 | --- | --- | --- |
 | @xyflow/react | 12.12.0 | MIT |
 | roughjs | 4.6.6 | MIT |
+| @tiptap/core, @tiptap/pm, @tiptap/extension-document / paragraph / text | 3.32.0 | [MIT](licenses/Tiptap-MIT.txt) |
+| ProseMirror model / state / view / history | 1.25.12 / 1.4.4 / 1.42.8 / 1.5.1 | [MIT](licenses/ProseMirror-MIT.txt)，完整传递版本由 lockfile 固定 |
+| MathLive | 0.111.1 | [MIT](licenses/MathLive-MIT.txt)；本地 KaTeX 字体沿用 OFL-1.1 |
+
+MathLive 从锁定 npm 包打包，字体复制到 `dist/renderer/mathlive-fonts/`，声音关闭；运行不依赖 CDN、云编辑服务或商业 Tiptap 扩展。以上编辑组件的许可原文与字体许可一起复制到 `dist/licenses/`。
 
 器件样本中的 TI 74153 手册原页复制自已有实验资源；其来源版本和文件摘要见 `fixtures/t04-provenance.json`。该来源页仍保留其原始身份，并非新绘制材料。

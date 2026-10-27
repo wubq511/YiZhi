@@ -77,6 +77,8 @@ export interface DraftInput {
   baseRevision: number;
   changes: TextChange[];
   splits?: ParagraphSplit[];
+  patch?: import('./editor-api').ContentPatch;
+  formulaDrafts?: import('./editor-api').FormulaDraft[];
   /** False for incomplete editor syntax: retained, never promoted as formal content. */
   complete: boolean;
   /** Explicit takeover after recovering an ended session's draft. */

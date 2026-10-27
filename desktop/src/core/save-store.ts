@@ -1,8 +1,11 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
+import { patchTargets } from '../editor-api';
+import { initializeEditorStore, validatePatch, applyContentPatch } from './editor-store';
 import type { DraftInput, DraftReceipt, RecoverableDraft, EditCommand, EditReceipt, EditHistory, SaveReceipt, CourseUnit, ReadingBlock, SaveEventData } from '../shared';
 
 export function initializeSaveStore(db: DatabaseSync) {
+  initializeEditorStore(db);
   db.exec(`CREATE TABLE IF NOT EXISTS input_progress(
     session_id TEXT PRIMARY KEY, seq INTEGER NOT NULL, digest TEXT NOT NULL, receipt TEXT NOT NULL, confirmed_seq INTEGER NOT NULL DEFAULT 0);
     CREATE TABLE IF NOT EXISTS draft_versions(object_id TEXT PRIMARY KEY, version INTEGER NOT NULL);
@@ -38,6 +41,10 @@ function validate(input: DraftInput) {
     (input.splits !== undefined && (!Array.isArray(input.splits) || input.splits.length > 1000 ||
       input.splits.some(s => !s || typeof s.blockId !== 'string' || typeof s.newBlockId !== 'string' || !Number.isSafeInteger(s.offset)))) ||
     JSON.stringify(input).length > 2_000_000) throw new Error('无效的输入草稿');
+  if (input.patch) validatePatch(input.patch);
+  if (input.formulaDrafts && (!Array.isArray(input.formulaDrafts) || input.formulaDrafts.some(f =>
+    !f || typeof f.blockId !== 'string' || typeof f.latex !== 'string') || (input.complete && input.formulaDrafts.length)))
+    throw new Error('未完成公式只能保留为草稿');
 }
 export function transaction<T>(db: DatabaseSync, run: () => T): T {
   db.exec('BEGIN IMMEDIATE');
@@ -103,7 +110,8 @@ export function history(db: DatabaseSync): EditHistory[] {
 }
 /** Text/object targets; callers must also check shared ancestors for structural operations. */
 export function draftTargets(input: DraftInput): Set<string> {
-  return new Set([...input.changes.map(c => c.blockId), ...(input.splits ?? []).flatMap(s => [s.blockId, s.newBlockId])]);
+  return new Set([...input.changes.map(c => c.blockId), ...(input.splits ?? []).flatMap(s => [s.blockId, s.newBlockId]),
+    ...patchTargets(input.patch), ...(input.formulaDrafts ?? []).map(f => f.blockId)]);
 }
 /** Runs after the formal unit UPDATE and before history/receipt/progress COMMIT.
  * The observer may update block/ancestor/dependency projections on the same connection;
@@ -127,17 +135,19 @@ export function commitEdit(db: DatabaseSync, command: EditCommand, afterWrite?: 
     if (progress && command.inputSeq === Number(progress.seq) && progress.digest !== digest(input))
       throw new Error('同一输入序号不能换用不同内容');
     const affected = draftTargets(command);
-    if (!affected.size) throw new Error('没有待提交的修改');
+    // A cancelled editor action/finished draft may have no body diff, but still needs an exact durable input receipt.
+    if (!affected.size && !command.patch) throw new Error('没有待提交的修改');
     const drafts = readDrafts(db);
     for (const draft of drafts) {
       if (draft.input.sessionId === command.sessionId && draft.input.inputSeq === command.inputSeq) continue;
       if ([...draftTargets(draft.input)].some(id => affected.has(id))) throw new Error('较新或其他会话草稿仍待整合');
       // Splits share the same block list, even if their text targets differ.
-      if ((draft.input.splits?.length || command.splits?.length)) throw new Error('共同结构上的草稿仍待整合');
+      if ((draft.input.splits?.length || command.splits?.length || draft.input.patch?.structure || command.patch?.structure)) throw new Error('共同结构上的草稿仍待整合');
     }
     const row = db.prepare('SELECT payload, revision FROM units WHERE id=?').get('KU-001')!;
     if (Number(row.revision) !== command.baseRevision) throw new Error('正文版本已变化，输入仍保留，请重新核对');
     const unit: CourseUnit = JSON.parse(String(row.payload));
+    const editorEffect = command.patch ? applyContentPatch(db, unit, command.patch) : undefined;
     const find = (blocks: ReadingBlock[], id: string, parentId = unit.id): { block: ReadingBlock; siblings: ReadingBlock[]; parentId: string } | undefined => {
       for (const block of blocks) {
         if (block.id === id) return { block, siblings: blocks, parentId };
@@ -178,13 +188,15 @@ export function commitEdit(db: DatabaseSync, command: EditCommand, afterWrite?: 
     }
     const receipt: EditReceipt = { operationId: command.operationId, sessionId: command.sessionId,
       inputSeq: command.inputSeq, revision: Number(row.revision) + 1,
-      blockId: command.changes[0]?.blockId ?? command.splits![0].blockId, blockIds: [...affected], cursor: 0 };
+      blockId: command.changes[0]?.blockId ?? command.splits?.[0]?.blockId ?? patchTargets(command.patch)[0] ?? unit.id, blockIds: [...affected], cursor: 0 };
     db.prepare('UPDATE units SET payload=?, revision=? WHERE id=?').run(JSON.stringify(unit), receipt.revision, unit.id);
     const relatedChanges = afterWrite?.();
     receipt.cursor = appendEvent(db, { type: 'content.committed', receipt: { ...receipt, cursor: eventCursor(db) + 1 } });
-    const after = [...affected].map(id => find(unit.reading.blocks, id)?.block).filter((block): block is ReadingBlock => !!block).map(valueOf);
+    const legacyAffected = new Set([...command.changes.map(c => c.blockId), ...(command.splits ?? []).flatMap(s => [s.blockId, s.newBlockId])]);
+    const after = [...legacyAffected].map(id => find(unit.reading.blocks, id)?.block).filter((block): block is ReadingBlock => !!block).map(valueOf);
     db.prepare('INSERT INTO operations VALUES (?, ?, ?, ?, ?, ?)')
-      .run(command.operationId, hash, JSON.stringify(receipt), unit.id, JSON.stringify(before), JSON.stringify({ blocks: after, splits: correspondence, relatedChanges: relatedChanges ?? [] }));
+      .run(command.operationId, hash, JSON.stringify(receipt), unit.id, JSON.stringify([...before, ...(editorEffect?.before ?? [])]), JSON.stringify({ blocks: [...after, ...(editorEffect?.after ?? [])], splits: correspondence,
+        ...(editorEffect ? { structure: editorEffect.structure, correspondence: editorEffect.correspondence } : {}), relatedChanges: relatedChanges ?? [] }));
     db.prepare('INSERT INTO operation_times VALUES (?, ?)').run(command.operationId, new Date().toISOString());
     if (!progress || command.inputSeq > Number(progress.seq)) {
       db.prepare(`INSERT INTO input_progress VALUES (?, ?, ?, ?, ?) ON CONFLICT(session_id)
@@ -230,6 +242,7 @@ export function draftScopes(unit: CourseUnit, input: DraftInput) {
     }
   }
   for (const split of input.splits ?? []) direct.add(`structure:${parents.get(split.blockId) ?? unit.id}`);
+  if (input.patch?.structure) { direct.add(`structure:${input.patch.structure.parentId}`); ancestors.add(input.patch.structure.parentId); }
   return { direct, ancestors };
 }
 

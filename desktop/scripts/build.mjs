@@ -1,5 +1,5 @@
 import { build } from 'esbuild';
-import { mkdir, copyFile, readdir } from 'node:fs/promises';
+import { mkdir, copyFile, readdir, cp } from 'node:fs/promises';
 await mkdir('dist/tests', { recursive: true });
 const entries = [
   ['src/core/course-service.ts', 'dist/course-service.cjs'],
@@ -20,6 +20,8 @@ try {
     platform: 'browser', target: 'chrome140', loader: { '.woff': 'file', '.woff2': 'file', '.ttf': 'file' } });
   await copyFile('src/renderer/index.html', 'dist/renderer/index.html');
   await copyFile('src/renderer/assets/ti74153-1.png', 'dist/renderer/ti74153-1.png');
+  await cp('node_modules/mathlive/fonts', 'dist/renderer/mathlive-fonts', { recursive: true });
 } catch (error) { throw error; }
 await mkdir('dist/fixtures', { recursive: true });
+await cp('licenses', 'dist/licenses', { recursive: true });
 for (const file of await readdir('fixtures')) await copyFile(`fixtures/${file}`, `dist/fixtures/${file}`);
