@@ -79,3 +79,5 @@ T29 在已导入的一个 PDF 版本上提供逐页解析、停止／明确继�
 真实只读学习问答支持多段对话、固定正文选文与 T14 来源引用、真实回答增量、课程内持久草稿，以及基于已存可见对话的新问题。执行器在宿主运行，学习窗口关闭后仍可完成回答；明确退出先排空任务登记和输入。协议、恢复用途与实际执行器测试见[Agent 接入说明](docs/agent.md)。
 
 T13 的一个自含离线扩展、版本／现场迁移与宿主恢复接口见 [extensions](docs/extensions.md)。测试使用一次性课程副本；原始个人课程不参与故障注入。
+
+T15 offline four-scope search: [contract and limits](docs/search.md). Open “搜索课程” for actual stored content, scope filters, background indexing, deep navigation and return to the prior reading scene. Search regressions are `tests/search.test.ts` and `tests/search.spec.ts`.

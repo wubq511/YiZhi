@@ -46,6 +46,7 @@ export interface SaveReceipt {
   basedOnRevision?: number;
 }
 export interface DesktopBridge extends SaveBridge {
+  search: import('./search-api').SearchAPI;
   annotations: import('./annotation-api').AnnotationAPI;
   extensions: Omit<import('./extensions-api').ExtensionsAPI, 'resource'>;
   experiments: import('./experiments-api').ExperimentsAPI;
