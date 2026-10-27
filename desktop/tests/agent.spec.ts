@@ -60,7 +60,13 @@ test('Agent sidebar keeps drafts, native composer Undo, fixed source selection a
     await page.getByRole('button', { name: '带此选段向 Agent 提问', exact: true }).click();
     await expect(page.locator('.agent-attachment')).toContainText('Source selection fixed evidence');
     await page.getByRole('button', { name: '返回画板', exact: true }).click();
-    await composer.fill('解释这段来源'); await page.getByRole('button', { name: '发送问题', exact: true }).click();
+    await composer.fill('解释这段来源');
+    const other = choices.find(o => o.id !== first.id)!;
+    await page.getByLabel('学习对话列表').selectOption(other.id); await expect(composer).toHaveValue('第二段草稿');
+    await page.getByLabel('学习对话列表').selectOption(first.id); await expect(composer).toHaveValue('解释这段来源');
+    await expect(page.locator('.agent-attachment')).toContainText('Source selection fixed evidence');
+    await page.getByRole('button', { name: '发送问题', exact: true }).click();
+    await expect(page.getByRole('status', { name: '回答状态' })).toHaveCount(2);
     await expect(page.getByRole('status', { name: '回答状态' }).last()).toHaveText('回答已完成');
     await expect(page.getByLabel('固定课程出处').last()).toContainText('Source selection fixed evidence');
     await composer.fill('重开后接着问'); await expect(page.getByRole('status', { name: '对话草稿保存' })).toHaveText('草稿已保存');
@@ -139,17 +145,19 @@ test('actual installed executor answers a small cited question through the Elect
     await expect(page.locator('.agent-message.assistant .agent-prose').last()).toHaveText(evidence.answer);
     await expect(page.getByLabel('固定课程出处').last()).toContainText('Place value depends on position.');
     evidence.assertions.push('actual app quit/reopen retained answer, immutable citation and composer; board unchanged; reduced Finder PATH passed');
-    // A second bounded real turn verifies conversation continuation, not task resumption.
+    // A new ephemeral thread continues the Core-visible conversation without a permanent hidden tool-read transcript.
     await page.getByLabel('问答模型').selectOption('gpt-6-luna');
-    await page.getByRole('textbox', { name: '学习对话草稿' }).fill('接着刚才的问题，只调用课程目标工具，用一句中文说明十进制 22 中左边的 2 表示什么。保持课程依据与补充解释分开。');
+    await page.getByRole('textbox', { name: '学习对话草稿' }).fill('接着刚才的问题，请调用课程目标工具，并准确重复上一条回答引用的英文原句，再用一句中文说明十进制 22 中左边的 2 表示什么。保持课程依据与补充解释分开。');
     await page.getByRole('button', { name: '发送问题', exact: true }).click();
     await expect(page.getByRole('status', { name: '回答状态' }).last()).toHaveText('回答已完成', { timeout: 90_000 });
     await expect(page.getByRole('status', { name: '回答状态' })).toHaveCount(2);
     await expect(page.getByRole('status', { name: '回答状态' }).last()).toHaveText('回答已完成', { timeout: 90_000 });
     const continued = await page.evaluate(async () => { const b = (window as any).yizhi; const c = await b.open(); const l = await b.agent.list({ sessionId: c.sessionId }); return b.agent.get({ sessionId: c.sessionId, conversationId: l.selectedId }); });
-    expect(continued.tasks[1].threadId).toBe(saved.tasks[0].threadId);
+    expect(continued.tasks[1].threadId).not.toBe(saved.tasks[0].threadId);
+    await expect(page.locator('.agent-message.assistant .agent-prose').last()).toContainText('Place value depends on position.');
+    await expect(page.locator('.agent-message.assistant .agent-prose').last()).toContainText(/20|二十|两个十/);
     expect(continued.tasks[1].turnId).not.toBe(saved.tasks[0].turnId);
-    evidence.continuedTask = continued.tasks[1]; evidence.assertions.push('reopened product resumed the same real CLI thread for a new completed question');
+    evidence.continuedTask = continued.tasks[1]; evidence.assertions.push('reopened product continued from Core-visible history in a new ephemeral CLI thread, repeated the prior exact quote and completed a new turn');
     evidence.passed = true;
   } catch (error) { evidence.error = String(error); throw error; }
   finally {

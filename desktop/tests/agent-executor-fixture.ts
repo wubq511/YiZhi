@@ -27,7 +27,7 @@ async function receive(m: any) {
   if (m.method === 'model/list') respond({ data: [{ id: 'fixture', model: 'fixture', displayName: 'Protocol fixture', isDefault: true }], nextCursor: null });
   if (m.method === 'thread/resume') respond({ thread: { id: m.params.threadId } });
   if (m.method === 'thread/start') {
-    if (m.params.sandbox !== 'read-only' || m.params.approvalPolicy !== 'never' || !m.params.dynamicTools.every((t: any) => t.type === 'function') || m.params.config['mcp_servers.fixture.enabled'] !== false)
+    if (m.params.ephemeral !== true || m.params.sandbox !== 'read-only' || m.params.approvalPolicy !== 'never' || !m.params.dynamicTools.every((t: any) => t.type === 'function') || m.params.config['mcp_servers.fixture.enabled'] !== false)
       return send({ id: m.id, error: { code: -32602, message: 'Readonly isolation was not configured' } });
     respond({ thread: { id: `fixture-thread-${++threadSeq}` } });
   }

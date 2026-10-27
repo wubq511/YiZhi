@@ -54,7 +54,7 @@ test('host app-server handles async real course tool reads while core stays resp
     const conversation = await core.agent.create({ sessionId, operationId: 'create' });
     const task = await runtime.submit({ sessionId, operationId: 'submit', conversationId: conversation.id, generation: 1,
       text: '解释位权', target: { unitId: 'KU-001' } });
-    const received = await until(() => core.agent.get({ sessionId, conversationId: conversation.id }), v => v.messages.some(m => m.state === 'streaming'));
+    const received = await until(() => core.agent.get({ sessionId, conversationId: conversation.id }), v => v.messages.some(m => m.state === 'streaming') || v.tasks[0].status !== 'running');
     assert.equal(received.tasks[0].status, 'running');
     assert.deepEqual((await core.read(sessionId)).unit, opened.unit);
     const complete = await until(() => core.agent.get({ sessionId, conversationId: conversation.id }), v => v.tasks[0].status === 'completed');
