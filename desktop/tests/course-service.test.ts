@@ -118,3 +118,16 @@ test('course navigation exposes the real lightweight graph and reads a selected 
     await assert.rejects(service.readUnit(course.sessionId, 'KU-999'));
   } finally { await service.close(); await rm(root, { recursive: true, force: true }); }
 });
+
+test('reading state survives reopening the course with disclosure and return position', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-reading-state-'));
+  let service = new CourseService(resolve('dist/worker.cjs'));
+  try {
+    const opened = await service.open(root);
+    const state = { unitId: 'KU-002', expanded: { 'RB-TH-01-17-next-unit-reference:hint': true }, returnStack: [{ unitId: 'KU-001', blockId: 'RB-TH-01-17-next-unit-reference', scrollTop: 420 }], scrollTop: 20 };
+    await service.setReadingState(opened.sessionId, state);
+    await service.close(); service = new CourseService(resolve('dist/worker.cjs'));
+    const reopened = await service.open(root);
+    assert.deepEqual(await service.readingState(reopened.sessionId), state);
+  } finally { await service.close(); await rm(root, { recursive: true, force: true }); }
+});

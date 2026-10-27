@@ -1,5 +1,5 @@
 import { Worker } from 'node:worker_threads';
-import type { CourseGraph, CourseUnit, OpenedCourse, SaveParagraph, SaveReceipt } from '../shared';
+import type { CourseGraph, CourseUnit, OpenedCourse, ReadingState, SaveParagraph, SaveReceipt } from '../shared';
 
 /** One instance belongs to the application host, shared by all its windows/courses. */
 export class CourseService {
@@ -39,6 +39,8 @@ export class CourseService {
   read(sessionId: string): Promise<OpenedCourse> { return this.request('read', { sessionId }); }
   graph(sessionId: string): Promise<CourseGraph> { return this.request('graph', { sessionId }); }
   readUnit(sessionId: string, unitId: string): Promise<CourseUnit> { return this.request('readUnit', { sessionId, unitId }); }
+  readingState(sessionId: string): Promise<ReadingState | null> { return this.request('readingState', { sessionId }); }
+  setReadingState(sessionId: string, state: ReadingState): Promise<void> { return this.request('setReadingState', { sessionId, state }); }
   save(command: SaveParagraph): Promise<SaveReceipt> { return this.request('save', command); }
   close(): Promise<void> {
     if (this.closing) return this.closing;

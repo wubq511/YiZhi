@@ -1,0 +1,989 @@
+{
+  "aliases": [
+    "三位一组",
+    "四位一组"
+  ],
+  "id": "KU-003",
+  "internals": [
+    {
+      "kind": "condition",
+      "text": "最高位与最低位不足一组时补 0"
+    },
+    {
+      "kind": "example",
+      "text": "67.731_8=110111.111011001_2；3AB4_16=0011101010110100_2"
+    }
+  ],
+  "kind": "method",
+  "name": "二进制、八进制与十六进制互转",
+  "outcome": "能按 3 位/4 位一组在二进制与八进制、十六进制之间互转，并正确补零。",
+  "questionTypes": [
+    "数制转换"
+  ],
+  "rating": {
+    "evidence": {
+      "exerciseExamples": [],
+      "homeworkDirect": [
+        {
+          "basis": "stem",
+          "label": "1.15(a)",
+          "questionId": "Q-005"
+        },
+        {
+          "basis": "stem",
+          "label": "1.15(c)",
+          "questionId": "Q-006"
+        },
+        {
+          "basis": "stem",
+          "label": "1.19(a)",
+          "questionId": "Q-011"
+        },
+        {
+          "basis": "stem",
+          "label": "1.19(c)",
+          "questionId": "Q-012"
+        }
+      ],
+      "referenceItems": [
+        {
+          "id": "REF-001",
+          "kind": "basic-type-list",
+          "label": "二进制基本题型（习题课 P2）"
+        }
+      ],
+      "support": []
+    },
+    "rationale": "习题课明确列出二进制与八/十六进制转换，且多道作业直接考查分组转换。",
+    "stars": 5,
+    "supportAdjustment": null
+  },
+  "reading": {
+    "blocks": [
+      {
+        "id": "RB-TH-01-40-method-overview",
+        "kind": "paragraph",
+        "payload": {
+          "text": "二进制、八进制、十六进制之间的互转不需要经过十进制做乘除运算，核心依据是三种基数都是 2 的幂：2³=8，所以 1 位八进制数码恰好对应 3 位二进制；2⁴=16，所以 1 位十六进制数码恰好对应 4 位二进制。于是转换就变成「分组—查表—拼接」三步：以小数点为界，整数部分从小数点向左、每 3 位（或 4 位）一组，小数部分从小数点向右、每 3 位（或 4 位）一组，每组整体换成一个八进制（或十六进制）数码即可，反之亦然。分组方向「从靠近小数点处向两侧展开」是保证位权对齐的关键——最高位一组不足 3 位（或 4 位）时在数的左侧补 0，最低位一组不足时在数的右侧补 0，补零不改变数值。课件 C01 第 34 页顶部给出两组对照示例：八进制 257.0554 ↔ 二进制 010 101 111.000 101 101 100，十六进制 AF.16C ↔ 二进制 1010 1111.0001 0110 1100，并用例 6、例 7、例 8 完整演示双向转换（本单元例题块逐一复现）。"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 34 页标题「二进制、八进制、十六进制」，顶部两组 3 位/4 位分组对照与例 6/7/8 原页",
+            "pdfPages": [
+              34
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-41-octal-3bit-table",
+        "kind": "table",
+        "payload": {
+          "columns": [
+            "八进制数码",
+            "对应的 3 位二进制",
+            "按权展开验算"
+          ],
+          "rows": [
+            [
+              "0",
+              "000",
+              "0×4+0×2+0×1 = 0"
+            ],
+            [
+              "1",
+              "001",
+              "0×4+0×2+1×1 = 1"
+            ],
+            [
+              "2",
+              "010",
+              "0×4+1×2+0×1 = 2"
+            ],
+            [
+              "3",
+              "011",
+              "0×4+1×2+1×1 = 3"
+            ],
+            [
+              "4",
+              "100",
+              "1×4+0×2+0×1 = 4"
+            ],
+            [
+              "5",
+              "101",
+              "1×4+0×2+1×1 = 5"
+            ],
+            [
+              "6",
+              "110",
+              "1×4+1×2+0×1 = 6"
+            ],
+            [
+              "7",
+              "111",
+              "1×4+1×2+1×1 = 7"
+            ]
+          ]
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 34 页顶部 257.0554₈ ↔ 010 101 111.000 101 101 100₂ 逐组对应关系；表值按 3 位无符号二进制权展开核对",
+            "pdfPages": [
+              34
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-42-hex-4bit-table",
+        "kind": "table",
+        "payload": {
+          "columns": [
+            "十六进制数码",
+            "对应十进制",
+            "对应的 4 位二进制"
+          ],
+          "rows": [
+            [
+              "0",
+              "0",
+              "0000"
+            ],
+            [
+              "1",
+              "1",
+              "0001"
+            ],
+            [
+              "2",
+              "2",
+              "0010"
+            ],
+            [
+              "3",
+              "3",
+              "0011"
+            ],
+            [
+              "4",
+              "4",
+              "0100"
+            ],
+            [
+              "5",
+              "5",
+              "0101"
+            ],
+            [
+              "6",
+              "6",
+              "0110"
+            ],
+            [
+              "7",
+              "7",
+              "0111"
+            ],
+            [
+              "8",
+              "8",
+              "1000"
+            ],
+            [
+              "9",
+              "9",
+              "1001"
+            ],
+            [
+              "A",
+              "10",
+              "1010"
+            ],
+            [
+              "B",
+              "11",
+              "1011"
+            ],
+            [
+              "C",
+              "12",
+              "1100"
+            ],
+            [
+              "D",
+              "13",
+              "1101"
+            ],
+            [
+              "E",
+              "14",
+              "1110"
+            ],
+            [
+              "F",
+              "15",
+              "1111"
+            ]
+          ]
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "第 34 页顶部 AF.16C ↔ 1010 1111.0001 0110 1100₂ 的逐组对应（A↔1010、F↔1111、1↔0001、6↔0110、C↔1100）与例 6 的 3AB4 ↔ 0011 1010 1011 0100 都逐组验证了表值；表值按 4 位无符号二进制权展开核对",
+            "pdfPages": [
+              34
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-43-bin-to-oct-hex-steps",
+        "kind": "steps",
+        "payload": {
+          "items": [
+            "第 1 步（定位）：找到小数点；纯整数则把整个数视为小数点左侧，纯小数则把整个数视为小数点右侧。",
+            "第 2 步（分组）：目标为八进制时按 3 位一组，目标为十六进制时按 4 位一组。整数部分从小数点向左分组，小数部分从小数点向右分组，中间的小数点保留原位。",
+            "第 3 步（补零）：最高（左）端一组不足 3 位（或 4 位）时在其左侧补 0；最低（右）端一组不足时在其右侧补 0。中间各组之间的 0 是分组本身的一部分，绝不能省略或删除。",
+            "第 4 步（查表）：把每组 3 位或 4 位二进制换成一个八进制或十六进制数码，参照本单元的数码对照表逐组核对。",
+            "第 5 步（拼接）：按组顺序写下全部数码，中间加回小数点；按教材与课件习惯可保留分组形式或加括号标注基数，如 (375.236)₈、(7D.4E)₁₆。"
+          ]
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 34 页例 7「最高位不足3位补0」「最低位不足3位补0」与例 8 同款标注，对应第 2、3 步；其余步骤为该方法在例 6/7/8 中的完整复现",
+            "pdfPages": [
+              34
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-44-oct-hex-to-bin-steps",
+        "kind": "steps",
+        "payload": {
+          "items": [
+            "第 1 步（展开）：八进制转二进制时，每一位数码展开为对应的 3 位二进制；十六进制转二进制时，每一位展开为对应的 4 位二进制，方向是「一变多」的直接替换。",
+            "第 2 步（对齐）：先完整写出每组的 3 位或 4 位，保留小数点与组间位置。全部展开后，整个整数部分最左端的 0、整个小数部分最右端的 0 可按需要省略，因为它们不改变数值；内部的 0 不能删除。为方便逐组核对，也可以保留完整分组。",
+            "第 3 步（拼接）：把各组依次连写，中间加回小数点，得到二进制结果；建议保留分组空格便于检查，如 1010 1111.0001 0110 1100。",
+            "第 4 步（验算）：按权相加（KU-002 方法）抽查：十六进制结果可逐位乘 16 的幂求和核对，八进制同理；例如 FFFF₁₆ 展开成 16 个 1 后应满足 2¹⁶−1 = 65535。"
+          ]
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 34 页顶部 AF.16C → 1010 1111.0001 0110 1100 与例 6 (3AB4)₁₆=(0011 1010 1011 0100)₂ 的逐位展开演示；验算思路引用 KU-002 按权相加法",
+            "pdfPages": [
+              34
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-45a-example-6-oct-to-bin-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "(67.731)₈：逐位展开为 3 位二进制——6→110，7→111，7→111，3→011，1→001。",
+                "拼接：110 111.111 011 001，故 (67.731)₈ = (110111.111011001)₂。",
+                "(3AB4)₁₆：逐位展开为 4 位二进制——3→0011，A→1010，B→1011，4→0100。",
+                "拼接：0011 1010 1011 0100，故 (3AB4)₁₆ = (0011101010110100)₂，省略首组前导零写为 11101010110100₂ 亦可（课件保留 0011 首组）。",
+                "验算：(3AB4)₁₆ = 3×16³ + 10×16² + 11×16 + 4 = 12288 + 2560 + 176 + 4 = 15028₁₀；11101010110100₂ 按权相加 = 8192+4096+1024+512+128+64+16+8+4 = 15028 ✓。"
+              ]
+            },
+            "role": "core",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-45-example-6-oct-to-bin",
+        "kind": "example",
+        "payload": {
+          "answerNature": "authored-example",
+          "hint": "八进制一变三、十六进制一变四：每位数码直接展开，小数点位置不动。",
+          "problem": "把 (67.731)₈ 和 (3AB4)₁₆ 转换为二进制数。",
+          "title": "例 6（课件） · 八进制与十六进制转二进制"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 34 页例 6 原页：(67.731)₈=(110 111.111 011 001)₂、(3AB4)₁₆=(0011 1010 1011 0100)₂",
+            "pdfPages": [
+              34
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-46a-example-7-bin-to-oct-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "整数部分 11111101 从小数点向左分为 11 | 111 | 101；最左组补零后为 011 | 111 | 101，对应 3、7、5。",
+                "小数部分 01001111 从小数点向右分为 010 | 011 | 11；最右组补零后为 010 | 011 | 110，对应 2、3、6。",
+                "拼接得 (375.236)₈，因此 (11111101.01001111)₂=(375.236)₈。课件原页整数分组是 11 111 101，连写有8位，不能漏写成7位的1111101。",
+                "整数验算：11111101₂=128+64+32+16+8+4+1=253；375₈=3×64+7×8+5=253。",
+                "小数验算：0.01001111₂=1/4+1/32+1/64+1/128+1/256=0.30859375；0.236₈=2/8+3/64+6/512=0.30859375。两边总值均为253.30859375。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-46-example-7-bin-to-oct",
+        "kind": "example",
+        "payload": {
+          "answerNature": "authored-example",
+          "hint": "以小数点为界，整数部分向左、小数部分向右，每3位一组；首末组不足3位时分别在左、右补0。",
+          "problem": "把 (11111101.01001111)₂ 转换为八进制数。",
+          "title": "例 7（课件） · 二进制转八进制（补零边界）"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "第 34 页例 7 原页：(11 111 101.010 011 11)₂=(375.236)₈，含「最高位不足3位补0」「最低位不足3位补0」两处标注",
+            "pdfPages": [
+              34
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-47a-example-8-bin-to-hex-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "整数部分从小数点向左每 4 位一组：111 1101。最左组只有 3 位，课件标注「最高位不足4位补0」，补成 0111 1101。",
+                "小数部分从小数点向右每 4 位一组：0100 111。最右组只有 3 位，课件标注「最低位不足4位补0」，补成 0100 1110。",
+                "逐组查表：0111→7，1101→D；0100→4，1110→E。",
+                "拼接得 (7D.4E)₁₆，故 (1111101.0100111)₂ = (7D.4E)₁₆。",
+                "验算：1111101₂ = 125 = 7×16+13 = 112+13 ✓；0.0100111₂ = 0.25+0.03125+0.015625+0.0078125 = 0.3046875，而 4/16+14/256 = 0.25+0.0546875 = 0.3046875 ✓（0.4E₁₆）。"
+              ]
+            },
+            "role": "core",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-47-example-8-bin-to-hex",
+        "kind": "example",
+        "payload": {
+          "answerNature": "authored-example",
+          "hint": "与例 7 同型但按 4 位一组；首末组不足 4 位时分别在左、右补 0。",
+          "problem": "把 (1111101.0100111)₂ 转换为十六进制数。",
+          "title": "例 8（课件） · 二进制转十六进制（补零边界）"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 34 页例 8 原页：(111 1101.0100 111)₂=(7D.4E)₁₆，含「最高位不足4位补0」「最低位不足4位补0」两处标注",
+            "pdfPages": [
+              34
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-48a-example-Q005-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "1010 恰为 4 位，整数部分无需补零、无需再分，自成一组。",
+                "查对照表：1010 → A。",
+                "故 1010₂ = (A)₁₆。验算：A = 10，1010₂ = 8+2 = 10 ✓。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-48-example-Q005",
+        "kind": "example",
+        "payload": {
+          "answerNature": "derived-solution",
+          "hint": "按 4 位一组以小数点为界划分；纯整数只有一组，查十六进制对照表即可。",
+          "questionId": "Q-005",
+          "title": "例题 · 1010₂ 转十六进制（习题 1.15(a)）"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "作业首页题号清单与教材 P23 习题 1.15(a) 1010₂ 原页",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          },
+          {
+            "note": "第 34 页顶部对照 A ↔ 1010",
+            "pdfPages": [
+              34
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-49a-example-Q006-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "整数部分 8 位，按 4 位一组划分：1111 | 0000。",
+                "查对照表：1111 → F，0000 → 0。",
+                "拼接得 F0，故 11110000₂ = (F0)₁₆。验算：F0 = 15×16+0 = 240，11110000₂ = 128+64+32+16 = 240 ✓。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-49-example-Q006",
+        "kind": "example",
+        "payload": {
+          "answerNature": "derived-solution",
+          "hint": "8 位恰好分成两组 4 位，逐组查表后拼接。",
+          "questionId": "Q-006",
+          "title": "例题 · 11110000₂ 转十六进制（习题 1.15(c)）"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "作业首页题号清单与教材 P23 习题 1.15(c) 11110000₂ 原页",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          },
+          {
+            "note": "第 34 页顶部对照 F ↔ 1111、0 ↔ 0000",
+            "pdfPages": [
+              34
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-50a-example-Q011-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "逐位展开：A = 10 → 1010，5 → 0101。",
+                "拼接：1010 0101，故 A5₁₆ = (10100101)₂。",
+                "验算：A5 = 10×16+5 = 165，10100101₂ = 128+32+4+1 = 165 ✓。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-50-example-Q011",
+        "kind": "example",
+        "payload": {
+          "answerNature": "derived-solution",
+          "hint": "每位十六进制数码展开为 4 位二进制，依次拼接。",
+          "questionId": "Q-011",
+          "title": "例题 · A5₁₆ 转二进制（习题 1.19(a)）"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "作业首页题号清单与教材 P23 习题 1.19(a) A5₁₆ 原页",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          },
+          {
+            "note": "第 34 页顶部对照 A ↔ 1010",
+            "pdfPages": [
+              34
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-51a-example-Q012-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "逐位展开：F = 15 → 1111，四个 F 依次展开得 1111 1111 1111 1111。",
+                "拼接得 16 个 1，故 FFFF₁₆ = (1111111111111111)₂。",
+                "验算：FFFF = 15×16³+15×16²+15×16+15 = 61440+3840+240+15 = 65535；16 位全 1 的二进制数即 2¹⁶−1 = 65535 ✓。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-51-example-Q012",
+        "kind": "example",
+        "payload": {
+          "answerNature": "derived-solution",
+          "hint": "F = 15 → 1111，四个 F 各展 4 位，共 16 位。",
+          "questionId": "Q-012",
+          "title": "例题 · FFFF₁₆ 转二进制（习题 1.19(c)）"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "作业首页题号清单与教材 P23 习题 1.19(c) FFFF₁₆ 原页",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          },
+          {
+            "note": "第 34 页顶部对照 F ↔ 1111",
+            "pdfPages": [
+              34
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-52-padding-callout",
+        "kind": "callout",
+        "payload": {
+          "text": "补零的方向由小数点决定：整数部分向左分组，最左端不足一组时在左侧补0；小数部分向右分组，最右端不足一组时在右侧补0。补的都是整个位串外端的零，因此不改变数值。例如 11₂=011₂，0.111₂=0.1110₂；不能把后一个例子误读成整数111₂=1110₂。展开八/十六进制时先保留每组全宽，避免丢掉内部位置；核对结束后，整数最左端和小数最右端的零可以省略。八进制与十六进制互转可先以二进制为桥梁，再按新的组宽重新分组。"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "第 34 页例 7/例 8 补零标注原页；第 5 点为分组位权关系的推论（3 位与 4 位组不重合），不对应单独原页文字",
+            "pdfPages": [
+              34
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-01-53a-exercise-selftest-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "① 转八进制：整数 11011 分组 11 011，左补零为 011 011 → 3、3；小数 1011 分组 101 1，右补零为 101 100 → 5、4。故 (11011.1011)₂ = (33.54)₈。",
+                "① 转十六进制：整数 11011 分组 1 1011，左补零为 0001 1011 → 1、B；小数 1011 恰 4 位 → B。故 (11011.1011)₂ = (1B.B)₁₆。",
+                "① 验算：11011.1011₂ = 16+8+2+1 + 0.5+0.125+0.0625 = 27.6875；33.54₈ = 3×8+3 + 5/8+4/64 = 27 + 0.625+0.0625 = 27.6875 ✓；1B.B₁₆ = 16+11 + 11/16 = 27 + 0.6875 = 27.6875 ✓。",
+                "② (AF.16C)₁₆ 逐位展开：A→1010，F→1111；1→0001，6→0110，C→1100。拼接得 1010 1111.0001 0110 1100，与课件顶部示例一致 ✓。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-01-53-exercise-selftest",
+        "kind": "exercise",
+        "payload": {
+          "answerNature": "self-test",
+          "hint": "① 整数 11011 按 3 位分组是 11 011，按 4 位分组是 1 1011，首组都要补零；② 逐位一变四展开，注意末组 C→1100 先完整写出1100，方便与原数码逐组核对。",
+          "problem": "① 把 (11011.1011)₂ 同时转成八进制数和十六进制数；② 把课件第 34 页顶部的 (AF.16C)₁₆ 转回二进制数，检查是否还原出 1010 1111.0001 0110 1100。",
+          "title": "练习 · 双向各练一题（自测）"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "题型对应第 34 页例 7/例 8 的分组补零方法与顶部 AF.16C 对照示例",
+            "pdfPages": [
+              34
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-01-54-next-unit-reference",
+        "kind": "knowledge-reference",
+        "payload": {
+          "intent": "二进制位、字节与存储容量的定义和换算（KB/MB/GB 与 2¹⁰ 幂关系），是分组互转之外的第二个应用场景，见 KU-004《位、字节与存储容量》。",
+          "targetUnitId": "KU-004"
+        },
+        "role": "supplement",
+        "sourceRefs": []
+      }
+    ],
+    "coverage": [
+      {
+        "coreBlockIds": [
+          "RB-TH-01-40-method-overview",
+          "RB-TH-01-41-octal-3bit-table",
+          "RB-TH-01-43-bin-to-oct-hex-steps",
+          "RB-TH-01-44-oct-hex-to-bin-steps",
+          "RB-TH-01-45-example-6-oct-to-bin",
+          "RB-TH-01-47-example-8-bin-to-hex",
+          "RB-TH-01-52-padding-callout"
+        ],
+        "goal": "能按 3 位/4 位一组在二进制与八进制、十六进制之间互转，并正确补零（KU-003 outcome）",
+        "materials": [
+          {
+            "blockIds": [
+              "RB-TH-01-46-example-7-bin-to-oct",
+              "RB-TH-01-48-example-Q005",
+              "RB-TH-01-49-example-Q006",
+              "RB-TH-01-50-example-Q011",
+              "RB-TH-01-51-example-Q012"
+            ],
+            "kind": "example",
+            "status": "verified"
+          },
+          {
+            "blockIds": [
+              "RB-TH-01-53-exercise-selftest"
+            ],
+            "kind": "exercise",
+            "status": "verified"
+          },
+          {
+            "blockIds": [
+              "RB-TH-01-43-bin-to-oct-hex-steps",
+              "RB-TH-01-44-oct-hex-to-bin-steps"
+            ],
+            "kind": "method",
+            "status": "verified"
+          },
+          {
+            "blockIds": [
+              "RB-TH-01-40-method-overview"
+            ],
+            "kind": "derivation",
+            "status": "verified"
+          },
+          {
+            "kind": "figure",
+            "reason": "本单元原页为文字算式页（分组对照、例 6/7/8 数值算式），无电路图/卡诺图/波形图需要绘制；分组与补零过程已在 steps 块逐组复现，对照表以 table 块呈现",
+            "status": "not-applicable"
+          },
+          {
+            "kind": "interactive",
+            "reason": "进制分组互转为纯数值方法，复习画板现有 mux/decoder/kmap 组件均不适用",
+            "status": "not-applicable"
+          }
+        ],
+        "note": "已逐页目视核对 C01 第 34 页渲染图（pages/c01-p34-34.png）与 HW01 第 1、3 页渲染图（pages/hw01-p01-1.png、hw01-p03-3.png）。例 6/7/8 数值与两处补零标注、顶部两组对照（257.0554₈ ↔ 010 101 111.000 101 101 100₂，AF.16C ↔ 1010 1111.0001 0110 1100₂）均与原页一致。四道正式题 Q-005/Q-006/Q-011/Q-012 的题面（1.15(a) 1010₂、1.15(c) 11110000₂、1.19(a) A5₁₆、1.19(c) FFFF₁₆）经教材 P23 原页核对，教材无官方答案，solution 按「据题干推导」给出并经 content-audit.py 独立计算复核（1010₂=10、11110000₂=240、A5₁₆=165、FFFF₁₆=65535=2¹⁶−1、67.731₈ ↔ 110111.111011001₂、3AB4₁₆=15028、1111101.01001111₂=125.359375=375.236₈、1111101.0100111₂=125.3046875=7D.4E₁₆、11011.1011₂=27.6875=33.54₈=1B.B₁₆ 等）。",
+        "readingStatus": "passed",
+        "sourceRefs": [
+          {
+            "note": "二/八/十六进制分组互转方法与例 6/7/8 的全部原页",
+            "pdfPages": [
+              34
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          },
+          {
+            "note": "作业首页题号清单与教材 P23（习题 1.15/1.19）原页",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "visualStatus": "verified"
+      }
+    ],
+    "revision": 1,
+    "schemaVersion": "review-reading-1",
+    "status": "complete"
+  },
+  "sourceRefs": [
+    {
+      "note": "二进制、八进制与十六进制互转：二/八/十六进制按 3 位/4 位分组互转",
+      "pdfPages": [
+        34
+      ],
+      "sourceId": "SRC-C01",
+      "versionId": "VER-SRC-C01-42c5e893c129",
+      "visualStatus": "verified"
+    }
+  ],
+  "summary": "八进制对应 3 位二进制，十六进制对应 4 位二进制；以小数点为界分组。",
+  "themeId": "TH-01",
+  "theme": {
+    "id": "TH-01",
+    "lessonId": "L01",
+    "name": "数制与数制转换",
+    "coreOutcome": "能在十进制、二进制、八进制、十六进制之间准确转换，并按权解释一个数的值。",
+    "sourceRefs": [
+      {
+        "sourceId": "SRC-C01",
+        "pdfPages": [
+          20,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34
+        ],
+        "visualStatus": "verified",
+        "note": "主题范围页；具体单元拆分见 units",
+        "versionId": "VER-SRC-C01-42c5e893c129"
+      }
+    ],
+    "rating": {
+      "stars": 5,
+      "rationale": "主题核心的多类数制转换被习题课基本题型明确列出，并被多次作业直接考查。"
+    }
+  },
+  "questions": [
+    {
+      "id": "MAP-005",
+      "questionId": "Q-005",
+      "unitId": "KU-003",
+      "role": "direct",
+      "basis": "stem",
+      "note": "按四位一组直接转为十六进制",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-005",
+        "kind": "homework",
+        "label": "1.15(a)",
+        "parentId": "Q-004",
+        "questionTypes": [
+          "数制转换"
+        ],
+        "solution": "据题干推导（教材习题无官方答案）：按 4 位一组以小数点为界划分，1010 恰为一组，查十六进制对照表 1010 → A，故 1010₂ = (A)₁₆。验算：A = 10 = 8+2 = 1010₂ ✓。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "教材 P23 的 1.15(a)",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "将下列无符号二进制数转换为十六进制。a) 1010₂",
+        "taskSummary": "将 1010₂ 转换为十六进制。"
+      },
+      "unit": {
+        "id": "KU-003",
+        "name": "二进制、八进制与十六进制互转",
+        "kind": "method",
+        "themeId": "TH-01",
+        "themeName": "数制与数制转换",
+        "stars": 5,
+        "questionTypes": [
+          "数制转换"
+        ]
+      }
+    },
+    {
+      "id": "MAP-007",
+      "questionId": "Q-006",
+      "unitId": "KU-003",
+      "role": "direct",
+      "basis": "stem",
+      "note": "按四位一组转写",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-006",
+        "kind": "homework",
+        "label": "1.15(c)",
+        "parentId": "Q-004",
+        "questionTypes": [
+          "数制转换"
+        ],
+        "solution": "据题干推导（教材习题无官方答案）：按 4 位一组划分 1111 | 0000，查表 1111 → F、0000 → 0，故 11110000₂ = (F0)₁₆。验算：F0 = 15×16 = 240 = 128+64+32+16 ✓。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "教材 P23 的 1.15(c)",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "将下列无符号二进制数转换为十六进制。c) 11110000₂",
+        "taskSummary": "将 11110000₂ 转换为十六进制。"
+      },
+      "unit": {
+        "id": "KU-003",
+        "name": "二进制、八进制与十六进制互转",
+        "kind": "method",
+        "themeId": "TH-01",
+        "themeName": "数制与数制转换",
+        "stars": 5,
+        "questionTypes": [
+          "数制转换"
+        ]
+      }
+    },
+    {
+      "id": "MAP-013",
+      "questionId": "Q-011",
+      "unitId": "KU-003",
+      "role": "direct",
+      "basis": "stem",
+      "note": "十六进制每位展开为 4 位二进制",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-011",
+        "kind": "homework",
+        "label": "1.19(a)",
+        "parentId": "Q-010",
+        "questionTypes": [
+          "数制转换"
+        ],
+        "solution": "据题干推导（教材习题无官方答案）：每位十六进制数码展开为 4 位二进制——A = 10 → 1010，5 → 0101，拼接得 A5₁₆ = (10100101)₂。验算：A5 = 10×16+5 = 165 = 128+32+4+1 ✓。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "教材 P23 的 1.19(a)",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "将下列十六进制数转换为无符号二进制数。a) A5₁₆",
+        "taskSummary": "将 A5₁₆ 转换为二进制。"
+      },
+      "unit": {
+        "id": "KU-003",
+        "name": "二进制、八进制与十六进制互转",
+        "kind": "method",
+        "themeId": "TH-01",
+        "themeName": "数制与数制转换",
+        "stars": 5,
+        "questionTypes": [
+          "数制转换"
+        ]
+      }
+    },
+    {
+      "id": "MAP-014",
+      "questionId": "Q-012",
+      "unitId": "KU-003",
+      "role": "direct",
+      "basis": "stem",
+      "note": "十六进制每位展开为 4 位二进制",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-012",
+        "kind": "homework",
+        "label": "1.19(c)",
+        "parentId": "Q-010",
+        "questionTypes": [
+          "数制转换"
+        ],
+        "solution": "据题干推导（教材习题无官方答案）：每位展开为 4 位二进制，F = 15 → 1111，四个 F 依次展开拼接得 FFFF₁₆ = (1111111111111111)₂（16 个 1）。验算：FFFF = 15×(16³+16²+16+1) = 65535 = 2¹⁶−1，而 16 位全 1 二进制数恰为 2¹⁶−1 ✓。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "教材 P23 的 1.19(c)",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "将下列十六进制数转换为无符号二进制数。c) FFFF₁₆",
+        "taskSummary": "将 FFFF₁₆ 转换为二进制。"
+      },
+      "unit": {
+        "id": "KU-003",
+        "name": "二进制、八进制与十六进制互转",
+        "kind": "method",
+        "themeId": "TH-01",
+        "themeName": "数制与数制转换",
+        "stars": 5,
+        "questionTypes": [
+          "数制转换"
+        ]
+      }
+    }
+  ],
+  "relations": []
+}

@@ -11,6 +11,8 @@ const bridge: DesktopBridge = {
   open: () => invoke('course:open'),
   graph: sessionId => invoke('course:graph', sessionId),
   readUnit: (sessionId, unitId) => ipcRenderer.invoke('course:read-unit', sessionId, unitId),
+  readingState: sessionId => invoke('course:reading-state', sessionId),
+  setReadingState: (sessionId, state) => ipcRenderer.invoke('course:set-reading-state', sessionId, state),
   save: command => invoke('course:save', command),
   onCloseRequested(listener) {
     const handler = async (_event: Electron.IpcRendererEvent, requestId: number) => {

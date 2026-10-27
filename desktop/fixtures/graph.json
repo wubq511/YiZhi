@@ -3843,5 +3843,81 @@
     "units": 84,
     "themes": 20,
     "relations": 43
+  },
+  "requirementGroups": [
+    {
+      "id": "G1",
+      "targetUnitId": "KU-044",
+      "mode": "any",
+      "unitIds": [
+        "KU-033",
+        "KU-035"
+      ],
+      "relationIds": [
+        "REL-010",
+        "REL-011"
+      ],
+      "value": "代数化简与卡诺图是通用设计的两条可替代化简路线，不能解释为共同必需。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C02",
+          "pdfPages": [
+            52,
+            53,
+            54,
+            55,
+            56,
+            57,
+            58,
+            59,
+            60
+          ],
+          "visualStatus": "verified",
+          "note": "代数化简路线",
+          "versionId": "VER-SRC-C02-1c152428693e"
+        },
+        {
+          "sourceId": "SRC-C03",
+          "pdfPages": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16
+          ],
+          "visualStatus": "verified",
+          "note": "卡诺图路线",
+          "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+        },
+        {
+          "sourceId": "SRC-C04",
+          "pdfPages": [
+            19,
+            20
+          ],
+          "visualStatus": "verified",
+          "note": "组合设计流程",
+          "versionId": "VER-SRC-C04-f29340849838"
+        }
+      ]
+    }
+  ],
+  "conditions": {
+    "KU-044": {
+      "required": [
+        "KU-029"
+      ],
+      "groups": [
+        "G1"
+      ]
+    }
   }
 }
