@@ -1,3 +1,4 @@
+import { AnnotationPanel, type AnnotationPanelHandle } from './annotation-panel';
 import { CameraController, type FollowState } from './camera-controller';
 import { useLocalLayout, ReadingSurface } from './local-layout';
 import type { LayoutPlacement } from '../layout';
@@ -114,6 +115,8 @@ function App() {
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [agentOpen, setAgentOpen] = useState(false);
   const agentPanel = useRef<AgentPanelHandle>(null);
+  const notesPanel = useRef<AnnotationPanelHandle>(null);
+  const [notesOpen, setNotesOpen] = useState(false);
   const sourcesPanel = useRef<SourcePanelHandle>(null);
   const [sourceCitations, setSourceCitations] = useState<SourceCitation[]>([]);
   const sourceTrigger = useRef<HTMLButtonElement | null>(null);
@@ -245,6 +248,7 @@ function App() {
       try { await window.yizhi.setReadingState(sessionRef.current, { ...readingRef.current, camera: flow.getViewport() }); }
       catch { readingFailed.current = true; setReadingSave('error'); setClosing(false); return false; }
     }
+    if (notesPanel.current && !await notesPanel.current.flush()) { setClosing(false); return false; }
     if (sourcesPanel.current && !await sourcesPanel.current.flush()) { setClosing(false); return false; }
     const current = await window.yizhi.open();
     if (!await flushExtensions(current.sessionId)) { setReadError('扩展现场尚未确认，请恢复最近确认现场后重试。'); setClosing(false); return false; }
@@ -356,7 +360,16 @@ function App() {
   };
   const status = { draft: '草稿已保留', saved: '已保存', pending: '待保存', saving: '正在保存…', error: '未保存' }[state.status];
   return <>
-    <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen || sourcesOpen || agentOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
+    <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen || sourcesOpen || agentOpen || notesOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
+      {course && <AnnotationPanel ref={notesPanel} sessionId={course.sessionId} narrow={narrow} prepare={async () => !!await channel.current?.flush()} onOpenChange={value => { setNotesOpen(value); if (value && narrow) setDirectory(false); }} locate={async note => {
+        if (selected?.id !== 'KU-001') await go('KU-001');
+        const editor = continuous.current;
+        if (!editor) throw new Error('请先定位批注所属单元。');
+        if (!await channel.current?.flush() || !await editor.finish()) throw new Error('请先完成当前输入，再定位批注。');
+        editor.reconcile(await window.yizhi.open());
+        const latest = (await window.yizhi.annotations.list({ sessionId: course.sessionId })).find(item => item.id === note.id);
+        if (latest) await editor.revealAnnotation(latest);
+      }} />}
       {course && <SourcePanel ref={sourcesPanel} sessionId={course.sessionId} narrow={narrow} target={selected ? { unitId: selected.id } : undefined} onOpenChange={setSourcesOpen} onCitationsChange={setSourceCitations} onQuestion={citation => agentPanel.current?.attachCitation(citation)} />}
       {course && <AgentPanel ref={agentPanel} sessionId={course.sessionId} narrow={narrow} target={{ unitId: selected?.id ?? course.unit.id }} targetName={selected?.name ?? course.unit.name} sourceOpen={sourcesOpen} onOpenChange={value => { setAgentOpen(value); if (value && narrow) setDirectory(false); }} openCitation={citation => sourcesPanel.current?.openCitation(citation)} />}
       {!cameraReady && !loadError && <span role="status" aria-label="画板定位">正在定位画板…</span>}
@@ -384,7 +397,7 @@ function App() {
       </div>
     </header>
     {state.error && <div className="save-error" role="alert">{state.error}{!state.error.includes('冲突部分') && ' 输入仍保留，请重试保存。'}</div>}
-    <div className="workspace board-workspace" inert={(!cameraReady && !loadError) || (narrow && (sourcesOpen || agentOpen))} aria-busy={!cameraReady && !loadError}>
+    <div className="workspace board-workspace" inert={(!cameraReady && !loadError) || (narrow && (sourcesOpen || agentOpen || notesOpen))} aria-busy={!cameraReady && !loadError}>
       {directory && <nav ref={navRef} inert={sourceOpen || (narrow && (relationsOpen || producerOpen))} aria-label="课程目录" onKeyDown={event => trap(event, closeDirectory)}><h2>课程目录</h2>{narrow && <button onClick={closeDirectory}>关闭目录</button>}
         <label className="review-filter">复习状态筛选 <select aria-label="复习状态筛选" value={reviewFilter} onChange={event => setReviewFilter(event.target.value as typeof reviewFilter)}><option value="all">全部单元</option><option value="pending">待复习</option><option value="weak">薄弱</option><option value="mastered">已掌握</option></select></label>
         {graph?.groups.map(group => { const counts = review?.themes[group.id]; const matches = graph.nodes.filter(node => node.themeId === group.id && (reviewFilter === 'all' ? (directoryTheme ?? selected?.theme.id) === group.id : review?.units[node.id]?.status === reviewFilter)); return <div key={group.id}><button aria-label={group.name} className="directory-theme" onClick={() => { setDirectoryTheme(group.id); const first = matches[0] ?? graph.nodes.find(node => node.themeId === group.id); if (first) { void go(first.id); if (narrow) closeDirectory(); } }}>{group.name}{counts ? <span aria-hidden="true"> · 待复习 {counts.pending} / 薄弱 {counts.weak} / 已掌握 {counts.mastered}</span> : ''}</button>{matches.map(node => <button aria-label={node.name} className="directory-unit" key={node.id} onClick={() => { void go(node.id); if (narrow) closeDirectory(); }}>{node.name}{review ? <span aria-hidden="true"> · {{ pending: '待复习', weak: '薄弱', mastered: '已掌握' }[review.units[node.id].status]}</span> : ''}</button>)}</div>; })}</nav>}
@@ -406,6 +419,7 @@ function App() {
             {unit.id==='KU-001'&&<ExtensionExperiment sessionId={course.sessionId} active={viewport.zoom>=0.55&&selected?.id===unit.id} disabled={closing}/>}
             <SourceReferences citations={sourceCitations.filter(citation => citation.target?.unitId === unit.id)} onOpen={citation => sourcesPanel.current?.openCitation(citation)} />
             {unit.id === 'KU-001' && channel.current ? <ContinuousUnitEditor course={course} channel={channel.current} disabled={closing || producerBusy || !cameraReady} saveError={state.status === 'error'}
+              annotate={selection => { void notesPanel.current?.create(selection); }}
               composition={active => { composing.current = active; }} controller={instance => { continuous.current = instance; }}
               renderBlock={block => <ReadingBoundary><Block block={block} experiment={{ unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing, composition: active => { composing.current = active; } }} reading={reading} updateReading={updateReading}
                 onSource={button => { sourceTrigger.current = button; setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;

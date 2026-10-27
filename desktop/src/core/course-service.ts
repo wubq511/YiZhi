@@ -1,3 +1,4 @@
+import { annotationClient } from '../annotation-api';
 import { extensionsClient } from '../extensions-api';
 import { experimentsClient } from '../experiments-api';
 import { agentClient, type AgentEvent, type AgentTask } from '../agent-api';
@@ -10,6 +11,7 @@ import type { CourseGraph, CourseUnit, ReadingState, OpenedCourse, SaveParagraph
 
 /** One instance belongs to the application host, shared by all its windows/courses. */
 export class CourseService {
+  readonly annotations = annotationClient((action, payload) => this.request(action, payload));
   readonly extensions = extensionsClient((action, payload) => this.request(action, payload));
   readonly experiments = experimentsClient((action, payload) => this.request(action, payload));
   readonly agent = agentClient((action, payload) => this.request(action, payload));

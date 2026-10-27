@@ -20,3 +20,5 @@
 .editor-formula math-field:focus-within { outline: 2px solid #6965db; outline-offset: 3px; }
 .formula-draft { display: block; color: #41627e; font: 13px/1.7 system-ui, sans-serif; }
 .formula-draft:not(:empty) { border: 1px dashed #a9bdce; background: #f0f5fa; padding: 8px; margin-top: 10px; }
+
+.continuous-prose .annotation-highlight { background: #fff3ce; text-decoration: underline; text-decoration-color: #bc9a5b; text-underline-offset: .2em; }

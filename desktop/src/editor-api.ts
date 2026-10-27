@@ -2,6 +2,10 @@ import type { ReadingBlock } from './shared';
 
 /** A projection delta, never a second permanent editor document. Payloads include unknown fields. */
 export interface ContentPatch {
+  /** Actual editor Undo/Redo targets, scoped to the final payload of this patch. */
+  restorations?: ReadingBlock[];
+  textEdits?: import('./annotation-api').TextEditProof[];
+  formulaEdits?: import('./annotation-api').FormulaEditProof[];
   updates: Array<{ blockId: string; before: Record<string, any>; after: Record<string, any> }>;
   /** The active B's sibling identity list. Unchanged objects have no body in this patch. */
   structure?: { parentId: string; before: string[]; after: string[]; inserted: ReadingBlock[] };
@@ -42,5 +46,8 @@ export function composePatch(first: ContentPatch | undefined, next: ContentPatch
   }
   return { updates: [...updates.values()].filter(u => !equal(u.before, u.after)),
     ...(structure && !equal(structure.before, structure.after) ? { structure } : {}),
+    restorations: [...(first.restorations ?? []).filter(b => !next.updates.some(u => u.blockId === b.id) && (!next.structure || next.structure.after.includes(b.id))), ...(next.restorations ?? [])],
+    textEdits: [...(first.textEdits ?? []), ...(next.textEdits ?? [])],
+    formulaEdits: [...(first.formulaEdits ?? []), ...(next.formulaEdits ?? [])],
     correspondence: [...first.correspondence, ...next.correspondence] };
 }

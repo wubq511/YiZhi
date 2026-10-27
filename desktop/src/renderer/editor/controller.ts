@@ -1,6 +1,11 @@
-import { Editor } from '@tiptap/core';
+import { codePointOffset, utf16Offset, type AnnotationSelection, type PersonalNote, type FormulaEditProof, type TextEditProof } from '../../annotation-api';
+import { formulaModel } from './formula-selection';
+import type { MathfieldElement } from 'mathlive';
+import { Editor, Extension } from '@tiptap/core';
+import { Plugin } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { NodeSelection, TextSelection } from '@tiptap/pm/state';
-import { closeHistory, undo, redo } from '@tiptap/pm/history';
+import { closeHistory, undo, redo, isHistoryTransaction } from '@tiptap/pm/history';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import type { OpenedCourse, ReadingBlock } from '../../shared';
 import { equal } from '../../editor-api';
@@ -12,6 +17,7 @@ import { integrateValue, textRange } from '../../content-integration';
 import type { CommandAPI, CandidateCheck } from '../../command-api';
 
 export interface EditorOptions {
+  annotate(selection: AnnotationSelection): void;
   renderOpaque(element: HTMLElement, block: ReadingBlock): () => void;
   composition(active: boolean): void;
   commands: CommandAPI;
@@ -29,6 +35,7 @@ export class ContinuousEditor {
   private previous: ReadingBlock[];
   private drafts = new Map<string, string>();
   private composing = false;
+  private composedTextEdits: TextEditProof[] = [];
   private editorId = crypto.randomUUID();
   private protectionSequence = 0;
   private protectionWork = Promise.resolve();
@@ -66,8 +73,17 @@ export class ContinuousEditor {
       return { dom, stopEvent: () => true, ignoreMutation: () => true, destroy: cleanup };
     } });
     const formula = atom('formula').extend({ addNodeView: () => ({ node }) => formulaView(node,
-      (id, latex, complete) => this.formulaInput(id, latex, complete), id => this.drafts.get(id)) });
-    this.editor = new Editor({ element, extensions: [...baseExtensions, opaque, formula],
+      (id, latex, complete, proof, restored) => this.formulaInput(id, latex, complete, proof, restored), id => this.drafts.get(id), (block, field) => {
+        options.annotate(this.captureFormula(block, field));
+      }) });
+    const highlights = Extension.create({ name: 'personalAnnotationHighlights', addProseMirrorPlugins: () => [new Plugin<DecorationSet>({
+      state: { init: () => DecorationSet.empty, apply(tr, previous, oldState) {
+        const ranges = tr.getMeta('annotationLocations') as Array<{ from: number; to: number }> | undefined;
+        return ranges ? DecorationSet.create(tr.doc, ranges.map(r => Decoration.inline(r.from, r.to, { class: 'annotation-highlight' })))
+          : tr.docChanged || (tr.selectionSet && !tr.selection.eq(oldState.selection)) ? DecorationSet.empty : previous;
+      } }, props: { decorations(state) { return this.getState(state); } },
+    })] });
+    this.editor = new Editor({ element, extensions: [...baseExtensions, opaque, formula, highlights],
       content: { type: 'doc', content: recovered.map(project) },
       editorProps: { attributes: { role: 'textbox', 'aria-label': '连续编辑正文', 'aria-multiline': 'true', class: 'continuous-prose nodrag nopan' },
         transformPasted: freshClipboard,
@@ -87,16 +103,29 @@ export class ContinuousEditor {
       },
       onUpdate: ({ transaction, appendedTransactions }) => {
         const correspondences = [transaction, ...appendedTransactions].flatMap(tr => tr.getMeta('editorCorrespondence') ?? []);
-        this.changed(correspondences, !!transaction.getMeta('external'));
+        const textEdits: TextEditProof[] = [];
+        if (!transaction.getMeta('external')) for (const tr of [transaction, ...appendedTransactions]) for (let i = 0; i < tr.steps.length; i++) {
+          const step = tr.steps[i].toJSON(), before = tr.docs[i];
+          if (step.stepType !== 'replace' || step.from === undefined || step.to === undefined) continue;
+          const start = before.resolve(step.from), end = before.resolve(step.to);
+          if (start.parent.type.name !== 'paragraph' || start.parent !== end.parent) continue;
+          const after = (tr.docs[i + 1] ?? tr.doc).nodeAt(start.before(1));
+          if (after?.type.name !== 'paragraph' || after.attrs.block.id !== start.parent.attrs.block.id) continue;
+          const from = codePointOffset(start.parent.textContent, start.parentOffset), to = codePointOffset(start.parent.textContent, end.parentOffset);
+          const inserted = (tr.steps[i] as any).slice?.content.textBetween(0, (tr.steps[i] as any).slice.content.size) ?? '';
+          if (Array.from(start.parent.textContent).slice(0, from).join('') + inserted + Array.from(start.parent.textContent).slice(to).join('') === after.textContent)
+            textEdits.push({ blockId: after.attrs.block.id, before: start.parent.textContent, after: after.textContent, from, to, inserted });
+        }
+        this.changed(correspondences, !!transaction.getMeta('external'), transaction.getMeta('formulaProof'), textEdits, isHistoryTransaction(transaction) || !!transaction.getMeta('formulaRestore'));
       },
       onSelectionUpdate: () => { if (this.engaged) this.selectionChanged(); },
     });
-    Object.assign(this.editor.storage, { courseSelection: { capture: () => this.captureSelection(), settle: () => this.settleProtection() } });
+    Object.assign(this.editor.storage, { courseSelection: { capture: () => this.captureSelection(), captureAnnotation: () => this.captureAnnotation(), settle: () => this.settleProtection() } });
     // Paragraph aliases remain programmatically focusable for accessibility/legacy IPC tests,
     // while ProseMirror owns the single native editing focus and selection observer.
     this.editor.view.dom.addEventListener('focusin', event => {
       const formula = (event.target as HTMLElement).closest<HTMLElement>('.editor-formula');
-      if (formula?.dataset.blockId) { this.engaged = true; this.setProtection([formula.dataset.blockId], 'editing'); }
+      if (formula?.dataset.blockId) { this.engaged = true; this.setProtection([formula.dataset.blockId], (event.target as MathfieldElement).readOnly ? 'selection' : 'editing'); }
       if ((event.target as HTMLElement).matches('p[data-block-id]')) queueMicrotask(() => {
         const selection = getSelection(), range = selection?.rangeCount ? selection.getRangeAt(0).cloneRange() : null;
         this.editor.view.dom.focus({ preventScroll: true });
@@ -113,14 +142,59 @@ export class ContinuousEditor {
       if (node.type.name !== 'paragraph' || from >= pos + node.nodeSize - 1 || to <= pos + 1) return;
       const block = blocksOf(this.editor.state.doc).find(b => b.id === node.attrs.block.id)!;
       const shown = this.shown.get(block.id), text = node.textContent;
-      const start = Array.from(text.slice(0, Math.max(0, from - pos - 1))).length;
-      const end = Array.from(text.slice(0, Math.min(text.length, to - pos - 1))).length;
+      const start = codePointOffset(text, Math.max(0, from - pos - 1));
+      const end = codePointOffset(text, Math.min(text.length, to - pos - 1));
       fragments.push({ blockId: block.id, field: 'text', block: structuredClone(block), formalRevision: shown?.revision ?? this.course.revision,
         contentVersion: shown?.version, source: equal(shown?.block, block) ? 'formal' : 'student-draft',
         projection: { version: 1, encoding: 'unicode-code-points', text }, from: start, to: end,
         quote: Array.from(text).slice(start, end).join('') });
     });
     return { formalRevision: fragments[0]?.formalRevision ?? this.course.revision, latestFormalRevision: this.course.revision, fragments };
+  }
+  captureAnnotation(): AnnotationSelection {
+    const field = [...this.editor.view.dom.querySelectorAll<MathfieldElement>('math-field:not([hidden])')].find(field => field.hasFocus());
+    if (field) {
+      const id = field.closest<HTMLElement>('[data-block-id]')?.dataset.blockId;
+      const block = this.previous.find(b => b.id === id);
+      if (block && !field.selectionIsCollapsed) return this.captureFormula(block, field);
+    }
+    return { unitId: this.course.unit.id, fragments: this.captureSelection().fragments };
+  }
+  private captureFormula(block: ReadingBlock, field: MathfieldElement): AnnotationSelection {
+    const shown = this.shown.get(block.id), latex = field.getValue();
+    const actual = structuredClone(block);
+    // MathLive may normalize serialization without changing the shown formal expression.
+    if (this.drafts.has(block.id)) actual.payload.latex = latex;
+    const projection = formulaModel(field, String(actual.payload.latex));
+    return { unitId: this.course.unit.id, fragments: field.selection.ranges.map(([a, b]) => [Math.min(a, b), Math.max(a, b)])
+      .filter(([from, to]) => to > from).sort((a, b) => a[0] - b[0]).map(([from, to]) => ({
+        blockId: block.id, block: actual, field: 'latex', formalRevision: shown?.revision ?? this.course.revision,
+        contentVersion: shown?.version, source: equal(shown?.block, actual) ? 'formal' : 'student-draft',
+        projection, from, to, quote: field.getValue([from, to]),
+      })) };
+  }
+  async revealAnnotation(note: PersonalNote) {
+    if (note.current.status !== 'attached') throw new Error('此批注待重新关联，请先选择新的片段。');
+    const locations = note.current.fragments;
+    const current = blocksOf(this.editor.state.doc);
+    for (const l of locations) {
+      const block = current.find(b => b.id === l.blockId);
+      if (!block) throw new Error('当前显示内容尚未对齐，请结束输入或选择后重试。');
+      const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(block))))].map(n => n.toString(16).padStart(2, '0')).join('');
+      if (digest !== l.version || !equal(blocksOf(this.editor.state.doc).find(b => b.id === l.blockId), block)) throw new Error('当前显示版本不同，请结束输入或选择后重试。');
+    }
+    if (locations[0].field === 'latex') {
+      const l = locations[0], element = [...this.editor.view.dom.querySelectorAll<HTMLElement>('.editor-formula')].find(e => e.dataset.blockId === l.blockId);
+      element?.dispatchEvent(new CustomEvent('formula-annotation-reveal', { detail: l })); return;
+    }
+    const ranges: Array<{ from: number; to: number }> = [];
+    for (const location of locations) this.editor.state.doc.forEach((node, pos) => {
+      if (node.attrs.block.id === location.blockId) ranges.push({ from: pos + 1 + utf16Offset(node.textContent, location.from), to: pos + 1 + utf16Offset(node.textContent, location.to) });
+    });
+    if (!ranges.length) throw new Error('当前选段暂不可见');
+    const first = ranges[0];
+    this.editor.view.dispatch(this.editor.state.tr.setSelection(TextSelection.create(this.editor.state.doc, first.from, first.to)).setMeta('annotationLocations', ranges));
+    this.editor.view.focus();
   }
   private selectionChanged() {
     const ids: string[] = [], { from, to, empty } = this.editor.state.selection;
@@ -184,15 +258,19 @@ export class ContinuousEditor {
     this.reconcile(await this.channel.snapshot());
     this.options.status(await this.options.commands.recheck({ sessionId: snapshot.sessionId }));
   }
-  private changed(correspondence: ContentPatch['correspondence'] = [], external = false) {
+  private changed(correspondence: ContentPatch['correspondence'] = [], external = false, formulaProof?: FormulaEditProof, textEdits: TextEditProof[] = [], restored = false) {
     const current = blocksOf(this.editor.state.doc);
     if (this.composing) {
+      if (!external) this.composedTextEdits.push(...textEdits);
       // An independent mapped transaction is already formal. It must not become part of
       // the student's later composition delta, while the live composing range keeps its old basis.
       if (external) this.previous = this.previous.map(block => this.protectedIds.has(block.id) ? block : current.find(b => b.id === block.id) ?? block);
       return;
     }
     const patch = delta(this.previous, current, this.course.unit.id, correspondence);
+    if (restored) patch.restorations = current.filter(b => !equal(this.previous.find(old => old.id === b.id), b));
+    if (formulaProof) patch.formulaEdits = [formulaProof];
+    patch.textEdits = [...this.composedTextEdits, ...textEdits]; this.composedTextEdits = [];
     if (!external && (patch.updates.length || patch.structure)) {
       // Exact adjacent joins are proven by the actual edited before/after documents.
       for (let i = 1; i < this.previous.length; i++) {
@@ -209,7 +287,7 @@ export class ContinuousEditor {
     const live = new Set(blocks.map(b => b.id));
     return [...this.drafts].filter(([id]) => live.has(id)).map(([blockId, latex]) => ({ blockId, latex }));
   }
-  private formulaInput(id: string, latex: string, complete: boolean) {
+  private formulaInput(id: string, latex: string, complete: boolean, proof?: FormulaEditProof, restored = false) {
     if (!complete) { this.drafts.set(id, latex); this.channel.edit({ changes: [], formulaDrafts: this.formulaDrafts() }); return; }
     const hadDraft = this.drafts.delete(id);
     let found = false;
@@ -217,14 +295,14 @@ export class ContinuousEditor {
       if (node.attrs.block.id === id && node.attrs.block.payload.latex !== latex) {
         found = true;
         const block = { ...node.attrs.block, payload: { ...node.attrs.block.payload, latex } };
-        this.editor.view.dispatch(this.editor.state.tr.setNodeMarkup(pos, undefined, { block }).setMeta('addToHistory', false));
+        this.editor.view.dispatch(this.editor.state.tr.setNodeMarkup(pos, undefined, { block }).setMeta('addToHistory', false).setMeta('formulaProof', proof).setMeta('formulaRestore', restored));
       }
     });
     if (!found && hadDraft) this.channel.edit({ changes: [], patch: { updates: [], correspondence: [] }, formulaDrafts: this.formulaDrafts() });
   }
   setEditable(editable: boolean) {
     this.editor.setEditable(editable);
-    this.editor.view.dom.querySelectorAll('math-field').forEach(field => { (field as HTMLElement & { readOnly: boolean }).readOnly = !editable; });
+    this.editor.view.dom.querySelectorAll('math-field').forEach(field => { (field as HTMLElement & { readOnly: boolean }).readOnly = !editable || (field as HTMLElement).dataset.annotationSelection === 'true'; });
     this.editor.view.dom.querySelectorAll<HTMLButtonElement>('.editor-formula button').forEach(button => { button.disabled = !editable; });
   }
   undo() { undo(this.editor.state, this.editor.view.dispatch); }
