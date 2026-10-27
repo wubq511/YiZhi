@@ -1,0 +1,20 @@
+.annotation-panel { position: fixed; z-index: 35; inset: 90px 18px 18px auto; width: min(380px, calc(100vw - 36px)); box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain; padding: 20px; border: 1px solid #c9bf9e; border-radius: 12px; background: #fffdf8; color: #3f392a; font: 14px/1.7 system-ui, sans-serif; scrollbar-color: #a99d7b #fffdf8; }
+.annotation-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.annotation-heading h2 { margin: 0; font-size: 20px; }
+.annotation-panel button { font: inherit; }
+.annotation-panel button:focus-visible, .annotation-panel summary:focus-visible, .annotation-panel textarea:focus-visible { outline: 2px solid #6965db; outline-offset: 3px; }
+.annotation-panel button:hover:not(:disabled) { background: #f2eedf; }
+.annotation-panel button:disabled { opacity: .55; cursor: default; }
+.annotation-panel nav { display: flex; flex-wrap: wrap; gap: 6px; margin-block: 18px; }
+.annotation-panel nav [aria-current=true] { border-color: #6965db; }
+.annotation-association { margin-block: 20px 8px; color: #715724; }
+.annotation-panel blockquote { margin: 0 0 20px; padding: 12px; background: #fff3ce; border: 1px solid #d5c394; border-radius: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.annotation-label { display: block; font-weight: 600; }
+.annotation-panel textarea { display: block; box-sizing: border-box; width: 100%; min-height: 130px; max-height: 45vh; resize: vertical; padding: 10px; color: #3f392a; background: #fff; border: 1px solid #b4ac98; border-radius: 6px; font: 15px/1.75 system-ui, sans-serif; caret-color: #6965db; }
+.annotation-panel ::selection { background: #eceaff; }
+.annotation-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 12px 24px; }
+.annotation-panel details { margin-block: 24px 16px; }
+.annotation-context { margin-block: 16px; overflow-wrap: anywhere; }
+.annotation-context pre { margin-block: 8px; white-space: pre-wrap; font: 13px/1.7 ui-monospace, monospace; }
+.annotation-panel [role=alert] { color: #9b2929; }
+@media (max-width: 760px) { .annotation-panel { inset: 16px; width: auto; } }

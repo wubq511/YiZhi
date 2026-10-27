@@ -46,6 +46,7 @@ export interface SaveReceipt {
   basedOnRevision?: number;
 }
 export interface DesktopBridge extends SaveBridge {
+  annotations: import('./annotation-api').AnnotationAPI;
   experiments: import('./experiments-api').ExperimentsAPI;
   agent: import('./agent-api').AgentBridge;
   parsing: import('./parsing-api').ParsingBridge;
@@ -119,6 +120,7 @@ export interface EditHistory {
   committedAt: string | null;
 }
 export type SaveEventData =
+  { type: 'annotation.changed'; noteId: string } |
   { type: 'agent.changed'; conversationId: string; taskId?: string } |
   { type: 'parse.changed'; taskId: string; attemptId: string; kind: string; artifactId?: string } |
   { type: 'draft.saved'; sessionId: string; inputSeq: number } |

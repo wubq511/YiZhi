@@ -6,7 +6,8 @@ import type { ParagraphSaveChannel } from '../save-channel';
 import { ContinuousEditor } from './controller';
 import './editor.css';
 
-export function ContinuousUnitEditor({ course, channel, disabled, saveError, composition, renderBlock, controller }: {
+export function ContinuousUnitEditor({ course, channel, disabled, saveError, composition, renderBlock, controller, annotate }: {
+  annotate(selection: import('../../annotation-api').AnnotationSelection): void;
   course: OpenedCourse; channel: ParagraphSaveChannel; disabled: boolean;
   saveError?: boolean;
   composition(active: boolean): void; renderBlock(block: ReadingBlock): ReactNode;
@@ -16,11 +17,12 @@ export function ContinuousUnitEditor({ course, channel, disabled, saveError, com
   const [checks, setChecks] = useState<CandidateCheck[]>([]);
   const [conflicts, setConflicts] = useState<Array<{ blockId: string; current: Record<string, any>; student: Record<string, any> }>>([]);
   const [resolving, setResolving] = useState(false), [failure, setFailure] = useState<string>();
-  const latest = useRef({ composition, renderBlock, controller }); latest.current = { composition, renderBlock, controller };
+  const latest = useRef({ composition, renderBlock, controller, annotate }); latest.current = { composition, renderBlock, controller, annotate };
   const roots = useRef(new Map<HTMLElement, { root: Root; block: ReadingBlock }>());
   useEffect(() => {
     if (!element.current) return;
     const editor = new ContinuousEditor(element.current, course, channel, {
+      annotate: selection => latest.current.annotate(selection),
       composition: active => latest.current.composition(active),
       commands: window.yizhi.commands, status: setChecks,
       renderOpaque(element, block) {
@@ -46,6 +48,7 @@ export function ContinuousUnitEditor({ course, channel, disabled, saveError, com
   return <section className="continuous-editor">
     <div className="editor-tools" role="toolbar" aria-label="正文编辑工具" onMouseDown={event => event.preventDefault()}>
       <span>正文 · 连续编辑，自动保存</span>
+      <button disabled={disabled} onClick={() => { const capture = instance.current?.captureAnnotation(); if (capture) annotate(capture); }}>批注所选文字</button>
       <button disabled={disabled} onClick={() => instance.current?.undo()}>撤销正文</button>
       <button disabled={disabled} onClick={() => instance.current?.redo()}>重做正文</button>
       <button disabled={disabled} onClick={() => instance.current?.insertFormula()}>插入公式</button>

@@ -1,3 +1,4 @@
+import { annotationMethods } from '../annotation-api';
 import { AgentRuntime } from '../agent/executor';
 import { registerAgentIPC } from './agent-ipc';
 import { app, BrowserWindow, dialog, ipcMain, Menu, protocol } from 'electron';
@@ -63,6 +64,7 @@ else {
     for (const method of ['start','continue','stop','get','list','artifact','artifacts','correct','query'] as const) {
       ipcMain.handle(`parsing:${method}`, (event, request) => { checkSender(event); return core.parsing[method](request); });
     }
+    for (const method of annotationMethods) ipcMain.handle(`annotations:${method}`, (event, request) => { checkSender(event); return core.annotations[method](request); });
     ipcMain.handle('course:open', async event => { checkSender(event); const opened = await core.open(courseDirectory); activeSessionId = opened.sessionId; return opened; });
     ipcMain.handle('course:graph', async (event, sessionId: string) => { checkSender(event); return core.graph(sessionId); });
     ipcMain.handle('course:read-unit', async (event, sessionId: string, unitId: string) => { checkSender(event); return core.readUnit(sessionId, unitId); });
