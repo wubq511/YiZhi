@@ -44,6 +44,7 @@ export interface SaveReceipt {
 }
 export interface DesktopBridge extends SaveBridge {
   agent: import('./agent-api').AgentBridge;
+  parsing: import('./parsing-api').ParsingBridge;
   sources: import('./sources-api').SourceBridge;
   commands: import('./command-api').CommandAPI;
   relations: import('./relation-api').RelationAPI;
@@ -111,6 +112,7 @@ export interface EditHistory {
 }
 export type SaveEventData =
   { type: 'agent.changed'; conversationId: string; taskId?: string } |
+  { type: 'parse.changed'; taskId: string; attemptId: string; kind: string; artifactId?: string } |
   { type: 'draft.saved'; sessionId: string; inputSeq: number } |
   { type: 'content.committed'; receipt: EditReceipt } |
   { type: 'relations.committed'; operationId: string; revision: number; changedObjectIds: string[] } |

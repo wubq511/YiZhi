@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { SourcePage, SourceCitation, SourceReadingContext, SourceList, CiteSource, PrintedPage } from '../sources-api';
+import { ParsingSection } from './parsing-section';
 import { SourcePdf, type SourceSelection } from './source-pdf';
 import './source-panel.css';
 
@@ -104,7 +105,7 @@ export const SourcePanel = forwardRef<SourcePanelHandle, { sessionId: string; na
   }}>原文资料</button>{open && createPortal(<aside ref={panel} className="source-panel" role={narrow ? 'dialog' : 'complementary'} aria-modal={narrow || undefined} aria-label="原文资料" onKeyDown={event => {
     if (event.key === 'Escape') { event.preventDefault(); void close(); }
     if (event.key === 'Tab' && narrow) {
-      const targets = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex="0"]')];
+      const targets = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), summary, [tabindex="0"]')].filter(element => element.getClientRects().length > 0);
       if (event.shiftKey && document.activeElement === targets[0]) { event.preventDefault(); targets.at(-1)?.focus(); }
       else if (!event.shiftKey && document.activeElement === targets.at(-1)) { event.preventDefault(); targets[0]?.focus(); }
     }
@@ -131,6 +132,7 @@ export const SourcePanel = forwardRef<SourcePanelHandle, { sessionId: string; na
       })}>前往印刷页</button>{printedMatches.length > 1 && <p>同名印刷页有多处，请选择：{printedMatches.map(match => <button key={match.id} onClick={() => choose(versionId, match.pdfPageIndex)}>PDF 第 {match.pdfPageIndex + 1} 页</button>)}</p>}</details>
       {activeCitation?.printedPage && <p>原引用印刷页：{activeCitation.printedPage.label}（保留引用时的核对记录）</p>}
     </>}
+    {version && <ParsingSection key={versionId} sessionId={sessionId} generation={list.generation} source={version} onSource={index => { choose(versionId,index); setReload(n=>n+1); requestAnimationFrame(()=>scroller.current?.scrollIntoView({block:'center'})); }} />}
     <div role="status" aria-label="原文状态" aria-live="polite" className="source-status">{busy ? '正在保存资料…' : renderError ? '原页暂不可读' : ready ? '原页已载入' : version ? '正在读取本地原页…' : '尚未导入资料'}</div>
     {error && <div role="alert" className="source-error"><p>{error}</p>{retryAction.current && <button disabled={busy} onClick={() => retryAction.current && void run(retryAction.current)}>重试资料操作</button>}</div>}
     {renderError && <div role="alert" className="source-error"><p>该来源暂不可读：{renderError}。画板正文仍可阅读。</p><button onClick={() => setReload(value => value + 1)}>重试原页</button><button disabled={busy} onClick={() => {

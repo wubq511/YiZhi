@@ -26,6 +26,9 @@ export class Sources {
   /** Preserve the common logical-operation namespace across student, producer, relation and source writes. */
   fenceOperation(action: string, operationId: unknown) {
     if (typeof operationId !== 'string') return;
+    if (this.db.prepare("SELECT 1 FROM sqlite_master WHERE name='parse_operations'").get() &&
+      !action.startsWith('parsing:') && this.db.prepare('SELECT 1 FROM parse_operations WHERE id=?').get(operationId) &&
+      ['sources:write', 'save', 'commitEdit', 'commands:commit', 'relations:commit'].includes(action)) throw new Error('操作身份已用于解析');
     if (action === 'sources:write') {
       if (this.db.prepare('SELECT 1 FROM operations WHERE id=?').get(operationId) || this.db.prepare('SELECT 1 FROM cg_candidates WHERE id=?').get(operationId))
         throw new Error('操作身份已用于其他正式修改');

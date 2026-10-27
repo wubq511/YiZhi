@@ -1,6 +1,7 @@
 import { agentClient } from '../agent-api';
 import { contextBridge, ipcRenderer } from 'electron';
 import type { DesktopBridge } from '../shared';
+import { parsingBridge } from '../parsing-api';
 import { relationClient } from '../relation-api';
 import { commandClient } from '../command-api';
 import { sourceBridge } from '../sources-api';
@@ -13,6 +14,7 @@ async function invoke(channel: string, argument?: unknown) {
 }
 const bridge: DesktopBridge = {
   agent: { ...agentClient(invoke), status: () => invoke('agent:status') },
+  parsing: parsingBridge(invoke),
   sources: sourceBridge(invoke),
   commands: commandClient(invoke),
   relations: relationClient(invoke),
