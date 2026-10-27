@@ -11,8 +11,8 @@ export interface GroupResult {
   revision?: number; cursor?: number; changedObjectIds: string[]; reason?: string;
 }
 export interface GroupHistory {
-  operationId: string; attemptId: string; taskId: string; generation: number; revision: number; committedAt: string;
-  changes: { objectId: string; before: Record<string, any> | null; after: Record<string, any>; beforeVersion: number; afterVersion: number }[];
+  operationId: string; attemptId?: string; taskId?: string; domain?: 'formal-relation'; actor?: 'agent' | 'student'; generation: number; revision: number; committedAt: string;
+  changes: { objectId: string; before: Record<string, any> | null; after: Record<string, any> | null; beforeVersion: number; afterVersion: number }[];
 }
 export interface RetainedCandidate { command: GroupCommand; result: GroupResult }
 export interface CommandAPI {

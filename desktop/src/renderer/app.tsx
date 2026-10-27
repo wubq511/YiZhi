@@ -8,6 +8,7 @@ import 'katex/dist/katex.min.css';
 import './style.css';
 import type { CourseGraph, CourseUnit, DesktopBridge, OpenedCourse, ReadingBlock, ReadingState } from '../shared';
 import { ParagraphSaveChannel, type SaveState } from './save-channel';
+import { RelationsPanel, useRelationEvents } from './relations-panel';
 import { ControlledProducer } from './controlled-producer';
 declare global { interface Window { yizhi: DesktopBridge } }
 
@@ -96,7 +97,7 @@ function App() {
     if (!narrow) return;
     if (event.key === 'Escape') { event.preventDefault(); close(); return; }
     if (event.key !== 'Tab') return;
-    const items = [...event.currentTarget.querySelectorAll<HTMLElement>('button, select, input, [tabindex]:not([tabindex="-1"])')].filter(item => !item.hasAttribute('disabled'));
+    const items = [...event.currentTarget.querySelectorAll<HTMLElement>('button, select, input, textarea, [tabindex]:not([tabindex="-1"])')].filter(item => !item.matches(':disabled'));
     if (!items.length) return;
     if (event.shiftKey && document.activeElement === items[0]) { event.preventDefault(); items[items.length - 1].focus(); }
     else if (!event.shiftKey && document.activeElement === items[items.length - 1]) { event.preventDefault(); items[0].focus(); }
@@ -109,12 +110,14 @@ function App() {
   const closeSource = () => { setSourceOpen(false); requestAnimationFrame(() => sourceTrigger.current?.focus()); };
   useEffect(() => { if (sourceOpen) sourceDialog.current?.querySelector<HTMLButtonElement>('button')?.focus(); }, [sourceOpen]);
   const [relationsOpen, setRelationsOpen] = useState(false);
+  const [relationFocus, setRelationFocus] = useState<string>();
   const relationButton = useRef<HTMLButtonElement>(null);
   const relationPanel = useRef<HTMLElement>(null);
   const closeRelations = () => { setRelationsOpen(false); requestAnimationFrame(() => relationButton.current?.focus()); };
-  useEffect(() => { if (narrow && relationsOpen) relationPanel.current?.querySelector<HTMLButtonElement>('button')?.focus(); }, [narrow, relationsOpen]);
+  useEffect(() => { if (narrow && relationsOpen) { setDirectory(false); relationPanel.current?.querySelector<HTMLButtonElement>('button')?.focus(); } }, [narrow, relationsOpen]);
   const [relationView, setRelationView] = useState("main");
   const [course, setCourse] = useState<OpenedCourse>();
+  useRelationEvents(course?.sessionId, setGraph);
   const [loadError, setLoadError] = useState<string>();
   const [state, setState] = useState<SaveState>({ status: 'saved' });
   const [closing, setClosing] = useState(false);
@@ -242,7 +245,7 @@ function App() {
   const edges = useMemo(() => {
     if (!graph) return [];
     const visible = graph.edges.filter(edge => relationView === 'all' || edge.view === relationView);
-    if (viewport.zoom >= 0.35) return visible.map(edge => ({ id: edge.id, source: edge.fromUnitId, target: edge.toUnitId, label: edge.requirementGroupId ? `${edge.type} · ${edge.requirementGroupId}（或）` : edge.type, markerEnd: edge.directed ? { type: MarkerType.ArrowClosed } : undefined, animated: false }));
+    if (viewport.zoom >= 0.35) return visible.map(edge => ({ id: edge.id, source: edge.fromUnitId, target: edge.toUnitId, label: edge.requirementGroupId ? `${edge.type} · ${edge.requirementGroupId}（${graph.requirementGroups.find(g => g.id === edge.requirementGroupId)?.mode === "any" ? "或" : "且"}）` : edge.type, markerEnd: edge.directed ? { type: MarkerType.ArrowClosed } : undefined, animated: false }));
     const groups = new Map<string, { source: string; target: string; count: number; type: string; directed: boolean }>();
     for (const edge of visible) {
       const source = graph.nodes.find(node => node.id === edge.fromUnitId)?.themeId;
@@ -286,8 +289,8 @@ function App() {
     {state.error && <div className="save-error" role="alert">{state.error} 输入仍保留，请重试保存。</div>}
     <div className="workspace board-workspace">
       {directory && <nav ref={navRef} inert={sourceOpen || (narrow && (relationsOpen || producerOpen))} aria-label="课程目录" onKeyDown={event => trap(event, closeDirectory)}><h2>课程目录</h2>{narrow && <button onClick={closeDirectory}>关闭目录</button>}{graph?.groups.map(group => <div key={group.id}><button className="directory-theme" onClick={() => { const first = graph.nodes.find(node => node.themeId === group.id); if (first) { void go(first.id); if (narrow) closeDirectory(); } }}>{group.name}</button>{selected?.theme.id === group.id && graph.nodes.filter(node => node.themeId === group.id).map(node => <button className="directory-unit" key={node.id} onClick={() => { void go(node.id); if (narrow) closeDirectory(); }}>{node.name}</button>)}</div>)}</nav>}
-      <main ref={boardRef} className="board" aria-label="知识画板" role="region" inert={narrow && (directory || producerOpen)}>
-        <div className="board-background" inert={sourceOpen || (narrow && relationsOpen)}><ReactFlow nodes={nodes} edges={edges} onInit={() => setNodesReady(true)} minZoom={0.04} maxZoom={2} nodesDraggable={false} panOnScroll zoomOnScroll={false} zoomOnPinch panOnDrag={tool === "select" ? [1] : [0, 1]} selectionOnDrag={tool === "select"} panActivationKeyCode="Space" onMove={(_event, next) => setViewport(next)} onMoveEnd={(_event, next) => { const current = readingRef.current; if (current) persist({ ...current, camera: next }); }} onNodeClick={(_event, node) => { const first = graph?.nodes.find(item => item.id === node.id || item.themeId === node.id); if (first) void go(first.id); }}>
+      <main ref={boardRef} className="board" aria-label="知识画板" role="region" inert={narrow && ((directory && !relationsOpen) || producerOpen)}>
+        <div className="board-background" inert={sourceOpen || (narrow && relationsOpen)}><ReactFlow nodes={nodes} edges={edges} onInit={() => setNodesReady(true)} onEdgeClick={(_event, edge) => { setRelationFocus(edge.id); setRelationsOpen(true); }} minZoom={0.04} maxZoom={2} nodesDraggable={false} panOnScroll zoomOnScroll={false} zoomOnPinch panOnDrag={tool === "select" ? [1] : [0, 1]} selectionOnDrag={tool === "select"} panActivationKeyCode="Space" onMove={(_event, next) => setViewport(next)} onMoveEnd={(_event, next) => { const current = readingRef.current; if (current) persist({ ...current, camera: next }); }} onNodeClick={(_event, node) => { const first = graph?.nodes.find(item => item.id === node.id || item.themeId === node.id); if (first) void go(first.id); }}>
           {minimap && <MiniMap ariaLabel="小地图" nodeColor="#7798bc" nodeStrokeColor="#345d88" maskColor="rgba(105,101,219,.12)" pannable zoomable />}
         </ReactFlow>
         <div className="board-tools">{reading?.returnStack.length ? <button onClick={() => { const previous = reading.returnStack[reading.returnStack.length - 1]; void go(previous.unitId, { ...reading, unitId: previous.unitId, scrollTop: previous.scrollTop, camera: previous.camera, returnStack: reading.returnStack.slice(0, -1) }); }}>返回引用位置</button> : null}<button ref={directoryButton} onClick={() => setDirectory(!directory)}>{directory ? '收起目录' : '展开目录'}</button><button onClick={() => setMinimap(!minimap)}>{minimap ? '收起小地图' : '展开小地图'}</button><button onClick={() => void flow.fitView({ duration: 0 })}>全图</button><button aria-pressed={tool === "read"} onClick={() => setTool("read")}>阅读工具</button><button aria-pressed={tool === "select"} onClick={() => setTool("select")}>选择工具</button><button aria-pressed={tool === "hand"} onClick={() => setTool("hand")}>手形工具</button><button ref={relationButton} onClick={() => setRelationsOpen(!relationsOpen)}>{relationsOpen ? "关闭关系" : "查看关系"}</button><label>关系 <select aria-label="关系范围" value={relationView} onChange={event => setRelationView(event.target.value)}><option value="main">主关系</option><option value="auxiliary">辅助关系</option><option value="all">全部关系</option></select></label></div>
@@ -302,10 +305,7 @@ function App() {
             <footer>来源：既有数字逻辑课程单元的独立副本。编辑保留原有知识身份。</footer>
           </article>
         </div>; })}</div>
-        {relationsOpen && graph && <aside ref={relationPanel} className="relations-panel" role={narrow ? "dialog" : undefined} aria-modal={narrow || undefined} aria-label="关系详情" onKeyDown={event => trap(event, closeRelations)}><h2>关系详情</h2><button onClick={closeRelations}>关闭关系详情</button><p>前置条件中，未分组的项目全部必要；路线组按指定规则选择。</p>
-          {relationView !== 'auxiliary' && graph.requirementGroups.map(group => <section key={group.id}><h3>{graph.nodes.find(n => n.id === group.targetUnitId)?.name} · 前置条件</h3>{(graph.conditions[group.targetUnitId]?.required ?? []).map(id => <p key={id}>{id}：{graph.nodes.find(n => n.id === id)?.name}</p>)}<p>{group.mode === 'any' ? '任选一条' : '全部需要'}：{group.unitIds.map(id => `${id} ${graph.nodes.find(n => n.id === id)?.name}`).join(' 或 ')}</p><p>{group.value}</p></section>)}
-          {graph.edges.filter(edge => relationView === 'all' || edge.view === relationView).map(edge => <section key={edge.id}><h3>{edge.id} · {edge.type}</h3><p>{edge.fromUnitId} {graph.nodes.find(n => n.id === edge.fromUnitId)?.name} → {edge.toUnitId} {graph.nodes.find(n => n.id === edge.toUnitId)?.name}</p><p>{edge.value}</p><p>来源：{edge.sourceRefs.map(ref => `${ref.sourceId} ${ref.pdfPages?.join('、') ?? ''} ${ref.note ?? ''}`).join('；')}</p></section>)}
-        </aside>}
+        {relationsOpen && graph && course && <RelationsPanel graph={graph} sessionId={course.sessionId} view={relationView} narrow={narrow} panelRef={relationPanel} onClose={closeRelations} onKeyDown={event => trap(event, closeRelations)} onGraph={setGraph} focusId={relationFocus} />}
         {sourceOpen && <section ref={sourceDialog} className="source-dialog" role="dialog" aria-modal="true" aria-label="TI 74153 原页" onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); closeSource(); } else if (event.key === 'Tab') { event.preventDefault(); sourceDialog.current?.querySelector<HTMLButtonElement>('button')?.focus(); } }}><button onClick={closeSource}>返回正文</button><h2>TI 74153 原页 · 第 1 页</h2><img src="./ti74153-1.png" alt="TI 74153 手册第 1 页" /></section>}
       </main>
     </div>

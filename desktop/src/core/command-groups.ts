@@ -144,6 +144,7 @@ export class CommandGroups {
       throw new Error('无效或重复的一致修改组写入范围');
     return this.transaction(() => {
       this.observe();
+      if (this.db.prepare('SELECT 1 FROM operations WHERE id=?').get(command.operationId)) throw new Error('操作身份已用于正文修改');
       const previous = this.db.prepare('SELECT * FROM cg_candidates WHERE id=?').get(command.operationId);
       if (previous) {
         if (previous.digest !== digest(command)) throw new Error('同一操作不能换用不同内容');
@@ -263,7 +264,9 @@ export class CommandGroups {
   }
   query(operationId: string): GroupResult | null {
     const row = this.db.prepare('SELECT result FROM cg_candidates WHERE id=?').get(operationId);
-    return row ? parse(row.result) : null;
+    if (!row) return null;
+    const result = parse(row.result);
+    return result.domain === 'formal-relation' ? null : result;
   }
   private attempt(attemptId: string): Attempt {
     const row = this.db.prepare('SELECT * FROM cg_attempts WHERE id=?').get(attemptId);
