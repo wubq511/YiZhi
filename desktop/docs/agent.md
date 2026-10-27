@@ -32,3 +32,8 @@ RPC 对客户端响应与异步服务请求分别处理。每个任务按实际 
 任务 `groups` 只含真实 Core 回执；模型完成不能制造保存事实。已有提交但后组失败／未完为 `partial`，无正式变化或仍有候选为 `pending`。`executorStatus` 独立保留执行器真实终态，完整消息不因任务部分完成而改成未接收完成。未完成组保持草稿候选，不加逐块预览采纳。工具读取／实际提交进度驱动 T09 跟随，用户导航取消后不抢回，完成不定位；「查看实际修改」是用户主动动作。终态清除工具原始输入输出及该 attempt 的全量 `cg_bases.read_values`，保留必要变更历史、候选、版本和摘要事实，后续清理可沿既有 purpose/reference 钩子实现。
 
 回归见 `agent-mutation.test.ts` / `agent.test.ts` 及实际 Electron 小窗口 `agent-mutation.spec.ts`。真实安装 CLI 验收单独启用 `agent-mutation-real.spec.ts`：`YIZHI_REAL_EXECUTOR=1`、`YIZHI_T17_SOURCE` 指向实际 C05 课件，`YIZHI_EVIDENCE_DIR` 保存实际任务／工具／操作组／来源／独立穷举／重开证据。受控协议 fixture 只验证竞争与权限，不代表真实 Agent。
+
+
+窄一致性复查后的边界：结构补丁以修改前后递归对象的并集检测公式链接与实验定义，因此新增、删除和改指链接都不能漏过证明要求；新公式可在已有实验依据及完整有限证明下同组加入，未取得可验证依据的新增实验组合保留为候选。任何声明读取的正式关系 basis 都必须仍有效，不因本组没有关系写入而跳过。结构／领域一致组的 `commit` 必须拥有最外层提交，显式拒绝嵌套；旧 T06 SQL 整合仍沿其既有事务路径，不使用实验 heap publisher。
+
+当正文已有 F→E 公式链接时，`experiments.act(kind:formula)` 不再独立发布新正式定义，需经完整一致组；Core 的 `formulaScope` 只读投影让 UI 清楚显示该能力。参数操作和已确认现场仍可使用。无此关联的 T12 独立自由试算继续支持原有公式编辑和保存。

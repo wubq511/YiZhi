@@ -19,16 +19,18 @@ test('small actual Electron window follows real tool groups, keeps student takeo
   await expect(page.getByRole('status',{name:'修改跟随'})).toHaveText('正在跟随修改');
   await expect(page.getByRole('textbox',{name:'编辑首段正文'})).toContainText('受控协议回归');
   await page.waitForTimeout(250); // settle real local layout compensation before the student's deliberate takeover
-  const beforePan=await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return (await b.readingState(c.sessionId)).camera;});
+  const matrix=()=>page.locator('.react-flow__viewport').evaluate(el=>{const m=new DOMMatrixReadOnly(getComputedStyle(el).transform);return {x:m.e,y:m.f,zoom:m.a};});
   const board=(await page.locator('main.board').boundingBox())!;await page.mouse.move(board.x+8,board.y+board.height/2);await page.mouse.wheel(0,80);
   await expect(page.getByRole('status',{name:'修改跟随'})).toHaveText('已由你控制视野');
-  await expect.poll(()=>page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return (await b.readingState(c.sessionId)).camera.y;})).not.toBe(beforePan.y);
+  await page.evaluate(()=>new Promise<void>(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>done()))));
+  const liveCamera=await matrix();
+  await expect.poll(()=>page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return (await b.readingState(c.sessionId)).camera.y;})).toBeCloseTo(liveCamera.y,3);
   const camera=await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return (await b.readingState(c.sessionId)).camera;});
   await expect(page.getByRole('status',{name:'回答状态'})).toContainText('部分完成',{timeout:15000});
   await expect(page.getByRole('status',{name:'修改跟随'})).toHaveText('修改已结束');
   await expect(page.getByRole('textbox',{name:'编辑首段正文'})).toContainText('受控协议回归');
   await expect(page.getByRole('status',{name:'回答状态'})).toContainText('草稿候选');
-  const actual=await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return {state:await b.readingState(c.sessionId),unit:c.unit,graph:await b.graph(c.sessionId)};});expect(actual.state.camera).toEqual(camera);
+  const actual=await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return {state:await b.readingState(c.sessionId),unit:c.unit,graph:await b.graph(c.sessionId)};});expect(actual.state.camera).toEqual(camera);const finalCamera=await matrix();expect(finalCamera.x).toBeCloseTo(liveCamera.x,3);expect(finalCamera.y).toBeCloseTo(liveCamera.y,3);expect(finalCamera.zoom).toBeCloseTo(liveCamera.zoom,6);
   expect(actual.unit.reading.blocks[0].kind).toBe('example');const baseline=actual.graph.layout.nodes.find((n:any)=>n.unitId==='KU-001');
   await page.getByRole('button',{name:'收起对话',exact:true}).click();
   const summary=page.locator('[data-agent-unit="KU-001"] details summary').first();await revealBoardControl(page,summary);await summary.click();await summary.click();
@@ -41,4 +43,23 @@ test('small actual Electron window follows real tool groups, keeps student takeo
   await expect.poll(()=>page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return (await b.readingState(c.sessionId)).unitId;})).toBe('KU-001');
   if(process.env.YIZHI_EVIDENCE_DIR)await page.screenshot({path:join(process.env.YIZHI_EVIDENCE_DIR,'t17-controlled-small-reopen.png')});
  }finally{await app.close();await rm(root,{recursive:true,force:true});}
+});
+
+
+import { CourseService } from '../src/core/course-service';
+import { muxCopy,correction,muxId } from './agent-mutation-setup';
+test('linked experiment formula offers grouped editing while actual input controls and confirmed scene survive small-window reopen',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-linked-formula-ui-')),core=new CourseService(resolve('dist/worker.cjs'));let app:any;
+ try{
+  const {sessionId,citation,view}=await muxCopy(core,join(root,'course'));const result=await core.commands.commit(await correction(core,sessionId,citation.id,'correct-linked-copy'));expect(result.status).toBe('committed');
+  let v=await core.experiments.read({sessionId,instanceId:view.instanceId});await core.experiments.act({sessionId,instanceId:v.instanceId,generation:v.generation,operationId:'adopt',action:{kind:'migrate',baseVersion:v.version}});await core.close();
+  const launch=()=>electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile'),YIZHI_CODEX_PATH:join(root,'no-generation-needed')}});app=await launch();let page=await app.firstWindow();await resizeBoardWindow(app,page);
+  await page.getByRole('button',{name:'复用器与分配器',exact:true}).click();await page.getByRole('button',{name:'MUX 器件、级联与扩展',exact:true}).first().click();
+  const lab=page.getByRole('region',{name:'交互 · 4 选 1 的选择语义',exact:true}),edit=lab.getByRole('button',{name:'编辑实验公式',exact:true});
+  await revealBoardControl(page,edit);await expect(edit).toBeDisabled();await expect(lab.getByRole('status',{name:'关联公式编辑'})).toContainText('请在 Agent 中请求修改');
+  const input=lab.getByRole('checkbox',{name:'I0',exact:true});await revealBoardControl(page,input);await input.check();await expect(lab.getByRole('status',{name:'MUX 输出'})).toHaveText('输出 Z = 1');await expect(lab.getByRole('status',{name:'实验保存状态'})).toHaveText('现场已保存');
+  await app.close();app=await launch();page=await app.firstWindow();await resizeBoardWindow(app,page);
+  await expect(page.getByRole('button',{name:'编辑实验公式',exact:true})).toBeDisabled();const read=await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return b.experiments.open({sessionId:c.sessionId,unitId:'KU-057',blockId:'RB-TH-13-057-010-interactive'});});expect(read.formulaScope).toBe('consistency-group');expect(read.state.inputs.I0).toBe(1);expect(read.result.output).toBe(1);
+  if(process.env.YIZHI_EVIDENCE_DIR)await page.screenshot({path:join(process.env.YIZHI_EVIDENCE_DIR,'t17-linked-formula-scope.png')});
+ }finally{await app?.close();await core.close();await rm(root,{recursive:true,force:true});}
 });

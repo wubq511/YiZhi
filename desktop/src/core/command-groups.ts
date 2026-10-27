@@ -1,3 +1,4 @@
+import { changedCouplings } from './consistency-links';
 import type { ConsistencyPort } from './command-consistency';
 import { applyContentPatch, validatePatch } from './editor-store';
 import { patchTargets } from '../editor-api';
@@ -202,8 +203,11 @@ export class CommandGroups {
       new Set(command.changes.map(change => change.objectId)).size !== command.changes.length || json(command).length > 1_000_000)
       throw new Error('无效或重复的一致修改组写入范围');
     if (command.patch) validatePatch(command.patch);
-    this.fenceOperation(command.operationId);
     const nested = this.db.isTransaction;
+    // Legacy SQL-only recheck/resolve composes internally. Aggregate commits own their final COMMIT;
+    // they are never an in-transaction hook and must not publish heap before an external commit.
+    if(nested && (command.patch || command.bundle || this.db.prepare('SELECT domain_basis FROM cg_bases WHERE id=?').get(command.basisId)?.domain_basis))throw new Error('结构／领域一致组必须作为最外层命令提交，不能嵌套发布实验现场');
+    this.fenceOperation(command.operationId);
     let requiresConsistency = false; let publish: (() => void) | undefined; let committed!: GroupResult;
     try { committed = this.transaction(() => {
       this.observe();
@@ -321,10 +325,7 @@ export class CommandGroups {
           beforeVersion: versions.get(`structure:${unit.id}`)!, afterVersion: versions.get(`structure:${unit.id}`)! + 1 });
       }
       let related: GroupResult['related'];
-      requiresConsistency = beforeUnit.reading.blocks.some(old => {
-        const next=unit.reading.blocks.find(b=>b.id===old.id);
-        return old.kind==='interactive' && ['mux','decoder','kmap'].includes(old.payload.component) && (!next || !equal([old.payload.config,old.payload.inputs],[next.payload.config,next.payload.inputs])) || old.payload.experimentBlockId && !equal(old.payload,next?.payload);
-      });
+      requiresConsistency = changedCouplings(beforeUnit,unit).size > 0 || !!basis.domain_basis;
       if (command.bundle || requiresConsistency) {
         if (!basis.domain_basis || !this.consistency) throw new Error('必要领域的读取依据缺失');
         const applied = this.consistency.apply(command,beforeUnit,unit,parse(basis.domain_basis));

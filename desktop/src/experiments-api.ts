@@ -10,6 +10,7 @@ export interface ExperimentState {
 export interface ExperimentResult { output?: number; selected?: number; enabled?: boolean; outputs?: number[]; highlighted?: number[] }
 export interface ExperimentView {
   instanceId: string; unitId: string; blockId: string; generation: number; version: number;
+  formulaScope?: 'independent'|'consistency-group';
   pendingDefinition?: BuiltinDefinition; gesture?: boolean; migrationError?: string; definition: BuiltinDefinition; state: ExperimentState; result: ExperimentResult | null;
   running: boolean; background: boolean; visible: boolean;
   phase: 'running' | 'paused' | 'needs-check' | 'pause-incomplete'; error?: string;

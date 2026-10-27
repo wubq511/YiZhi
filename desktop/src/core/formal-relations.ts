@@ -108,15 +108,18 @@ export class FormalRelations {
       return receipt;
     });
   }
+  /** Every declared relation read participates, including read-only dependencies. */
+  assertBasis(request: RelationRead & {basisId:string;generation:number}) {
+    this.eligible(request.attemptId);
+    const basis=this.db.prepare('SELECT * FROM formal_relation_bases WHERE id=?').get(request.basisId);
+    if(basis && (basis.attempt_id??undefined)!==request.attemptId)throw new Error('正式关系读取与提交的尝试身份不一致');
+    if(!basis || basis.session_id!==request.sessionId || Number(basis.generation)!==this.generation() || request.generation!==this.generation() || Number(basis.revision)!==this.revision())throw new Error('正式关系依据已变化，请重新读取核对；候选仍保留');
+  }
   /** Caller owns the necessary group's transaction and its common receipt/history. */
   applyInTransaction(command: RelationCommand): { receipt: RelationReceipt; changes: GroupHistory['changes'] } {
     if (!this.db.isTransaction) throw new Error('正式关系组需要已有事务');
     validateRelationCommand(command);
-      this.eligible(command.attemptId);
-      const basis = this.db.prepare('SELECT * FROM formal_relation_bases WHERE id=?').get(command.basisId);
-      if (basis && (basis.attempt_id ?? undefined) !== command.attemptId) throw new Error('正式关系读取与提交的尝试身份不一致');
-      if (!basis || basis.session_id !== command.sessionId || Number(basis.generation) !== this.generation() ||
-        command.generation !== this.generation() || Number(basis.revision) !== this.revision()) throw new Error('正式关系依据已变化，请重新读取核对；候选仍保留');
+      this.assertBasis(command);
       for (const change of [...command.changes, ...(command.groupChanges ?? [])]) {
         if (change.value && this.db.prepare('SELECT 1 FROM formal_relation_retired WHERE id=?').get(change.id)) throw new Error('已退休的关系或路线组身份不能重用');
       }

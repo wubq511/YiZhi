@@ -1,3 +1,4 @@
+import { unitBlocks,changedCouplings,linkedExperiment,isBuiltin } from './consistency-links';
 import type { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
 import type { CourseGraph, CourseUnit, ReadingBlock } from '../shared';
@@ -23,12 +24,13 @@ export class CommandConsistency implements ConsistencyPort {
     const unit: CourseUnit = JSON.parse(String(this.db.prepare('SELECT payload FROM units WHERE id=?').get(unitId)!.payload));
     return { layout: local.map(n => ({ unitId: n.unitId, x: n.x, y: n.y, width: n.width, version: Number(this.db.prepare('SELECT version FROM layout_versions WHERE unit_id=?').get(n.unitId)?.version ?? 0) })),
       relations: this.relations.read({ sessionId: request.sessionId, attemptId: request.attemptId }),
-      experiments: unit.reading.blocks.filter(b => b.kind === 'interactive' && ['mux','decoder','kmap'].includes(b.payload.component)).map(b => {
+      experiments: unitBlocks(unit).filter(isBuiltin).map(b => {
         const definition = this.experiments.formalDefinition(unitId, b.id); return { blockId: b.id, definition, signature: hash(definition) };
       }) };
   }
   apply(command: GroupCommand, before: CourseUnit, after: CourseUnit, context: ConsistencyBasis) {
     if (!this.db.isTransaction) throw new Error('必要一致组缺少事务');
+    this.relations.assertBasis({sessionId:command.sessionId,attemptId:command.attemptId,basisId:context.relations.basisId,generation:context.relations.generation});
     const edits = command.bundle ?? {}, changes: GroupHistory['changes'] = [], receipt: ConsistencyReceipt = { layoutUnitIds: [], definitions: [] };
     const publications: Array<() => void> = [];
     const currentLayout = layoutGraph(this.db, this.graph).layout.nodes;
@@ -39,6 +41,11 @@ export class CommandConsistency implements ConsistencyPort {
     if (edits.layout && (edits.layout.length > 3 || edits.layout.some(n => !context.layout.some(old => old.unitId === n.unitId)))) throw new Error('整理只能覆盖目标与已读取的两个局部邻居');
     const planned = new Map((edits.experiments ?? []).map(e => [e.blockId,e]));
     if (planned.size !== (edits.experiments?.length ?? 0)) throw new Error('必要实验不能重复提交');
+    for(const id of changedCouplings(before,after)) if(!planned.has(id))throw new Error('新增或变更的公式关联／实验缺少完整有限证明组');
+    for(const formula of unitBlocks(after).filter(b=>linkedExperiment(b))) {
+      const target=unitBlocks(after).find(b=>b.id===linkedExperiment(formula));
+      if(!isBuiltin(target)||!context.experiments.some(e=>e.blockId===target!.id))throw new Error('新增实验或公式目标没有可验证的既有实验依据，候选需完整重读');
+    }
     const find = (u: CourseUnit, id: string): ReadingBlock | undefined => {
       const walk = (bs: ReadingBlock[]): ReadingBlock | undefined => { for (const b of bs) { if (b.id === id) return b; const found = walk(b.children ?? []); if (found) return found; } }; return walk(u.reading.blocks);
     };
@@ -46,7 +53,7 @@ export class CommandConsistency implements ConsistencyPort {
       if (hash(this.experiments.formalDefinition(before.id,old.blockId)) !== old.signature) throw new Error('实验正式定义已变化，请重新读取');
       const block = find(after,old.blockId), prior = find(before,old.blockId)!;
       if ((!block || !equal([block.payload.config,block.payload.inputs],[prior.payload.config,prior.payload.inputs])) && !planned.has(old.blockId)) throw new Error('实验配置变化必须连同公式校验作为完整组提交');
-      for (const formula of before.reading.blocks.filter(b => b.payload.experimentBlockId === old.blockId)) if (!equal(find(after,formula.id)?.payload,formula.payload) && !planned.has(old.blockId)) throw new Error('关联公式变化缺少必要实验校验');
+      for (const formula of unitBlocks(before).filter(b => linkedExperiment(b) === old.blockId)) if (!equal(find(after,formula.id)?.payload,formula.payload) && !planned.has(old.blockId)) throw new Error('关联公式变化缺少必要实验校验');
     }
     for (const proposal of edits.experiments ?? []) {
       const old = context.experiments.find(e => e.blockId === proposal.blockId), block = find(after,proposal.blockId);
@@ -61,7 +68,7 @@ export class CommandConsistency implements ConsistencyPort {
       if (next.definition.kind !== 'mux' || !equal(Object.keys(next.definition.initialInputs).sort(), [...names].sort())) throw new Error('当前独立校验仅覆盖实际六位4:1 MUX有限域');
       const rows = assignments(names), actual = rows.map(bits => evaluate(next.definition,bits).output), formula = formulaOutputs(proposal.formula,names);
       const expected = rows.map(bits => bits[['I0','I1','I2','I3'][2*bits.S1+bits.S0]]);
-      for(const linked of after.reading.blocks.filter(b=>b.payload.experimentBlockId===block.id)) {
+      for(const linked of unitBlocks(after).filter(b=>linkedExperiment(b)===block.id)) {
         if(typeof linked.payload.latex!=='string')throw new Error('关联公式正文缺失');
         const display=convertFormula(next.definition,linked.payload.latex);
         if(display.check!=='verified')throw new Error(`关联公式 ${linked.id} 不在支持的布尔语法内；请以当前输出名和精确变量名，使用¬、·、+的完整等式`);
