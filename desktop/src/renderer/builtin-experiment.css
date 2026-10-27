@@ -1,0 +1,29 @@
+.builtin-experiment { margin-block: 28px; padding-block: 20px; border-block: 1px solid #a9bdce; overflow-wrap: anywhere; }
+.builtin-experiment h3 { margin: 0 0 12px; }
+.builtin-experiment .builtin-scope { color: #345d88; margin-block: 8px 18px; }
+.builtin-experiment fieldset { display: flex; flex-wrap: wrap; gap: 12px 20px; border: 0; padding: 0; margin: 0 0 20px; }
+.builtin-experiment legend { color: #345d88; margin-bottom: 8px; }
+.builtin-experiment label { display: inline-flex; align-items: center; gap: 8px; font: 20px/1.65 system-ui, sans-serif; }
+.builtin-experiment input { accent-color: #6965db; width: 20px; height: 20px; }
+.builtin-experiment .builtin-formula { margin-block: 18px; }
+.builtin-formula > span { color: #345d88; }
+.builtin-formula p { white-space: pre-wrap; font-family: KaTeX_Main, serif; margin-block: 8px 12px; line-height: 1.65; }
+.builtin-experiment .builtin-grammar, .builtin-experiment .builtin-runtime-state { color: #68717a; font: 18px/1.65 system-ui, sans-serif; }
+.builtin-diagram { display: block; width: 100%; max-height: 410px; margin-block: 20px; font-family: system-ui, sans-serif; font-size: 18px; fill: #27343e; }
+.builtin-diagram g path { stroke: #7798bc; }
+.builtin-diagram .active-path path { stroke: #286b58; }
+.builtin-diagram .active-path text { fill: #286b58; font-weight: 600; }
+.builtin-experiment .builtin-result { color: #286b58; background: #edf7f1; padding: 10px 14px; margin-block: 12px 20px; }
+.builtin-runtime { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 20px; }
+.builtin-runtime label { font: 18px/1.6 system-ui, sans-serif; }
+.builtin-experiment button { min-height: 34px; }
+.builtin-experiment button:focus-visible, .builtin-experiment input:focus-visible { outline: 2px solid #6965db; outline-offset: 3px; }
+.builtin-experiment button:disabled { opacity: .55; cursor: default; }
+.builtin-experiment .builtin-error { color: #a13737; background: #fdf0f0; padding: 12px; }
+.builtin-experiment ::selection { color: #27343e; background: #eeedff; }
+.builtin-formula-editor { margin-block: 10px; }
+.builtin-formula-editor math-field { width: 100%; max-width: 100%; font-size: 25px; background: #fffefa; --caret-color: #6965db; --selection-background-color: #eeedff; }
+.builtin-kmap { overflow-x: auto; margin-block: 20px; }
+.builtin-kmap table { width: 100%; border-collapse: collapse; font: 22px/1.65 system-ui, sans-serif; font-variant-numeric: tabular-nums; text-align: center; }
+.builtin-kmap th, .builtin-kmap td { border: 1px solid #7798bc; padding: 12px; }
+.builtin-kmap td[data-highlighted='true'] { color: #286b58; background: #edf7f1; outline: 2px solid #5f967e; outline-offset: -3px; }

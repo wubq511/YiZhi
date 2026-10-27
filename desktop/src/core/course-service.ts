@@ -1,3 +1,4 @@
+import { experimentsClient } from '../experiments-api';
 import { agentClient, type AgentEvent, type AgentTask } from '../agent-api';
 import { relationClient } from '../relation-api';
 import { Worker } from 'node:worker_threads';
@@ -8,6 +9,7 @@ import type { CourseGraph, CourseUnit, ReadingState, OpenedCourse, SaveParagraph
 
 /** One instance belongs to the application host, shared by all its windows/courses. */
 export class CourseService {
+  readonly experiments = experimentsClient((action, payload) => this.request(action, payload));
   readonly agent = agentClient((action, payload) => this.request(action, payload));
   readAgentTarget(request: { sessionId: string; taskId: string; attemptId: string; generation: number }): Promise<unknown> { return this.request('agent:readTarget', request); }
   recordAgent(event: AgentEvent): Promise<AgentTask> { return this.request('agent:record', event); }

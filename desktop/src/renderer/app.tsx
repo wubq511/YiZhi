@@ -1,3 +1,4 @@
+import { BuiltinExperiment, flushBuiltinExperiments } from './builtin-experiment';
 import { AgentPanel, type AgentPanelHandle } from './agent-panel';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { ReactFlow, ReactFlowProvider, MiniMap, useReactFlow, MarkerType, type Viewport } from '@xyflow/react';
@@ -37,17 +38,6 @@ function RoughFrame({ id }: { id: string }) {
   return <svg ref={ref} className="rough-frame" aria-hidden="true" />;
 }
 
-function Mux({ payload }: { payload: Record<string, any> }) {
-  const [bits, setBits] = useState<Record<string, number>>(payload.inputs);
-  const index = bits.S1 * 2 + bits.S0;
-  const signals: string[] = payload.config.dataSignals;
-  const signal = signals[index];
-  const output = signal === '0' || signal === '1' ? Number(signal) : signal.startsWith('¬') ? 1 - bits[signal.slice(1)] : bits[signal];
-  return <section className="mux"><h3>{payload.title ?? '交互 · 多路选择'}</h3><p>选择端决定输出的数据端。</p>
-    {Object.keys(bits).map(name => <label key={name}><input type="checkbox" checked={!!bits[name]} onChange={event => setBits({ ...bits, [name]: Number(event.target.checked) })} />{name} = {bits[name]}</label>)}
-    <p role="status" aria-label="MUX 输出">输出 {payload.bindings?.output ?? 'Z'} = {output}</p></section>;
-}
-
 function ReadingBoundary({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
@@ -61,9 +51,9 @@ function ReadingBoundary({ children }: { children: React.ReactNode }) {
   return <div data-reading-block ref={ref} inert={!visible && !focused} onFocus={() => setFocused(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>{children}</div>;
 }
 
-function Block({ block, onReference, reading, updateReading, onSource }: { block: ReadingBlock; onReference: (id: string, blockId: string) => void; reading: ReadingState | null; updateReading: (key: string, value: boolean) => void; onSource: (button: HTMLButtonElement) => void }) {
+function Block({ block, onReference, reading, updateReading, onSource, experiment }: { block: ReadingBlock; experiment: { unitId: string; sessionId: string; active: boolean; disabled: boolean; composition?: (active: boolean) => void }; onReference: (id: string, blockId: string) => void; reading: ReadingState | null; updateReading: (key: string, value: boolean) => void; onSource: (button: HTMLButtonElement) => void }) {
   const payload = block.payload;
-  const children = block.children?.map(child => <ReadingBoundary key={child.id}><Block block={child} onReference={onReference} onSource={onSource} reading={reading} updateReading={updateReading} /></ReadingBoundary>);
+  const children = block.children?.map(child => <ReadingBoundary key={child.id}><Block block={child} experiment={experiment} onReference={onReference} onSource={onSource} reading={reading} updateReading={updateReading} /></ReadingBoundary>);
   if (block.kind === 'paragraph') return <p>{payload.text}</p>;
   if (block.kind === 'formula') return <div className="formula" role="math" aria-label={payload.latex}
     dangerouslySetInnerHTML={{ __html: katex.renderToString(payload.latex, { throwOnError: false, trust: false, displayMode: true }) }} />;
@@ -78,7 +68,7 @@ function Block({ block, onReference, reading, updateReading, onSource }: { block
     {payload.hint && <details className="hint" open={reading?.expanded[block.id + ":hint"] ?? false} onToggle={event => updateReading(block.id + ":hint", event.currentTarget.open)}><summary>学习提示</summary><p>{payload.hint}</p></details>}
     {block.kind === 'exercise' ? <details className="answer" open={reading?.expanded[block.id + ":answer"] ?? false} onToggle={event => updateReading(block.id + ":answer", event.currentTarget.open)}><summary>答案与步骤</summary>{children}</details> : children}
   </details>;
-  if (block.kind === 'interactive' && payload.component === 'mux') return <Mux payload={payload} />;
+  if (block.kind === 'interactive' && ['mux', 'decoder', 'kmap'].includes(payload.component)) return <BuiltinExperiment block={block} {...experiment} />;
   if (block.kind === 'figure' && payload.asset) return <figure><img src="./ti74153-1.png" alt={payload.alt} /><figcaption>{payload.caption}</figcaption><button onClick={event => onSource(event.currentTarget)}>查看 TI 74153 原页</button></figure>;
   if (block.kind === 'figure' && payload.config?.nodes) return <figure><figcaption>{payload.alt}</figcaption><svg viewBox="0 0 640 250" role="img" aria-label={payload.alt}>{payload.config.edges.map((edge: any, index: number) => { const a = payload.config.nodes.find((node: any) => node.id === edge.from), b = payload.config.nodes.find((node: any) => node.id === edge.to); return <line key={index} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#7798bc" />; })}{payload.config.nodes.map((node: any) => <g key={node.id}><rect x={node.x - 45} y={node.y - 20} width="90" height="40" fill="white" stroke="#7798bc" /><text x={node.x} y={node.y} textAnchor="middle" dominantBaseline="middle" fontSize="13">{node.label}</text></g>)}</svg><figcaption>{payload.config.caption}</figcaption></figure>;
   if (block.kind === 'knowledge-reference') return <p className="reference">{payload.intent}<br/><button onClick={() => onReference(payload.targetUnitId, block.id)}>前往 {payload.targetUnitId}</button></p>;
@@ -96,6 +86,7 @@ function App() {
   const [readError, setReadError] = useState<string>();
   const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 0.1 });
   const [directory, setDirectory] = useState(true);
+  const [directoryTheme, setDirectoryTheme] = useState<string>();
   const [narrow, setNarrow] = useState(() => matchMedia('(max-width: 760px)').matches);
   const directoryButton = useRef<HTMLButtonElement>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -203,6 +194,8 @@ function App() {
       catch { readingFailed.current = true; setReadingSave('error'); setClosing(false); return false; }
     }
     if (sourcesPanel.current && !await sourcesPanel.current.flush()) { setClosing(false); return false; }
+    const current = await window.yizhi.open();
+    if (!await flushBuiltinExperiments(window.yizhi, current.sessionId)) { setReadError('实验现场尚未确认，请返回实验重试保存或恢复最近确认现场。'); setClosing(false); return false; }
     if (agentPanel.current && !await agentPanel.current.flush()) { setClosing(false); return false; }
     const saved = await channel.current.flush();
     if (saved && continuous.current && !await continuous.current.finish()) { setClosing(false); return false; }
@@ -218,7 +211,7 @@ function App() {
     const position = graph.layout.nodes.find(node => node.unitId === id);
     if (!position) return;
     setReadError(undefined);
-    try { const unit = await window.yizhi.readUnit(course.sessionId, id); persist(nextState ?? { ...(readingRef.current ?? { expanded: {}, returnStack: [], scrollTop: 0 }), unitId: id, scrollTop: 0 }); setSelected(unit); setMounted(previous => previous.some(item => item.id === id) ? previous : [...previous.filter(item => item.id === 'KU-001'), unit]); }
+    try { const unit = await window.yizhi.readUnit(course.sessionId, id); persist(nextState ?? { ...(readingRef.current ?? { expanded: {}, returnStack: [], scrollTop: 0 }), unitId: id, scrollTop: 0 }); setSelected(unit); setDirectoryTheme(unit.theme.id); setMounted(previous => previous.some(item => item.id === id) ? previous : [...previous.filter(item => item.id === 'KU-001'), unit]); }
     catch (error) { setSelected(undefined); setReadError((error as Error).message); }
     if (nextState?.camera) await flow.setViewport(nextState.camera, { duration: 0 });
     else await flow.setCenter(position.x + 325, position.y + 250, { zoom: 0.85, duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 180 });
@@ -244,7 +237,7 @@ function App() {
     if (!board) return;
     const wheel = (event: WheelEvent) => {
       const target = event.target as HTMLElement;
-      if (target.closest('.board-tools, .relations-panel, .source-dialog, .react-flow__minimap, .table-scroll, input, select, textarea, .mux')) return;
+      if (target.closest('.board-tools, .relations-panel, .source-dialog, .react-flow__minimap, .table-scroll, input, select, textarea, .mux, .builtin-formula-editor, math-field')) return;
       if (!target.closest('.reading-layer') && !event.shiftKey) return;
       event.preventDefault(); event.stopPropagation();
       const current = flow.getViewport();
@@ -316,7 +309,7 @@ function App() {
     <div className="workspace board-workspace" inert={(!cameraReady && !loadError) || (narrow && (sourcesOpen || agentOpen))} aria-busy={!cameraReady && !loadError}>
       {directory && <nav ref={navRef} inert={sourceOpen || (narrow && (relationsOpen || producerOpen))} aria-label="课程目录" onKeyDown={event => trap(event, closeDirectory)}><h2>课程目录</h2>{narrow && <button onClick={closeDirectory}>关闭目录</button>}
         <label className="review-filter">复习状态筛选 <select aria-label="复习状态筛选" value={reviewFilter} onChange={event => setReviewFilter(event.target.value as typeof reviewFilter)}><option value="all">全部单元</option><option value="pending">待复习</option><option value="weak">薄弱</option><option value="mastered">已掌握</option></select></label>
-        {graph?.groups.map(group => { const counts = review?.themes[group.id]; const matches = graph.nodes.filter(node => node.themeId === group.id && (reviewFilter === 'all' ? selected?.theme.id === group.id : review?.units[node.id]?.status === reviewFilter)); return <div key={group.id}><button aria-label={group.name} className="directory-theme" onClick={() => { const first = matches[0] ?? graph.nodes.find(node => node.themeId === group.id); if (first) { void go(first.id); if (narrow) closeDirectory(); } }}>{group.name}{counts ? <span aria-hidden="true"> · 待复习 {counts.pending} / 薄弱 {counts.weak} / 已掌握 {counts.mastered}</span> : ''}</button>{matches.map(node => <button aria-label={node.name} className="directory-unit" key={node.id} onClick={() => { void go(node.id); if (narrow) closeDirectory(); }}>{node.name}{review ? <span aria-hidden="true"> · {{ pending: '待复习', weak: '薄弱', mastered: '已掌握' }[review.units[node.id].status]}</span> : ''}</button>)}</div>; })}</nav>}
+        {graph?.groups.map(group => { const counts = review?.themes[group.id]; const matches = graph.nodes.filter(node => node.themeId === group.id && (reviewFilter === 'all' ? (directoryTheme ?? selected?.theme.id) === group.id : review?.units[node.id]?.status === reviewFilter)); return <div key={group.id}><button aria-label={group.name} className="directory-theme" onClick={() => { setDirectoryTheme(group.id); const first = matches[0] ?? graph.nodes.find(node => node.themeId === group.id); if (first) { void go(first.id); if (narrow) closeDirectory(); } }}>{group.name}{counts ? <span aria-hidden="true"> · 待复习 {counts.pending} / 薄弱 {counts.weak} / 已掌握 {counts.mastered}</span> : ''}</button>{matches.map(node => <button aria-label={node.name} className="directory-unit" key={node.id} onClick={() => { void go(node.id); if (narrow) closeDirectory(); }}>{node.name}{review ? <span aria-hidden="true"> · {{ pending: '待复习', weak: '薄弱', mastered: '已掌握' }[review.units[node.id].status]}</span> : ''}</button>)}</div>; })}</nav>}
       <main ref={boardRef} className="board" aria-label="知识画板" role="region" inert={narrow && ((directory && !relationsOpen) || producerOpen)}>
         <div className="board-background" inert={sourceOpen || (narrow && relationsOpen)}><ReactFlow nodes={nodes} edges={edges} onInit={() => setNodesReady(true)} onEdgeClick={(_event, edge) => { setRelationFocus(edge.id); setRelationsOpen(true); }} minZoom={0.04} maxZoom={2} nodesDraggable={false} panOnScroll zoomOnScroll={false} zoomOnPinch panOnDrag={tool === "select" ? [1] : [0, 1]} selectionOnDrag={tool === "select"} panActivationKeyCode="Space" onMove={(_event, next) => setViewport(next)} onMoveEnd={(_event, next) => { const current = readingRef.current; if (current) persist({ ...current, camera: next }); }} onNodeClick={(_event, node) => { const first = graph?.nodes.find(item => item.id === node.id || item.themeId === node.id); if (first) void go(first.id); }}>
 
@@ -331,10 +324,10 @@ function App() {
             <SourceReferences citations={sourceCitations.filter(citation => citation.target?.unitId === unit.id)} onOpen={citation => sourcesPanel.current?.openCitation(citation)} />
             {unit.id === 'KU-001' && channel.current ? <ContinuousUnitEditor course={course} channel={channel.current} disabled={closing || producerBusy} saveError={state.status === 'error'}
               composition={active => { composing.current = active; }} controller={instance => { continuous.current = instance; }}
-              renderBlock={block => <ReadingBoundary><Block block={block} reading={reading} updateReading={updateReading}
+              renderBlock={block => <ReadingBoundary><Block block={block} experiment={{ unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing, composition: active => { composing.current = active; } }} reading={reading} updateReading={updateReading}
                 onSource={button => { sourceTrigger.current = button; setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;
                   void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} /></ReadingBoundary>} />
-              : unit.reading.blocks.map(block => <ReadingBoundary key={block.id}><Block block={block} reading={reading} updateReading={updateReading}
+              : unit.reading.blocks.map(block => <ReadingBoundary key={block.id}><Block block={block} experiment={{ unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing, composition: active => { composing.current = active; } }} reading={reading} updateReading={updateReading}
                 onSource={button => { sourceTrigger.current = button; setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;
                   void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} /></ReadingBoundary>)}
 

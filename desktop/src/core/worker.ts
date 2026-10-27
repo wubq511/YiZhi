@@ -1,3 +1,4 @@
+import { BuiltinExperiments } from './builtin-experiments';
 import { AgentStore } from './agent-store';
 import { parentPort, workerData } from 'node:worker_threads';
 import { DatabaseSync } from 'node:sqlite';
@@ -20,6 +21,7 @@ interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; cou
   // T03 constructs its observer on this same connection; both student save entry points call it in-transaction.
   groups: CommandGroups;
   sources: Sources;
+  experiments: BuiltinExperiments;
   parsing: Parsing;
   relations: FormalRelations;
   agent: AgentStore;
@@ -84,7 +86,7 @@ function open(directory: string): OpenedCourse {
     const sourceUnit = (id: string) => {
       const row = db!.prepare('SELECT payload FROM units WHERE id=?').get(id);
       if (row) return JSON.parse(String(row.payload));
-      if (['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-055', 'KU-057'].includes(id))
+      if (['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-035', 'KU-055', 'KU-057', 'KU-062'].includes(id))
         return JSON.parse(readFileSync(join(__dirname, `fixtures/unit-${id.slice(3)}.json`), 'utf8'));
     };
     const graph = JSON.parse(readFileSync(join(__dirname, 'fixtures/graph.json'), 'utf8')) as CourseGraph;
@@ -97,9 +99,10 @@ function open(directory: string): OpenedCourse {
     const relationCatalog = JSON.parse(readFileSync(join(__dirname, 'fixtures/relation-catalog.json'), 'utf8'));
     const relations = new FormalRelations(db, graph, { retiredUnitIds: relationCatalog.retiredUnitIds,
       get sources() { return sources.relationCatalog(relationCatalog.sources); } });
+    const experiments = new BuiltinExperiments(db, sourceUnit);
     const parsing = new Parsing(db, canonical, sources, run => { queue = queue.then(run).catch(error => { console.error(error); }); }, workerData?.parseScheduling);
     const agent = new AgentStore(db, sources, sourceUnit);
-    const course: Course = { db, owner, agent, sessionId: randomUUID(), graph, groups, relations, sources, parsing,
+    const course: Course = { db, owner, agent, sessionId: randomUUID(), graph, groups, relations, sources, experiments, parsing,
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     const result = snapshot(course);
     courses.set(canonical, course);
@@ -122,6 +125,10 @@ let draining = false;
 parentPort!.on('message', message => {
   if (draining) { parentPort!.postMessage({ id: message.id, ok: false, error: '课程核心正在退出' }); return; }
   if (message.action === 'close') draining = true;
+  if (message.action === 'experiments:act') {
+    const course = [...courses.values()].find(c => c.sessionId === message.payload?.sessionId);
+    try { course?.experiments.stopIssuing(message.payload); } catch { /* Invalid input is rejected by the ordered dispatcher below. */ }
+  }
   if (message.action === 'sources:page') {
     // Immutable source bytes may parse asynchronously while short core requests continue.
     // Start after prior ordered writes; only close drains these read-only operations.
@@ -137,6 +144,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       const course = session(payload.sessionId);
       course.sources.fenceOperation(action === 'commands:resolveInput' ? 'commitEdit' : action, payload.operationId);
       course.agent.fence(action, payload.operationId);
+      course.experiments.fenceOperation(action, payload.operationId);
     }
     let value: unknown;
     if (action === 'open') value = open(payload.directory);
@@ -157,9 +165,19 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     } else if (action === 'readUnit') {
       const course = session(payload.sessionId);
       if (payload.unitId === 'KU-001') value = snapshot(course).unit;
-      else if (['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-055', 'KU-057'].includes(payload.unitId))
+      else if (['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-035', 'KU-055', 'KU-057', 'KU-062'].includes(payload.unitId))
         value = JSON.parse(readFileSync(join(__dirname, `fixtures/unit-${payload.unitId.slice(3)}.json`), 'utf8'));
       else throw new Error('该单元正文尚未加入课程副本');
+    }
+    else if (action.startsWith('experiments:')) {
+      const experiments = session(payload.sessionId).experiments;
+      const method = action.slice(12);
+      if (method === 'open') value = experiments.open(payload);
+      else if (method === 'read') value = experiments.read(payload);
+      else if (method === 'snapshot') value = experiments.snapshot(payload);
+      else if (method === 'act') value = experiments.act(payload);
+      else if (method === 'pauseAll') value = experiments.pauseAll();
+      else throw new Error('未知实验接口');
     }
     else if (action === 'saveDraft') value = saveDraft(session(payload.sessionId).db, payload);
     else if (action === 'commitEdit') value = commit(session(payload.sessionId), payload);
@@ -182,7 +200,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action.startsWith('sources:')) value = await session(payload.sessionId).sources.dispatch(action, payload);
     else if (action === 'close') {
       await Promise.all(sourceReads);
-      for (const course of courses.values()) { await course.parsing.close(); course.db.close(); course.owner.close(); }
+      for (const course of courses.values()) { course.experiments.dispose(); await course.parsing.close(); course.db.close(); course.owner.close(); }
       courses.clear();
     } else throw new Error('未知课程命令');
     parentPort!.postMessage({ id, ok: true, value });
