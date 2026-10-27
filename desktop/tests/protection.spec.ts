@@ -78,7 +78,8 @@ test('real persisted overlapping versions expose only the conflict and the stude
     await page.setViewportSize({ width: 700, height: 700 });
     // Viewport emulation only; not physical input/device acceptance.
     const closeDirectory = page.getByRole('button', { name: '关闭目录', exact: true });
-    if (await closeDirectory.isVisible()) await closeDirectory.click();
+    await expect(closeDirectory).toBeVisible();
+    await closeDirectory.click();
     await conflict.scrollIntoViewIfNeeded();
     await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t06-conflict-narrow.png' });
     await conflict.getByRole('button', { name: '冲突处保留学生草稿', exact: true }).click();
