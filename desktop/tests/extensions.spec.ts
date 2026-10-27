@@ -1,3 +1,4 @@
+import {resizeBoardWindow,revealBoardControl} from './board-test-helpers';
 import {test,expect,_electron as electron} from '@playwright/test';
 import {mkdtemp,rm} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
@@ -8,8 +9,9 @@ test('a real sandboxed browser Worker verifies learning results, saves complete 
  const launch=()=>electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});
  let app=await launch();
  try {
-  let page=await app.firstWindow();
+  let page=await app.firstWindow();await resizeBoardWindow(app,page);
   await page.getByRole('button',{name:'数制与数制转换',exact:true}).click();
+  await revealBoardControl(page,page.getByRole('button',{name:'奇偶校验扩展实验',exact:true}));
   await page.getByRole('button',{name:'奇偶校验扩展实验',exact:true}).click();
   const lab=()=>page.getByRole('region',{name:'奇偶校验扩展实验',exact:true});
   await expect(lab().getByRole('status',{name:'扩展保存状态'})).toHaveText('现场已保存');
@@ -34,7 +36,8 @@ test('a real sandboxed browser Worker verifies learning results, saves complete 
   await app.evaluate(async({session})=>{await session.defaultSession.clearCache();await session.defaultSession.clearStorageData();await session.defaultSession.enableNetworkEmulation({offline:true});});
   await app.close();
   await rm(join(root,'profile','Cache'),{recursive:true,force:true});
-  app=await launch(); await app.evaluate(async({session})=>{await session.defaultSession.enableNetworkEmulation({offline:true});}); page=await app.firstWindow();
+  app=await launch(); await app.evaluate(async({session})=>{await session.defaultSession.enableNetworkEmulation({offline:true});}); page=await app.firstWindow();await resizeBoardWindow(app,page);
+  await revealBoardControl(page,page.getByRole('button',{name:'奇偶校验扩展实验',exact:true}));
   await page.getByRole('button',{name:'奇偶校验扩展实验',exact:true}).click();
   await expect(lab().getByRole('status',{name:'扩展保存状态'})).toHaveText('现场已保存');
   expect((await read()).state).toEqual(saved.state);
@@ -169,7 +172,8 @@ test('an actual confirmation disk fault stops browser steps and offers explicit 
  const {DatabaseSync}=await import('node:sqlite');const root=await mkdtemp(join(tmpdir(),'yizhi-extension-disk-fault-'));
  const app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});const child=app.process();let fault:InstanceType<typeof DatabaseSync>|undefined;
  try{
-  const page=await app.firstWindow();await page.getByRole('button',{name:'数制与数制转换',exact:true}).click();await page.getByRole('button',{name:'奇偶校验扩展实验',exact:true}).click();
+  const page=await app.firstWindow();await resizeBoardWindow(app,page);await page.getByRole('button',{name:'数制与数制转换',exact:true}).click();await revealBoardControl(page,page.getByRole('button',{name:'奇偶校验扩展实验',exact:true}));
+  await page.getByRole('button',{name:'奇偶校验扩展实验',exact:true}).click();
   const lab=page.getByRole('region',{name:'奇偶校验扩展实验',exact:true});await expect(lab.getByRole('status',{name:'扩展保存状态'})).toHaveText('现场已保存');
   const frame=page.frames().find(f=>f.url().startsWith('yizhi-extension:'))!;
   await frame.evaluate(()=>{(window as any).__issuedSteps=0;addEventListener('message',e=>{if(e.data?.kind==='step')(window as any).__issuedSteps++;});});
@@ -180,9 +184,11 @@ test('an actual confirmation disk fault stops browser steps and offers explicit 
   await expect(lab.getByRole('status',{name:'扩展保存状态'})).toHaveText('暂停未完成');
   const confirmed=(await read()).state,issued=await frame.evaluate(()=>(window as any).__issuedSteps);
   await page.waitForTimeout(700);expect(await frame.evaluate(()=>(window as any).__issuedSteps)).toBe(issued);expect((await read()).state).toEqual(confirmed);
+  await revealBoardControl(page,page.getByRole('button',{name:'奇偶校验扩展实验',exact:true}));
   await page.getByRole('button',{name:'奇偶校验扩展实验',exact:true}).click();
   await expect(lab).toBeVisible();
   fault.exec('DROP TRIGGER extension_ui_disk_fault');fault.close();fault=undefined;
+  await revealBoardControl(page,lab.getByRole('button',{name:'恢复最近确认现场',exact:true}));
   await lab.getByRole('button',{name:'恢复最近确认现场',exact:true}).click();await expect(lab.getByRole('status',{name:'扩展保存状态'})).toHaveText('现场已保存');expect((await read()).state).toEqual(confirmed);
   await app.close();
  }finally{fault?.close();if(child.exitCode===null&&child.signalCode===null){const done=new Promise<void>(r=>child.once('exit',()=>r()));child.kill('SIGKILL');await done;}await rm(root,{recursive:true,force:true});}

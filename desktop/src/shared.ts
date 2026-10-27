@@ -49,6 +49,7 @@ export interface SaveReceipt {
 }
 export interface DesktopBridge extends SaveBridge {
   exchange: import('./exchange-api').ExchangeBridge;
+  search: import('./search-api').SearchAPI;
   annotations: import('./annotation-api').AnnotationAPI;
   extensions: Omit<import('./extensions-api').ExtensionsAPI, 'resource'>;
   experiments: import('./experiments-api').ExperimentsAPI;

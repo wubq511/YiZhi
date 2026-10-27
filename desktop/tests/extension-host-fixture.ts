@@ -3,6 +3,7 @@
 import {app,BrowserWindow,dialog} from 'electron';
 import {writeFileSync} from 'node:fs';
 import {join} from 'node:path';
+import {randomUUID} from 'node:crypto';
 const output=process.env.YIZHI_RECOVERY_EVIDENCE!;
 let loads=0,first:any,events=0,oldPid=0;
 const diagnostics:any[]=[];
@@ -40,7 +41,23 @@ app.on('browser-window-created',(_event,w:BrowserWindow)=>{
    oldPid=wc.getOSProcessId();
    const frame=wc.mainFrame.frames.find(f=>f.url.startsWith('yizhi-extension:'))!;
    if(frame.processId!==wc.mainFrame.processId)throw Error('test requires shared renderer');
-   void frame.executeJavaScript('while(true){}').catch(()=>{});
+   const marker=`native-loop-${randomUUID()}`;
+   await new Promise<void>((resolve,reject)=>{
+    const cleanup=()=>{clearTimeout(startDeadline);wc.removeListener('console-message',started);};
+    const started=(details:Electron.Event<Electron.WebContentsConsoleMessageEventParams>)=>{
+     // This shared renderer reports main-frame metadata for the subframe log.
+     // Only the unique marker injected immediately before the loop releases input.
+     if(details.message!==marker)return;
+     cleanup();diagnostics.push({loopEntered:true,at:Date.now(),windowFocused:w.isFocused(),contentsFocused:wc.isFocused(),consoleFrame:{processId:details.frame.processId,routingId:details.frame.routingId},faultFrame:{processId:frame.processId,routingId:frame.routingId}});resolve();
+    };
+    const startDeadline=setTimeout(()=>{cleanup();reject(Error('generated renderer did not enter the actual fault loop'));},5000);
+    wc.on('console-message',started);
+    // Keep fault scheduling separate from input issuance: sending input before
+    // this real renderer log can acknowledge it before the loop ever starts.
+    void frame.executeJavaScript(`setTimeout(()=>{console.log(${JSON.stringify(marker)});while(true){}},500)`)
+     .catch(error=>{cleanup();reject(error);});
+   });
+   diagnostics.push({inputIssued:true,at:Date.now()});
    // Actual input is now unanswered; no fake unresponsive event or product fault switch.
    wc.sendInputEvent({type:'mouseDown',x:400,y:300,button:'left',clickCount:1});
    wc.sendInputEvent({type:'mouseUp',x:400,y:300,button:'left',clickCount:1});
@@ -48,6 +65,6 @@ app.on('browser-window-created',(_event,w:BrowserWindow)=>{
    const restored=await wc.executeJavaScript(`(async()=>{const b=window.yizhi,c=await b.open(),v=await b.extensions.open({sessionId:c.sessionId});return {v,text:c.unit.reading.blocks.find(x=>x.id===c.editableBlockId).payload.text};})()`);
    clearTimeout(deadline);finish({events,loads,oldPid,newPid:wc.getOSProcessId(),diagnostics,before:first,after:restored.v,text:restored.text,runtime:process.versions});
   }
- })().catch(error=>finish({error:String(error),loads,events},1));});
+ })().catch(error=>finish({error:String(error),loads,events,diagnostics},1));});
 });
 require(join(__dirname,'../main.cjs'));
