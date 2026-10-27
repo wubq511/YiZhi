@@ -1,0 +1,134 @@
+{
+  "title": "组合逻辑知识点样例",
+  "scope": "期中第01–06课中的局部样例，非完整复习提纲",
+  "date": "2026-10-24",
+  "direction": "source是target的前置或输入；以kind区分",
+  "review_status": "基于课件核对后的演示性教学建模，非教师公布的依赖定义",
+  "nodes": [
+    {
+      "id": "truth",
+      "label": "真值表",
+      "source": "02 逻辑代数 · PDF p33、38",
+      "note": "按输入组合枚举输出；也是三条实现路线共同的检验依据。"
+    },
+    {
+      "id": "minterm",
+      "label": "最小项 / 标准与或式",
+      "source": "02 逻辑代数 · PDF p34、38",
+      "note": "把输出为 1 的行写成最小项之和；变量顺序决定编号。"
+    },
+    {
+      "id": "gray",
+      "label": "格雷码 / 相邻性",
+      "source": "03 卡诺图 · PDF p5–6",
+      "note": "00、01、11、10 排列保证相邻格只改变一个变量。"
+    },
+    {
+      "id": "kmap",
+      "label": "卡诺图化简",
+      "source": "03 卡诺图 · PDF p5–14",
+      "note": "以最小项和相邻性为基础；可圈最大组合、利用必要质蕴含。"
+    },
+    {
+      "id": "algebra",
+      "label": "逻辑代数化简",
+      "source": "02 逻辑代数 · PDF p53",
+      "note": "同一个函数也可用代数定律化简；与卡诺图是可替代方法。"
+    },
+    {
+      "id": "gate",
+      "label": "门级电路实现",
+      "source": "04 组合逻辑分析+设计 · PDF p19–20",
+      "note": "选择表达式、按题目约束画电路，并验证功能；并非必须先用卡诺图。"
+    },
+    {
+      "id": "cofactor",
+      "label": "按选择变量分组",
+      "source": "05 组合模块1+代码 · PDF p19",
+      "note": "取 x、y 作选择输入，把每组 F 写成 0、1、z 或 z 的反。"
+    },
+    {
+      "id": "muxrule",
+      "label": "MUX 选择规则",
+      "source": "05 组合模块1+代码 · PDF p4",
+      "note": "选择端的编码决定哪一个数据输入接到输出。"
+    },
+    {
+      "id": "mux",
+      "label": "用 MUX 实现函数",
+      "source": "05 组合模块1+代码 · PDF p19",
+      "note": "课件例：F=Σm(1,2,6,7)，S1=x、S0=y；I0=z、I1=¬z、I2=0、I3=1。"
+    },
+    {
+      "id": "decoder",
+      "label": "用译码器实现函数",
+      "source": "05 组合模块1+代码 · PDF p31、35、38–39",
+      "note": "高有效输出可合并所需最小项；74LS138 为低有效，须相应处理极性。"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "truth",
+      "target": "minterm",
+      "kind": "route",
+      "label": "可写成"
+    },
+    {
+      "id": "e2",
+      "source": "minterm",
+      "target": "kmap",
+      "kind": "requires",
+      "label": "单元含义"
+    },
+    {
+      "id": "e3",
+      "source": "gray",
+      "target": "kmap",
+      "kind": "requires",
+      "label": "相邻依据"
+    },
+    {
+      "id": "e4",
+      "source": "kmap",
+      "target": "gate",
+      "kind": "route",
+      "label": "可用路线"
+    },
+    {
+      "id": "e5",
+      "source": "algebra",
+      "target": "gate",
+      "kind": "route",
+      "label": "另一条路线"
+    },
+    {
+      "id": "e6",
+      "source": "truth",
+      "target": "cofactor",
+      "kind": "requires",
+      "label": "分组取值"
+    },
+    {
+      "id": "e7",
+      "source": "cofactor",
+      "target": "mux",
+      "kind": "requires",
+      "label": "确定数据端"
+    },
+    {
+      "id": "e8",
+      "source": "muxrule",
+      "target": "mux",
+      "kind": "requires",
+      "label": "确定选择端"
+    },
+    {
+      "id": "e9",
+      "source": "minterm",
+      "target": "decoder",
+      "kind": "requires",
+      "label": "选择输出项"
+    }
+  ]
+}

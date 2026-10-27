@@ -1,0 +1,2904 @@
+{
+  "status": "final",
+  "date": "2026-10-25",
+  "relationReview": "07-价值关系.json",
+  "method": "B 按习题课、作业和课件证据评级；A 按主题核心学习表现独立评级，不从 B 计算整体星级",
+  "unitRatings": [
+    {
+      "unitId": "KU-001",
+      "name": "位置记数法与权展开",
+      "themeId": "TH-01",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-001 直接相关，课件有相应讲解；尚无独立例题或作业直接证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [
+          {
+            "questionId": "Q-002",
+            "label": "1.13(a)",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-003",
+            "label": "1.13(c)",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-008",
+            "label": "1.17(a)",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-009",
+            "label": "1.17(c)",
+            "basis": "agent-analysis"
+          }
+        ],
+        "referenceItems": [
+          {
+            "id": "REF-001",
+            "kind": "basic-type-list",
+            "label": "二进制基本题型（习题课 P2）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-002",
+      "name": "非十进制与十进制互转",
+      "themeId": "TH-01",
+      "stars": 5,
+      "rationale": "习题课明确列出数制转换，且多道作业直接要求二/八/十六进制与十进制互转。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-002",
+            "label": "1.13(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-003",
+            "label": "1.13(c)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-008",
+            "label": "1.17(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-009",
+            "label": "1.17(c)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-032",
+            "label": "1.65(c)",
+            "basis": "stem"
+          }
+        ],
+        "support": [
+          {
+            "questionId": "Q-038",
+            "label": "补充题 2(a)",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-039",
+            "label": "补充题 2(b)",
+            "basis": "agent-analysis"
+          }
+        ],
+        "referenceItems": [
+          {
+            "id": "REF-001",
+            "kind": "basic-type-list",
+            "label": "二进制基本题型（习题课 P2）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-003",
+      "name": "二进制、八进制与十六进制互转",
+      "themeId": "TH-01",
+      "stars": 5,
+      "rationale": "习题课明确列出二进制与八/十六进制转换，且多道作业直接考查分组转换。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-005",
+            "label": "1.15(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-006",
+            "label": "1.15(c)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-011",
+            "label": "1.19(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-012",
+            "label": "1.19(c)",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-001",
+            "kind": "basic-type-list",
+            "label": "二进制基本题型（习题课 P2）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-004",
+      "name": "位、字节与存储容量单位",
+      "themeId": "TH-01",
+      "stars": 4,
+      "rationale": "课后作业直接考查：1.47。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-022",
+            "label": "1.47",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-005",
+      "name": "无符号二进制四则运算",
+      "themeId": "TH-01",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-001 明确相关，且作业直接考查：1.52(a)、1.52(b)。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-024",
+            "label": "1.52(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-025",
+            "label": "1.52(b)",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-001",
+            "kind": "basic-type-list",
+            "label": "二进制基本题型（习题课 P2）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-006",
+      "name": "模运算与补码原理",
+      "themeId": "TH-02",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-001 直接相关，课件有相应讲解；尚无独立例题或作业直接证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [
+          {
+            "questionId": "Q-014",
+            "label": "1.21(a)",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-015",
+            "label": "1.21(c)",
+            "basis": "agent-analysis"
+          }
+        ],
+        "referenceItems": [
+          {
+            "id": "REF-001",
+            "kind": "basic-type-list",
+            "label": "二进制基本题型（习题课 P2）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-007",
+      "name": "原码、反码、补码表示与转换",
+      "themeId": "TH-02",
+      "stars": 5,
+      "rationale": "习题课明确列出原码、反码、补码，且多道作业直接考查表示与转换。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-014",
+            "label": "1.21(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-015",
+            "label": "1.21(c)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-017",
+            "label": "1.23(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-018",
+            "label": "1.23(c)",
+            "basis": "stem"
+          }
+        ],
+        "support": [
+          {
+            "questionId": "Q-020",
+            "label": "1.33(a)",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-021",
+            "label": "1.33(b)",
+            "basis": "agent-analysis"
+          }
+        ],
+        "referenceItems": [
+          {
+            "id": "REF-001",
+            "kind": "basic-type-list",
+            "label": "二进制基本题型（习题课 P2）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-008",
+      "name": "补码加减运算",
+      "themeId": "TH-02",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-001 明确相关，且作业直接考查：1.54(a)、1.54(b)。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-027",
+            "label": "1.54(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-028",
+            "label": "1.54(b)",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-001",
+            "kind": "basic-type-list",
+            "label": "二进制基本题型（习题课 P2）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-009",
+      "name": "有符号数溢出判断与检测",
+      "themeId": "TH-02",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-001 明确相关，且作业直接考查：1.54(a)、1.54(b)。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-027",
+            "label": "1.54(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-028",
+            "label": "1.54(b)",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-001",
+            "kind": "basic-type-list",
+            "label": "二进制基本题型（习题课 P2）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-010",
+      "name": "零扩展与符号扩展",
+      "themeId": "TH-02",
+      "stars": 4,
+      "rationale": "课后作业直接考查：1.33(a)、1.33(b)。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-020",
+            "label": "1.33(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-021",
+            "label": "1.33(b)",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-011",
+      "name": "BCD 码及常用变体",
+      "themeId": "TH-03",
+      "stars": 5,
+      "rationale": "习题课解答例题直接考查：【11】；作业也直接考查：1.65(a)、1.65(b)、1.65(c)、1.65(d)、补充题 1(a)、补充题 1(b)、补充题 2(a)、补充题 2(b)。",
+      "evidence": {
+        "exerciseExamples": [
+          {
+            "questionId": "Q-120",
+            "label": "【11】",
+            "basis": "official-solution"
+          }
+        ],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-030",
+            "label": "1.65(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-031",
+            "label": "1.65(b)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-032",
+            "label": "1.65(c)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-033",
+            "label": "1.65(d)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-035",
+            "label": "补充题 1(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-036",
+            "label": "补充题 1(b)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-038",
+            "label": "补充题 2(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-039",
+            "label": "补充题 2(b)",
+            "basis": "stem"
+          }
+        ],
+        "support": [
+          {
+            "questionId": "Q-082",
+            "label": "四舍五入电路",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-100",
+            "label": "第 4 题",
+            "basis": "agent-analysis"
+          }
+        ],
+        "referenceItems": [
+          {
+            "id": "REF-001",
+            "kind": "basic-type-list",
+            "label": "二进制基本题型（习题课 P2）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-012",
+      "name": "BCD 加法与减法",
+      "themeId": "TH-03",
+      "stars": 3,
+      "rationale": "课件明确讲解 BCD 加减，未获得直接题目证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-013",
+      "name": "ASCII 字符编码",
+      "themeId": "TH-03",
+      "stars": 2,
+      "rationale": "ASCII 为介绍性编码内容，未获得直接题目证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-014",
+      "name": "格雷码性质与编码转换",
+      "themeId": "TH-03",
+      "stars": 5,
+      "rationale": "习题课解答例题直接考查：【10】；作业也直接考查：补充题 2(a)、补充题 2(b)、分析下图代码转换电路的功能。",
+      "evidence": {
+        "exerciseExamples": [
+          {
+            "questionId": "Q-119",
+            "label": "【10】",
+            "basis": "official-solution"
+          }
+        ],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-038",
+            "label": "补充题 2(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-039",
+            "label": "补充题 2(b)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-080",
+            "label": "分析下图代码转换电路的功能",
+            "basis": "agent-analysis"
+          }
+        ],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-001",
+            "kind": "basic-type-list",
+            "label": "二进制基本题型（习题课 P2）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-015",
+      "name": "奇偶校验码",
+      "themeId": "TH-03",
+      "stars": 3,
+      "rationale": "课件讲解奇偶校验并支撑校验器，未获得直接题目证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-016",
+      "name": "汉明码",
+      "themeId": "TH-03",
+      "stars": 2,
+      "rationale": "仅要求说明汉明码基本思想，未获得直接题目证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-017",
+      "name": "三种基本逻辑运算与真值表",
+      "themeId": "TH-04",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-001 直接相关，课件有相应讲解；尚无独立例题或作业直接证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-001",
+            "kind": "basic-type-list",
+            "label": "二进制基本题型（习题课 P2）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-018",
+      "name": "正逻辑与负逻辑",
+      "themeId": "TH-04",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-001 直接相关，课件有相应讲解；尚无独立例题或作业直接证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-001",
+            "kind": "basic-type-list",
+            "label": "二进制基本题型（习题课 P2）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-019",
+      "name": "复合逻辑门功能",
+      "themeId": "TH-04",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-001 直接相关，课件有相应讲解；尚无独立例题或作业直接证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-001",
+            "kind": "basic-type-list",
+            "label": "二进制基本题型（习题课 P2）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-020",
+      "name": "用通用门实现基本逻辑",
+      "themeId": "TH-04",
+      "stars": 5,
+      "rationale": "习题课解答例题直接考查：【1】、【6】；作业也直接考查：2.11(a)、2.11(c)、2.11(e)、保密锁设计。",
+      "evidence": {
+        "exerciseExamples": [
+          {
+            "questionId": "Q-101",
+            "label": "【1】",
+            "basis": "official-solution"
+          },
+          {
+            "questionId": "Q-113",
+            "label": "【6】",
+            "basis": "official-solution"
+          }
+        ],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-051",
+            "label": "2.11(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-057",
+            "label": "2.11(c)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-063",
+            "label": "2.11(e)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-081",
+            "label": "保密锁设计",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-003",
+            "kind": "basic-type-list",
+            "label": "组合逻辑分析与设计基本题型（习题课 P3 右栏）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-021",
+      "name": "异或、同或性质与多变量奇偶性",
+      "themeId": "TH-04",
+      "stars": 5,
+      "rationale": "习题课解答例题直接考查：【7】F1、【7】F2、【4】①。",
+      "evidence": {
+        "exerciseExamples": [
+          {
+            "questionId": "Q-115",
+            "label": "【7】F1",
+            "basis": "official-solution"
+          },
+          {
+            "questionId": "Q-116",
+            "label": "【7】F2",
+            "basis": "official-solution"
+          },
+          {
+            "questionId": "Q-105",
+            "label": "【4】①",
+            "basis": "official-solution"
+          }
+        ],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-022",
+      "name": "电路原理图连接规范",
+      "themeId": "TH-04",
+      "stars": 3,
+      "rationale": "原理图连接规范支撑电路读图，未获得直接题目证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-001",
+            "kind": "basic-type-list",
+            "label": "二进制基本题型（习题课 P2）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-023",
+      "name": "逻辑代数公理与基本定理",
+      "themeId": "TH-05",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-002 直接相关，课件有相应讲解；尚无独立例题或作业直接证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-002",
+            "kind": "basic-type-list",
+            "label": "组合逻辑表示与化简基本题型（习题课 P3 左栏）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-024",
+      "name": "摩根定理",
+      "themeId": "TH-05",
+      "stars": 5,
+      "rationale": "习题课解答例题直接考查：【1】、【6】；作业也直接考查：2.27。",
+      "evidence": {
+        "exerciseExamples": [
+          {
+            "questionId": "Q-101",
+            "label": "【1】",
+            "basis": "official-solution"
+          },
+          {
+            "questionId": "Q-113",
+            "label": "【6】",
+            "basis": "official-solution"
+          }
+        ],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-077",
+            "label": "2.27",
+            "basis": "stem"
+          }
+        ],
+        "support": [
+          {
+            "questionId": "Q-051",
+            "label": "2.11(a)",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-057",
+            "label": "2.11(c)",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-063",
+            "label": "2.11(e)",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-065",
+            "label": "2.13(a)",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-066",
+            "label": "2.13(b)",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-067",
+            "label": "2.13(c)",
+            "basis": "agent-analysis"
+          }
+        ],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-025",
+      "name": "推气泡法",
+      "themeId": "TH-05",
+      "stars": 4,
+      "rationale": "课后作业直接考查：2.27。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-077",
+            "label": "2.27",
+            "basis": "stem"
+          }
+        ],
+        "support": [
+          {
+            "questionId": "Q-051",
+            "label": "2.11(a)",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-057",
+            "label": "2.11(c)",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-063",
+            "label": "2.11(e)",
+            "basis": "agent-analysis"
+          }
+        ],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-026",
+      "name": "代入、反演与对偶规则",
+      "themeId": "TH-05",
+      "stars": 3,
+      "rationale": "课件明确讲解代入、反演、对偶及示例，支撑公式化简，未获得直接题目证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-027",
+      "name": "与-或式与或-与式",
+      "themeId": "TH-06",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-002 直接相关，课件有相应讲解；尚无独立例题或作业直接证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-002",
+            "kind": "basic-type-list",
+            "label": "组合逻辑表示与化简基本题型（习题课 P3 左栏）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-028",
+      "name": "最小项、最大项与标准式",
+      "themeId": "TH-06",
+      "stars": 5,
+      "rationale": "习题课解答例题直接考查：【2】。",
+      "evidence": {
+        "exerciseExamples": [
+          {
+            "questionId": "Q-102",
+            "label": "【2】",
+            "basis": "official-solution"
+          }
+        ],
+        "homeworkDirect": [],
+        "support": [
+          {
+            "questionId": "Q-046",
+            "label": "2.1(a)",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-047",
+            "label": "2.3(a)",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-048",
+            "label": "2.5(a)",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-052",
+            "label": "2.1(c)",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-053",
+            "label": "2.3(c)",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-054",
+            "label": "2.5(c)",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-058",
+            "label": "2.1(e)",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-059",
+            "label": "2.3(e)",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-060",
+            "label": "2.5(e)",
+            "basis": "agent-analysis"
+          }
+        ],
+        "referenceItems": [
+          {
+            "id": "REF-002",
+            "kind": "basic-type-list",
+            "label": "组合逻辑表示与化简基本题型（习题课 P3 左栏）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-029",
+      "name": "真值表与标准式互转",
+      "themeId": "TH-06",
+      "stars": 5,
+      "rationale": "习题课解答例题直接考查：【2】、【3】；作业也直接考查：2.1(a)、2.3(a)、2.1(c)、2.3(c)、2.1(e)、2.3(e)、2.13(a)、2.13(b)、2.13(c)、保密锁设计。",
+      "evidence": {
+        "exerciseExamples": [
+          {
+            "questionId": "Q-102",
+            "label": "【2】",
+            "basis": "official-solution"
+          },
+          {
+            "questionId": "Q-103",
+            "label": "【3】",
+            "basis": "official-solution"
+          }
+        ],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-046",
+            "label": "2.1(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-047",
+            "label": "2.3(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-052",
+            "label": "2.1(c)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-053",
+            "label": "2.3(c)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-058",
+            "label": "2.1(e)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-059",
+            "label": "2.3(e)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-065",
+            "label": "2.13(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-066",
+            "label": "2.13(b)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-067",
+            "label": "2.13(c)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-081",
+            "label": "保密锁设计",
+            "basis": "stem"
+          }
+        ],
+        "support": [
+          {
+            "questionId": "Q-079",
+            "label": "2.38",
+            "basis": "agent-analysis"
+          }
+        ],
+        "referenceItems": [
+          {
+            "id": "REF-002",
+            "kind": "basic-type-list",
+            "label": "组合逻辑表示与化简基本题型（习题课 P3 左栏）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-030",
+      "name": "非 HDL 逻辑表示法识别与互转",
+      "themeId": "TH-06",
+      "stars": 5,
+      "rationale": "习题课解答例题直接考查：【7】F1、【7】F2、【9】；作业也直接考查：2.7(a)、2.9(a)、2.7(c)、2.9(c)、2.7(e)、2.9(e)、2.15(a)、2.15(b)、2.15(c)、2.17(a)、2.17(b)、2.17(c)、2.25、2.27、第 2 题。",
+      "evidence": {
+        "exerciseExamples": [
+          {
+            "questionId": "Q-115",
+            "label": "【7】F1",
+            "basis": "official-solution"
+          },
+          {
+            "questionId": "Q-116",
+            "label": "【7】F2",
+            "basis": "official-solution"
+          },
+          {
+            "questionId": "Q-118",
+            "label": "【9】",
+            "basis": "official-solution"
+          }
+        ],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-049",
+            "label": "2.7(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-050",
+            "label": "2.9(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-055",
+            "label": "2.7(c)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-056",
+            "label": "2.9(c)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-061",
+            "label": "2.7(e)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-062",
+            "label": "2.9(e)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-069",
+            "label": "2.15(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-070",
+            "label": "2.15(b)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-071",
+            "label": "2.15(c)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-073",
+            "label": "2.17(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-074",
+            "label": "2.17(b)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-075",
+            "label": "2.17(c)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-076",
+            "label": "2.25",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-077",
+            "label": "2.27",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-089",
+            "label": "第 2 题",
+            "basis": "stem"
+          }
+        ],
+        "support": [
+          {
+            "questionId": "Q-080",
+            "label": "分析下图代码转换电路的功能",
+            "basis": "agent-analysis"
+          }
+        ],
+        "referenceItems": [
+          {
+            "id": "REF-002",
+            "kind": "basic-type-list",
+            "label": "组合逻辑表示与化简基本题型（习题课 P3 左栏）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-031",
+      "name": "与或非式实现",
+      "themeId": "TH-06",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-002 直接相关，课件有相应讲解；尚无独立例题或作业直接证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-002",
+            "kind": "basic-type-list",
+            "label": "组合逻辑表示与化简基本题型（习题课 P3 左栏）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-032",
+      "name": "最简表达式标准与电路优化",
+      "themeId": "TH-07",
+      "stars": 4,
+      "rationale": "课后作业直接考查：2.7(a)、2.9(a)、2.7(c)、2.9(c)、2.7(e)、2.9(e)、2.15(a)、2.15(b)、2.15(c)、2.17(a)、2.17(b)、2.17(c)、2.25、2.11(a)、2.11(c)、2.11(e)。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-049",
+            "label": "2.7(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-050",
+            "label": "2.9(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-055",
+            "label": "2.7(c)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-056",
+            "label": "2.9(c)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-061",
+            "label": "2.7(e)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-062",
+            "label": "2.9(e)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-069",
+            "label": "2.15(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-070",
+            "label": "2.15(b)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-071",
+            "label": "2.15(c)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-073",
+            "label": "2.17(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-074",
+            "label": "2.17(b)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-075",
+            "label": "2.17(c)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-076",
+            "label": "2.25",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-051",
+            "label": "2.11(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-057",
+            "label": "2.11(c)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-063",
+            "label": "2.11(e)",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-033",
+      "name": "代数法化简",
+      "themeId": "TH-07",
+      "stars": 5,
+      "rationale": "习题课解答例题直接考查：【1】、【4】①、【4】②、【4】③、【6】、【2】；作业也直接考查：2.5(a)、2.5(c)、2.5(e)、2.13(a)、2.13(b)、2.13(c)、2.17(a)、2.17(b)、2.17(c)、2.25、2.35、保密锁设计。",
+      "evidence": {
+        "exerciseExamples": [
+          {
+            "questionId": "Q-101",
+            "label": "【1】",
+            "basis": "official-solution"
+          },
+          {
+            "questionId": "Q-105",
+            "label": "【4】①",
+            "basis": "official-solution"
+          },
+          {
+            "questionId": "Q-106",
+            "label": "【4】②",
+            "basis": "official-solution"
+          },
+          {
+            "questionId": "Q-107",
+            "label": "【4】③",
+            "basis": "official-solution"
+          },
+          {
+            "questionId": "Q-113",
+            "label": "【6】",
+            "basis": "official-solution"
+          },
+          {
+            "questionId": "Q-102",
+            "label": "【2】",
+            "basis": "official-solution"
+          }
+        ],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-048",
+            "label": "2.5(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-054",
+            "label": "2.5(c)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-060",
+            "label": "2.5(e)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-065",
+            "label": "2.13(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-066",
+            "label": "2.13(b)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-067",
+            "label": "2.13(c)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-073",
+            "label": "2.17(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-074",
+            "label": "2.17(b)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-075",
+            "label": "2.17(c)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-076",
+            "label": "2.25",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-078",
+            "label": "2.35",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-081",
+            "label": "保密锁设计",
+            "basis": "stem"
+          }
+        ],
+        "support": [
+          {
+            "questionId": "Q-096",
+            "label": "5.55(b)",
+            "basis": "agent-analysis"
+          }
+        ],
+        "referenceItems": [
+          {
+            "id": "REF-002",
+            "kind": "basic-type-list",
+            "label": "组合逻辑表示与化简基本题型（习题课 P3 左栏）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-034",
+      "name": "卡诺图结构、格雷码排列与相邻规则",
+      "themeId": "TH-08",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-002 直接相关，课件有相应讲解；尚无独立例题或作业直接证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-002",
+            "kind": "basic-type-list",
+            "label": "组合逻辑表示与化简基本题型（习题课 P3 左栏）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-035",
+      "name": "2–4 变量卡诺图化简",
+      "themeId": "TH-08",
+      "stars": 5,
+      "rationale": "习题课解答例题直接考查：【5】①、【5】②、【5】③、【5】④、【10】；作业也直接考查：2.13(a)、2.13(b)、2.13(c)。",
+      "evidence": {
+        "exerciseExamples": [
+          {
+            "questionId": "Q-109",
+            "label": "【5】①",
+            "basis": "official-solution"
+          },
+          {
+            "questionId": "Q-110",
+            "label": "【5】②",
+            "basis": "official-solution"
+          },
+          {
+            "questionId": "Q-111",
+            "label": "【5】③",
+            "basis": "official-solution"
+          },
+          {
+            "questionId": "Q-112",
+            "label": "【5】④",
+            "basis": "official-solution"
+          },
+          {
+            "questionId": "Q-119",
+            "label": "【10】",
+            "basis": "official-solution"
+          }
+        ],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-065",
+            "label": "2.13(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-066",
+            "label": "2.13(b)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-067",
+            "label": "2.13(c)",
+            "basis": "stem"
+          }
+        ],
+        "support": [
+          {
+            "questionId": "Q-086",
+            "label": "2.31",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-087",
+            "label": "多输出函数化简",
+            "basis": "agent-analysis"
+          }
+        ],
+        "referenceItems": [
+          {
+            "id": "REF-002",
+            "kind": "basic-type-list",
+            "label": "组合逻辑表示与化简基本题型（习题课 P3 左栏）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-036",
+      "name": "质蕴含、必要质蕴含与最简覆盖",
+      "themeId": "TH-08",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-002 直接相关，课件有相应讲解；尚无独立例题或作业直接证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-002",
+            "kind": "basic-type-list",
+            "label": "组合逻辑表示与化简基本题型（习题课 P3 左栏）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-037",
+      "name": "5–6 变量卡诺图与多图邻接",
+      "themeId": "TH-08",
+      "stars": 3,
+      "rationale": "课件有 5/6 变量多图邻接实例，但无直接题目证据；6 变量主要作方法展示。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-038",
+      "name": "卡诺图上的反函数、对偶与逻辑运算",
+      "themeId": "TH-08",
+      "stars": 3,
+      "rationale": "课件有反函数、对偶与逐格运算实例，未获得直接题目证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-039",
+      "name": "无关项与含无关项化简",
+      "themeId": "TH-09",
+      "stars": 5,
+      "rationale": "习题课解答例题直接考查：【5】④；作业也直接考查：2.31。",
+      "evidence": {
+        "exerciseExamples": [
+          {
+            "questionId": "Q-112",
+            "label": "【5】④",
+            "basis": "official-solution"
+          }
+        ],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-086",
+            "label": "2.31",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-002",
+            "kind": "basic-type-list",
+            "label": "组合逻辑表示与化简基本题型（习题课 P3 左栏）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-040",
+      "name": "最大项法与两次取反求或-与式",
+      "themeId": "TH-09",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-002 直接相关，课件有相应讲解；尚无独立例题或作业直接证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-002",
+            "kind": "basic-type-list",
+            "label": "组合逻辑表示与化简基本题型（习题课 P3 左栏）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-041",
+      "name": "多输出函数共享乘积项化简",
+      "themeId": "TH-09",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-002 明确相关，且作业直接考查：多输出函数化简。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-087",
+            "label": "多输出函数化简",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-002",
+            "kind": "basic-type-list",
+            "label": "组合逻辑表示与化简基本题型（习题课 P3 左栏）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-042",
+      "name": "组合逻辑电路定义与判别",
+      "themeId": "TH-10",
+      "stars": 3,
+      "rationale": "组合电路定义支撑后续分析与设计，未获得直接题目证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-043",
+      "name": "组合逻辑电路分析",
+      "themeId": "TH-10",
+      "stars": 5,
+      "rationale": "习题课解答例题直接考查：【8】、【9】；作业也直接考查：分析下图代码转换电路的功能、第 3 题。",
+      "evidence": {
+        "exerciseExamples": [
+          {
+            "questionId": "Q-117",
+            "label": "【8】",
+            "basis": "official-solution"
+          },
+          {
+            "questionId": "Q-118",
+            "label": "【9】",
+            "basis": "official-solution"
+          }
+        ],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-080",
+            "label": "分析下图代码转换电路的功能",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-099",
+            "label": "第 3 题",
+            "basis": "stem"
+          }
+        ],
+        "support": [
+          {
+            "questionId": "Q-076",
+            "label": "2.25",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-089",
+            "label": "第 2 题",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-097",
+            "label": "5.55(c)",
+            "basis": "agent-analysis"
+          }
+        ],
+        "referenceItems": [
+          {
+            "id": "REF-003",
+            "kind": "basic-type-list",
+            "label": "组合逻辑分析与设计基本题型（习题课 P3 右栏）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-044",
+      "name": "组合逻辑设计流程",
+      "themeId": "TH-10",
+      "stars": 5,
+      "rationale": "习题课解答例题直接考查：【12】；作业也直接考查：2.35、2.38、保密锁设计、四舍五入电路、第 4 题。",
+      "evidence": {
+        "exerciseExamples": [
+          {
+            "questionId": "Q-121",
+            "label": "【12】",
+            "basis": "official-solution"
+          }
+        ],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-078",
+            "label": "2.35",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-079",
+            "label": "2.38",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-081",
+            "label": "保密锁设计",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-082",
+            "label": "四舍五入电路",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-100",
+            "label": "第 4 题",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-003",
+            "kind": "basic-type-list",
+            "label": "组合逻辑分析与设计基本题型（习题课 P3 右栏）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-045",
+      "name": "由文字需求直接列写逻辑表达式",
+      "themeId": "TH-11",
+      "stars": 5,
+      "rationale": "习题课解答例题直接考查：【3】；作业也直接考查：2.35、2.38、保密锁设计。",
+      "evidence": {
+        "exerciseExamples": [
+          {
+            "questionId": "Q-103",
+            "label": "【3】",
+            "basis": "official-solution"
+          }
+        ],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-078",
+            "label": "2.35",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-079",
+            "label": "2.38",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-081",
+            "label": "保密锁设计",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-046",
+      "name": "含无关项的判别与设计",
+      "themeId": "TH-11",
+      "stars": 4,
+      "rationale": "课后作业直接考查：四舍五入电路。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-082",
+            "label": "四舍五入电路",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-047",
+      "name": "码变换电路设计",
+      "themeId": "TH-11",
+      "stars": 5,
+      "rationale": "习题课解答例题直接考查：【10】、【11】；作业也直接考查：2.38。",
+      "evidence": {
+        "exerciseExamples": [
+          {
+            "questionId": "Q-119",
+            "label": "【10】",
+            "basis": "official-solution"
+          },
+          {
+            "questionId": "Q-120",
+            "label": "【11】",
+            "basis": "official-solution"
+          }
+        ],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-079",
+            "label": "2.38",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-048",
+      "name": "分层设计与比较器实现",
+      "themeId": "TH-11",
+      "stars": 3,
+      "rationale": "课件有分层比较器设计实例，未获得直接题目证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-050",
+      "name": "1 位十进制 BCD 加法器设计",
+      "themeId": "TH-11",
+      "stars": 3,
+      "rationale": "课件有完整 1 位 BCD 加法器设计例，未获得直接题目证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-051",
+      "name": "竞争与冒险概念",
+      "themeId": "TH-12",
+      "stars": 3,
+      "rationale": "竞争与冒险概念支撑作业中的判断和消除，未获得独立题目直接证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [
+          {
+            "questionId": "Q-084",
+            "label": "险象题 1",
+            "basis": "agent-analysis"
+          },
+          {
+            "questionId": "Q-085",
+            "label": "险象题 2",
+            "basis": "agent-analysis"
+          }
+        ],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-052",
+      "name": "冒险判断（代数法与卡诺图法）",
+      "themeId": "TH-12",
+      "stars": 4,
+      "rationale": "课后作业直接考查：险象题 1、险象题 2。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-084",
+            "label": "险象题 1",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-085",
+            "label": "险象题 2",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-053",
+      "name": "消除冒险的方法",
+      "themeId": "TH-12",
+      "stars": 4,
+      "rationale": "课后作业直接考查：险象题 1、险象题 2。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-084",
+            "label": "险象题 1",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-085",
+            "label": "险象题 2",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-054",
+      "name": "传播延迟、最小延迟与关键路径",
+      "themeId": "TH-12",
+      "stars": 3,
+      "rationale": "延迟与关键路径有明确讲解和计算例，未获得直接题目证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-055",
+      "name": "MUX 功能与 2:1/4:1 表达式",
+      "themeId": "TH-13",
+      "stars": 5,
+      "rationale": "习题课解答例题直接考查：【8】；作业也直接考查：第 2 题。",
+      "evidence": {
+        "exerciseExamples": [
+          {
+            "questionId": "Q-117",
+            "label": "【8】",
+            "basis": "official-solution"
+          }
+        ],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-089",
+            "label": "第 2 题",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-006",
+            "kind": "device-summary",
+            "label": "74HC153 双 4 选 1 复用器"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-056",
+      "name": "用 MUX 实现逻辑函数",
+      "themeId": "TH-13",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-003 明确相关，且作业直接考查：第 3 题(a)、第 3 题(b)。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-091",
+            "label": "第 3 题(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-092",
+            "label": "第 3 题(b)",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-003",
+            "kind": "basic-type-list",
+            "label": "组合逻辑分析与设计基本题型（习题课 P3 右栏）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-057",
+      "name": "MUX 器件、级联与扩展",
+      "themeId": "TH-13",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-006 直接相关，课件有相应讲解；尚无独立例题或作业直接证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-006",
+            "kind": "device-summary",
+            "label": "74HC153 双 4 选 1 复用器"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-058",
+      "name": "MUX 波形分析",
+      "themeId": "TH-13",
+      "stars": 3,
+      "rationale": "MUX 输出波形有明确示例，未获得直接题目证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-059",
+      "name": "DMUX 与 MUX/DMUX 数据传输",
+      "themeId": "TH-13",
+      "stars": 3,
+      "rationale": "MUX/DMUX 数据传输有应用示例，未获得直接题目证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-060",
+      "name": "编码器功能与普通/优先编码",
+      "themeId": "TH-14",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-005 明确相关，且作业直接考查：第 1 题。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-088",
+            "label": "第 1 题",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-005",
+            "kind": "device-summary",
+            "label": "74HC148 8-3 优先编码器"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-061",
+      "name": "74LS148 与 74LS147 优先编码器",
+      "themeId": "TH-14",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-005 直接相关，课件有相应讲解；尚无独立例题或作业直接证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-005",
+            "kind": "device-summary",
+            "label": "74HC148 8-3 优先编码器"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-062",
+      "name": "译码器功能与 2:4/3:8 译码器",
+      "themeId": "TH-14",
+      "stars": 4,
+      "rationale": "课后作业直接考查：第 4 题。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-093",
+            "label": "第 4 题",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-063",
+      "name": "74LS138 端口、有效电平与使能",
+      "themeId": "TH-14",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-004 明确相关，且作业直接考查：第 4 题。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-093",
+            "label": "第 4 题",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-004",
+            "kind": "device-summary",
+            "label": "74HC138 3-8 译码器"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-064",
+      "name": "用译码器实现逻辑函数",
+      "themeId": "TH-14",
+      "stars": 5,
+      "rationale": "习题课解答例题直接考查：【11】。",
+      "evidence": {
+        "exerciseExamples": [
+          {
+            "questionId": "Q-120",
+            "label": "【11】",
+            "basis": "official-solution"
+          }
+        ],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-003",
+            "kind": "basic-type-list",
+            "label": "组合逻辑分析与设计基本题型（习题课 P3 右栏）"
+          },
+          {
+            "id": "REF-004",
+            "kind": "device-summary",
+            "label": "74HC138 3-8 译码器"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-065",
+      "name": "译码器级联扩展",
+      "themeId": "TH-14",
+      "stars": 3,
+      "rationale": "译码器级联扩展有示例，但习题课仅有器件汇总，尚无独立题目直接证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-004",
+            "kind": "device-summary",
+            "label": "74HC138 3-8 译码器"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-066",
+      "name": "二-十进制译码器与七段显示译码器",
+      "themeId": "TH-14",
+      "stars": 3,
+      "rationale": "显示译码器有完整真值表和控制说明，未获得直接题目证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-067",
+      "name": "移位器功能与移位类型",
+      "themeId": "TH-15",
+      "stars": 3,
+      "rationale": "移位类型和控制有明确示例，未获得直接题目证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-068",
+      "name": "奇偶校验器与 74LS280",
+      "themeId": "TH-16",
+      "stars": 3,
+      "rationale": "奇偶校验传输有完整示例，未获得直接题目证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-069",
+      "name": "数值比较器与 74HC85",
+      "themeId": "TH-16",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-008 明确相关，且作业直接考查：第 4 题。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-100",
+            "label": "第 4 题",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-008",
+            "kind": "device-summary",
+            "label": "74LS85 4 位数值比较器"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-070",
+      "name": "半加器与全加器",
+      "themeId": "TH-17",
+      "stars": 3,
+      "rationale": "半加/全加器是加法模块基础，未获得直接题目证据；仅作为行波结构的基础支撑，不足以单独上调。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": {
+        "status": "not-applied",
+        "reason": "仅作为行波结构的基础支撑，未获得直接题目证据，不足以单独上调。"
+      }
+    },
+    {
+      "unitId": "KU-071",
+      "name": "行波进位加法器",
+      "themeId": "TH-17",
+      "stars": 4,
+      "rationale": "行波进位结构直接支撑超前进位比较、加减两用、部分积累加和 BCD 加法器，跨模块构造作用明确，上调至四星。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": {
+        "status": "upgraded",
+        "from": 3,
+        "to": 4,
+        "reason": "行波进位结构直接支撑超前进位比较、加减两用、部分积累加和 BCD 加法器，跨模块构造作用明确。",
+        "relationIds": [
+          "REL-019",
+          "REL-020",
+          "REL-021",
+          "REL-022"
+        ]
+      }
+    },
+    {
+      "unitId": "KU-072",
+      "name": "超前进位加法器与 74LS283",
+      "themeId": "TH-17",
+      "stars": 5,
+      "rationale": "习题课解答例题直接考查：【12】；作业也直接考查：第 3 题。",
+      "evidence": {
+        "exerciseExamples": [
+          {
+            "questionId": "Q-121",
+            "label": "【12】",
+            "basis": "official-solution"
+          }
+        ],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-099",
+            "label": "第 3 题",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-003",
+            "kind": "basic-type-list",
+            "label": "组合逻辑分析与设计基本题型（习题课 P3 右栏）"
+          },
+          {
+            "id": "REF-007",
+            "kind": "device-summary",
+            "label": "74LS283 4 位加法器"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-074",
+      "name": "半减器与全减器",
+      "themeId": "TH-17",
+      "stars": 3,
+      "rationale": "半减/全减器有明确讲解，未获得直接题目证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-075",
+      "name": "加/减法器与溢出标志",
+      "themeId": "TH-17",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-003、REF-007 直接相关，课件有相应讲解；尚无独立例题或作业直接证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-003",
+            "kind": "basic-type-list",
+            "label": "组合逻辑分析与设计基本题型（习题课 P3 右栏）"
+          },
+          {
+            "id": "REF-007",
+            "kind": "device-summary",
+            "label": "74LS283 4 位加法器"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-076",
+      "name": "二进制乘法器",
+      "themeId": "TH-17",
+      "stars": 5,
+      "rationale": "习题课解答例题直接考查：【12】。",
+      "evidence": {
+        "exerciseExamples": [
+          {
+            "questionId": "Q-121",
+            "label": "【12】",
+            "basis": "official-solution"
+          }
+        ],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-077",
+      "name": "二进制转 BCD（推导方程与移位加 3）",
+      "themeId": "TH-18",
+      "stars": 3,
+      "rationale": "推导方程与移位加 3 有完整示例，未获得直接题目证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-078",
+      "name": "开关电路与分立元件门",
+      "themeId": "TH-19",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-001 直接相关，课件有相应讲解；尚无独立例题或作业直接证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-001",
+            "kind": "basic-type-list",
+            "label": "二进制基本题型（习题课 P2）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-079",
+      "name": "二极管开关特性",
+      "themeId": "TH-19",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-001 直接相关，课件有相应讲解；尚无独立例题或作业直接证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-001",
+            "kind": "basic-type-list",
+            "label": "二进制基本题型（习题课 P2）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-080",
+      "name": "三极管开关特性",
+      "themeId": "TH-19",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-001 直接相关，课件有相应讲解；尚无独立例题或作业直接证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-001",
+            "kind": "basic-type-list",
+            "label": "二进制基本题型（习题课 P2）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-081",
+      "name": "TTL/CMOS 集成门与器件分类",
+      "themeId": "TH-19",
+      "stars": 4,
+      "rationale": "习题课参考条目 REF-001 直接相关，课件有相应讲解；尚无独立例题或作业直接证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": [
+          {
+            "id": "REF-001",
+            "kind": "basic-type-list",
+            "label": "二进制基本题型（习题课 P2）"
+          }
+        ]
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-082",
+      "name": "用 PAL/PLA 实现组合函数",
+      "themeId": "TH-20",
+      "stars": 3,
+      "rationale": "PAL/PLA 设计有完整示例，未获得直接题目证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-083",
+      "name": "用 LE/LUT 实现组合函数",
+      "themeId": "TH-20",
+      "stars": 4,
+      "rationale": "课后作业直接考查：5.55(a)、5.55(b)、5.55(c)。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-095",
+            "label": "5.55(a)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-096",
+            "label": "5.55(b)",
+            "basis": "stem"
+          },
+          {
+            "questionId": "Q-097",
+            "label": "5.55(c)",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-084",
+      "name": "PROM/PAL/PLA 阵列结构",
+      "themeId": "TH-20",
+      "stars": 4,
+      "rationale": "课后作业直接考查：第 2 题。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [
+          {
+            "questionId": "Q-098",
+            "label": "第 2 题",
+            "basis": "stem"
+          }
+        ],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-085",
+      "name": "CPLD 宏单元与开关矩阵",
+      "themeId": "TH-20",
+      "stars": 2,
+      "rationale": "CPLD 结构属于背景性内容，未获得直接题目证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    },
+    {
+      "unitId": "KU-086",
+      "name": "FPGA 的 LE/LUT 结构",
+      "themeId": "TH-20",
+      "stars": 3,
+      "rationale": "FPGA 结构直接支撑 LE/LUT 实现，未获得直接题目证据。",
+      "evidence": {
+        "exerciseExamples": [],
+        "homeworkDirect": [],
+        "support": [],
+        "referenceItems": []
+      },
+      "supportAdjustment": null
+    }
+  ],
+  "themeRatings": [
+    {
+      "themeId": "TH-01",
+      "name": "数制与数制转换",
+      "coreOutcome": "能在十进制、二进制、八进制、十六进制之间准确转换，并按权解释一个数的值。",
+      "stars": 5,
+      "rationale": "主题核心的多类数制转换被习题课基本题型明确列出，并被多次作业直接考查。",
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 3,
+        "5": 2
+      },
+      "unitCount": 5,
+      "ratingMode": "主题核心学习表现与主题层证据独立评定；单元峰值与分布仅作摘要"
+    },
+    {
+      "themeId": "TH-02",
+      "name": "有符号数与补码运算",
+      "coreOutcome": "能写出正负数的原码、反码、补码，并用补码完成加减与溢出判断。",
+      "stars": 5,
+      "rationale": "主题核心的原反补码与补码运算被习题课明确列出，并被多次作业直接考查。",
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 4,
+        "5": 1
+      },
+      "unitCount": 5,
+      "ratingMode": "主题核心学习表现与主题层证据独立评定；单元峰值与分布仅作摘要"
+    },
+    {
+      "themeId": "TH-03",
+      "name": "常用编码与可靠性编码",
+      "coreOutcome": "能识别并使用 BCD、ASCII、格雷码、奇偶校验码与汉明码，说明其编码规则和检错能力。",
+      "stars": 5,
+      "rationale": "主题核心的 BCD、格雷码等有习题课基本题型和解答例题支撑，作业覆盖也充分。",
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 2,
+        "3": 2,
+        "4": 0,
+        "5": 2
+      },
+      "unitCount": 6,
+      "ratingMode": "主题核心学习表现与主题层证据独立评定；单元峰值与分布仅作摘要"
+    },
+    {
+      "themeId": "TH-04",
+      "name": "逻辑运算与逻辑门",
+      "coreOutcome": "能由逻辑门或真值表判断逻辑功能，并用基本门或通用门实现给定运算。",
+      "stars": 5,
+      "rationale": "主题核心的逻辑门及通用门实现有习题课基本题型和解答例题直接支撑。",
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 1,
+        "4": 3,
+        "5": 2
+      },
+      "unitCount": 6,
+      "ratingMode": "主题核心学习表现与主题层证据独立评定；单元峰值与分布仅作摘要"
+    },
+    {
+      "themeId": "TH-05",
+      "name": "逻辑代数公理与规则",
+      "coreOutcome": "能运用逻辑代数公理、定理、摩根定理、推气泡法和三个重要规则完成等式变换与证明。",
+      "stars": 5,
+      "rationale": "主题核心的代数规则、摩根定理在习题课解答例题中直接应用。",
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 1,
+        "4": 2,
+        "5": 1
+      },
+      "unitCount": 4,
+      "ratingMode": "主题核心学习表现与主题层证据独立评定；单元峰值与分布仅作摘要"
+    },
+    {
+      "themeId": "TH-06",
+      "name": "逻辑函数表达与表示",
+      "coreOutcome": "能在函数式、真值表、逻辑图、波形图之间转换，并写出标准与-或式或标准或-与式。",
+      "stars": 5,
+      "rationale": "主题核心的标准式与表示转换被习题课明确列出，并在多组解答例题中出现。",
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 2,
+        "5": 3
+      },
+      "unitCount": 5,
+      "ratingMode": "主题核心学习表现与主题层证据独立评定；单元峰值与分布仅作摘要"
+    },
+    {
+      "themeId": "TH-07",
+      "name": "逻辑函数化简",
+      "coreOutcome": "能按最简与-或式标准，用代数法合并、吸收、消去、消项和配项。",
+      "stars": 5,
+      "rationale": "主题核心的代数化简在习题课多组解答例题和作业中直接考查。",
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 1,
+        "5": 1
+      },
+      "unitCount": 2,
+      "ratingMode": "主题核心学习表现与主题层证据独立评定；单元峰值与分布仅作摘要"
+    },
+    {
+      "themeId": "TH-08",
+      "name": "卡诺图基础与化简",
+      "coreOutcome": "能画出并读取 2–6 变量卡诺图，按相邻与最简覆盖规则完成化简。",
+      "stars": 5,
+      "rationale": "主题核心的卡诺图化简在习题课多组解答例题和作业中直接考查。",
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 2,
+        "4": 2,
+        "5": 1
+      },
+      "unitCount": 5,
+      "ratingMode": "主题核心学习表现与主题层证据独立评定；单元峰值与分布仅作摘要"
+    },
+    {
+      "themeId": "TH-09",
+      "name": "无关项、或-与式与多输出化简",
+      "coreOutcome": "能利用无关项、最大项法和两次取反法化简，并对多输出函数共享乘积项。",
+      "stars": 5,
+      "rationale": "主题核心的无关项、最大项和多输出化简有基本题型、解答例题及作业证据。",
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 2,
+        "5": 1
+      },
+      "unitCount": 3,
+      "ratingMode": "主题核心学习表现与主题层证据独立评定；单元峰值与分布仅作摘要"
+    },
+    {
+      "themeId": "TH-10",
+      "name": "组合逻辑分析与设计",
+      "coreOutcome": "能判断组合电路、由电路图求功能，并按设计流程从需求得到逻辑电路。",
+      "stars": 5,
+      "rationale": "主题核心的组合分析与设计在习题课基本题型和解答例题中均有直接证据。",
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 1,
+        "4": 0,
+        "5": 2
+      },
+      "unitCount": 3,
+      "ratingMode": "主题核心学习表现与主题层证据独立评定；单元峰值与分布仅作摘要"
+    },
+    {
+      "themeId": "TH-11",
+      "name": "组合逻辑设计实例",
+      "coreOutcome": "能把文字需求、编码转换、比较与十进制运算转化为分层、可实现的组合电路。",
+      "stars": 5,
+      "rationale": "主题核心的文字需求与码变换设计在习题课解答例题中直接覆盖，并有作业支撑。",
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 2,
+        "4": 1,
+        "5": 2
+      },
+      "unitCount": 5,
+      "ratingMode": "主题核心学习表现与主题层证据独立评定；单元峰值与分布仅作摘要"
+    },
+    {
+      "themeId": "TH-12",
+      "name": "竞争冒险与延迟",
+      "coreOutcome": "能识别竞争、冒险和关键路径，判断冒险并用冗余项、电容或选通脉冲消除。",
+      "stars": 4,
+      "rationale": "主题核心的冒险判断与消除有作业直接证据，但缺少习题课专项解答例题。",
+      "unitPeak": 4,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 2,
+        "4": 2,
+        "5": 0
+      },
+      "unitCount": 4,
+      "ratingMode": "主题核心学习表现与主题层证据独立评定；单元峰值与分布仅作摘要"
+    },
+    {
+      "themeId": "TH-13",
+      "name": "复用器与分配器",
+      "coreOutcome": "能使用 MUX 选择数据、用 MUX 实现逻辑函数，并说明 MUX/DMUX 的扩展与数据传输。",
+      "stars": 5,
+      "rationale": "主题核心的 MUX 功能、分析、实现与器件在基本题型、解答例题和作业中均有证据。",
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 2,
+        "4": 2,
+        "5": 1
+      },
+      "unitCount": 5,
+      "ratingMode": "主题核心学习表现与主题层证据独立评定；单元峰值与分布仅作摘要"
+    },
+    {
+      "themeId": "TH-14",
+      "name": "编码器与译码器",
+      "coreOutcome": "能区分普通/优先编码与通用/显示译码，使用 74 系列器件实现函数、扩展与地址译码。",
+      "stars": 5,
+      "rationale": "主题核心的译码器实现有习题课解答例题，编码/译码器件也有汇总与作业证据。",
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 2,
+        "4": 4,
+        "5": 1
+      },
+      "unitCount": 7,
+      "ratingMode": "主题核心学习表现与主题层证据独立评定；单元峰值与分布仅作摘要"
+    },
+    {
+      "themeId": "TH-15",
+      "name": "移位器",
+      "coreOutcome": "能区分逻辑、循环、算术移位，并说明 4 位移位器控制码与输出关系。",
+      "stars": 3,
+      "rationale": "主题核心的移位类型和控制只有课件实例；习题课的移位乘法不覆盖整个主题，故不按直接主题证据升级。",
+      "unitPeak": 3,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 1,
+        "4": 0,
+        "5": 0
+      },
+      "unitCount": 1,
+      "ratingMode": "主题核心学习表现与主题层证据独立评定；单元峰值与分布仅作摘要"
+    },
+    {
+      "themeId": "TH-16",
+      "name": "校验器与比较器",
+      "coreOutcome": "能用异或与 74LS280 构成奇偶校验，用 74HC85 完成数位比较与级联。",
+      "stars": 4,
+      "rationale": "主题核心的数值比较器有作业和器件汇总直接证据；校验器部分缺少直接题目，整体不按五星。",
+      "unitPeak": 4,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 1,
+        "4": 1,
+        "5": 0
+      },
+      "unitCount": 2,
+      "ratingMode": "主题核心学习表现与主题层证据独立评定；单元峰值与分布仅作摘要"
+    },
+    {
+      "themeId": "TH-17",
+      "name": "加法器、减法器与乘法器",
+      "coreOutcome": "能分析半加/全加、行波与超前进位、加减法器和二进制乘法器的结构及溢出。",
+      "stars": 5,
+      "rationale": "主题核心的加法器实现和移位相加乘法有习题课解答例题及作业证据。",
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 2,
+        "4": 2,
+        "5": 2
+      },
+      "unitCount": 6,
+      "ratingMode": "主题核心学习表现与主题层证据独立评定；单元峰值与分布仅作摘要"
+    },
+    {
+      "themeId": "TH-18",
+      "name": "二进制与 BCD 转换",
+      "coreOutcome": "能用推导方程或移位加 3 算法完成二进制到 BCD 的转换。",
+      "stars": 3,
+      "rationale": "主题核心的二进制转 BCD 算法只有课件完整示例，未获得直接题目证据。",
+      "unitPeak": 3,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 1,
+        "4": 0,
+        "5": 0
+      },
+      "unitCount": 1,
+      "ratingMode": "主题核心学习表现与主题层证据独立评定；单元峰值与分布仅作摘要"
+    },
+    {
+      "themeId": "TH-19",
+      "name": "逻辑门器件理论",
+      "coreOutcome": "能说明开关电路、二极管/三极管开关特性以及 TTL/CMOS 门电路的器件基础。",
+      "stars": 4,
+      "rationale": "习题课基本题型明确列出常用逻辑门及电器特征，但缺少专项解答例题。",
+      "unitPeak": 4,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 4,
+        "5": 0
+      },
+      "unitCount": 4,
+      "ratingMode": "主题核心学习表现与主题层证据独立评定；单元峰值与分布仅作摘要"
+    },
+    {
+      "themeId": "TH-20",
+      "name": "可编程逻辑器件与 FPGA",
+      "coreOutcome": "能说明 PROM/PAL/PLA 的阵列可编程性、CPLD 的宏单元结构，以及 FPGA 的 LE、LUT 与配置结构。",
+      "stars": 4,
+      "rationale": "主题核心的与或阵列和 LE/LUT 实现有作业直接证据，但缺少习题课专项解答例题。",
+      "unitPeak": 4,
+      "unitDistribution": {
+        "1": 0,
+        "2": 1,
+        "3": 2,
+        "4": 2,
+        "5": 0
+      },
+      "unitCount": 5,
+      "ratingMode": "主题核心学习表现与主题层证据独立评定；单元峰值与分布仅作摘要"
+    }
+  ]
+}

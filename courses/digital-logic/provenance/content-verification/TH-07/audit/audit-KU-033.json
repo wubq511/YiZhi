@@ -1,0 +1,45 @@
+{
+  "unit": "KU-033",
+  "checks": [
+    {
+      "claim": "Q-065 2.13(a) simplifies to A B̄ + ĀB + AB D + ĀB̄D",
+      "onset": [
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        14
+      ],
+      "original": "AB̅C̅+AB̅C+A̅BC+A̅BC̅D+ABD̅",
+      "minimal": "A̅B+AB̅+A̅B̅D̅+ABD̅",
+      "equivalent": false,
+      "minimal_stats": {
+        "term_count": 4,
+        "literal_count": 10
+      },
+      "passed": false
+    },
+    {
+      "claim": "practice F=A B̄ + ĀB D",
+      "onset": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        10
+      ],
+      "expression": "A̅B+AB̅D̅",
+      "stats": {
+        "term_count": 2,
+        "literal_count": 5
+      },
+      "passed": true
+    }
+  ],
+  "passed": false
+}

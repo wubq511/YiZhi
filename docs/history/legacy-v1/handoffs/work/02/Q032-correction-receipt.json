@@ -1,0 +1,82 @@
+{
+  "operationId": "OP-CONTENT-02-Q032-SOURCE-CORRECTION-20261026",
+  "commitId": "4470b23a-cf23-44e7-adcc-5eb6a27be0f4",
+  "courseId": "COURSE-30937c7c-155a-40d1-bfa5-b36827a91541",
+  "generation": 1,
+  "sequence": 197,
+  "saved": true,
+  "revisions": {
+    "knowledge:Q-032": 3
+  },
+  "changes": [
+    {
+      "namespace": "knowledge",
+      "key": "Q-032",
+      "value": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-032",
+        "kind": "homework",
+        "label": "1.65(c)",
+        "parentId": "Q-029",
+        "questionTypes": [
+          "数制转换"
+        ],
+        "solution": "据题干推导（教材习题无官方答案）：BCD 每 4 位二进制表示 1 位十进制数字，10010101_BCD 按 4 位一组为 1001 | 0101，即 9 | 5，表示十进制 95；用除 2 取余法：95 → 47(余1) → 23(余1) → 11(余1) → 5(余1) → 2(余1) → 1(余0) → 0(余1)，余数逆序得 (1011111)₂。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "教材 P25 的 1.65(c)",
+            "pdfPages": [
+              1,
+              5
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "回答下列与 BCD 系统相关的问题（BCD 定义见习题 1.64）。c) 将 10010101_BCD 转换为二进制数。",
+        "taskSummary": "将 10010101_BCD 转换为二进制。"
+      },
+      "revision": 3,
+      "deleted": false
+    }
+  ],
+  "savedAt": "2026-10-26T04:29:21.109054+00:00",
+  "knowledgeChanges": [
+    {
+      "namespace": "knowledge",
+      "key": "Q-032",
+      "value": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-032",
+        "kind": "homework",
+        "label": "1.65(c)",
+        "parentId": "Q-029",
+        "questionTypes": [
+          "数制转换"
+        ],
+        "solution": "据题干推导（教材习题无官方答案）：BCD 每 4 位二进制表示 1 位十进制数字，10010101_BCD 按 4 位一组为 1001 | 0101，即 9 | 5，表示十进制 95；用除 2 取余法：95 → 47(余1) → 23(余1) → 11(余1) → 5(余1) → 2(余1) → 1(余0) → 0(余1)，余数逆序得 (1011111)₂。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "教材 P25 的 1.65(c)",
+            "pdfPages": [
+              1,
+              5
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "回答下列与 BCD 系统相关的问题（BCD 定义见习题 1.64）。c) 将 10010101_BCD 转换为二进制数。",
+        "taskSummary": "将 10010101_BCD 转换为二进制。"
+      },
+      "revision": 3,
+      "deleted": false
+    }
+  ]
+}

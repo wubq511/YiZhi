@@ -1,0 +1,26 @@
+{
+  "auditPurpose": "主 Agent 核查评测评分中的运行期完整性和浏览器证据；未重跑或改写原始答案。",
+  "source": "/Users/robertwu/.kimi-code/sessions/wd_workspace_68cc00e7679a/session_45338ce8-0bc7-45e0-b361-7ce94ef99cb0/agents/agent-18/wire.jsonl",
+  "toolCalls": {"Read": 21, "Bash": 80, "ReadMediaFile": 1, "Write": 3, "Edit": 11, "mcp__desktop_browser__run": 28, "TaskStop": 1, "TaskList": 1},
+  "mutationReview": {
+    "directWritesAndEdits": "已查看全部 14 次 Write/Edit 的路径，均为本运行的 answer.md、transcript.md、browser_check.log 或 command_status.tsv。没有正式工具、规则、知识数据或布局作为目标。",
+    "shellCalls": "已检查 80 次 Bash 的命令；临时数据修改位于 /tmp/midterm-map-eval03-20261025-134055/，其他写入位于本运行 outputs 或 /tmp。check/build 均调用正式工具，通过 MIDTERM_MAP_FILE/MIDTERM_LAYOUT_FILE/MIDTERM_OUTPUT_DIR 指向临时副本。没有改写、删除或替换正式工具与规则的命令。",
+    "sourceDataMutationLines": [264, 280, 338],
+    "buildAndCheckLines": [289, 313, 346],
+    "consistencyScriptLine": 378,
+    "directWriteEditLines": [459, 467, 523, 547, 829, 894, 910, 926, 950, 966, 982, 1014, 1054, 1070],
+    "conclusion": "现有完整执行轨迹支持该运行未通过修改规则、删除校验或忽略无效关系错误来伪造通过。原评分中以事后 check 通过证明工具未改的推理无效，现以实际执行轨迹替代。未采集运行期工具 before/after 哈希，不声称有工具副本哈希对照。"
+  },
+  "browserEvidence": {
+    "toolCallLine": 821,
+    "toolResultLine": 822,
+    "operation": "page.text.snapshot",
+    "snapshotId": "text-dc2036bd-74a2-4c9b-97f8-a46a46761d73",
+    "observedHeading": "REL-001 · requires",
+    "observedSourceHash": "3ba45d738c5a41dd810ea9f66196df4c262ff9bbba0fe000331f859d85bd8695",
+    "observedSourceText": "SRC-C01 · PDF P25–27、35–37、40：模与补数到补码表示",
+    "navigationLines": [765, 781, 789, 797, 805, 813, 821],
+    "note": "过滤后画布关系数为 0 不妨碍从单元详情中的关系入口打开关系详情；截图中的关系数量与详情查看不是矛盾。"
+  },
+  "testBoundary": "unittest 的 13 项检查使用测试自身创建的 canonical 数据副本；修改后临时数据的正确性由 valid_build/valid_check、consistency_check 与 derived_evidence 支撑。当前正式工具已在评测后更新，不能用事后版本测试替代运行期证据。"
+}

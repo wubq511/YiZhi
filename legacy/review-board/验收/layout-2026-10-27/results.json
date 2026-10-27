@@ -1,0 +1,108 @@
+{
+  "stage": "layout",
+  "date": "2026-10-27",
+  "changes": [
+    "Assistant tasks and prompts shrink to a scrollable minimum; panel remains scrollable at short heights.",
+    "Selection context has bounded height and independent scroll; input starts at 112px.",
+    "Editing toolbar uses the full available canvas width, and ResizeObserver measures its actual height.",
+    "Canvas controls avoid the editor based on remaining canvas width and measured toolbar height.",
+    "Mobile overlay sidebars temporarily hide editing controls without closing their state."
+  ],
+  "assessment": {
+    "readingOrder": "Concept, method, and device units retain title, explanation, diagram/table, example, practice and personal note order.",
+    "grouping": "No new containers. Assistant conversation, task records, and composition retain separate regions.",
+    "rhythm": {
+      "bodyWorldFontPx": 24,
+      "bodyWorldLineHeightPx": 44.4,
+      "paragraphMargin": "18px 0",
+      "subheadingMargin": "32px 0 16px",
+      "assistantGapPx": 12
+    },
+    "structure": "Continuous canvas with stable unit coordinates; shell adaptations do not change course layout.",
+    "density": "Assistant lists scroll before the composer leaves the panel; extremely short panels support outer scrolling.",
+    "adaptation": "Manual render checks at 1440x1000, 930x745 and 393x852; automated short-height case at 930x520. DOM order unchanged.",
+    "extremes": "Long task list and selection fixture, active/wrapped editor, mobile overlays, material expansion, source scroll restore."
+  },
+  "measurements": {
+    "assistant930x745": {
+      "panelBottom": 745,
+      "sendTop": 695,
+      "sendBottom": 729,
+      "panelScrollHeight": 675,
+      "panelClientHeight": 675,
+      "taskViewportHeight": 83.5,
+      "taskScrollHeight": 265
+    },
+    "collapsedTools930x745": {
+      "canvasToolsBottom": 675,
+      "editorTop": 687.203125
+    },
+    "activeTools930x745": {
+      "width": 906,
+      "left": 12,
+      "height": 119.7890625,
+      "canvasToolsBottom": 600,
+      "editorTop": 612.2109375
+    },
+    "materialExpansion": {
+      "unit": "KU-035",
+      "before": {
+        "x": 1470,
+        "y": 230,
+        "height": 1916
+      },
+      "after": {
+        "x": 1470,
+        "y": 230,
+        "height": 2266
+      },
+      "sameColumnNeighborKU037": {
+        "beforeY": 2316,
+        "afterY": 2666
+      },
+      "otherColumnKU036": {
+        "beforeY": 4147,
+        "afterY": 4147
+      },
+      "restoredClosed": true
+    }
+  },
+  "verification": {
+    "clientSuite": {
+      "files": [
+        "board-client.test.cjs",
+        "integration-client.test.cjs",
+        "agent-client.test.cjs",
+        "editing-client.test.cjs",
+        "persistence-client.test.cjs"
+      ],
+      "exitCode": 0,
+      "failed": 0,
+      "skipped": 1
+    },
+    "finalBoardRerun": {
+      "exitCode": 0,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 53484.222833
+    },
+    "mechanicalLayoutFindings": [],
+    "detectorLimitation": "Static scan cannot resolve two server-alias asset CSS paths; rendered browser checks cover actual loaded styling.",
+    "knowledgeMapSHA256": "223f55f8f4ddac71f0036274778ab25de0f40f2cf8fdd9745a8b2cb85d1c1564",
+    "viewLayoutSHA256": "c9f0f6b75a0e630cf92b34fc5a5c7980ecd3500fb7b3d5085d2de69181322b93",
+    "courseHashesMatchTypesetBaseline": true
+  },
+  "evidence": [
+    "assistant-930.png",
+    "assistant-mobile.png",
+    "editing-930.png",
+    "concept-wide.png",
+    "method-wide.png",
+    "device-wide.png",
+    "material-expanded.png"
+  ],
+  "auditFollowup": [
+    "KU-035 interaction renders implementation text showCorners 0; evaluate in the next audit."
+  ],
+  "nextStage": "audit; DESIGN.md and .impeccable/design.json remain deferred to document."
+}

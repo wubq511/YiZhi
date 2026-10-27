@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>同一道 MUX 题，三种实际效果</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f6f8;color:#172333;font:15px/1.6 system-ui,'PingFang SC',sans-serif}header{background:#fff;border-bottom:1px solid #d9e0e8;padding:20px 28px}h1{font-size:24px;margin:0 0 4px}p{margin:4px 0;color:#536174}nav{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}button,a{font:inherit}button{border:1px solid #c6d1de;background:#fff;border-radius:6px;padding:8px 18px;cursor:pointer;color:#334155}button[aria-selected=true]{background:#183f61;color:white;border-color:#183f61}button:focus-visible,a:focus-visible{outline:3px solid #d49330;outline-offset:3px}.detail{display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:12px 28px;background:#edf2f7;border-bottom:1px solid #d9e0e8}.detail p{flex:1;min-width:260px;margin:0;color:#273b50}a{color:#1c557e;text-underline-offset:3px}iframe{width:100%;height:1100px;border:0;display:block;background:#fff}iframe[hidden]{display:none}footer{padding:18px 28px;border-top:1px solid #d9e0e8;font-size:13px}footer p{margin-bottom:8px}@media(max-width:700px){header,.detail,footer{padding-left:16px;padding-right:16px}h1{font-size:21px}iframe{height:1500px}}
+</style>
+</head>
+<body>
+<header>
+<h1>同一道 MUX 题，三种实际效果</h1>
+<p>F(x,y,z)=Σm(1,2,6,7) · S1=x，S0=y · I0=z，I1=¬z，I2=0，I3=1</p>
+<nav role="tablist" aria-label="切换演示">
+<button id="tab-ve" role="tab" aria-selected="true" aria-controls="panel-ve" data-demo="ve">visual-explainer · 交互讲解</button>
+<button id="tab-fw" role="tab" aria-selected="false" aria-controls="panel-fw" data-demo="fw">fireworks · 静态图解</button>
+<button id="tab-ex" role="tab" aria-selected="false" aria-controls="panel-ex" data-demo="ex">Excalidraw · 可编辑白板</button>
+</nav>
+</header>
+<div class="detail"><p id="hint">点击 x / y / z，观察选中端、通路、输出和分组高亮如何同步变化。</p><a id="open-demo" href="visual-explainer-mux.html" target="_blank">单独打开演示 ↗</a><a id="open-source" href="visual-explainer-mux.src.html" download>下载可修改源文件</a></div>
+<iframe id="panel-ve" role="tabpanel" aria-labelledby="tab-ve" title="visual-explainer MUX 交互讲解" src="visual-explainer-mux.html"></iframe>
+<iframe id="panel-fw" role="tabpanel" aria-labelledby="tab-fw" title="fireworks MUX 图解查看器" src="fireworks-mux.html" loading="lazy" hidden></iframe>
+<iframe id="panel-ex" role="tabpanel" aria-labelledby="tab-ex" title="Excalidraw MUX 原生画布" src="excalidraw-mux.html" loading="lazy" hidden></iframe>
+<footer>
+<p>三份图使用相同例题、四组取值、概念关系和课件来源；这是表达方式对比。全部 8 组输入已核对，visual-explainer 的按钮联动已实测。</p>
+<a href="fireworks-mux.png" target="_blank">fireworks 高清图</a> · <a href="excalidraw-mux.png" target="_blank">Excalidraw 高清图</a> · <a href="../archify/archify-mux.html" target="_blank">先前的 Archify</a> · <a href="../diagram-design/diagram-design-mux.html" target="_blank">先前的 Diagram Design</a> · <a href="README.md">版本与验证记录</a>
+</footer>
+<script>
+const demos={ve:{file:'visual-explainer-mux.html',source:'visual-explainer-mux.src.html',hint:'点击 x / y / z，观察选中端、通路、输出和分组高亮如何同步变化。'},fw:{file:'fireworks-mux.html',source:'fireworks-ir.json',hint:'先看整张图，再用 + / − 放大；可导出 SVG 或图片。这个查看器不支持拖动单个节点。'},ex:{file:'excalidraw-mux.html',source:'excalidraw-mux.excalidraw',hint:'点击“进入可编辑画布”，拖动节点或改字；修改后点击“下载源文件”保存。'}};
+for(const button of document.querySelectorAll('[data-demo]'))button.addEventListener('click',()=>{const key=button.dataset.demo;for(const id of Object.keys(demos)){document.getElementById('panel-'+id).hidden=id!==key;document.getElementById('tab-'+id).setAttribute('aria-selected',String(id===key));}document.getElementById('hint').textContent=demos[key].hint;document.getElementById('open-demo').href=demos[key].file;document.getElementById('open-source').href=demos[key].source;});
+</script>
+</body>
+</html>

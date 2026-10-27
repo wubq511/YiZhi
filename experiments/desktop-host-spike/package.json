@@ -1,0 +1,8 @@
+{
+  "name": "desktop-host-spike",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Bounded macOS host experiment; not a product application",
+  "scripts": { "probe": "node run.mjs" },
+  "devDependencies": { "electron": "40.10.6" }
+}

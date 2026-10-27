@@ -1,0 +1,126 @@
+<!doctype html>
+<!-- Throwaway visual prototype: hand-drawn strokes, upright A typography and semantic content colors.
+     Fixed MUX sample, in-memory edits. No course data or Agent connection. -->
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>图文样式与公式编辑 · 数字逻辑</title>
+  <link rel="stylesheet" href="vendor/mathlive/mathlive-fonts.css">
+  <link rel="stylesheet" href="vendor/mathlive/mathlive-static.css">
+  <link rel="stylesheet" href="handwriting.css">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="vendor/mathlive/mathlive.min.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="identity"><span class="brand-mark" aria-hidden="true">∿</span><div><strong>数字逻辑</strong><span class="crumb">组合逻辑 / 复用器</span></div></div>
+    <span class="prototype-label">图文样式 · 局部样例</span>
+    <div class="header-actions">
+      <button id="open-editor" aria-pressed="false">编辑公式</button>
+      <button id="reset">重置样例</button>
+      <button id="fullscreen" aria-label="切换全屏">⛶</button>
+    </div>
+  </header>
+  <main class="workspace">
+    <section id="viewport" aria-label="复用器知识画板，可拖动空白处和缩放">
+      <div class="canvas-heading"><span class="chapter">05 / COMBINATIONAL LOGIC</span><span id="scene-subtitle">把选择过程画出来</span></div>
+      <div id="world">
+        <svg class="connections" viewBox="0 0 1240 740" aria-hidden="true">
+          <!-- sketch:connections -->
+<path class="sketch-stroke" d="M335 402 C355.01706316995745 402.85627701602255, 379.2145070913248 397.60513867161546, 406 390 M335 402 C356.0061401829853 399.8827728835757, 380.2765297502512 396.9609077095504, 406 390" stroke="var(--line)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<path class="sketch-stroke" d="M397.4613439002232 396.5644003541637 C399.1636296712751 394.650342198127, 401.36602604467544 393.4312132146001, 406 390 M397.4613439002232 396.5644003541637 C400.4936679085781 394.0198455691366, 403.62458954448607 391.63916044288925, 406 390 M406 390 C403.07322101435807 390.23264397590845, 401.15514083454707 389.662691911705, 395.28966258004874 388.86480294627245 M406 390 C403.3295544251297 389.61929436795657, 400.3935493003489 389.52246402580136, 395.28966258004874 388.86480294627245" stroke="var(--line)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<path class="sketch-stroke" d="M794 390 C810.0179802697463 393.592267587129, 829.9486983052454 383.8158925049938, 850 369 M794 390 C810.5825081738628 390.7087271970464, 828.2805286263721 385.8773236079467, 850 369" stroke="var(--line)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<path class="sketch-stroke" d="M844.6900920957873 378.37042571331637 C846.368064740224 375.7825243169932, 847.2229466610886 374.6466394716881, 850 369 M844.6900920957873 378.37042571331637 C845.980089345984 376.3139270179719, 846.9250433183585 374.4010945737598, 850 369 M850 369 C846.8291308962963 369.696830395551, 844.2898844171391 370.21637693076, 839.6925317153521 372.1234752377721 M850 369 C845.9976235784146 370.46291440415257, 842.3293774395155 371.6281885886224, 839.6925317153521 372.1234752377721" stroke="var(--line)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<path class="sketch-stroke" d="M1020 510 C1018.645039635957 515.5164999826811, 1018.2997956842787 518.5448715497739, 1020 532 M1020 510 C1020.0318398623806 518.29684924311, 1019.8487113489848 526.2617439738941, 1020 532" stroke="var(--line)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<path class="sketch-stroke" d="M1016 522 C1017.2869008076542 524.134881440676, 1017.7087610546862 526.9536997036366, 1020 532 M1016 522 C1016.6831407504037 524.4986402150981, 1017.9851136402501 526.5858342133829, 1020 532 M1020 532 C1021.6916565358467 527.9547615997119, 1023.2795036022296 524.5145676244256, 1024 522 M1020 532 C1020.9851413366936 529.6725073088152, 1021.5644604848322 527.7523939276693, 1024 522" stroke="var(--line)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<!-- /sketch:connections -->
+        </svg>
+        <article class="scene-title">
+          <div class="eyebrow">一条线索，看懂一个器件</div>
+          <h1>选择哪一路，<br><span class="title-takeaway">就输出哪一路。<svg class="title-underline" viewBox="0 0 350 16" preserveAspectRatio="none" aria-hidden="true"><!-- sketch:underline -->
+<path class="sketch-stroke" d="M2 9 C58.915218058476846 4.557567402472099, 118.73608473067483 7.546034404387077, 175 9 M175 9 C233.9600675019125 14.01838481898109, 289.1202637029191 12.649203607191643, 348 8" stroke="#c2e3d4" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<!-- /sketch:underline --></svg></span></h1>
+          <p>4 选 1 复用器 <span class="small-math">MUX</span></p>
+        </article>
+        <article class="node selection">
+          <svg class="sketch-frame" preserveAspectRatio="none" viewBox="0 0 300 190" aria-hidden="true"><!-- sketch:selection -->
+<path class="sketch-fill" d="M9.517169597093016 5.693621276970953 L289.39266066486016 8.12295346474275 L291.28669659728183 185.73144739186392 L6.297052662912757 183.42909146165476" stroke="none" stroke-width="0" fill="var(--condition-fill)" stroke-linecap="round" stroke-linejoin="round"/>
+<path class="sketch-stroke" d="M8 7 C66.56253284303396 8.562865999201874, 123.79578963611867 4.89036246796216, 292 7 M8 7 C103.30198876842488 5.24630976253137, 199.28966745564435 4.241504379692317, 292 7 M292 7 C290.1548828203339 58.74248012090102, 292.898935543384 106.15168645912783, 292 183 M292 7 C294.9592150763832 43.38903673994355, 294.0949762047492 82.8119382898789, 292 183 M292 183 C214.35549028122537 179.7811709341465, 135.23846781886965 179.13529889020634, 8 183 M292 183 C231.90969517095562 180.11652564796722, 170.27630360671606 179.44519321096263, 8 183 M8 183 C9.368907477381454 132.53003053152932, 10.62599444878362 83.39485635096206, 8 7 M8 183 C4.649705726249516 144.18039944875053, 6.115373985810578 107.65368418204598, 8 7" stroke="var(--condition-line)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<!-- /sketch:selection --></svg>
+          <div class="node-inner"><span class="step">01</span><h2>先看选择端</h2>
+          <div class="selector-code"><span>x<span>高位</span></span><span>y<span>低位</span></span><b>0</b><b>1</b></div>
+          <p>选择码 <strong>01</strong> 对应第 1 路。</p></div>
+        </article>
+        <article class="node circuit">
+          <div class="circuit-caption"><span class="step">02</span><h2>只让选中的一路通过</h2></div>
+          <svg class="mux-drawing" viewBox="0 0 410 300" role="img" aria-label="四选一复用器：选择端 xy 等于 01，I1 这一路连到输出 F，其他输入未选中。">
+            <!-- sketch:circuit -->
+<path class="sketch-fill" d="M156 30 C198.62879589035478 40.75961575732916, 252.37761511395988 57.53052569424152, 286 68 C288.9872642740989 108.62468568542972, 289.34167595062496 146.37619545692579, 286 236 C254.8825368240465 236.85489727169858, 225.14228481445355 247.99440799890667, 156 269 C153.14116887688527 174.33397925231702, 153.96313753631668 79.69177070177902, 156 30" stroke="none" stroke-width="0" fill="#f7f9fc" stroke-linecap="round" stroke-linejoin="round"/>
+<path class="sketch-stroke" d="M156 30 C184.23879704970906 40.268713490547384, 213.49714955940883 48.17263326651766, 286 68 M156 30 C195.63995715235393 42.49428908741497, 237.0641521418936 55.22394213872426, 286 68 M286 68 C283.6449558182811 135.61358012100683, 283.3659719600534 201.9893533385359, 286 236 M286 68 C283.01829089443214 101.56742204469629, 283.5747752256228 138.26424962249584, 286 236 M286 236 C241.05580344117737 245.91921532546937, 194.19143296639925 256.43313081387265, 156 269 M286 236 C237.38485374979595 249.9802849449513, 191.52120216924618 261.07259390701705, 156 269 M156 269 C157.53201361730052 178.00697679308803, 158.82299572186656 86.8656051513198, 156 30 M156 269 C153.44013723361556 208.97703705668175, 153.71170675090636 147.3458027778873, 156 30" stroke="#71859a" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<path class="sketch-stroke" d="M50 70 C72.54993011150509 69.11145449327994, 95.19419699534774 69.91011380600501, 156 70 M50 70 C80.91053160019219 69.32538082306068, 110.9108870273456 69.5470748216359, 156 70 M50 181 C78.64977607522161 181.08565082583596, 106.65264318808914 182.20338629517724, 156 181 M50 181 C71.49156355448066 181.22712119642776, 94.39814142640681 181.10956825439018, 156 181 M50 236 C75.43570697698742 236.88954961677362, 100.63235021457076 236.43806778569987, 156 236 M50 236 C80.9074118692428 235.57819933815878, 113.25977689083666 235.79220634027402, 156 236" stroke="#bec6cf" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<path class="sketch-stroke" d="M50 125 C73.77698885090649 125.20827443831729, 94.78878626180813 125.0279235535221, 155 125 M50 125 C86.30524048754015 125.34049373296334, 123.28361314418726 124.68259757635428, 155 125 M155 125 C178.2446520142568 123.1973801883248, 200.40573729304597 133.21153928857916, 220 153 M155 125 C178.96161552287484 124.57290469090299, 199.0290012449259 133.82576048448837, 220 153 M220 153 C245.7486265999265 153.3813727058329, 269.43437827946616 154.09382587148323, 284 153 M220 153 C242.52522884621285 152.58830461621173, 263.5370281831827 153.5429778394092, 284 153 M284 153 C315.0509276064113 152.93137807556215, 348.51977003430943 154.12186058767858, 375 153 M284 153 C316.54357438799923 154.32341918339978, 349.2392285219859 153.59822919210444, 375 153" stroke="var(--signal-ink)" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<path class="sketch-stroke" d="M220 298 C221.06740948554082 289.1225971580483, 221.43407078381583 278.8477996101603, 220 255 M220 298 C220.27894317680497 282.03078513341023, 220.42161321812767 266.62049707323314, 220 255" stroke="var(--condition-ink)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<!-- /sketch:circuit -->
+            <circle class="connection-dot" cx="156" cy="125" r="5"/>
+            <circle class="connection-dot" cx="284" cy="153" r="5"/>
+            <text class="circuit-text muted" x="12" y="76">I₀</text>
+            <text class="circuit-text active-text" x="12" y="131">I₁</text>
+            <text class="circuit-text muted" x="12" y="187">I₂</text>
+            <text class="circuit-text muted" x="12" y="242">I₃</text>
+            <text class="circuit-text output-text" x="382" y="160">F</text>
+            <text class="circuit-text mux-label" x="218" y="107" text-anchor="middle">MUX</text>
+            <text class="circuit-small" x="235" y="291">xy = 01</text>
+          </svg>
+          <div class="input-equation equation" data-equation="input" role="button" tabindex="0" aria-label="编辑输入端公式"><svg class="sketch-frame" viewBox="0 0 240 56" preserveAspectRatio="none" aria-hidden="true"><!-- sketch:input -->
+<path class="sketch-fill" d="M3.0988951615057885 2.568341045919806 L236.39062759494408 3.1846355461515485 L239.14244828140363 55.520991634670644 L1.9871971867047251 55.39539942378178" stroke="none" stroke-width="0" fill="var(--condition-fill)" stroke-linecap="round" stroke-linejoin="round"/>
+<path class="sketch-stroke" d="M2 2 C52.949309638339074 1.1410307342510095, 102.05033659979826 -0.11267559926593707, 238 2 M2 2 C68.16383620790609 1.201528787753474, 132.29313276671553 0.38199796641964917, 238 2 M238 2 C237.61499082823235 19.870112335216255, 238.5388365217014 34.201175874378535, 238 54 M238 2 C237.84208914080756 21.947985749738294, 237.95521075913803 41.69887791317888, 238 54 M238 54 C170.57963458673737 51.66792756956608, 104.50943892047671 52.69078965242876, 2 54 M238 54 C170.71578121781798 54.04301660665341, 101.91704944175356 52.80614651602443, 2 54 M2 54 C3.2548853037686087 38.34292075512931, 1.773133882674668 20.06360933622345, 2 2 M2 54 C1.162742865875643 39.61724515263922, 1.832351090804022 24.93283662688918, 2 2" stroke="var(--condition-line)" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<!-- /sketch:input --></svg><span class="formula-label">输入条件</span><span class="math-render"></span><span class="edit-glyph" aria-hidden="true">✎</span></div>
+        </article>
+        <article class="node result">
+          <svg class="sketch-frame" preserveAspectRatio="none" viewBox="0 0 360 220" aria-hidden="true"><!-- sketch:result -->
+<path class="sketch-fill" d="M9.98489347975701 9.593161350674928 L350.89155842941256 6.416946172900498 L354.80871207993476 211.54081053156406 L6.665169128589332 211.57900613565" stroke="none" stroke-width="0" fill="var(--signal-fill)" stroke-linecap="round" stroke-linejoin="round"/>
+<path class="sketch-stroke" d="M8 7 C78.7999181776403 7.738746198861485, 150.12353101483362 7.5038096930092415, 352 7 M8 7 C97.6751859931185 10.657221985149732, 186.98854996350784 10.721141383906563, 352 7 M352 7 C347.5385166402851 85.4331545475391, 347.1340431601669 161.5434420544246, 352 213 M352 7 C349.43911430387243 72.61102242496064, 351.6159974567517 139.29015143305446, 352 213 M352 213 C273.83077368425745 217.56354461022687, 198.43329254864008 218.38399426415108, 8 213 M352 213 C254.33795463548017 211.92139642796204, 156.97960688995715 211.85776666684163, 8 213 M8 213 C5.808044314336156 162.98649322928082, 4.361086720075432 118.92774363156781, 8 7 M8 213 C11.055329321906644 133.3633203739297, 10.228394209548881 56.730656102115084, 8 7" stroke="var(--signal-line)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<!-- /sketch:result --></svg>
+          <div class="node-inner"><span class="step">03</span><h2>输出由 I₁ 决定</h2>
+            <div class="equation result-equation" data-equation="result" role="button" tabindex="0" aria-label="编辑输出公式"><span class="math-render"></span><span class="edit-glyph" aria-hidden="true">✎</span></div>
+            <p class="result-caption">此时，z 取反后就是 F。</p>
+            <span class="equation-hint">点公式，直接改</span>
+          </div>
+        </article>
+        <article class="node truth">
+          <h2><span class="hand-underline">代两个值看看</span></h2>
+          <table aria-label="当 xy 为 01 时，z 与 F 的对应关系"><thead><tr><th>z</th><th>F</th><th>怎么看</th></tr></thead><tbody><tr><td>0</td><td>1</td><td>0 取反是 1</td></tr><tr><td>1</td><td>0</td><td>1 取反是 0</td></tr></tbody></table>
+        </article>
+        <aside class="note"><svg class="sketch-frame" viewBox="0 0 320 130" preserveAspectRatio="none" aria-hidden="true"><!-- sketch:note -->
+<path class="sketch-fill" d="M4.781607500463724 1.3756548844277858 L316.2369262136519 3.865259190648794 L319.1263918079436 126.85896124467254 L1.3182415880262852 129.2396956168115" stroke="none" stroke-width="0" fill="var(--note-fill)" stroke-linecap="round" stroke-linejoin="round"/>
+<path class="sketch-stroke" d="M3 3 C68.66489762040956 5.148944140967109, 136.5236276259087 6.2116947802791955, 317 3 M3 3 C67.33972807459793 -0.8077023900675926, 131.32717762455084 0.2997170867965209, 317 3 M317 3 C319.8256073894493 53.85191098563374, 318.14014150524065 99.23056245893241, 317 127 M317 3 C315.3054891237356 30.986097831279043, 316.2563601502515 58.32549395896495, 317 127 M317 127 C227.07472833281463 131.11674066065052, 139.22369627230077 129.6763697905406, 3 127 M317 127 C247.10554023192532 128.30099763400978, 177.02626293694777 129.47396014416398, 3 127 M3 127 C1.1426073198683557 96.83903054632246, 1.9180011158354577 63.88463723361491, 3 3 M3 127 C2.4513513198338446 85.17924258857965, 0.5019072523556646 42.99016894586384, 3 3" stroke="var(--note-line)" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<path class="sketch-stroke" d="M5 8 C5.807426859586499 31.848787228018047, 5.688364137857221 56.91886240132153, 5 122 M5 8 C4.656454576783814 39.31642769332976, 5.156532450252213 71.1918375754729, 5 122" stroke="#c2974f" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<!-- /sketch:note --></svg><span class="note-pin" aria-hidden="true">✳</span><h2>给自己的提醒</h2><p contenteditable="true" role="textbox" aria-label="编辑样例笔记" spellcheck="false">先确认 xy 的顺序，再找数据端。<br>交换高低位，选中的一路也会变。</p></aside>
+        <div class="relation-label label-one">选择</div><div class="relation-label label-two">传到输出</div><div class="relation-label label-three">代入验证</div>
+      </div>
+      <div class="canvas-tools"><button id="zoom-out" aria-label="缩小画板">−</button><output id="zoom-label">100%</output><button id="zoom-in" aria-label="放大画板">＋</button><button id="fit">看全图</button></div>
+      <div class="canvas-help">拖动空白处移动 · 滚轮缩放</div>
+    </section>
+    <aside id="editor-panel" hidden aria-label="可视化公式编辑器">
+      <div class="editor-sticky">
+      <div class="editor-top"><div><span class="eyebrow">选中公式</span><h2 id="editor-title">输出公式</h2></div><button id="close-editor" aria-label="完成公式编辑">✕</button></div>
+      <p class="editor-intro">点选公式中的位置，再选符号或结构。</p>
+      <div id="mathfield-container"></div>
+      <button id="more-symbols" class="more-symbols">更多符号键盘</button>
+      </div>
+      <div class="editing-status"><span class="status-dot"></span><span id="edit-status">修改会直接显示在画板上</span></div>
+      <div class="edit-actions"><button data-command="undo">撤回</button><button data-command="redo">重做</button><button data-command="selectAll">全选</button><button id="clear-formula">清空</button></div>
+      <section class="key-section"><h3>字母与数字</h3><div id="basic-keys" class="key-grid basic"></div></section>
+      <section class="key-section"><h3>逻辑符号</h3><div id="logic-keys" class="key-grid"></div></section>
+      <section class="key-section"><h3>公式结构</h3><div id="structure-keys" class="key-grid structures"></div></section>
+      <div class="cursor-actions"><button data-command="moveToPreviousChar" aria-label="光标左移">←</button><button data-command="moveToNextPlaceholder">下一个空位</button><button data-command="moveToNextChar" aria-label="光标右移">→</button><button data-command="deleteBackward" aria-label="删除前一个符号">⌫</button></div>
+      <div class="editor-tip"><strong>试一下</strong><p>清空公式，点 F、＝、上划线，再点 z。<br>也可以直接点进已有的上下标或分式。</p></div>
+      <button id="finish-edit" class="finish-edit">完成编辑</button>
+    </aside>
+  </main>
+  <p id="toast" role="status" aria-live="polite" hidden></p>
+</body>
+</html>

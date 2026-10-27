@@ -1,0 +1,7 @@
+{
+  "name": "bounded-undo-input-spike",
+  "private": true,
+  "type": "module",
+  "scripts": { "probe": "node probe.mjs" },
+  "devDependencies": { "playwright-core": "1.62.1" }
+}

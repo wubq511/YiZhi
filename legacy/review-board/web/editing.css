@@ -1,0 +1,205 @@
+.review-editing {
+  position: fixed;
+  z-index: 65;
+  left: 50%;
+  bottom: 13px;
+  max-width: min(940px, calc(100vw - 24px));
+  transform: translateX(-50%);
+  color: #27384a;
+  font: 13px/1.6 system-ui, sans-serif;
+  --edit-line: #b8c9d8;
+  --edit-blue: #345d88;
+  --edit-paper: #fffefa;
+}
+.review-editing [hidden] { display: none !important; }
+.review-editing button, .editing-block-entry {
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 1px solid #bdccda;
+  border-radius: 7px;
+  background: #fff;
+  color: #345d88;
+  font: inherit;
+  cursor: pointer;
+}
+.review-editing button:not(:disabled):hover, .editing-block-entry:hover { border-color: #9fb7ce; background: #edf4fc; }
+.review-editing button:not(:disabled):active { transform: translateY(1px); }
+.review-editing button[aria-pressed="true"] { border-color: #aaa3df; background: #eeedff; color: #514db5; }
+.review-editing button:focus-visible, .editing-block-entry:focus-visible { outline: 2px solid #6965db; outline-offset: 3px; }
+.review-editing button:disabled { opacity: .48; cursor: wait; }
+.editing-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 7px;
+  border: 1px solid var(--edit-line);
+  border-radius: 11px;
+  background: var(--edit-paper);
+  box-shadow: 0 5px 20px #27384a12, 0 1px 3px #27384e08;
+  transition: box-shadow 160ms ease;
+}
+.review-editing[data-active="true"] .editing-toolbar { box-shadow: 0 8px 28px #27384a16, 0 2px 5px #27384a08; }
+.review-editing[data-active="true"] { width: max-content; }
+.review-editing:not([data-active="true"]) .editing-toolbar { padding: 5px; border-radius: 10px; }
+.review-editing:not([data-active="true"]) .editing-toolbar > :not(:first-child), .review-editing:not([data-active="true"]) .editing-status { display: none; }
+.review-editing:not([data-active="true"]) { width: auto; }
+.review-editing:not([data-active="true"]) .editing-toolbar > button:first-child { border-color: #c5d2de; background: #fff; }
+.editing-toolbar input[type="color"] { width: 36px; height: 30px; padding: 2px; border: 1px solid var(--edit-line); border-radius: 6px; background: #fff; cursor: pointer; }
+.editing-status {
+  max-width: 85vw;
+  margin: 5px 0 0;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: #fffefaf5;
+  color: var(--ui-muted);
+  font-size: var(--type-label);
+  box-shadow: 0 2px 8px #27384a06;
+}
+.editing-status[data-error="true"], .editing-warning { color: var(--system-danger); background: var(--system-danger-fill); }
+
+.editing-panel, .editing-library {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 11px);
+  width: min(490px, var(--editing-available-width, calc(100vw - 30px)));
+  max-width: var(--editing-available-width, 490px);
+  max-height: calc(100vh - 210px);
+  box-sizing: border-box;
+  overflow: auto;
+  padding: 18px;
+  border: 1px solid var(--edit-line);
+  border-radius: 12px;
+  background: var(--edit-paper);
+  box-shadow: 0 14px 44px #27384a1f, 0 3px 12px #27384a0b;
+  overscroll-behavior: contain;
+}
+.editing-panel:not([hidden]), .editing-library:not([hidden]) { animation: editing-pop-in 180ms cubic-bezier(.2, .75, .25, 1); }
+.editing-panel h2, .editing-library h2 { margin: 0 0 12px; color: #2e4356; font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
+.editing-panel h3, .editing-library h3 { color: #3b5063; font-size: 14px; font-weight: 600; }
+.editing-panel > p, .editing-library > p { color: var(--ui-muted); font-size: var(--type-label); line-height: 1.75; }
+.editing-field { display: flex; min-width: 0; flex-direction: column; gap: 5px; margin: 11px 0; }
+.editing-field > span { color: #5b6e7e; font-size: var(--type-label); }
+.editing-field textarea, .editing-field input, .editing-panel select {
+  width: 100%;
+  min-height: 36px;
+  box-sizing: border-box;
+  padding: 8px 9px;
+  border: 1px solid #bdccda;
+  border-radius: 7px;
+  background: #fff;
+  color: #27384a;
+  font: inherit;
+  user-select: text;
+}
+.editing-field textarea { min-height: 96px; resize: vertical; line-height: 1.75; }
+.editing-field textarea:focus, .editing-field input:focus, .editing-panel select:focus { border-color: #9e96d5; box-shadow: 0 0 0 3px #6965db0d; outline: none; }
+.editing-panel select { margin: 5px 0; }
+.editing-panel math-field {
+  display: block;
+  min-height: 56px;
+  padding: 7px;
+  border: 1px solid #a8bdd1;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 25px;
+  --selection-background-color: #dce8ff;
+}
+.editing-panel math-field:focus-within { border-color: #9e96d5; box-shadow: 0 0 0 3px #6965db0d; }
+.editing-symbols, .editing-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.editing-symbols button { min-width: 32px; font-size: var(--type-control); }
+.editing-actions {
+  position: sticky;
+  bottom: -18px;
+  margin-right: -2px;
+  margin-left: -2px;
+  padding: 12px 2px 4px;
+  border-top: 1px dashed #c6d2dc;
+  background: #fffefaf5;
+}
+.editing-table-grid { max-width: 100%; overflow-x: auto; padding: 4px; overscroll-behavior: contain; }
+.editing-table-row { display: flex; align-items: start; gap: 6px; }
+.editing-table-row > * { min-width: 115px; flex: 1; }
+.editing-table-row .editing-symbols { max-width: 220px; }
+.editing-source-options label { display: flex; align-items: center; gap: 7px; padding: 5px 0; }
+.review-editing blockquote {
+  max-height: 130px;
+  margin: 10px 0;
+  overflow: auto;
+  padding: 7px 10px;
+  border-left: 3px solid #b8c9d8;
+  border-radius: 0 6px 6px 0;
+  background: #eef4f8;
+  color: #536779;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.editing-library-item { margin: 14px 0; padding-top: 11px; border-top: 1px dashed #c2cfda; overflow-wrap: anywhere; }
+.editing-library-item p { color: #5d6e7d; font-size: var(--type-label); line-height: 1.75; white-space: pre-wrap; }
+.editing-library-item button { margin: 4px 4px 0 0; }
+.editing-anchor-orphan { padding-left: 10px; border-left: 1px solid var(--system-danger); }
+.editing-anchor-orphan .editing-anchor-state { color: var(--system-danger); }
+.editing-anchor-changed .editing-anchor-state { color: var(--system-info); }
+.editing-pending-payload {
+  max-height: 140px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid #e4e8ed;
+  border-radius: 7px;
+  background: #f4f6f8;
+  font: var(--type-label)/1.6 ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: pre-wrap;
+}
+.editing-block-entry { display: none; position: relative; z-index: 3; margin: 3px 5px 5px 0; font: 13px/1.4 system-ui, sans-serif; }
+.review-editing-active .editing-block-entry { display: inline-block; }
+body[data-editing="true"] .unit-content, body[data-editing="true"] .reading-block { user-select: text; cursor: text; }
+.editing-overlay { position: absolute; top: 0; left: 0; z-index: 5; overflow: visible; pointer-events: none; }
+.editing-drawing { pointer-events: none; }
+.editing-drawing [data-drawing-hit] { cursor: move; }
+.editing-drawing [data-drawing-resize] { cursor: nwse-resize; }
+.editing-highlight { mix-blend-mode: multiply; }
+.editing-semantic-warning { padding: 7px 10px; border: 1px dashed var(--system-danger-line); background: var(--system-danger-fill); color: var(--system-danger); font: 15px/1.55 system-ui, sans-serif; }
+.editing-semantic-stale [data-interactive-output]::before { content: "需核对 · "; color: var(--system-danger); }
+.editing-unit-controls { display: none; position: relative; z-index: 8; gap: 7px; margin-bottom: 10px; }
+.review-editing-active .editing-unit-controls { display: flex; flex-wrap: wrap; }
+.editing-unit-controls button { padding: 5px 9px; border: 1px dashed #9fb6d2; border-radius: 7px; background: #f3f7fc; color: #345d88; font: 14px/1.5 system-ui, sans-serif; }
+.editing-unit-controls [data-unit-transform="move"] { cursor: move; touch-action: none; }
+.editing-unit-controls [data-unit-transform="resize"] { cursor: nwse-resize; touch-action: none; }
+.editing-material-change { display: flex; align-items: center; gap: 7px; margin: 12px 0; font-size: var(--type-label); }
+.editing-material-change input { width: auto; }
+
+.unit > svg[data-annotation-overlay].editing-overlay,
+.unit-panel > svg[data-annotation-overlay].editing-overlay {
+  position: absolute !important;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  contain: strict;
+  pointer-events: none;
+  aspect-ratio: auto;
+}
+
+@keyframes editing-pop-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 1100px) {
+  .editing-panel, .editing-library { width: min(460px, var(--editing-available-width, calc(100vw - 30px))); }
+}
+
+@media (max-width: 650px) {
+  .review-editing { width: calc(100vw - 20px); }
+  .editing-toolbar { max-height: 112px; overflow: auto; overscroll-behavior: contain; }
+  .editing-panel, .editing-library { max-height: calc(100dvh - 242px); padding: 16px; }
+  .editing-actions { bottom: -16px; }
+  .editing-table-row { flex-wrap: wrap; }
+}
+
+/* Overlay sidebars own the narrow screen; the editor resumes when they close. */
+@media (max-width: 760px) {
+  body:has(.workspace > .side-panel:not([hidden])) .review-editing,
+  body:has(#navigation:not([hidden])) .review-editing { visibility: hidden; pointer-events: none; }
+}

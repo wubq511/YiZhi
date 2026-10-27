@@ -1,0 +1,795 @@
+{
+  "allPassed": true,
+  "caseCount": 128,
+  "examples": {
+    "11001": {
+      "noShift": "11001",
+      "shr": "01100",
+      "shl": "10010",
+      "ror": "11100",
+      "rol": "10011",
+      "asr": "11100",
+      "ror2": "01110"
+    },
+    "10110": {
+      "noShift": "10110",
+      "shr": "01011",
+      "shl": "01100",
+      "ror": "01011",
+      "rol": "01101",
+      "asr": "11011",
+      "ror2": "10101"
+    }
+  },
+  "note": "按逻辑/循环/算术定义独立计算；ror2 与 bits[-2:]+bits[:-2] 全量一致，P60 的 0 不当作 d0。",
+  "cases": [
+    {
+      "input": "0000",
+      "controlCode": "000",
+      "control": "noShift",
+      "output": "0000"
+    },
+    {
+      "input": "0000",
+      "controlCode": "001",
+      "control": "shr",
+      "output": "0000"
+    },
+    {
+      "input": "0000",
+      "controlCode": "010",
+      "control": "shl",
+      "output": "0000"
+    },
+    {
+      "input": "0000",
+      "controlCode": "011",
+      "control": "ror",
+      "output": "0000"
+    },
+    {
+      "input": "0000",
+      "controlCode": "100",
+      "control": "rol",
+      "output": "0000"
+    },
+    {
+      "input": "0000",
+      "controlCode": "101",
+      "control": "asr",
+      "output": "0000"
+    },
+    {
+      "input": "0000",
+      "controlCode": "110",
+      "control": "ror2",
+      "output": "0000"
+    },
+    {
+      "input": "0000",
+      "controlCode": "111",
+      "control": "noShift",
+      "output": "0000"
+    },
+    {
+      "input": "0001",
+      "controlCode": "000",
+      "control": "noShift",
+      "output": "0001"
+    },
+    {
+      "input": "0001",
+      "controlCode": "001",
+      "control": "shr",
+      "output": "0000"
+    },
+    {
+      "input": "0001",
+      "controlCode": "010",
+      "control": "shl",
+      "output": "0010"
+    },
+    {
+      "input": "0001",
+      "controlCode": "011",
+      "control": "ror",
+      "output": "1000"
+    },
+    {
+      "input": "0001",
+      "controlCode": "100",
+      "control": "rol",
+      "output": "0010"
+    },
+    {
+      "input": "0001",
+      "controlCode": "101",
+      "control": "asr",
+      "output": "0000"
+    },
+    {
+      "input": "0001",
+      "controlCode": "110",
+      "control": "ror2",
+      "output": "0100"
+    },
+    {
+      "input": "0001",
+      "controlCode": "111",
+      "control": "noShift",
+      "output": "0001"
+    },
+    {
+      "input": "0010",
+      "controlCode": "000",
+      "control": "noShift",
+      "output": "0010"
+    },
+    {
+      "input": "0010",
+      "controlCode": "001",
+      "control": "shr",
+      "output": "0001"
+    },
+    {
+      "input": "0010",
+      "controlCode": "010",
+      "control": "shl",
+      "output": "0100"
+    },
+    {
+      "input": "0010",
+      "controlCode": "011",
+      "control": "ror",
+      "output": "0001"
+    },
+    {
+      "input": "0010",
+      "controlCode": "100",
+      "control": "rol",
+      "output": "0100"
+    },
+    {
+      "input": "0010",
+      "controlCode": "101",
+      "control": "asr",
+      "output": "0001"
+    },
+    {
+      "input": "0010",
+      "controlCode": "110",
+      "control": "ror2",
+      "output": "1000"
+    },
+    {
+      "input": "0010",
+      "controlCode": "111",
+      "control": "noShift",
+      "output": "0010"
+    },
+    {
+      "input": "0011",
+      "controlCode": "000",
+      "control": "noShift",
+      "output": "0011"
+    },
+    {
+      "input": "0011",
+      "controlCode": "001",
+      "control": "shr",
+      "output": "0001"
+    },
+    {
+      "input": "0011",
+      "controlCode": "010",
+      "control": "shl",
+      "output": "0110"
+    },
+    {
+      "input": "0011",
+      "controlCode": "011",
+      "control": "ror",
+      "output": "1001"
+    },
+    {
+      "input": "0011",
+      "controlCode": "100",
+      "control": "rol",
+      "output": "0110"
+    },
+    {
+      "input": "0011",
+      "controlCode": "101",
+      "control": "asr",
+      "output": "0001"
+    },
+    {
+      "input": "0011",
+      "controlCode": "110",
+      "control": "ror2",
+      "output": "1100"
+    },
+    {
+      "input": "0011",
+      "controlCode": "111",
+      "control": "noShift",
+      "output": "0011"
+    },
+    {
+      "input": "0100",
+      "controlCode": "000",
+      "control": "noShift",
+      "output": "0100"
+    },
+    {
+      "input": "0100",
+      "controlCode": "001",
+      "control": "shr",
+      "output": "0010"
+    },
+    {
+      "input": "0100",
+      "controlCode": "010",
+      "control": "shl",
+      "output": "1000"
+    },
+    {
+      "input": "0100",
+      "controlCode": "011",
+      "control": "ror",
+      "output": "0010"
+    },
+    {
+      "input": "0100",
+      "controlCode": "100",
+      "control": "rol",
+      "output": "1000"
+    },
+    {
+      "input": "0100",
+      "controlCode": "101",
+      "control": "asr",
+      "output": "0010"
+    },
+    {
+      "input": "0100",
+      "controlCode": "110",
+      "control": "ror2",
+      "output": "0001"
+    },
+    {
+      "input": "0100",
+      "controlCode": "111",
+      "control": "noShift",
+      "output": "0100"
+    },
+    {
+      "input": "0101",
+      "controlCode": "000",
+      "control": "noShift",
+      "output": "0101"
+    },
+    {
+      "input": "0101",
+      "controlCode": "001",
+      "control": "shr",
+      "output": "0010"
+    },
+    {
+      "input": "0101",
+      "controlCode": "010",
+      "control": "shl",
+      "output": "1010"
+    },
+    {
+      "input": "0101",
+      "controlCode": "011",
+      "control": "ror",
+      "output": "1010"
+    },
+    {
+      "input": "0101",
+      "controlCode": "100",
+      "control": "rol",
+      "output": "1010"
+    },
+    {
+      "input": "0101",
+      "controlCode": "101",
+      "control": "asr",
+      "output": "0010"
+    },
+    {
+      "input": "0101",
+      "controlCode": "110",
+      "control": "ror2",
+      "output": "0101"
+    },
+    {
+      "input": "0101",
+      "controlCode": "111",
+      "control": "noShift",
+      "output": "0101"
+    },
+    {
+      "input": "0110",
+      "controlCode": "000",
+      "control": "noShift",
+      "output": "0110"
+    },
+    {
+      "input": "0110",
+      "controlCode": "001",
+      "control": "shr",
+      "output": "0011"
+    },
+    {
+      "input": "0110",
+      "controlCode": "010",
+      "control": "shl",
+      "output": "1100"
+    },
+    {
+      "input": "0110",
+      "controlCode": "011",
+      "control": "ror",
+      "output": "0011"
+    },
+    {
+      "input": "0110",
+      "controlCode": "100",
+      "control": "rol",
+      "output": "1100"
+    },
+    {
+      "input": "0110",
+      "controlCode": "101",
+      "control": "asr",
+      "output": "0011"
+    },
+    {
+      "input": "0110",
+      "controlCode": "110",
+      "control": "ror2",
+      "output": "1001"
+    },
+    {
+      "input": "0110",
+      "controlCode": "111",
+      "control": "noShift",
+      "output": "0110"
+    },
+    {
+      "input": "0111",
+      "controlCode": "000",
+      "control": "noShift",
+      "output": "0111"
+    },
+    {
+      "input": "0111",
+      "controlCode": "001",
+      "control": "shr",
+      "output": "0011"
+    },
+    {
+      "input": "0111",
+      "controlCode": "010",
+      "control": "shl",
+      "output": "1110"
+    },
+    {
+      "input": "0111",
+      "controlCode": "011",
+      "control": "ror",
+      "output": "1011"
+    },
+    {
+      "input": "0111",
+      "controlCode": "100",
+      "control": "rol",
+      "output": "1110"
+    },
+    {
+      "input": "0111",
+      "controlCode": "101",
+      "control": "asr",
+      "output": "0011"
+    },
+    {
+      "input": "0111",
+      "controlCode": "110",
+      "control": "ror2",
+      "output": "1101"
+    },
+    {
+      "input": "0111",
+      "controlCode": "111",
+      "control": "noShift",
+      "output": "0111"
+    },
+    {
+      "input": "1000",
+      "controlCode": "000",
+      "control": "noShift",
+      "output": "1000"
+    },
+    {
+      "input": "1000",
+      "controlCode": "001",
+      "control": "shr",
+      "output": "0100"
+    },
+    {
+      "input": "1000",
+      "controlCode": "010",
+      "control": "shl",
+      "output": "0000"
+    },
+    {
+      "input": "1000",
+      "controlCode": "011",
+      "control": "ror",
+      "output": "0100"
+    },
+    {
+      "input": "1000",
+      "controlCode": "100",
+      "control": "rol",
+      "output": "0001"
+    },
+    {
+      "input": "1000",
+      "controlCode": "101",
+      "control": "asr",
+      "output": "1100"
+    },
+    {
+      "input": "1000",
+      "controlCode": "110",
+      "control": "ror2",
+      "output": "0010"
+    },
+    {
+      "input": "1000",
+      "controlCode": "111",
+      "control": "noShift",
+      "output": "1000"
+    },
+    {
+      "input": "1001",
+      "controlCode": "000",
+      "control": "noShift",
+      "output": "1001"
+    },
+    {
+      "input": "1001",
+      "controlCode": "001",
+      "control": "shr",
+      "output": "0100"
+    },
+    {
+      "input": "1001",
+      "controlCode": "010",
+      "control": "shl",
+      "output": "0010"
+    },
+    {
+      "input": "1001",
+      "controlCode": "011",
+      "control": "ror",
+      "output": "1100"
+    },
+    {
+      "input": "1001",
+      "controlCode": "100",
+      "control": "rol",
+      "output": "0011"
+    },
+    {
+      "input": "1001",
+      "controlCode": "101",
+      "control": "asr",
+      "output": "1100"
+    },
+    {
+      "input": "1001",
+      "controlCode": "110",
+      "control": "ror2",
+      "output": "0110"
+    },
+    {
+      "input": "1001",
+      "controlCode": "111",
+      "control": "noShift",
+      "output": "1001"
+    },
+    {
+      "input": "1010",
+      "controlCode": "000",
+      "control": "noShift",
+      "output": "1010"
+    },
+    {
+      "input": "1010",
+      "controlCode": "001",
+      "control": "shr",
+      "output": "0101"
+    },
+    {
+      "input": "1010",
+      "controlCode": "010",
+      "control": "shl",
+      "output": "0100"
+    },
+    {
+      "input": "1010",
+      "controlCode": "011",
+      "control": "ror",
+      "output": "0101"
+    },
+    {
+      "input": "1010",
+      "controlCode": "100",
+      "control": "rol",
+      "output": "0101"
+    },
+    {
+      "input": "1010",
+      "controlCode": "101",
+      "control": "asr",
+      "output": "1101"
+    },
+    {
+      "input": "1010",
+      "controlCode": "110",
+      "control": "ror2",
+      "output": "1010"
+    },
+    {
+      "input": "1010",
+      "controlCode": "111",
+      "control": "noShift",
+      "output": "1010"
+    },
+    {
+      "input": "1011",
+      "controlCode": "000",
+      "control": "noShift",
+      "output": "1011"
+    },
+    {
+      "input": "1011",
+      "controlCode": "001",
+      "control": "shr",
+      "output": "0101"
+    },
+    {
+      "input": "1011",
+      "controlCode": "010",
+      "control": "shl",
+      "output": "0110"
+    },
+    {
+      "input": "1011",
+      "controlCode": "011",
+      "control": "ror",
+      "output": "1101"
+    },
+    {
+      "input": "1011",
+      "controlCode": "100",
+      "control": "rol",
+      "output": "0111"
+    },
+    {
+      "input": "1011",
+      "controlCode": "101",
+      "control": "asr",
+      "output": "1101"
+    },
+    {
+      "input": "1011",
+      "controlCode": "110",
+      "control": "ror2",
+      "output": "1110"
+    },
+    {
+      "input": "1011",
+      "controlCode": "111",
+      "control": "noShift",
+      "output": "1011"
+    },
+    {
+      "input": "1100",
+      "controlCode": "000",
+      "control": "noShift",
+      "output": "1100"
+    },
+    {
+      "input": "1100",
+      "controlCode": "001",
+      "control": "shr",
+      "output": "0110"
+    },
+    {
+      "input": "1100",
+      "controlCode": "010",
+      "control": "shl",
+      "output": "1000"
+    },
+    {
+      "input": "1100",
+      "controlCode": "011",
+      "control": "ror",
+      "output": "0110"
+    },
+    {
+      "input": "1100",
+      "controlCode": "100",
+      "control": "rol",
+      "output": "1001"
+    },
+    {
+      "input": "1100",
+      "controlCode": "101",
+      "control": "asr",
+      "output": "1110"
+    },
+    {
+      "input": "1100",
+      "controlCode": "110",
+      "control": "ror2",
+      "output": "0011"
+    },
+    {
+      "input": "1100",
+      "controlCode": "111",
+      "control": "noShift",
+      "output": "1100"
+    },
+    {
+      "input": "1101",
+      "controlCode": "000",
+      "control": "noShift",
+      "output": "1101"
+    },
+    {
+      "input": "1101",
+      "controlCode": "001",
+      "control": "shr",
+      "output": "0110"
+    },
+    {
+      "input": "1101",
+      "controlCode": "010",
+      "control": "shl",
+      "output": "1010"
+    },
+    {
+      "input": "1101",
+      "controlCode": "011",
+      "control": "ror",
+      "output": "1110"
+    },
+    {
+      "input": "1101",
+      "controlCode": "100",
+      "control": "rol",
+      "output": "1011"
+    },
+    {
+      "input": "1101",
+      "controlCode": "101",
+      "control": "asr",
+      "output": "1110"
+    },
+    {
+      "input": "1101",
+      "controlCode": "110",
+      "control": "ror2",
+      "output": "0111"
+    },
+    {
+      "input": "1101",
+      "controlCode": "111",
+      "control": "noShift",
+      "output": "1101"
+    },
+    {
+      "input": "1110",
+      "controlCode": "000",
+      "control": "noShift",
+      "output": "1110"
+    },
+    {
+      "input": "1110",
+      "controlCode": "001",
+      "control": "shr",
+      "output": "0111"
+    },
+    {
+      "input": "1110",
+      "controlCode": "010",
+      "control": "shl",
+      "output": "1100"
+    },
+    {
+      "input": "1110",
+      "controlCode": "011",
+      "control": "ror",
+      "output": "0111"
+    },
+    {
+      "input": "1110",
+      "controlCode": "100",
+      "control": "rol",
+      "output": "1101"
+    },
+    {
+      "input": "1110",
+      "controlCode": "101",
+      "control": "asr",
+      "output": "1111"
+    },
+    {
+      "input": "1110",
+      "controlCode": "110",
+      "control": "ror2",
+      "output": "1011"
+    },
+    {
+      "input": "1110",
+      "controlCode": "111",
+      "control": "noShift",
+      "output": "1110"
+    },
+    {
+      "input": "1111",
+      "controlCode": "000",
+      "control": "noShift",
+      "output": "1111"
+    },
+    {
+      "input": "1111",
+      "controlCode": "001",
+      "control": "shr",
+      "output": "0111"
+    },
+    {
+      "input": "1111",
+      "controlCode": "010",
+      "control": "shl",
+      "output": "1110"
+    },
+    {
+      "input": "1111",
+      "controlCode": "011",
+      "control": "ror",
+      "output": "1111"
+    },
+    {
+      "input": "1111",
+      "controlCode": "100",
+      "control": "rol",
+      "output": "1111"
+    },
+    {
+      "input": "1111",
+      "controlCode": "101",
+      "control": "asr",
+      "output": "1111"
+    },
+    {
+      "input": "1111",
+      "controlCode": "110",
+      "control": "ror2",
+      "output": "1111"
+    },
+    {
+      "input": "1111",
+      "controlCode": "111",
+      "control": "noShift",
+      "output": "1111"
+    }
+  ]
+}

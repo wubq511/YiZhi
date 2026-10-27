@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>数字逻辑 · 在画板上复习</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="../style-math-prototype/handwriting.css">
+  <link rel="stylesheet" href="../style-math-prototype/vendor/mathlive/mathlive-static.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="identity"><span class="brand-mark">∿</span><div><strong>数字逻辑</strong><span class="crumb">期中复习 / 阅读原型</span></div></div>
+    <span class="scope-badge">MUX · 卡诺图 · 74LS138</span>
+    <div class="header-actions">
+      <button id="back" disabled title="回到上一处阅读位置">← 返回</button>
+      <button id="relations-toggle" aria-expanded="false">知识关系</button>
+      <button id="fullscreen" title="全屏阅读" aria-label="全屏阅读">⛶</button>
+    </div>
+  </header>
+  <main class="workspace">
+    <aside id="navigation" aria-label="课程导航">
+      <div class="nav-top"><span>课程目录</span><button id="nav-close" aria-label="收起课程目录">‹</button></div>
+      <label class="search"><span>⌕</span><input id="search" type="search" placeholder="找知识、公式或方法" autocomplete="off" aria-label="查找本页知识"></label>
+      <div id="nav-items"></div>
+      <div id="search-results" hidden></div>
+      <div class="nav-bottom">3 组真实阅读内容<br><span>其余关联单元提供摘要与出处</span></div>
+    </aside>
+    <section id="viewport" aria-label="可拖动缩放的复习画板" tabindex="0">
+      <button id="nav-open" class="floating-open" hidden>☰ 课程目录</button>
+      <div class="reading-context"><span id="depth-label">主题概览</span><span class="context-divider">/</span><span id="location-label">整张画板</span></div>
+      <div id="world"><svg id="relations-layer" aria-hidden="true"></svg><div id="themes"></div></div>
+      <div class="canvas-tools"><button id="zoom-out" aria-label="缩小">−</button><output id="zoom-label">30%</output><button id="zoom-in" aria-label="放大">＋</button><button id="theme-fit">本主题单元</button><button id="fit">主题总览</button></div>
+      <div class="canvas-input" title="鼠标模式：滚轮缩放；Shift＋滚轮横向平移，Ctrl/Cmd＋Shift＋滚轮纵向平移。触控板模式：双指平移、捏合缩放。空格＋拖动和中键拖动在两种模式下都可用。"><select id="input-mode" aria-label="画板操作方式"><option value="mouse">滚轮缩放</option><option value="trackpad">触控板平移</option></select><span id="gesture-help">拖动平移 · 捏合缩放 · 空格 / 中键拖动</span></div>
+      <aside id="minimap-panel" aria-label="画板小地图"><div class="minimap-heading"><span>当前位置</span><button id="minimap-close" aria-label="收起小地图">−</button></div><svg id="minimap" viewBox="0 0 3600 2500" aria-label="点击小地图定位"></svg></aside>
+      <button id="minimap-open" hidden>打开小地图</button>
+    </section>
+    <aside id="relationship-panel" class="side-panel" hidden>
+      <div class="panel-top"><div><span class="eyebrow">把联系看清楚</span><h2>知识关系</h2></div><button id="relations-close" aria-label="关闭知识关系">×</button></div>
+      <div class="relation-modes" role="group" aria-label="关系显示范围"><button data-mode="main" aria-pressed="true">主关系</button><button data-mode="related" aria-pressed="false">当前相关</button><button data-mode="all" aria-pressed="false">全部关系</button></div>
+      <p id="relation-summary" class="panel-copy"></p><div id="relation-list"></div>
+      <p class="panel-foot">箭头按各自含义阅读。主题间的聚合线用于定位；具体前置条件以单元关系为准。</p>
+    </aside>
+    <aside id="source-panel" class="side-panel source-panel" hidden>
+      <div class="panel-top"><div><span class="eyebrow">回到课程依据</span><h2 id="source-title">来源核对</h2></div><button id="source-close" aria-label="关闭来源核对">×</button></div>
+      <p id="source-caption" class="panel-copy"></p><div id="source-pages"></div>
+    </aside>
+  </main>
+  <div id="toast" role="status" hidden></div>
+  <script src="../style-math-prototype/vendor/mathlive/mathlive.min.js"></script>
+  <script src="rough-browser.js"></script>
+  <script src="course-data.js"></script>
+  <script src="content.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

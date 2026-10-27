@@ -1,0 +1,168 @@
+{
+  "brief_sha256": "037f8e3a2d97fe28940a5187959351fb2cc4aa64234700878b11593729f91a3d",
+  "brief_unchanged": true,
+  "truth_table": [
+    {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+      "selected": "I0",
+      "expression": "z",
+      "function": 0,
+      "mux_output": 0,
+      "group_value": 0,
+      "pass": true
+    },
+    {
+      "x": 0,
+      "y": 0,
+      "z": 1,
+      "selected": "I0",
+      "expression": "z",
+      "function": 1,
+      "mux_output": 1,
+      "group_value": 1,
+      "pass": true
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "z": 0,
+      "selected": "I1",
+      "expression": "¬z",
+      "function": 1,
+      "mux_output": 1,
+      "group_value": 1,
+      "pass": true
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "z": 1,
+      "selected": "I1",
+      "expression": "¬z",
+      "function": 0,
+      "mux_output": 0,
+      "group_value": 0,
+      "pass": true
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "z": 0,
+      "selected": "I2",
+      "expression": "0",
+      "function": 0,
+      "mux_output": 0,
+      "group_value": 0,
+      "pass": true
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "z": 1,
+      "selected": "I2",
+      "expression": "0",
+      "function": 0,
+      "mux_output": 0,
+      "group_value": 0,
+      "pass": true
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "z": 0,
+      "selected": "I3",
+      "expression": "1",
+      "function": 1,
+      "mux_output": 1,
+      "group_value": 1,
+      "pass": true
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "z": 1,
+      "selected": "I3",
+      "expression": "1",
+      "function": 1,
+      "mux_output": 1,
+      "group_value": 1,
+      "pass": true
+    }
+  ],
+  "all_eight_inputs_pass": true,
+  "missing_visible_brief_text": [],
+  "svg_size": [
+    1440,
+    1040
+  ],
+  "png_size": [
+    2160,
+    1560
+  ],
+  "upstream": {
+    "commit": "1ca1ff9cfcb67893a43d32b9ef3a1b782c44a46f",
+    "modified": false,
+    "node_for_motion": ">=22.12.0",
+    "schema_version": 1,
+    "skill_root": "/private/tmp/mux-fireworks",
+    "source": "git-checkout",
+    "styles": {
+      "1": "Flat Icon",
+      "2": "Dark Terminal",
+      "3": "Blueprint",
+      "4": "Notion Clean",
+      "5": "Glassmorphism",
+      "6": "Claude Official",
+      "7": "OpenAI",
+      "8": "Dark Luxury",
+      "9": "C4 Review Canvas",
+      "10": "Cloud Fabric",
+      "11": "Event Transit",
+      "12": "Ops Pulse"
+    },
+    "version": "1.2.0"
+  },
+  "font_preference": "Heiti SC; system STHeiti Medium.ttc, face 1",
+  "missing_glyphs_in_selected_font": [],
+  "html_static_checks": {
+    "external_resource_elements": [],
+    "inline_script_syntax_exit_code": 0
+  },
+  "post_generation_adaptations": [
+    "CJK font preference",
+    "exact visible source notes"
+  ],
+  "source_preservation": "unchanged brief embedded in fireworks-ir.json",
+  "browser_automation": "not used; HTML interaction delegated to main thread CUA",
+  "visual_review": {
+    "status": "passed",
+    "method": "view_image",
+    "observations": [
+      "Chinese and technical glyphs readable",
+      "No text clipping",
+      "Arrows clear and prerequisite directions correct",
+      "Exact brief conclusion and source notes visible"
+    ],
+    "browser_interaction": "not inspected; main-thread CUA handoff"
+  },
+  "artifacts": {
+    "fireworks-mux.svg": {
+      "bytes": 20556,
+      "sha256": "4543e153e9bbed13707ddacf90541bfcdab08bdb861ff793231338380c8315b8"
+    },
+    "fireworks-mux.png": {
+      "bytes": 213007,
+      "sha256": "6731cc6f6eba8d4414ac81d2a27df7364f8ca464216c6bd4905782f5e4a1fdf0"
+    },
+    "fireworks-mux.html": {
+      "bytes": 29159,
+      "sha256": "1f73156a5294f7c2a454de7056a305115c5b7a764d9495ab74a2349dab8d8550"
+    },
+    "fireworks-ir.json": {
+      "bytes": 8096,
+      "sha256": "90c6e60eb88c2b7f45bbb820823cff37412aeed80f77c1e490712eea62feb7b6"
+    }
+  }
+}

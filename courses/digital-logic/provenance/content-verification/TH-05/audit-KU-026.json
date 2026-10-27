@@ -1,0 +1,47 @@
+{
+  "unitId": "KU-026",
+  "description": "代入、反演、对偶三规则独立枚举复核",
+  "checks": [
+    {
+      "name": "代入规则：(A+D)(B+C)=(A+D)B+(A+D)C 16 组全枚举",
+      "pass": true,
+      "detail": "通过"
+    },
+    {
+      "name": "代入规则：摩根定理 overline(AB)=Ā+B̄ 4 组全枚举（作为代入基础）",
+      "pass": true,
+      "detail": "通过"
+    },
+    {
+      "name": "反演规则：F=ĀB+CD̄，F̄=(A+B̄)·(C̄+D) 16 组全枚举",
+      "pass": true,
+      "detail": "通过"
+    },
+    {
+      "name": "反演规则：错误写法 A+B̄C̄+D 确实≠ F̄（保持运算顺序的必要性，预期发现）",
+      "pass": true,
+      "detail": "相等组合数=10/16"
+    },
+    {
+      "name": "对偶规则：A+BC=(A+B)(A+C) 与对偶式 A(B+C)=AB+AC 均成立 8 组全枚举",
+      "pass": true,
+      "detail": "通过"
+    },
+    {
+      "name": "对偶式与反函数不同（F'≠F̄，对偶不对变量取反）",
+      "pass": true,
+      "detail": "不同组合数=6/16"
+    },
+    {
+      "name": "P28 例：F=(A+B̄)(B+C)(Ā+C) = (A+B̄)C 8 组全枚举",
+      "pass": true,
+      "detail": "通过"
+    },
+    {
+      "name": "P28 例：对偶式 F'=AB̄+BC+ĀC = AB̄+C 8 组全枚举",
+      "pass": true,
+      "detail": "通过"
+    }
+  ],
+  "allPass": true
+}

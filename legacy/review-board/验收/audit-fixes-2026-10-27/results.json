@@ -1,0 +1,115 @@
+{
+  "stage": "audit-fixes",
+  "date": "2026-10-27",
+  "result": "4项审计发现均已修复并复验",
+  "sourceAudit": "../audit-2026-10-27/results.json",
+  "changes": [
+    {
+      "id": "A11Y-01",
+      "status": "resolved",
+      "implementation": "阅读模式只保留当前单元的 Tab 入口，包含浏览器隐式聚焦的公式、表格和单元滚动区；焦点移动时同步内部滚动与画布相机。键盘继续阅读进入下一单元标题，移动端面板覆盖时背景画布退出焦点序列。",
+      "validation": "1440×1000，KU-055 从 viewport 经目录按钮进入本单元复习状态；逐次 Tab 到底部继续阅读，所有目标保持可见，Enter 进入 KU-056 标题。移动端键盘打开助手进入输入框，关闭后恢复入口。",
+      "screenshot": "keyboard-focus.png"
+    },
+    {
+      "id": "A11Y-02",
+      "status": "resolved",
+      "implementation": "新增 UI 辅助文字、浅底辅助文字和 placeholder 颜色 token，替换相关低对比度值。",
+      "method": "Chromium computed style，实色 sRGB 相对亮度对比。",
+      "samples": [
+        {
+          "selector": "#location-label",
+          "foreground": "#626b79",
+          "background": "#ffffff",
+          "ratio": 5.387
+        },
+        {
+          "selector": "#agent-draft::placeholder",
+          "foreground": "#687080",
+          "background": "#ffffff",
+          "ratio": 4.979
+        },
+        {
+          "selector": "#agent-target",
+          "foreground": "#5f6479",
+          "background": "#f7f7fa",
+          "ratio": 5.477
+        },
+        {
+          "selector": "#gesture-help",
+          "foreground": "#626b79",
+          "background": "#ffffff",
+          "ratio": 5.387
+        },
+        {
+          "selector": ".crumb",
+          "foreground": "#626b79",
+          "background": "#ffffff",
+          "ratio": 5.387
+        }
+      ],
+      "screenshot": "assistant-contrast.png"
+    },
+    {
+      "id": "RESP-01",
+      "status": "resolved",
+      "implementation": "顶栏和操作组允许换行；工作区按实际顶栏高度分配剩余空间，保存提示同步实际顶栏高度。",
+      "validation": {
+        "viewport": "393×852",
+        "rootFontSize": "200% / 32px",
+        "headerBottom": 114.796875,
+        "viewportTop": 114.796875,
+        "viewportBottom": 852,
+        "relationsButtonRight": 286,
+        "allVisibleHeaderButtonsInside": true
+      },
+      "screenshot": "text-size-200.png"
+    },
+    {
+      "id": "COPY-01",
+      "status": "resolved",
+      "implementation": "卡诺图 showCorners 显示为“显示跨边圈组”，使用按下状态表达开关；保留内部键和 S0/S1 信号标签。",
+      "validation": "Space 切换 aria-pressed=false→true，跨边圈组与解释正常更新，标签保持中文，再次 Space 已恢复 false。",
+      "screenshot": "kmap-control.png"
+    }
+  ],
+  "validation": {
+    "clientTests": {
+      "command": "node --test tests/board-client.test.cjs tests/agent-client.test.cjs tests/editing-client.test.cjs tests/integration-client.test.cjs tests/persistence-client.test.cjs",
+      "exitCode": 0,
+      "fail": 0,
+      "skipped": 1,
+      "skipReason": "editing-client 的可选浏览器用例需要 REVIEW_EDITING_BROWSER=1；本次 board-client 已使用独立 Chrome 与隔离课程执行真实键盘、布局、面板和编辑器回归。"
+    },
+    "providerLogicTests": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest tests/test_content_provider.py",
+      "passed": 2
+    },
+    "syntax": "app.js、agent.js、content/provider.js 的 node --check 均通过",
+    "courseDataUnchanged": true,
+    "courseDataHashes": {
+      "知识地图.json": "223f55f8f4ddac71f0036274778ab25de0f40f2cf8fdd9745a8b2cb85d1c1564",
+      "视图布局.json": "c9f0f6b75a0e630cf92b34fc5a5c7980ecd3500fb7b3d5085d2de69181322b93"
+    },
+    "limits": [
+      "文字缩放为根字号模拟；未验证系统文字缩放或浏览器真实缩放。",
+      "IAB 不支持触摸事件合成，未声称真机双指触摸或屏幕阅读器验证。"
+    ]
+  },
+  "detector": {
+    "command": ".agents/skills/impeccable/scripts/impeccable detect --json 复习画板/web",
+    "exitCode": 2,
+    "count": 161,
+    "countsByRule": {
+      "side-tab": 2,
+      "design-system-radius": 29,
+      "design-system-color": 108,
+      "design-system-font-size": 21,
+      "design-system-font": 1
+    },
+    "lowContrastBefore": 10,
+    "lowContrastAfter": 0,
+    "remainingAssessment": "剩余提示为设计文档/侧车与当前字体、色值、字号、圆角尚未同步，以及原有侧边线风格启发式；沿用原审计分类，不算新功能故障。静态扫描仍不能解析服务端的两个 assets 样式别名。"
+  },
+  "nextStage": "按既定分阶段流程，document 阶段尚未执行。"
+}

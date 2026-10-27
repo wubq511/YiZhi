@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "aa4e2aaf-edf6-4fd9-b2b4-6aeae5f51775",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/robertwu/Documents/大二上/数字逻辑与部件设计/docs/复习工具调研/04-演示/archify/archify-mux.json",
+  "output": "/Users/robertwu/Documents/大二上/数字逻辑与部件设计/docs/复习工具调研/04-演示/archify/archify-mux.html",
+  "specification": {
+    "sha256": "0209e41681c993065cd1751a687a8eebe586862db909a1b31a66995ecd930596",
+    "bytes": 2466
+  },
+  "artifact": {
+    "sha256": "2ebc1fcb2e4ee04d5c9dd672e9d9918e7546dc66a3d86f527df4d84c4ecf8810",
+    "bytes": 809489
+  }
+}

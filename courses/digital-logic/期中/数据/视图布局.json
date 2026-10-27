@@ -1,0 +1,1033 @@
+{
+  "edges": [
+    {
+      "elementId": "VE-E-REL-001",
+      "relationId": "REL-001"
+    },
+    {
+      "elementId": "VE-E-REL-002",
+      "relationId": "REL-002"
+    },
+    {
+      "elementId": "VE-E-REL-003",
+      "relationId": "REL-003"
+    },
+    {
+      "elementId": "VE-E-REL-004",
+      "relationId": "REL-004"
+    },
+    {
+      "elementId": "VE-E-REL-005",
+      "relationId": "REL-005"
+    },
+    {
+      "elementId": "VE-E-REL-006",
+      "relationId": "REL-006"
+    },
+    {
+      "elementId": "VE-E-REL-007",
+      "relationId": "REL-007"
+    },
+    {
+      "elementId": "VE-E-REL-008",
+      "relationId": "REL-008"
+    },
+    {
+      "elementId": "VE-E-REL-009",
+      "relationId": "REL-009"
+    },
+    {
+      "elementId": "VE-E-REL-010",
+      "relationId": "REL-010"
+    },
+    {
+      "elementId": "VE-E-REL-011",
+      "relationId": "REL-011"
+    },
+    {
+      "elementId": "VE-E-REL-012",
+      "relationId": "REL-012"
+    },
+    {
+      "elementId": "VE-E-REL-013",
+      "relationId": "REL-013"
+    },
+    {
+      "elementId": "VE-E-REL-014",
+      "relationId": "REL-014"
+    },
+    {
+      "elementId": "VE-E-REL-015",
+      "relationId": "REL-015"
+    },
+    {
+      "elementId": "VE-E-REL-016",
+      "relationId": "REL-016"
+    },
+    {
+      "elementId": "VE-E-REL-017",
+      "relationId": "REL-017"
+    },
+    {
+      "elementId": "VE-E-REL-018",
+      "relationId": "REL-018"
+    },
+    {
+      "elementId": "VE-E-REL-019",
+      "relationId": "REL-019"
+    },
+    {
+      "elementId": "VE-E-REL-020",
+      "relationId": "REL-020"
+    },
+    {
+      "elementId": "VE-E-REL-021",
+      "relationId": "REL-021"
+    },
+    {
+      "elementId": "VE-E-REL-022",
+      "relationId": "REL-022"
+    },
+    {
+      "elementId": "VE-E-REL-023",
+      "relationId": "REL-023"
+    },
+    {
+      "elementId": "VE-E-REL-024",
+      "relationId": "REL-024"
+    },
+    {
+      "elementId": "VE-E-REL-025",
+      "relationId": "REL-025"
+    },
+    {
+      "elementId": "VE-E-REL-026",
+      "relationId": "REL-026"
+    },
+    {
+      "elementId": "VE-E-REL-027",
+      "relationId": "REL-027"
+    },
+    {
+      "elementId": "VE-E-REL-028",
+      "relationId": "REL-028"
+    },
+    {
+      "elementId": "VE-E-REL-029",
+      "relationId": "REL-029"
+    },
+    {
+      "elementId": "VE-E-REL-030",
+      "relationId": "REL-030"
+    },
+    {
+      "elementId": "VE-E-REL-031",
+      "relationId": "REL-031"
+    },
+    {
+      "elementId": "VE-E-REL-032",
+      "relationId": "REL-032"
+    },
+    {
+      "elementId": "VE-E-REL-033",
+      "relationId": "REL-033"
+    },
+    {
+      "elementId": "VE-E-REL-034",
+      "relationId": "REL-034"
+    },
+    {
+      "elementId": "VE-E-REL-035",
+      "relationId": "REL-035"
+    },
+    {
+      "elementId": "VE-E-REL-036",
+      "relationId": "REL-036"
+    },
+    {
+      "elementId": "VE-E-REL-037",
+      "relationId": "REL-037"
+    },
+    {
+      "elementId": "VE-E-REL-038",
+      "relationId": "REL-038"
+    },
+    {
+      "elementId": "VE-E-REL-039",
+      "relationId": "REL-039"
+    },
+    {
+      "elementId": "VE-E-REL-040",
+      "relationId": "REL-040"
+    },
+    {
+      "elementId": "VE-E-REL-041",
+      "relationId": "REL-041"
+    },
+    {
+      "elementId": "VE-E-REL-042",
+      "relationId": "REL-042"
+    },
+    {
+      "elementId": "VE-E-REL-043",
+      "relationId": "REL-043"
+    }
+  ],
+  "groups": [
+    {
+      "elementId": "VE-G-TH-01",
+      "height": 394,
+      "themeId": "TH-01",
+      "title": "TH-01 · 数制与数制转换",
+      "width": 600,
+      "x": 80,
+      "y": 80
+    },
+    {
+      "elementId": "VE-G-TH-02",
+      "height": 394,
+      "themeId": "TH-02",
+      "title": "TH-02 · 有符号数与补码运算",
+      "width": 600,
+      "x": 80,
+      "y": 514
+    },
+    {
+      "elementId": "VE-G-TH-03",
+      "height": 394,
+      "themeId": "TH-03",
+      "title": "TH-03 · 常用编码与可靠性编码",
+      "width": 600,
+      "x": 80,
+      "y": 948
+    },
+    {
+      "elementId": "VE-G-TH-04",
+      "height": 394,
+      "themeId": "TH-04",
+      "title": "TH-04 · 逻辑运算与逻辑门",
+      "width": 600,
+      "x": 780,
+      "y": 80
+    },
+    {
+      "elementId": "VE-G-TH-05",
+      "height": 296,
+      "themeId": "TH-05",
+      "title": "TH-05 · 逻辑代数公理与规则",
+      "width": 600,
+      "x": 780,
+      "y": 514
+    },
+    {
+      "elementId": "VE-G-TH-06",
+      "height": 394,
+      "themeId": "TH-06",
+      "title": "TH-06 · 逻辑函数表达与表示",
+      "width": 600,
+      "x": 780,
+      "y": 850
+    },
+    {
+      "elementId": "VE-G-TH-07",
+      "height": 198,
+      "themeId": "TH-07",
+      "title": "TH-07 · 逻辑函数化简",
+      "width": 600,
+      "x": 780,
+      "y": 1284
+    },
+    {
+      "elementId": "VE-G-TH-08",
+      "height": 394,
+      "themeId": "TH-08",
+      "title": "TH-08 · 卡诺图基础与化简",
+      "width": 600,
+      "x": 1480,
+      "y": 80
+    },
+    {
+      "elementId": "VE-G-TH-09",
+      "height": 296,
+      "themeId": "TH-09",
+      "title": "TH-09 · 无关项、或-与式与多输出化简",
+      "width": 600,
+      "x": 1480,
+      "y": 514
+    },
+    {
+      "elementId": "VE-G-TH-10",
+      "height": 296,
+      "themeId": "TH-10",
+      "title": "TH-10 · 组合逻辑分析与设计",
+      "width": 600,
+      "x": 2180,
+      "y": 80
+    },
+    {
+      "elementId": "VE-G-TH-11",
+      "height": 394,
+      "themeId": "TH-11",
+      "title": "TH-11 · 组合逻辑设计实例",
+      "width": 600,
+      "x": 2180,
+      "y": 416
+    },
+    {
+      "elementId": "VE-G-TH-12",
+      "height": 296,
+      "themeId": "TH-12",
+      "title": "TH-12 · 竞争冒险与延迟",
+      "width": 600,
+      "x": 2180,
+      "y": 850
+    },
+    {
+      "elementId": "VE-G-TH-13",
+      "height": 394,
+      "themeId": "TH-13",
+      "title": "TH-13 · 复用器与分配器",
+      "width": 600,
+      "x": 2880,
+      "y": 80
+    },
+    {
+      "elementId": "VE-G-TH-14",
+      "height": 492,
+      "themeId": "TH-14",
+      "title": "TH-14 · 编码器与译码器",
+      "width": 600,
+      "x": 2880,
+      "y": 514
+    },
+    {
+      "elementId": "VE-G-TH-15",
+      "height": 198,
+      "themeId": "TH-15",
+      "title": "TH-15 · 移位器",
+      "width": 600,
+      "x": 2880,
+      "y": 1046
+    },
+    {
+      "elementId": "VE-G-TH-16",
+      "height": 198,
+      "themeId": "TH-16",
+      "title": "TH-16 · 校验器与比较器",
+      "width": 600,
+      "x": 3580,
+      "y": 80
+    },
+    {
+      "elementId": "VE-G-TH-17",
+      "height": 394,
+      "themeId": "TH-17",
+      "title": "TH-17 · 加法器、减法器与乘法器",
+      "width": 600,
+      "x": 3580,
+      "y": 318
+    },
+    {
+      "elementId": "VE-G-TH-18",
+      "height": 198,
+      "themeId": "TH-18",
+      "title": "TH-18 · 二进制与 BCD 转换",
+      "width": 600,
+      "x": 3580,
+      "y": 752
+    },
+    {
+      "elementId": "VE-G-TH-19",
+      "height": 296,
+      "themeId": "TH-19",
+      "title": "TH-19 · 逻辑门器件理论",
+      "width": 600,
+      "x": 3580,
+      "y": 990
+    },
+    {
+      "elementId": "VE-G-TH-20",
+      "height": 394,
+      "themeId": "TH-20",
+      "title": "TH-20 · 可编程逻辑器件与 FPGA",
+      "width": 600,
+      "x": 3580,
+      "y": 1326
+    }
+  ],
+  "nodes": [
+    {
+      "elementId": "VE-N-KU-001",
+      "height": 86,
+      "unitId": "KU-001",
+      "width": 268,
+      "x": 104,
+      "y": 168
+    },
+    {
+      "elementId": "VE-N-KU-002",
+      "height": 86,
+      "unitId": "KU-002",
+      "width": 268,
+      "x": 388,
+      "y": 168
+    },
+    {
+      "elementId": "VE-N-KU-003",
+      "height": 86,
+      "unitId": "KU-003",
+      "width": 268,
+      "x": 104,
+      "y": 266
+    },
+    {
+      "elementId": "VE-N-KU-004",
+      "height": 86,
+      "unitId": "KU-004",
+      "width": 268,
+      "x": 388,
+      "y": 266
+    },
+    {
+      "elementId": "VE-N-KU-005",
+      "height": 86,
+      "unitId": "KU-005",
+      "width": 268,
+      "x": 104,
+      "y": 364
+    },
+    {
+      "elementId": "VE-N-KU-006",
+      "height": 86,
+      "unitId": "KU-006",
+      "width": 268,
+      "x": 104,
+      "y": 602
+    },
+    {
+      "elementId": "VE-N-KU-007",
+      "height": 86,
+      "unitId": "KU-007",
+      "width": 268,
+      "x": 388,
+      "y": 602
+    },
+    {
+      "elementId": "VE-N-KU-008",
+      "height": 86,
+      "unitId": "KU-008",
+      "width": 268,
+      "x": 104,
+      "y": 700
+    },
+    {
+      "elementId": "VE-N-KU-009",
+      "height": 86,
+      "unitId": "KU-009",
+      "width": 268,
+      "x": 388,
+      "y": 700
+    },
+    {
+      "elementId": "VE-N-KU-010",
+      "height": 86,
+      "unitId": "KU-010",
+      "width": 268,
+      "x": 104,
+      "y": 798
+    },
+    {
+      "elementId": "VE-N-KU-011",
+      "height": 86,
+      "unitId": "KU-011",
+      "width": 268,
+      "x": 104,
+      "y": 1036
+    },
+    {
+      "elementId": "VE-N-KU-012",
+      "height": 86,
+      "unitId": "KU-012",
+      "width": 268,
+      "x": 388,
+      "y": 1036
+    },
+    {
+      "elementId": "VE-N-KU-013",
+      "height": 86,
+      "unitId": "KU-013",
+      "width": 268,
+      "x": 104,
+      "y": 1134
+    },
+    {
+      "elementId": "VE-N-KU-014",
+      "height": 86,
+      "unitId": "KU-014",
+      "width": 268,
+      "x": 388,
+      "y": 1134
+    },
+    {
+      "elementId": "VE-N-KU-015",
+      "height": 86,
+      "unitId": "KU-015",
+      "width": 268,
+      "x": 104,
+      "y": 1232
+    },
+    {
+      "elementId": "VE-N-KU-016",
+      "height": 86,
+      "unitId": "KU-016",
+      "width": 268,
+      "x": 388,
+      "y": 1232
+    },
+    {
+      "elementId": "VE-N-KU-017",
+      "height": 86,
+      "unitId": "KU-017",
+      "width": 268,
+      "x": 804,
+      "y": 168
+    },
+    {
+      "elementId": "VE-N-KU-018",
+      "height": 86,
+      "unitId": "KU-018",
+      "width": 268,
+      "x": 1088,
+      "y": 168
+    },
+    {
+      "elementId": "VE-N-KU-019",
+      "height": 86,
+      "unitId": "KU-019",
+      "width": 268,
+      "x": 804,
+      "y": 266
+    },
+    {
+      "elementId": "VE-N-KU-020",
+      "height": 86,
+      "unitId": "KU-020",
+      "width": 268,
+      "x": 1088,
+      "y": 266
+    },
+    {
+      "elementId": "VE-N-KU-021",
+      "height": 86,
+      "unitId": "KU-021",
+      "width": 268,
+      "x": 804,
+      "y": 364
+    },
+    {
+      "elementId": "VE-N-KU-022",
+      "height": 86,
+      "unitId": "KU-022",
+      "width": 268,
+      "x": 1088,
+      "y": 364
+    },
+    {
+      "elementId": "VE-N-KU-023",
+      "height": 86,
+      "unitId": "KU-023",
+      "width": 268,
+      "x": 804,
+      "y": 602
+    },
+    {
+      "elementId": "VE-N-KU-024",
+      "height": 86,
+      "unitId": "KU-024",
+      "width": 268,
+      "x": 1088,
+      "y": 602
+    },
+    {
+      "elementId": "VE-N-KU-025",
+      "height": 86,
+      "unitId": "KU-025",
+      "width": 268,
+      "x": 804,
+      "y": 700
+    },
+    {
+      "elementId": "VE-N-KU-026",
+      "height": 86,
+      "unitId": "KU-026",
+      "width": 268,
+      "x": 1088,
+      "y": 700
+    },
+    {
+      "elementId": "VE-N-KU-027",
+      "height": 86,
+      "unitId": "KU-027",
+      "width": 268,
+      "x": 804,
+      "y": 938
+    },
+    {
+      "elementId": "VE-N-KU-028",
+      "height": 86,
+      "unitId": "KU-028",
+      "width": 268,
+      "x": 1088,
+      "y": 938
+    },
+    {
+      "elementId": "VE-N-KU-029",
+      "height": 86,
+      "unitId": "KU-029",
+      "width": 268,
+      "x": 804,
+      "y": 1036
+    },
+    {
+      "elementId": "VE-N-KU-030",
+      "height": 86,
+      "unitId": "KU-030",
+      "width": 268,
+      "x": 1088,
+      "y": 1036
+    },
+    {
+      "elementId": "VE-N-KU-031",
+      "height": 86,
+      "unitId": "KU-031",
+      "width": 268,
+      "x": 804,
+      "y": 1134
+    },
+    {
+      "elementId": "VE-N-KU-032",
+      "height": 86,
+      "unitId": "KU-032",
+      "width": 268,
+      "x": 804,
+      "y": 1372
+    },
+    {
+      "elementId": "VE-N-KU-033",
+      "height": 86,
+      "unitId": "KU-033",
+      "width": 268,
+      "x": 1088,
+      "y": 1372
+    },
+    {
+      "elementId": "VE-N-KU-034",
+      "height": 86,
+      "unitId": "KU-034",
+      "width": 268,
+      "x": 1504,
+      "y": 168
+    },
+    {
+      "elementId": "VE-N-KU-035",
+      "height": 86,
+      "unitId": "KU-035",
+      "width": 268,
+      "x": 1788,
+      "y": 168
+    },
+    {
+      "elementId": "VE-N-KU-036",
+      "height": 86,
+      "unitId": "KU-036",
+      "width": 268,
+      "x": 1504,
+      "y": 266
+    },
+    {
+      "elementId": "VE-N-KU-037",
+      "height": 86,
+      "unitId": "KU-037",
+      "width": 268,
+      "x": 1788,
+      "y": 266
+    },
+    {
+      "elementId": "VE-N-KU-038",
+      "height": 86,
+      "unitId": "KU-038",
+      "width": 268,
+      "x": 1504,
+      "y": 364
+    },
+    {
+      "elementId": "VE-N-KU-039",
+      "height": 86,
+      "unitId": "KU-039",
+      "width": 268,
+      "x": 1504,
+      "y": 602
+    },
+    {
+      "elementId": "VE-N-KU-040",
+      "height": 86,
+      "unitId": "KU-040",
+      "width": 268,
+      "x": 1788,
+      "y": 602
+    },
+    {
+      "elementId": "VE-N-KU-041",
+      "height": 86,
+      "unitId": "KU-041",
+      "width": 268,
+      "x": 1504,
+      "y": 700
+    },
+    {
+      "elementId": "VE-N-KU-042",
+      "height": 86,
+      "unitId": "KU-042",
+      "width": 268,
+      "x": 2204,
+      "y": 168
+    },
+    {
+      "elementId": "VE-N-KU-043",
+      "height": 86,
+      "unitId": "KU-043",
+      "width": 268,
+      "x": 2488,
+      "y": 168
+    },
+    {
+      "elementId": "VE-N-KU-044",
+      "height": 86,
+      "unitId": "KU-044",
+      "width": 268,
+      "x": 2204,
+      "y": 266
+    },
+    {
+      "elementId": "VE-N-KU-045",
+      "height": 86,
+      "unitId": "KU-045",
+      "width": 268,
+      "x": 2204,
+      "y": 504
+    },
+    {
+      "elementId": "VE-N-KU-046",
+      "height": 86,
+      "unitId": "KU-046",
+      "width": 268,
+      "x": 2488,
+      "y": 504
+    },
+    {
+      "elementId": "VE-N-KU-047",
+      "height": 86,
+      "unitId": "KU-047",
+      "width": 268,
+      "x": 2204,
+      "y": 602
+    },
+    {
+      "elementId": "VE-N-KU-048",
+      "height": 86,
+      "unitId": "KU-048",
+      "width": 268,
+      "x": 2488,
+      "y": 602
+    },
+    {
+      "elementId": "VE-N-KU-050",
+      "height": 86,
+      "unitId": "KU-050",
+      "width": 268,
+      "x": 2204,
+      "y": 700
+    },
+    {
+      "elementId": "VE-N-KU-051",
+      "height": 86,
+      "unitId": "KU-051",
+      "width": 268,
+      "x": 2204,
+      "y": 938
+    },
+    {
+      "elementId": "VE-N-KU-052",
+      "height": 86,
+      "unitId": "KU-052",
+      "width": 268,
+      "x": 2488,
+      "y": 938
+    },
+    {
+      "elementId": "VE-N-KU-053",
+      "height": 86,
+      "unitId": "KU-053",
+      "width": 268,
+      "x": 2204,
+      "y": 1036
+    },
+    {
+      "elementId": "VE-N-KU-054",
+      "height": 86,
+      "unitId": "KU-054",
+      "width": 268,
+      "x": 2488,
+      "y": 1036
+    },
+    {
+      "elementId": "VE-N-KU-055",
+      "height": 86,
+      "unitId": "KU-055",
+      "width": 268,
+      "x": 2904,
+      "y": 168
+    },
+    {
+      "elementId": "VE-N-KU-056",
+      "height": 86,
+      "unitId": "KU-056",
+      "width": 268,
+      "x": 3188,
+      "y": 168
+    },
+    {
+      "elementId": "VE-N-KU-057",
+      "height": 86,
+      "unitId": "KU-057",
+      "width": 268,
+      "x": 2904,
+      "y": 266
+    },
+    {
+      "elementId": "VE-N-KU-058",
+      "height": 86,
+      "unitId": "KU-058",
+      "width": 268,
+      "x": 3188,
+      "y": 266
+    },
+    {
+      "elementId": "VE-N-KU-059",
+      "height": 86,
+      "unitId": "KU-059",
+      "width": 268,
+      "x": 2904,
+      "y": 364
+    },
+    {
+      "elementId": "VE-N-KU-060",
+      "height": 86,
+      "unitId": "KU-060",
+      "width": 268,
+      "x": 2904,
+      "y": 602
+    },
+    {
+      "elementId": "VE-N-KU-061",
+      "height": 86,
+      "unitId": "KU-061",
+      "width": 268,
+      "x": 3188,
+      "y": 602
+    },
+    {
+      "elementId": "VE-N-KU-062",
+      "height": 86,
+      "unitId": "KU-062",
+      "width": 268,
+      "x": 2904,
+      "y": 700
+    },
+    {
+      "elementId": "VE-N-KU-063",
+      "height": 86,
+      "unitId": "KU-063",
+      "width": 268,
+      "x": 3188,
+      "y": 700
+    },
+    {
+      "elementId": "VE-N-KU-064",
+      "height": 86,
+      "unitId": "KU-064",
+      "width": 268,
+      "x": 2904,
+      "y": 798
+    },
+    {
+      "elementId": "VE-N-KU-065",
+      "height": 86,
+      "unitId": "KU-065",
+      "width": 268,
+      "x": 3188,
+      "y": 798
+    },
+    {
+      "elementId": "VE-N-KU-066",
+      "height": 86,
+      "unitId": "KU-066",
+      "width": 268,
+      "x": 2904,
+      "y": 896
+    },
+    {
+      "elementId": "VE-N-KU-067",
+      "height": 86,
+      "unitId": "KU-067",
+      "width": 268,
+      "x": 2904,
+      "y": 1134
+    },
+    {
+      "elementId": "VE-N-KU-068",
+      "height": 86,
+      "unitId": "KU-068",
+      "width": 268,
+      "x": 3604,
+      "y": 168
+    },
+    {
+      "elementId": "VE-N-KU-069",
+      "height": 86,
+      "unitId": "KU-069",
+      "width": 268,
+      "x": 3888,
+      "y": 168
+    },
+    {
+      "elementId": "VE-N-KU-070",
+      "height": 86,
+      "unitId": "KU-070",
+      "width": 268,
+      "x": 3604,
+      "y": 406
+    },
+    {
+      "elementId": "VE-N-KU-071",
+      "height": 86,
+      "unitId": "KU-071",
+      "width": 268,
+      "x": 3888,
+      "y": 406
+    },
+    {
+      "elementId": "VE-N-KU-072",
+      "height": 86,
+      "unitId": "KU-072",
+      "width": 268,
+      "x": 3604,
+      "y": 504
+    },
+    {
+      "elementId": "VE-N-KU-074",
+      "height": 86,
+      "unitId": "KU-074",
+      "width": 268,
+      "x": 3888,
+      "y": 504
+    },
+    {
+      "elementId": "VE-N-KU-075",
+      "height": 86,
+      "unitId": "KU-075",
+      "width": 268,
+      "x": 3604,
+      "y": 602
+    },
+    {
+      "elementId": "VE-N-KU-076",
+      "height": 86,
+      "unitId": "KU-076",
+      "width": 268,
+      "x": 3888,
+      "y": 602
+    },
+    {
+      "elementId": "VE-N-KU-077",
+      "height": 86,
+      "unitId": "KU-077",
+      "width": 268,
+      "x": 3604,
+      "y": 840
+    },
+    {
+      "elementId": "VE-N-KU-078",
+      "height": 86,
+      "unitId": "KU-078",
+      "width": 268,
+      "x": 3604,
+      "y": 1078
+    },
+    {
+      "elementId": "VE-N-KU-079",
+      "height": 86,
+      "unitId": "KU-079",
+      "width": 268,
+      "x": 3888,
+      "y": 1078
+    },
+    {
+      "elementId": "VE-N-KU-080",
+      "height": 86,
+      "unitId": "KU-080",
+      "width": 268,
+      "x": 3604,
+      "y": 1176
+    },
+    {
+      "elementId": "VE-N-KU-081",
+      "height": 86,
+      "unitId": "KU-081",
+      "width": 268,
+      "x": 3888,
+      "y": 1176
+    },
+    {
+      "elementId": "VE-N-KU-082",
+      "height": 86,
+      "unitId": "KU-082",
+      "width": 268,
+      "x": 3604,
+      "y": 1414
+    },
+    {
+      "elementId": "VE-N-KU-083",
+      "height": 86,
+      "unitId": "KU-083",
+      "width": 268,
+      "x": 3888,
+      "y": 1414
+    },
+    {
+      "elementId": "VE-N-KU-084",
+      "height": 86,
+      "unitId": "KU-084",
+      "width": 268,
+      "x": 3604,
+      "y": 1512
+    },
+    {
+      "elementId": "VE-N-KU-085",
+      "height": 86,
+      "unitId": "KU-085",
+      "width": 268,
+      "x": 3888,
+      "y": 1512
+    },
+    {
+      "elementId": "VE-N-KU-086",
+      "height": 86,
+      "unitId": "KU-086",
+      "width": 268,
+      "x": 3604,
+      "y": 1610
+    }
+  ],
+  "schemaVersion": "midterm-layout-1"
+}

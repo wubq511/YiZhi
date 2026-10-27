@@ -1,0 +1,158 @@
+[
+  {
+    "name": "Graphify",
+    "key": "graphify",
+    "page_url": "https://github.com/Graphify-Labs/graphify/blob/c588b72d936927790a87ad009955078ed40562a3/README.md",
+    "image_url": "https://raw.githubusercontent.com/Graphify-Labs/graphify/c588b72d936927790a87ad009955078ed40562a3/docs/graph-hero.png",
+    "alt": "Graphify README sample: FastAPI codebase shown as a force-directed knowledge graph with detected-community legend.",
+    "caption": "静态图谱效果图；README 说明它来自交互式 graph.html，展示 FastAPI 代码库及检测到的社区。",
+    "kind": "static graph visualization from an interactive product output",
+    "verification": {
+      "source_version": "graphify v0.9.94; README snapshot commit c588b72",
+      "source_evidence": "README image alt text identifies the force-directed graph and community legend.",
+      "http": "206 Partial Content; image/png; 1400x692 px (dimensions read from PNG header)"
+    },
+    "status": "verified_image"
+  },
+  {
+    "name": "NodeGraph",
+    "key": "nodegraph",
+    "page_url": "https://github.com/Jeong-jin-Han/NodeGraph/blob/2cf3a77df8d358ced3563ce348b024b39f30d817/README.md",
+    "image_url": "https://raw.githubusercontent.com/Jeong-jin-Han/NodeGraph/2cf3a77df8d358ced3563ce348b024b39f30d817/resources/screenshot-pdf-jump.png",
+    "alt": "NodeGraph screenshot: an original-text quote node is connected to the matching sentence highlighted in the source PDF.",
+    "caption": "静态界面截图；显示引用节点与 PDF 原文定位/高亮之间的关联。",
+    "kind": "static product UI screenshot",
+    "verification": {
+      "source_version": "README badge v2.4.0; snapshot commit 2cf3a77",
+      "source_evidence": "README Screenshots section labels this image PDF quote-jump and explains the source sentence is highlighted.",
+      "http": "206 Partial Content; image/png; 2420x1356 px (dimensions read from PNG header)"
+    },
+    "status": "verified_image"
+  },
+  {
+    "name": "LightRAG",
+    "key": "lightrag",
+    "page_url": "https://github.com/HKUDS/LightRAG/blob/aaebfe1bb8d55deb6a4304d357a3bf4c92fcd40a/README.md",
+    "image_url": "https://raw.githubusercontent.com/HKUDS/LightRAG/aaebfe1bb8d55deb6a4304d357a3bf4c92fcd40a/README.assets/iShot_2025-03-23_12.40.08.png",
+    "alt": "LightRAG README image placed in the LightRAG API Server section.",
+    "caption": "静态界面截图；README 将图片放在介绍 Web UI 探索功能与 REST API 的 API Server 部分，图片文件名日期为 2025-03-23。",
+    "kind": "static product UI screenshot",
+    "verification": {
+      "source_version": "LightRAG v1.5.7; README snapshot commit aaebfe1",
+      "source_evidence": "README says the server offers a web UI for exploring LightRAG functionality and places this screenshot immediately after that description.",
+      "http": "206 Partial Content; image/png; 2336x1400 px (dimensions read from PNG header)"
+    },
+    "status": "verified_image"
+  },
+  {
+    "name": "cognee",
+    "key": "cognee",
+    "page_url": "https://github.com/topoteretes/cognee/blob/37f788bd287750e10d7610173e5332b3843f6ebd/README.md",
+    "image_url": "https://raw.githubusercontent.com/topoteretes/cognee/37f788bd287750e10d7610173e5332b3843f6ebd/assets/cognee-demo.gif",
+    "alt": "Cognee Demo, animated image embedded at the top of the official README.",
+    "caption": "官方 README 的动图演示；该图为动画演示，不是单张架构图。",
+    "kind": "animated product demo GIF",
+    "verification": {
+      "source_version": "cognee v1.6.6rc1; README snapshot commit 37f788b",
+      "source_evidence": "README embeds this asset with alt text Cognee Demo. README also has separate remember/recall architecture SVGs; this entry selects the demo GIF.",
+      "http": "206 Partial Content; image/gif; 1200x390 px (dimensions read from GIF header)"
+    },
+    "status": "verified_image"
+  },
+  {
+    "name": "baoyu-skills（baoyu-diagram / baoyu-infographic）",
+    "key": "baoyu",
+    "page_url": "https://github.com/JimLiu/baoyu-skills/blob/1567581c26ec29f4216c6e6835415bf30343b0e3/README.md",
+    "image_url": "https://raw.githubusercontent.com/JimLiu/baoyu-skills/1567581c26ec29f4216c6e6835415bf30343b0e3/screenshots/infographic-layouts/bridge.webp",
+    "alt": "baoyu-infographic official README bridge layout preview.",
+    "caption": "静态 WebP 信息图布局预览，对应 baoyu-infographic 的图片类展示；baoyu-diagram 是另一条产物路径，生成自包含 SVG，仓库未发现可嵌入的 diagram 输出样图。",
+    "kind": "static infographic layout preview; diagram SVG sample unavailable",
+    "verification": {
+      "source_version": "baoyu-skills v2.5.2; README snapshot commit 1567581",
+      "source_evidence": {
+        "baoyu-infographic": "README publishes image layout previews; its skill documentation describes raster image output.",
+        "baoyu-diagram": "Official skill documentation says it generates self-contained SVG files; recursive repository file listing contains the skill docs/references but no diagram output sample."
+      },
+      "http": "206 Partial Content; image/webp; 1376x768 px (dimensions read from WebP header)",
+      "diagram_skill_url": "https://github.com/JimLiu/baoyu-skills/blob/1567581c26ec29f4216c6e6835415bf30343b0e3/skills/baoyu-diagram/SKILL.md",
+      "infographic_skill_url": "https://github.com/JimLiu/baoyu-skills/blob/1567581c26ec29f4216c6e6835415bf30343b0e3/skills/baoyu-infographic/SKILL.md"
+    },
+    "status": "verified_infographic_preview_diagram_svg_sample_missing"
+  },
+  {
+    "name": "beautiful-mermaid",
+    "key": "beautiful-mermaid",
+    "page_url": "https://github.com/lukilabs/beautiful-mermaid/blob/2ac8bbbb060ca0a65a6a21f3200bd99b1587b488/README.md",
+    "image_url": "https://raw.githubusercontent.com/lukilabs/beautiful-mermaid/2ac8bbbb060ca0a65a6a21f3200bd99b1587b488/hero.png",
+    "alt": "beautiful-mermaid sequence diagram example.",
+    "caption": "静态渲染示例图；README 标为 sequence diagram example，不是编辑器界面截图。",
+    "kind": "static rendered diagram example",
+    "verification": {
+      "source_version": "beautiful-mermaid v1.1.2; README snapshot commit 2ac8bbb",
+      "source_evidence": "README embeds hero.png with alt text identifying it as a sequence diagram example.",
+      "http": "206 Partial Content; image/png; 1568x907 px (dimensions read from PNG header)"
+    },
+    "status": "verified_image"
+  },
+  {
+    "name": "Mermaid",
+    "key": "mermaid",
+    "page_url": "https://mermaid.js.org/intro/getting-started.html",
+    "image_url": "https://mermaid.js.org/assets/Code-Preview-Config.DjJHMydJ.png",
+    "alt": "Mermaid Live Editor screenshot showing the Code, Config, and Preview panels.",
+    "caption": "静态官方编辑器界面截图；展示 Mermaid 代码、配置与图形预览同屏。",
+    "kind": "static official editor UI screenshot",
+    "verification": {
+      "source_version": "Mermaid 12.2.0, shown in the official documentation navigation on 2026-10-24",
+      "source_evidence": "The official getting-started page embeds this image under the Live Editor configuration/preview description.",
+      "http": "206 Partial Content; image/png; 1440x793 px (dimensions read from PNG header)"
+    },
+    "status": "verified_image"
+  },
+  {
+    "name": "Markmap",
+    "key": "markmap",
+    "page_url": "https://markmap.js.org/docs/markmap",
+    "image_url": null,
+    "alt": "Official Markmap try-it-out page renders Markdown hierarchy as an interactive mind map.",
+    "caption": "本轮未找到可直接嵌入的官方静态效果图；官方文档提供交互演示链接，可直接查看实际导图。",
+    "kind": "official interactive demo only",
+    "verification": {
+      "source_version": "README snapshot commit 122bf05; existing research records markmap-cli 0.18.12 and GitHub release v0.18.0 (the repository contains multiple packages)",
+      "source_evidence": "Official docs say Markdown hierarchy is rendered as an interactive mind map and link the try-it-out page.",
+      "demo_url": "https://markmap.js.org/repl",
+      "image_search": "Official repository README and docs checked; no static product image found to embed."
+    },
+    "status": "demo_only_no_embeddable_image"
+  },
+  {
+    "name": "Cytoscape.js",
+    "key": "cytoscape",
+    "page_url": "https://github.com/cytoscape/cytoscape.js/blob/9aab1b4489645c15e82fce71fdce738f58d8165d/README.md",
+    "image_url": "https://raw.githubusercontent.com/cytoscape/cytoscape.js/9aab1b4489645c15e82fce71fdce738f58d8165d/documentation/img/tokyo-big.png",
+    "alt": "Cytoscape.js static example: network of Tokyo railway stations.",
+    "caption": "静态网络图示例；README 明确称其为 Tokyo railway stations network，并提供对应交互 demo 与源码。",
+    "kind": "static graph visualization example, not a UI screenshot",
+    "verification": {
+      "source_version": "Cytoscape.js v3.34.4; README snapshot commit 9aab1b4",
+      "source_evidence": "Official README Example section describes the Tokyo railway stations network and links a live demo.",
+      "http": "206 Partial Content; image/png; 1200x505 px (dimensions read from PNG header)"
+    },
+    "status": "verified_image"
+  },
+  {
+    "name": "React Flow（xyflow）",
+    "key": "react-flow",
+    "page_url": "https://reactflow.dev/showcase",
+    "image_url": "https://reactflow.dev/img/showcase/189f4645-2242-8185-a5fe-ca2dfcebe5b1.png",
+    "alt": "CircuLearn screenshot, shown in the official React Flow showcase.",
+    "caption": "静态第三方项目界面截图；CircuLearn 是教学逻辑电路的交互模拟器，由 React Flow 官方 Showcase 展示，不是 React Flow 自带编辑器截图。",
+    "kind": "static screenshot of a showcased React Flow-powered application",
+    "verification": {
+      "source_version": "@xyflow/react v12.12.0; repository snapshot commit 8523d8d",
+      "source_evidence": "Official showcase page labels the image CircuLearn screenshot and describes the app as an interactive simulator for teaching logic circuits.",
+      "http": "206 Partial Content; image/png; 2879x1559 px (dimensions read from PNG header)"
+    },
+    "status": "verified_showcase_image"
+  }
+]

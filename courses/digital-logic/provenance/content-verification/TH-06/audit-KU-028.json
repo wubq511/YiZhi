@@ -1,0 +1,42 @@
+{
+  "unitId": "KU-028",
+  "description": "最小项/最大项性质与 Q-102 独立枚举复核",
+  "checks": [
+    {
+      "name": "性质①：每组取值恰有 1 个最小项=1、1 个最大项=0（8 组）",
+      "pass": true,
+      "detail": "通过"
+    },
+    {
+      "name": "性质②：mi·mj=0 与 Mi+Mj=1（28 对×8 组，逻辑或）",
+      "pass": true,
+      "detail": "通过"
+    },
+    {
+      "name": "性质③：Σmi=1 与 ΠMi=0（8 组）",
+      "pass": true,
+      "detail": "通过"
+    },
+    {
+      "name": "性质④：mi = overline(Mi)（8 项×8 组）",
+      "pass": true,
+      "detail": "通过"
+    },
+    {
+      "name": "Q-102 Σm(2,3,4,5,6) 与原式真值表一致（8 组枚举）",
+      "pass": true,
+      "detail": "Σm 异常=[], ΠM 异常=[]"
+    },
+    {
+      "name": "Q-102 ΠM(0,1,7) 展开式与原式等价（8 组枚举）",
+      "pass": true,
+      "detail": "通过"
+    },
+    {
+      "name": "Q-102 Σm 与 ΠM 下标集合互补",
+      "pass": true,
+      "detail": "并集=[0, 1, 2, 3, 4, 5, 6, 7]"
+    }
+  ],
+  "allPass": true
+}

@@ -1,0 +1,92 @@
+{
+  "visual_explainer": [
+    {
+      "bits": "000",
+      "group": "00",
+      "live": "xy = 00 → 选中 I0 = z；z = 0，所以 F = 0。",
+      "note": "选中 I0",
+      "output": "F = 0"
+    },
+    {
+      "bits": "001",
+      "group": "00",
+      "live": "xy = 00 → 选中 I0 = z；z = 1，所以 F = 1。",
+      "note": "选中 I0",
+      "output": "F = 1"
+    },
+    {
+      "bits": "010",
+      "group": "01",
+      "live": "xy = 01 → 选中 I1 = ¬z；z = 0，所以 F = 1。",
+      "note": "选中 I1",
+      "output": "F = 1"
+    },
+    {
+      "bits": "011",
+      "group": "01",
+      "live": "xy = 01 → 选中 I1 = ¬z；z = 1，所以 F = 0。",
+      "note": "选中 I1",
+      "output": "F = 0"
+    },
+    {
+      "bits": "100",
+      "group": "10",
+      "live": "xy = 10 → 选中 I2 = 0；z = 0，所以 F = 0。",
+      "note": "选中 I2",
+      "output": "F = 0"
+    },
+    {
+      "bits": "101",
+      "group": "10",
+      "live": "xy = 10 → 选中 I2 = 0；z = 1，所以 F = 0。",
+      "note": "选中 I2",
+      "output": "F = 0"
+    },
+    {
+      "bits": "110",
+      "group": "11",
+      "live": "xy = 11 → 选中 I3 = 1；z = 0，所以 F = 1。",
+      "note": "选中 I3",
+      "output": "F = 1"
+    },
+    {
+      "bits": "111",
+      "group": "11",
+      "live": "xy = 11 → 选中 I3 = 1；z = 1，所以 F = 1。",
+      "note": "选中 I3",
+      "output": "F = 1"
+    }
+  ],
+  "fireworks": {
+    "opened": true,
+    "zoom_in": "100% -> 120%",
+    "reset": "120% -> 100%",
+    "png_visually_reviewed": true,
+    "viewer": "native export-html",
+    "scope": "未测试复制、主题与全部导出格式"
+  },
+  "excalidraw": {
+    "native_library": "0.18.1",
+    "scene_elements": 35,
+    "png_export": "2320x1984",
+    "svg_export": true,
+    "png_visually_reviewed": true,
+    "native_editor_opened": true,
+    "drag_test": {
+      "element": "s2-output",
+      "before": [
+        1010,
+        330
+      ],
+      "saved_after": [
+        1120,
+        376
+      ],
+      "bound_arrow_followed": true
+    },
+    "saved_json_parsed": true,
+    "undo_test": true,
+    "trial_changes_not_saved_to_deliverable": true,
+    "viewport_note": "画布适配系数最终由0.84调为0.70，为顶部工具栏增加留白；该最后参数未再次截图"
+  }
+}

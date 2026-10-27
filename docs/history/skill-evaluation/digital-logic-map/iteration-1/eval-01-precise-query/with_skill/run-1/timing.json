@@ -1,0 +1,6 @@
+{
+  "total_tokens": null,
+  "duration_ms": 47401,
+  "total_duration_seconds": 47.4,
+  "note": "执行者未报告 token 计数；duration 取任务通知的 wall time。"
+}

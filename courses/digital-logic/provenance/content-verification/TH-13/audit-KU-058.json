@@ -1,0 +1,63 @@
+{
+  "scope": "TH-13 candidate only",
+  "checks": [
+    {
+      "unitId": "KU-058",
+      "name": "正文八窗输入表对照原页独立读出的输入跳变位置",
+      "cases": 8,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-058",
+      "name": "八窗实际解答由同窗输入重算",
+      "cases": 8,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-058",
+      "name": "P16参考Y波形与选择计算独立对照",
+      "cases": 8,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-058",
+      "name": "读取自测题干数组与实际答案，按时间索引计算",
+      "cases": 6,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-058",
+      "name": "实际figure的640×240框边界、互不遮盖、连线端点",
+      "cases": 26,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "chapter",
+      "name": "validate_reading完整权威内存副本",
+      "cases": 1,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "chapter",
+      "name": "正式四样本reading在内存组合前后保持不变",
+      "cases": 4,
+      "pass": true,
+      "failures": []
+    }
+  ],
+  "allPass": true,
+  "caseCount": 61,
+  "fragmentSha256": {
+    "KU-058": "4acbd9c1386e032760418e41e2d66b4ae2ff4ab8c2a09ff9ad9372c38635c086"
+  },
+  "limitations": [
+    "原页目视由人工完成，脚本不能代替view_image",
+    "未运行浏览器或正式导入"
+  ]
+}

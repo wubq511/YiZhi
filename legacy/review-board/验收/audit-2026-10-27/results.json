@@ -1,0 +1,324 @@
+{
+  "stage": "audit",
+  "date": "2026-10-27",
+  "scope": "复习画板/web 与其实际载入的字体/原型样式；技术质量审计，不修改应用源码和课程权威数据。",
+  "implementationIntegrityVerdict": {
+    "result": "通过产品一致性检查，存在需要修复的实现缺口",
+    "evidence": "连续画布、主题/单元/材料层级、个人状态与课程重要性区分仍一致；未发现用装饰替代功能的系统性问题。showCorners 标签是局部实现信息泄漏。"
+  },
+  "healthScore": {
+    "total": 13,
+    "maximum": 20,
+    "rating": "Acceptable：需要明显改进",
+    "dimensions": [
+      {
+        "name": "Accessibility",
+        "score": 2,
+        "maximum": 4,
+        "finding": "键盘焦点在屏外；多处辅助文字对比度不足。"
+      },
+      {
+        "name": "Performance",
+        "score": 3,
+        "maximum": 4,
+        "finding": "已有帧调度、签名比对减少渲染与原页图片延迟加载；固定频率轮询是后续测量候选，未发现当前严重运行时异常。",
+        "basis": "源码审查，不是硬件性能基准。"
+      },
+      {
+        "name": "Theming",
+        "score": 3,
+        "maximum": 4,
+        "finding": "课程语义色已有 token，UI 辅助色仍有硬编码和对比度问题。产品首版不承诺主题切换，未把缺少暗色模式判为缺陷。"
+      },
+      {
+        "name": "Responsive Design",
+        "score": 2,
+        "maximum": 4,
+        "finding": "默认窄屏可用；文字增大时顶栏截断。真实触摸未验证。"
+      },
+      {
+        "name": "Implementation Integrity",
+        "score": 3,
+        "maximum": 4,
+        "finding": "整体产品语言与结构一致；局部控件显示实现字段名，设计文档待约定 document 阶段同步。"
+      }
+    ],
+    "note": "按 impeccable audit 量表做的工程评估，不是 WCAG 合规认证。"
+  },
+  "issueCounts": {
+    "P1": 2,
+    "P2": 2,
+    "P0": 0,
+    "P3": 0
+  },
+  "findings": [
+    {
+      "id": "A11Y-01",
+      "priority": "P1",
+      "title": "Tab 焦点进入屏外知识单元",
+      "category": "Accessibility",
+      "location": {
+        "file": "复习画板/web/app.js",
+        "line": 103
+      },
+      "impact": "键盘用户正在阅读 MUX 时，焦点离开可见内容，后续操作目标不可见；画板平移快捷键不能替代正常控件导航。",
+      "reproduction": [
+        "1440×1000，收起目录与助手，打开 KU-055。",
+        "聚焦 #viewport，按 Tab 到课程目录按钮，再按 Tab。"
+      ],
+      "evidence": {
+        "focusedUnit": "KU-001",
+        "focusedLabel": "位置记数法与权展开复习状态",
+        "rect": {
+          "x": -15459.1796875,
+          "y": 208.8179931640625,
+          "width": 81.69921875,
+          "height": 30.0999755859375
+        },
+        "focusableWorldControls": 1005,
+        "offscreenControls": 1004,
+        "viewportScrollLeft": 0
+      },
+      "standard": "WCAG 2.2 SC 2.4.7 Focus Visible；焦点顺序也需检查 SC 2.4.3。",
+      "standardURL": "https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html",
+      "recommendation": "为相机画布明确键盘策略：按当前显示层级管理可聚焦对象，在 focusin 时把目标带入可见区域；从导航进入单元或打开侧栏时主动转移到相应阅读/操作入口，并保留回到目录的路径。",
+      "suggestedCommand": "$impeccable harden",
+      "screenshot": "offscreen-keyboard-focus.png"
+    },
+    {
+      "id": "A11Y-02",
+      "priority": "P1",
+      "title": "辅助文字与输入提示对比度不足",
+      "category": "Accessibility / Theming",
+      "locations": [
+        {
+          "file": "复习画板/web/style.css",
+          "line": 205
+        },
+        {
+          "file": "复习画板/web/style.css",
+          "line": 222
+        },
+        {
+          "file": "复习画板/web/agent.css",
+          "line": 110
+        },
+        {
+          "file": "复习画板/web/agent.css",
+          "line": 141
+        }
+      ],
+      "impact": "当前位置、携带的目标上下文和输入提示在低对比视觉条件下难以辨认。",
+      "evidence": {
+        "method": "读取浏览器 computed style；对实色前景和实际背景按 sRGB 相对亮度计算。",
+        "samples": [
+          {
+            "selector": "#location-label",
+            "foreground": "#858791",
+            "background": "#ffffff",
+            "fontSize": 12,
+            "ratio": 3.576
+          },
+          {
+            "selector": "#agent-draft::placeholder",
+            "foreground": "#999ba6",
+            "background": "#ffffff",
+            "fontSize": 16,
+            "ratio": 2.765
+          },
+          {
+            "selector": "#agent-target",
+            "foreground": "#7a818c",
+            "background": "#f7f7fa",
+            "fontSize": 12,
+            "ratio": 3.673
+          },
+          {
+            "selector": "#gesture-help",
+            "foreground": "#898b95",
+            "background": "#ffffff",
+            "fontSize": 12,
+            "ratio": 3.392
+          },
+          {
+            "selector": ".crumb",
+            "foreground": "#7b7c86",
+            "background": "#ffffff",
+            "fontSize": 12,
+            "ratio": 4.142
+          }
+        ]
+      },
+      "standard": "WCAG 2.2 SC 1.4.3：正常字号文字至少 4.5:1。",
+      "standardURL": "https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html",
+      "recommendation": "建立满足对比要求的 UI 次级文字与 placeholder token，并在白底、目标浅底、消息浅底分别复测。保留课程语义配色，避免把所有文本统一加黑。",
+      "suggestedCommand": "$impeccable colorize",
+      "screenshot": "assistant-contrast.png"
+    },
+    {
+      "id": "RESP-01",
+      "priority": "P2",
+      "title": "放大文字后顶部操作被截断",
+      "category": "Responsive Design",
+      "locations": [
+        {
+          "file": "复习画板/web/style.css",
+          "line": 104
+        },
+        {
+          "file": "复习画板/web/style.css",
+          "line": 484
+        }
+      ],
+      "impact": "字体放大用户看不到完整的知识关系操作标签；顶部固定高度和不收缩操作组没有足够的空间适配。",
+      "reproduction": [
+        "393×852 视口，将根字体临时设为 200%（32px），其余样式保持原样。",
+        "检查 #relations-toggle 的边界；验证后恢复原根字体。"
+      ],
+      "evidence": {
+        "viewportWidth": 393,
+        "rootFontSize": 32,
+        "relationsButton": {
+          "left": 330.046875,
+          "right": 442.046875,
+          "width": 112
+        },
+        "documentScrollWidth": 393,
+        "default320pxViewport": "无横向溢出，知识关系按钮 right=308。",
+        "boundary": "这是根字体增大模拟，不是操作系统文字缩放、浏览器真实缩放或真机验证；因此单独报告适配问题，不直接声称完整 WCAG 缩放合规结论。"
+      },
+      "recommendation": "在空间不足或字体放大时允许顶栏重排/换行或提供清楚的更多操作入口，并同步工作区可用高度。",
+      "suggestedCommand": "$impeccable adapt",
+      "screenshot": "text-size-200.png"
+    },
+    {
+      "id": "COPY-01",
+      "priority": "P2",
+      "title": "卡诺图按钮显示内部变量名",
+      "category": "Implementation Integrity",
+      "location": {
+        "file": "复习画板/web/content/provider.js",
+        "line": 71
+      },
+      "impact": "学生看到 showCorners 0/1，必须从实现名猜测操作含义。",
+      "reproduction": [
+        "打开 KU-035 卡诺图圈组化简。",
+        "观察按钮 showCorners 0；点击后变为 showCorners 1，输出讲解正常变化。",
+        "再次点击恢复初始状态。"
+      ],
+      "evidence": {
+        "labelBefore": "showCorners0",
+        "labelAfter": "showCorners1",
+        "pressedStateWorks": true,
+        "outputAfter": "首列和末列跨边相邻，四个 1 可以合成一组；圈内只有 C 恒为 0。"
+      },
+      "recommendation": "给交互输入增加面向学生的展示标签映射，例如显示跨边圈组；保留 showCorners 作为内部状态键，且不要把 S0/S1 等有课程意义的信号名统一替换。",
+      "suggestedCommand": "$impeccable clarify",
+      "screenshot": "kmap-control.png"
+    }
+  ],
+  "patterns": [
+    "把所有世界坐标中的控件保留在 Tab 序列，未同步可见阅读范围。",
+    "浅色 UI 文字散落在多个 CSS 文件，需按使用语境统一对比要求。",
+    "内容渲染器直接使用输入对象键名作为展示标签，缺少展示语义层。"
+  ],
+  "positiveFindings": [
+    "默认 320px 窗口顶栏无横向溢出。",
+    "助手发送按钮和编辑工具避让的上一阶段修复在本轮页面检查中仍有效。",
+    "表格使用 th/thead/tbody；本轮 DOM 中未发现无 alt 属性的 img 或完全无文本/标签/title 的 button。",
+    "控件已有 focus-visible 样式、展开状态和 aria-live 输出，问题集中在相机与焦点协调。",
+    "源码具有 pointercancel/lostpointercapture 清理和 reduced-motion 处理；未将源码存在等同于真机验证。",
+    "本轮已检查浏览器日志未出现 error/warn。"
+  ],
+  "detector": {
+    "command": ".agents/skills/impeccable/scripts/impeccable detect --json 复习画板/web",
+    "exitCode": 2,
+    "rawCount": 187,
+    "warnings": 9,
+    "advisories": 178,
+    "countsByRule": {
+      "side-tab": 2,
+      "design-system-radius": 29,
+      "design-system-color": 124,
+      "design-system-font-size": 21,
+      "low-contrast": 10,
+      "design-system-font": 1
+    },
+    "triage": {
+      "lowContrast": "6 warnings + 4 advisories，运行时实色样本确认同类问题，合并为 A11Y-02。",
+      "designSystem": "124 color + 29 radius + 21 font-size advisories，以及 1 font warning。大多与 DESIGN.md/侧车尚未同步有关；Excalifont 是 typeset 阶段有意引入。留到 document，不能按原始告警条数当成独立故障。",
+      "sideTab": "2 warnings 对应语义变更警告和引用块的 3px 左线，是风格启发式；本轮没有证据显示它们阻碍任务，未列为功能缺陷。"
+    },
+    "limitations": "静态扫描无法解析两个 /assets 服务端别名样式路径；浏览器当前实际已载入。未运行额外浏览器扫描器。"
+  },
+  "nonBlockingObservations": [
+    {
+      "title": "助手关闭后仍每 700ms 轮询状态",
+      "location": "复习画板/web/agent.js:346",
+      "assessment": "源码确认，但该轮询也负责发现任务落盘变化和更新正文；没有负载测量，不将固定轮询本身算作故障。若需优化，应先测量空闲开销，再按任务/页面可见性退避。"
+    },
+    {
+      "title": "触摸捏合路径",
+      "assessment": "当前相机源码主要使用单指 Pointer Events 平移和 wheel+ctrl/meta 缩放。IAB 拒绝 Input.dispatchTouchEvent；原生双指触摸缩放、取消和移动表格应在支持触摸合成的环境或真机再验。"
+    }
+  ],
+  "validationBoundaries": {
+    "engine": "Codex in-app browser / Chromium，桌面仿真视口",
+    "viewports": [
+      "1440x1000",
+      "930x745",
+      "393x852",
+      "320x640"
+    ],
+    "keyboard": "真实 Tab 输入；KU-055 → 屏外 KU-001 已复现。",
+    "touch": "未验证：IAB 不支持 Input.dispatchTouchEvent。已撤销临时触摸仿真开关。",
+    "textScaling": "临时根字体 200%，验证后已还原；未验证浏览器真实缩放。",
+    "screenReader": "没有运行 VoiceOver/NVDA；只检查 DOM/可访问性树与键盘。",
+    "performance": "没有真实硬件 FPS、启动时间或负载基准。",
+    "existingTests": "复用 layout 阶段 5 个客户端测试文件无失败、1 skipped 的结果；本轮未修改代码，未无意义重复全套回归。",
+    "courseDataHashes": {
+      "知识地图.json": "223f55f8f4ddac71f0036274778ab25de0f40f2cf8fdd9745a8b2cb85d1c1564",
+      "视图布局.json": "c9f0f6b75a0e630cf92b34fc5a5c7980ecd3500fb7b3d5085d2de69181322b93"
+    },
+    "courseDataUnchanged": true
+  },
+  "recommendedActions": [
+    {
+      "priority": "P1",
+      "command": "$impeccable harden",
+      "action": "修复相机画布与键盘焦点协调。"
+    },
+    {
+      "priority": "P1",
+      "command": "$impeccable colorize",
+      "action": "修复辅助文字与 placeholder 对比度。"
+    },
+    {
+      "priority": "P2",
+      "command": "$impeccable adapt",
+      "action": "修复大字体顶栏重排。"
+    },
+    {
+      "priority": "P2",
+      "command": "$impeccable clarify",
+      "action": "修复卡诺图展示标签。"
+    },
+    {
+      "command": "$impeccable audit",
+      "action": "针对四项复现路径复验，并在可用环境补触摸检查。"
+    },
+    {
+      "command": "$impeccable document",
+      "action": "同步已确认的字体、字号、颜色、布局规则与侧车文件。"
+    },
+    {
+      "command": "$impeccable polish",
+      "action": "修复和同步后的最终视觉核对。"
+    }
+  ],
+  "followUp": {
+    "date": "2026-10-27",
+    "status": "4项发现均已修复并复验；原审计证据和评分保留为修复前快照",
+    "report": "../audit-fixes-2026-10-27/results.json"
+  }
+}

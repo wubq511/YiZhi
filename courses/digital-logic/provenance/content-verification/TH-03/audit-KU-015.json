@@ -1,0 +1,88 @@
+{
+  "ticket": "02-TH-03",
+  "unitId": "KU-015",
+  "method": "独立奇偶计数与全枚举，不读取正文 JSON",
+  "total": 11,
+  "passed": 11,
+  "failed": 0,
+  "allPass": true,
+  "results": [
+    {
+      "item": "1001 偶校验 P=0",
+      "expected": "0",
+      "actual": "0",
+      "pass": true,
+      "detail": "偶数个 1，偶校验补 0"
+    },
+    {
+      "item": "1001 奇校验 P=1",
+      "expected": "1",
+      "actual": "1",
+      "pass": true,
+      "detail": "奇数个 1 需补 1"
+    },
+    {
+      "item": "1001 偶校验 5 位码",
+      "expected": "01001",
+      "actual": "01001",
+      "pass": true,
+      "detail": "P 在最左"
+    },
+    {
+      "item": "1001 奇校验 5 位码",
+      "expected": "11001",
+      "actual": "11001",
+      "pass": true,
+      "detail": "P 在最左"
+    },
+    {
+      "item": "0110 偶校验 5 位码",
+      "expected": "00110",
+      "actual": "00110",
+      "pass": true,
+      "detail": "2 个 1，P=0"
+    },
+    {
+      "item": "0110 奇校验 5 位码",
+      "expected": "10110",
+      "actual": "10110",
+      "pass": true,
+      "detail": "需 P=1"
+    },
+    {
+      "item": "1111 偶校验 5 位码",
+      "expected": "01111",
+      "actual": "01111",
+      "pass": true,
+      "detail": "4 个 1，P=0"
+    },
+    {
+      "item": "偶校验：1 位翻转后不通过",
+      "expected": false,
+      "actual": false,
+      "pass": true,
+      "detail": "奇数个错误改变奇偶性"
+    },
+    {
+      "item": "偶校验：2 位翻转后通过",
+      "expected": true,
+      "actual": true,
+      "pass": true,
+      "detail": "偶数个错误不改变奇偶性"
+    },
+    {
+      "item": "任意 4 位数据的单比特错误均被偶校验发现",
+      "expected": [],
+      "actual": [],
+      "pass": true,
+      "detail": "对 16×5=80 种单比特错误全枚举，均应报错"
+    },
+    {
+      "item": "任意 2 位错误均不被偶校验发现",
+      "expected": 160,
+      "actual": 160,
+      "pass": true,
+      "detail": "16 个数据 × C(5,2)=10 种双错，全部通过偶校验"
+    }
+  ]
+}

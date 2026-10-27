@@ -1,0 +1,156 @@
+{
+ "total": 30,
+ "passed": 30,
+ "results": [
+  {
+   "check": "Y51(0,1,1)=1",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "Y51(0,0,1)=1",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "Y51 变量 B 有静态1潜在 (1,1)",
+   "ok": true,
+   "detail": "[(0, 0), (0, 1), (1, 0), (1, 1)]"
+  },
+  {
+   "check": "Y51 门级仿真出现毛刺事件",
+   "ok": true,
+   "detail": "35 events"
+  },
+  {
+   "check": "ĀC 是冗余项（不改变 Y51）",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "加 ĀC 后原毛刺上下文无残留",
+   "ok": true,
+   "detail": "residual=0"
+  },
+  {
+   "check": "课程例 变量 A 有险象",
+   "ok": true,
+   "detail": "{'A': True, 'B': False, 'C': False}"
+  },
+  {
+   "check": "课程例 变量 C 无险象",
+   "ok": true,
+   "detail": "{'A': True, 'B': False, 'C': False}"
+  },
+  {
+   "check": "课程例 相切对恰为 (011,111)",
+   "ok": true,
+   "detail": "[((0, 1, 1), (1, 1, 1))]"
+  },
+  {
+   "check": "F1 各变量均无险象",
+   "ok": true,
+   "detail": "{'A': False, 'B': False, 'C': False, 'D': False}"
+  },
+  {
+   "check": "F1 无相切对",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "F1 门级仿真无事件",
+   "ok": true,
+   "detail": "0"
+  },
+  {
+   "check": "F2（含 BC）各变量均无险象",
+   "ok": true,
+   "detail": "{'A': False, 'B': False, 'C': False, 'D': False}"
+  },
+  {
+   "check": "F2（含 BC）无相切对",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "F2 门级仿真无事件",
+   "ok": true,
+   "detail": "0"
+  },
+  {
+   "check": "裸式 AB+A'CD 变量 A 有险象",
+   "ok": true,
+   "detail": "{'A': True, 'B': False, 'C': False, 'D': False}"
+  },
+  {
+   "check": "裸式恰有一对相切 (0111,1111)",
+   "ok": true,
+   "detail": "[((0, 1, 1, 1), (1, 1, 1, 1))]"
+  },
+  {
+   "check": "裸式门级仿真有事件",
+   "ok": true,
+   "detail": "28"
+  },
+  {
+   "check": "BCD 是裸式的冗余项",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "加 BCD 后原冒险上下文无残留",
+   "ok": true,
+   "detail": "residual=0"
+  },
+  {
+   "check": "例2.15 tpd=300ps",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "例2.15 tcd=120ps",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "例2.16(a) tpd_sy=200ps",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "例2.16(a) tpd_dy=170ps",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "例2.16(b) tpd_sy=125ps",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "例2.16(b) tpd_dy=50ps",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "例2.16(c) tpd_s0y=85ps",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "例2.16(c) tpd_dy=100ps",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "自测 tpd=3×10ns=30ns",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "自测 tcd=1×6ns=6ns",
+   "ok": true,
+   "detail": ""
+  }
+ ]
+}

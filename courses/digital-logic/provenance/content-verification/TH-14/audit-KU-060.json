@@ -1,0 +1,84 @@
+{
+  "scope": "TH-14 candidate only",
+  "checks": [
+    {
+      "unitId": "KU-060",
+      "name": "实际P47优先表展开：15非零+1无效行",
+      "cases": 16,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-060",
+      "name": "实际优先表无重叠且完整覆盖16种输入",
+      "cases": 1,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-060",
+      "name": "读取正文P47优先表达式，独立最高优先级比较",
+      "cases": 15,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-060",
+      "name": "普通编码实际公式仅在四个单有效行验证",
+      "cases": 4,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-060",
+      "name": "P48按下标编码的实际公式与V",
+      "cases": 31,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-060",
+      "name": "Q-088从实际题干有效输入独立求优先级",
+      "cases": 1,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-060",
+      "name": "普通8-3实际或门表达式",
+      "cases": 8,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-060",
+      "name": "实际figure的640×240框边界、互不遮盖、连线端点",
+      "cases": 34,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "chapter",
+      "name": "validate_reading权威内存副本",
+      "cases": 1,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "chapter",
+      "name": "四正式样本reading保留不变",
+      "cases": 4,
+      "pass": true,
+      "failures": []
+    }
+  ],
+  "allPass": true,
+  "caseCount": 115,
+  "fragmentSha256": {
+    "KU-060": "98f10b7d28bfe802ff65210305bed09347b9a073d1e08388c4a37fb309cf663c"
+  },
+  "limitations": [
+    "原页目视由人工完成，脚本不能替代看图",
+    "未运行浏览器或正式导入"
+  ]
+}

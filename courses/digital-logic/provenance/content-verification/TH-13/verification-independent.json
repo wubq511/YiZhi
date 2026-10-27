@@ -1,0 +1,149 @@
+{
+  "scope": "TH-13 candidate only",
+  "checks": [
+    {
+      "unitId": "KU-057",
+      "name": "读取正文级联公式，对照直接地址选择",
+      "cases": 64,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-057",
+      "name": "实际74153功能表展开全部128种输入",
+      "cases": 128,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-057",
+      "name": "P22正文实际数据端接线对照题干最小项",
+      "cases": 32,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-057",
+      "name": "练习两种选择位序：读取答案数据端并重算",
+      "cases": 16,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-057",
+      "name": "8:1的4+2+1选择树：全部数据/地址枚举",
+      "cases": 2048,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-057",
+      "name": "16:1使能和末级选择：单热点覆盖所有通道",
+      "cases": 288,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-057",
+      "name": "四位并行2:1总线选择与整数整体选择",
+      "cases": 512,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-058",
+      "name": "正文八窗输入表对照原页独立读出的输入跳变位置",
+      "cases": 8,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-058",
+      "name": "八窗实际解答由同窗输入重算",
+      "cases": 8,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-058",
+      "name": "P16参考Y波形与选择计算独立对照",
+      "cases": 8,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-058",
+      "name": "读取自测题干数组与实际答案，按时间索引计算",
+      "cases": 6,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-059",
+      "name": "实际三态DMUX功能表对照单选定义",
+      "cases": 8,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-059",
+      "name": "实际例练的D5/D6答案与题干整数位权核对",
+      "cases": 3,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-059",
+      "name": "MUX/DMUX链路全部256数据字×8地址",
+      "cases": 2048,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-057",
+      "name": "实际figure的640×240框边界、互不遮盖、连线端点",
+      "cases": 26,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-058",
+      "name": "实际figure的640×240框边界、互不遮盖、连线端点",
+      "cases": 26,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-059",
+      "name": "实际figure的640×240框边界、互不遮盖、连线端点",
+      "cases": 20,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "chapter",
+      "name": "validate_reading完整权威内存副本",
+      "cases": 1,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "chapter",
+      "name": "正式四样本reading在内存组合前后保持不变",
+      "cases": 4,
+      "pass": true,
+      "failures": []
+    }
+  ],
+  "allPass": true,
+  "caseCount": 5254,
+  "fragmentSha256": {
+    "KU-057": "99e09943f717af6a2f6b99222fe21c5910f390143e9a7a6187b63cb406fc04dd",
+    "KU-058": "8f7945cc34169b7a63ea226444f97df1d0ca01de5b2be757821cb38490b5c2ee",
+    "KU-059": "63f84dc23569f5a07faabae1302165bccb4735e63492a20eb72b8c038ba461de"
+  },
+  "limitations": [
+    "原页目视由人工完成，脚本不能代替view_image",
+    "未运行浏览器或正式导入"
+  ]
+}

@@ -1,0 +1,528 @@
+{
+  "capturedAt": "2026-10-27T07:41:24.934Z",
+  "environment": {
+    "browser": "156.0.8078.48",
+    "platform": "darwin 27.0.0 arm64",
+    "cpu": "Apple M5",
+    "logicalCpus": 10,
+    "memoryGB": 16,
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "deviceScaleFactor": 1,
+    "headless": true
+  },
+  "caveats": [
+    "Synthetic 500-unit load repeats 84 real units; not 500 unique course units.",
+    "Single run per scenario; warm OS/browser assets; no statistical confidence interval.",
+    "rAF timings from headless Chrome are not physical mouse/trackpad or display-frame acceptance.",
+    "DOM counts exclude shadow DOM; JS heap is an approximate Chromium snapshot, not total memory.",
+    "Agent updates are simulated; sample localStorage is not CourseService durability or real Agent integration."
+  ],
+  "scenarios": [
+    {
+      "count": 84,
+      "mode": "all",
+      "initial": {
+        "mode": "all",
+        "count": 84,
+        "domElements": 23099,
+        "heavyBodies": 84,
+        "heapBytes": 19289248,
+        "viewport": {
+          "x": 95,
+          "y": 35,
+          "zoom": 0.7
+        },
+        "owner": "follow",
+        "workIndex": 0,
+        "bodyMounts": 84,
+        "bodyUnmounts": 0,
+        "paragraphUpdates": 0,
+        "deferredUpdates": 0,
+        "loadToReadyMs": 459.0999999642372
+      },
+      "readingAndStreaming": {
+        "frames": 360,
+        "frameMedianMs": 16.699999999999818,
+        "frameP95Ms": 16.700000000000728,
+        "framesOver33ms": 0,
+        "maxFrameMs": 16.800000000000182,
+        "longTasks": 0,
+        "maxLongTaskMs": 0,
+        "mode": "all",
+        "count": 84,
+        "domElements": 23100,
+        "heavyBodies": 84,
+        "heapBytes": 17391067,
+        "viewport": {
+          "x": 177.9684290428103,
+          "y": -195.28431904944705,
+          "zoom": 0.718088238978043
+        },
+        "owner": "manual",
+        "workIndex": 0,
+        "bodyMounts": 84,
+        "bodyUnmounts": 0,
+        "paragraphUpdates": 114,
+        "deferredUpdates": 0
+      },
+      "overviewAndStreaming": {
+        "frames": 160,
+        "frameMedianMs": 16.699999999999818,
+        "frameP95Ms": 33.30000000000018,
+        "framesOver33ms": 6,
+        "maxFrameMs": 133.29999999999927,
+        "longTasks": 2,
+        "maxLongTaskMs": 122,
+        "mode": "all",
+        "count": 84,
+        "domElements": 23100,
+        "heavyBodies": 84,
+        "heapBytes": 17725075,
+        "viewport": {
+          "x": -322.75323976283187,
+          "y": -259.88860857564185,
+          "zoom": 0.011989301141727771
+        },
+        "owner": "manual",
+        "workIndex": 0,
+        "bodyMounts": 84,
+        "bodyUnmounts": 0,
+        "paragraphUpdates": 167,
+        "deferredUpdates": 0
+      },
+      "errors": []
+    },
+    {
+      "count": 84,
+      "mode": "managed",
+      "initial": {
+        "mode": "managed",
+        "count": 84,
+        "domElements": 1869,
+        "heavyBodies": 3,
+        "heapBytes": 15722646,
+        "viewport": {
+          "x": 95,
+          "y": 35,
+          "zoom": 0.7
+        },
+        "owner": "follow",
+        "workIndex": 0,
+        "bodyMounts": 3,
+        "bodyUnmounts": 0,
+        "paragraphUpdates": 0,
+        "deferredUpdates": 0,
+        "loadToReadyMs": 108.80000001192093
+      },
+      "readingAndStreaming": {
+        "frames": 360,
+        "frameMedianMs": 16.699999999999818,
+        "frameP95Ms": 16.799999999999955,
+        "framesOver33ms": 0,
+        "maxFrameMs": 16.800000000000182,
+        "longTasks": 0,
+        "maxLongTaskMs": 0,
+        "mode": "managed",
+        "count": 84,
+        "domElements": 1870,
+        "heavyBodies": 3,
+        "heapBytes": 12613498,
+        "viewport": {
+          "x": 178.05992110711082,
+          "y": -195.24975311577006,
+          "zoom": 0.7180818961957887
+        },
+        "owner": "manual",
+        "workIndex": 0,
+        "bodyMounts": 4,
+        "bodyUnmounts": 1,
+        "paragraphUpdates": 116,
+        "deferredUpdates": 0
+      },
+      "overviewAndStreaming": {
+        "frames": 180,
+        "frameMedianMs": 16.699999999999818,
+        "frameP95Ms": 16.799999999999272,
+        "framesOver33ms": 0,
+        "maxFrameMs": 16.80000000000109,
+        "longTasks": 0,
+        "maxLongTaskMs": 0,
+        "mode": "managed",
+        "count": 84,
+        "domElements": 923,
+        "heavyBodies": 0,
+        "heapBytes": 16240607,
+        "viewport": {
+          "x": -322.7290726952207,
+          "y": -259.9369098597601,
+          "zoom": 0.011989186060453433
+        },
+        "owner": "manual",
+        "workIndex": 0,
+        "bodyMounts": 4,
+        "bodyUnmounts": 4,
+        "paragraphUpdates": 116,
+        "deferredUpdates": 0
+      },
+      "errors": []
+    },
+    {
+      "count": 500,
+      "mode": "all",
+      "initial": {
+        "mode": "all",
+        "count": 500,
+        "domElements": 137431,
+        "heavyBodies": 500,
+        "heapBytes": 65776127,
+        "viewport": {
+          "x": 95,
+          "y": 35,
+          "zoom": 0.7
+        },
+        "owner": "follow",
+        "workIndex": 0,
+        "bodyMounts": 500,
+        "bodyUnmounts": 0,
+        "paragraphUpdates": 0,
+        "deferredUpdates": 0,
+        "loadToReadyMs": 1675.800000011921
+      },
+      "readingAndStreaming": {
+        "frames": 360,
+        "frameMedianMs": 16.699999999999818,
+        "frameP95Ms": 16.700000000000728,
+        "framesOver33ms": 0,
+        "maxFrameMs": 16.800000000000182,
+        "longTasks": 0,
+        "maxLongTaskMs": 0,
+        "mode": "all",
+        "count": 500,
+        "domElements": 137432,
+        "heavyBodies": 500,
+        "heapBytes": 47426405,
+        "viewport": {
+          "x": 176.54978095117968,
+          "y": -195.8193779294989,
+          "zoom": 0.7181864788729224
+        },
+        "owner": "manual",
+        "workIndex": 0,
+        "bodyMounts": 500,
+        "bodyUnmounts": 0,
+        "paragraphUpdates": 114,
+        "deferredUpdates": 0
+      },
+      "overviewAndStreaming": {
+        "frames": 138,
+        "frameMedianMs": 16.69999999999891,
+        "frameP95Ms": 33.29999999999927,
+        "framesOver33ms": 6,
+        "maxFrameMs": 250.09999999999854,
+        "longTasks": 4,
+        "maxLongTaskMs": 253,
+        "mode": "all",
+        "count": 500,
+        "domElements": 137432,
+        "heavyBodies": 500,
+        "heapBytes": 48478847,
+        "viewport": {
+          "x": -322.8861923945567,
+          "y": -259.6172974270239,
+          "zoom": 0.011989934249497888
+        },
+        "owner": "manual",
+        "workIndex": 0,
+        "bodyMounts": 500,
+        "bodyUnmounts": 0,
+        "paragraphUpdates": 162,
+        "deferredUpdates": 0
+      },
+      "errors": []
+    },
+    {
+      "count": 500,
+      "mode": "managed",
+      "initial": {
+        "mode": "managed",
+        "count": 500,
+        "domElements": 6157,
+        "heavyBodies": 3,
+        "heapBytes": 35038706,
+        "viewport": {
+          "x": 95,
+          "y": 35,
+          "zoom": 0.7
+        },
+        "owner": "follow",
+        "workIndex": 0,
+        "bodyMounts": 3,
+        "bodyUnmounts": 0,
+        "paragraphUpdates": 0,
+        "deferredUpdates": 0,
+        "loadToReadyMs": 163.5
+      },
+      "readingAndStreaming": {
+        "frames": 361,
+        "frameMedianMs": 16.699999999999818,
+        "frameP95Ms": 16.700000000000728,
+        "framesOver33ms": 0,
+        "maxFrameMs": 16.800000000000182,
+        "longTasks": 0,
+        "maxLongTaskMs": 0,
+        "mode": "managed",
+        "count": 500,
+        "domElements": 6158,
+        "heavyBodies": 3,
+        "heapBytes": 46090782,
+        "viewport": {
+          "x": 178.65451933137433,
+          "y": -195.0249387841765,
+          "zoom": 0.7180406541911887
+        },
+        "owner": "manual",
+        "workIndex": 0,
+        "bodyMounts": 4,
+        "bodyUnmounts": 1,
+        "paragraphUpdates": 115,
+        "deferredUpdates": 0
+      },
+      "overviewAndStreaming": {
+        "frames": 179,
+        "frameMedianMs": 16.699999999999818,
+        "frameP95Ms": 16.700000000000728,
+        "framesOver33ms": 0,
+        "maxFrameMs": 33.30000000000018,
+        "longTasks": 0,
+        "maxLongTaskMs": 0,
+        "mode": "managed",
+        "count": 500,
+        "domElements": 5211,
+        "heavyBodies": 0,
+        "heapBytes": 53421815,
+        "viewport": {
+          "x": -322.81547070000556,
+          "y": -259.7628165371699,
+          "zoom": 0.011989597479523837
+        },
+        "owner": "manual",
+        "workIndex": 0,
+        "bodyMounts": 4,
+        "bodyUnmounts": 4,
+        "paragraphUpdates": 115,
+        "deferredUpdates": 0
+      },
+      "errors": []
+    }
+  ],
+  "checks": [
+    {
+      "name": "84/all: source images decoded",
+      "pass": true,
+      "evidence": []
+    },
+    {
+      "name": "84/all: no page errors",
+      "pass": true,
+      "evidence": []
+    },
+    {
+      "name": "84/managed: source images decoded",
+      "pass": true,
+      "evidence": []
+    },
+    {
+      "name": "84/managed: no page errors",
+      "pass": true,
+      "evidence": []
+    },
+    {
+      "name": "500/all: source images decoded",
+      "pass": true,
+      "evidence": []
+    },
+    {
+      "name": "500/all: no page errors",
+      "pass": true,
+      "evidence": []
+    },
+    {
+      "name": "500/managed: source images decoded",
+      "pass": true,
+      "evidence": []
+    },
+    {
+      "name": "500/managed: no page errors",
+      "pass": true,
+      "evidence": []
+    },
+    {
+      "name": "wheel cancels animation and future following",
+      "pass": true,
+      "evidence": {
+        "taken": {
+          "x": -402.88215041139676,
+          "y": -90,
+          "zoom": 0.7
+        },
+        "after": {
+          "x": -402.88215041139676,
+          "y": -90,
+          "zoom": 0.7
+        },
+        "owner": "manual"
+      }
+    },
+    {
+      "name": "return resumes at the latest object",
+      "pass": true,
+      "evidence": {
+        "viewport": {
+          "x": -1606,
+          "y": 35,
+          "zoom": 0.7
+        },
+        "workIndex": 3
+      }
+    },
+    {
+      "name": "pointer selects text without panning",
+      "pass": true,
+      "evidence": {
+        "selection": "置记数法（positional notation）用一个数字",
+        "viewport": {
+          "x": 95,
+          "y": 35,
+          "zoom": 0.7
+        }
+      }
+    },
+    {
+      "name": "selected paragraph is retained during incoming update",
+      "pass": true,
+      "evidence": {
+        "selection": "置记数法（positional notation）用一个数字"
+      }
+    },
+    {
+      "name": "deferred paragraph appears after selection ends",
+      "pass": true,
+      "evidence": "同一段新内容，选文结束后再显示。"
+    },
+    {
+      "name": "focused Chinese draft and selection survive other updates",
+      "pass": true,
+      "evidence": {
+        "same": true,
+        "value": "中文草稿与光标保持",
+        "start": 2,
+        "end": 4,
+        "active": true,
+        "viewport": {
+          "x": 95,
+          "y": 35,
+          "zoom": 0.7
+        }
+      }
+    },
+    {
+      "name": "focused editor remains mounted offscreen",
+      "pass": true
+    },
+    {
+      "name": "inactive offscreen body is unmounted",
+      "pass": true
+    },
+    {
+      "name": "draft returns after remount",
+      "pass": true
+    },
+    {
+      "name": "MathLive value and cursor survive sibling updates",
+      "pass": true,
+      "evidence": {
+        "before": {
+          "value": "\\frac{A+B}{C}",
+          "position": 3
+        },
+        "after": {
+          "same": true,
+          "value": "\\frac{A+B}{C}",
+          "position": 3
+        }
+      }
+    },
+    {
+      "name": "real experiment input changes without moving camera",
+      "pass": true,
+      "evidence": {
+        "before": {
+          "state": {
+            "RB-KU-035-diagram": {
+              "showCorners": false
+            }
+          },
+          "viewport": {
+            "x": -2173,
+            "y": -7141.6171875,
+            "zoom": 0.7
+          }
+        },
+        "after": {
+          "state": {
+            "RB-KU-035-diagram": {
+              "showCorners": 1
+            }
+          },
+          "viewport": {
+            "x": -2173,
+            "y": -7141.6171875,
+            "zoom": 0.7
+          }
+        }
+      }
+    },
+    {
+      "name": "experiment body unmounts offscreen",
+      "pass": true
+    },
+    {
+      "name": "experiment state survives remount",
+      "pass": true
+    },
+    {
+      "name": "sample autosaved draft survives reload",
+      "pass": true
+    },
+    {
+      "name": "sample autosaved formula survives reload",
+      "pass": true
+    },
+    {
+      "name": "sample autosaved experiment survives reload",
+      "pass": true
+    },
+    {
+      "name": "moved offscreen object uses current geometry for culling",
+      "pass": true
+    },
+    {
+      "name": "navigation finds the moved object and restores its draft",
+      "pass": true
+    },
+    {
+      "name": "interaction sequence: no page errors",
+      "pass": true,
+      "evidence": []
+    }
+  ],
+  "provenance": {
+    "fixtureSourceHash": "2588c903a74e05ac80b41e4ff0105c8387109711553f994b47b51cd7ac892adb",
+    "bundleSha256": "43280ca582edd126035c12e8fb470efa6f79e56f187d20711c13aee5d0810f79",
+    "fixtureSha256": "ff896778b0ff0d81be6a5859c86746fa04ddc89dd6397cf870aa9b29c325ae4b",
+    "packageLockSha256": "6ad0e14c5f1b60dd7f9b1e36cdfb614ca86d71279224a8867c90dc6dc61f8dbf"
+  }
+}

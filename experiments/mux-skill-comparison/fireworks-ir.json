@@ -1,0 +1,353 @@
+{
+  "schema_version": 1,
+  "mode": "architecture",
+  "template_type": "architecture",
+  "diagram_type": "MUX explanation and concept prerequisites",
+  "semantic_profile": "generic",
+  "style": 1,
+  "quality_profile": "showcase",
+  "text_policy": "strict",
+  "width": 1440,
+  "height": 1040,
+  "title": "用 4 选 1 多路选择器实现布尔函数",
+  "subtitle": "F(x,y,z) = Σm(1,2,6,7)  ·  变量顺序：x, y, z",
+  "containers": [
+    {
+      "id": "assignments",
+      "x": 40,
+      "y": 120,
+      "width": 1360,
+      "height": 185,
+      "label": "01  四组赋值",
+      "sublabel": "固定 xy，分别代入 z = 0 与 z = 1"
+    },
+    {
+      "id": "selection",
+      "x": 40,
+      "y": 345,
+      "width": 1360,
+      "height": 200,
+      "label": "02  MUX 选择机制"
+    },
+    {
+      "id": "concepts",
+      "x": 40,
+      "y": 590,
+      "width": 1360,
+      "height": 260,
+      "label": "03  简洁概念依赖"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "group-00",
+      "kind": "rect",
+      "x": 64,
+      "y": 170,
+      "width": 280,
+      "height": 104,
+      "label": "I0 = z",
+      "flat": true,
+      "title_size": 25,
+      "type_label": "xy = 00",
+      "sublabel": "F(z=0) = 0  ·  F(z=1) = 1",
+      "fill": "#eff6ff",
+      "stroke": "#93c5fd"
+    },
+    {
+      "id": "group-01",
+      "kind": "rect",
+      "x": 408,
+      "y": 170,
+      "width": 280,
+      "height": 104,
+      "label": "I1 = ¬z",
+      "flat": true,
+      "title_size": 25,
+      "type_label": "xy = 01",
+      "sublabel": "F(z=0) = 1  ·  F(z=1) = 0",
+      "fill": "#eff6ff",
+      "stroke": "#93c5fd"
+    },
+    {
+      "id": "group-10",
+      "kind": "rect",
+      "x": 752,
+      "y": 170,
+      "width": 280,
+      "height": 104,
+      "label": "I2 = 0",
+      "flat": true,
+      "title_size": 25,
+      "type_label": "xy = 10",
+      "sublabel": "F(z=0) = 0  ·  F(z=1) = 0",
+      "fill": "#eff6ff",
+      "stroke": "#93c5fd"
+    },
+    {
+      "id": "group-11",
+      "kind": "rect",
+      "x": 1096,
+      "y": 170,
+      "width": 280,
+      "height": 104,
+      "label": "I3 = 1",
+      "flat": true,
+      "title_size": 25,
+      "type_label": "xy = 11",
+      "sublabel": "F(z=0) = 1  ·  F(z=1) = 1",
+      "fill": "#eff6ff",
+      "stroke": "#93c5fd"
+    },
+    {
+      "id": "selectors",
+      "kind": "rect",
+      "x": 80,
+      "y": 405,
+      "width": 280,
+      "height": 100,
+      "label": "S1 = x · S0 = y",
+      "flat": true,
+      "title_size": 23,
+      "sublabel": "xy 决定选中哪个数据端",
+      "fill": "#faf5ff",
+      "stroke": "#c4b5fd"
+    },
+    {
+      "id": "mux",
+      "kind": "rect",
+      "x": 560,
+      "y": 405,
+      "width": 320,
+      "height": 100,
+      "label": "4 选 1 MUX",
+      "flat": true,
+      "title_size": 26,
+      "sublabel": "00→I0 · 01→I1 · 10→I2 · 11→I3",
+      "fill": "#eff6ff",
+      "stroke": "#93c5fd"
+    },
+    {
+      "id": "output",
+      "kind": "rect",
+      "x": 1080,
+      "y": 405,
+      "width": 280,
+      "height": 100,
+      "label": "F(x,y,z)",
+      "flat": true,
+      "title_size": 26,
+      "sublabel": "输出当前选中的数据端",
+      "fill": "#f0fdf4",
+      "stroke": "#86efac"
+    },
+    {
+      "id": "truth-table",
+      "kind": "rect",
+      "x": 80,
+      "y": 645,
+      "width": 250,
+      "height": 70,
+      "label": "真值表",
+      "flat": true,
+      "fill": "#f8fafc",
+      "stroke": "#cbd5e1",
+      "title_size": 20
+    },
+    {
+      "id": "grouping",
+      "kind": "rect",
+      "x": 510,
+      "y": 645,
+      "width": 300,
+      "height": 70,
+      "label": "按选择变量分组",
+      "flat": true,
+      "fill": "#f8fafc",
+      "stroke": "#cbd5e1",
+      "title_size": 20
+    },
+    {
+      "id": "mux-rule",
+      "kind": "rect",
+      "x": 510,
+      "y": 760,
+      "width": 300,
+      "height": 70,
+      "label": "MUX 选择规则",
+      "flat": true,
+      "fill": "#f8fafc",
+      "stroke": "#cbd5e1",
+      "title_size": 20
+    },
+    {
+      "id": "realize",
+      "kind": "rect",
+      "x": 1110,
+      "y": 645,
+      "width": 250,
+      "height": 70,
+      "label": "用 MUX 实现函数",
+      "flat": true,
+      "fill": "#f8fafc",
+      "stroke": "#cbd5e1",
+      "title_size": 20
+    }
+  ],
+  "arrows": [
+    {
+      "id": "select-signal",
+      "source": "selectors",
+      "target": "mux",
+      "source_port": "right",
+      "target_port": "left",
+      "flow": "control",
+      "label": "选择端",
+      "label_style": "offset",
+      "dashed": true
+    },
+    {
+      "id": "selected-data",
+      "source": "mux",
+      "target": "output",
+      "source_port": "right",
+      "target_port": "left",
+      "flow": "read",
+      "label": "所选数据",
+      "label_style": "offset"
+    },
+    {
+      "id": "prerequisite-1",
+      "source": "truth-table",
+      "target": "grouping",
+      "source_port": "right",
+      "target_port": "left",
+      "label": "分组取值",
+      "flow": "neutral",
+      "label_style": "offset"
+    },
+    {
+      "id": "prerequisite-2",
+      "source": "grouping",
+      "target": "realize",
+      "source_port": "right",
+      "target_port": "left",
+      "label": "确定数据端",
+      "flow": "neutral",
+      "label_style": "offset"
+    },
+    {
+      "id": "prerequisite-3",
+      "source": "mux-rule",
+      "target": "realize",
+      "source_port": "right",
+      "target_port": "bottom",
+      "label": "确定选择端",
+      "flow": "neutral",
+      "label_style": "offset"
+    }
+  ],
+  "legend_orientation": "horizontal",
+  "legend_x": 64,
+  "legend_y": 884,
+  "legend_locked": true,
+  "legend": [
+    {
+      "flow": "control",
+      "label": "选择信号"
+    },
+    {
+      "flow": "read",
+      "label": "输出数据"
+    },
+    {
+      "flow": "neutral",
+      "label": "概念依赖"
+    }
+  ],
+  "footer": "直接按真值表分组即可确定四个数据输入，本路线不要求先做卡诺图化简。",
+  "footer_x": 64,
+  "footer_y": 934,
+  "course_evidence": {
+    "sources": [
+      "02 逻辑代数 · PDF p33、38",
+      "05 组合模块1+代码 · PDF p4、19"
+    ],
+    "source_note": "PDF 页序从 1 开始。前置关系是本次依据课件整理的教学建模；函数与 MUX 数据端已枚举全部 8 组输入核对。"
+  },
+  "source_brief_sha256": "037f8e3a2d97fe28940a5187959351fb2cc4aa64234700878b11593729f91a3d",
+  "source_brief": {
+    "title": "用 4 选 1 多路选择器实现布尔函数",
+    "function": "F(x,y,z) = Σm(1,2,6,7)",
+    "variable_order": [
+      "x",
+      "y",
+      "z"
+    ],
+    "selectors": {
+      "S1": "x",
+      "S0": "y"
+    },
+    "data_inputs": {
+      "I0": "z",
+      "I1": "¬z",
+      "I2": "0",
+      "I3": "1"
+    },
+    "groups": [
+      {
+        "xy": "00",
+        "F_z0": 0,
+        "F_z1": 1,
+        "input": "I0 = z"
+      },
+      {
+        "xy": "01",
+        "F_z0": 1,
+        "F_z1": 0,
+        "input": "I1 = ¬z"
+      },
+      {
+        "xy": "10",
+        "F_z0": 0,
+        "F_z1": 0,
+        "input": "I2 = 0"
+      },
+      {
+        "xy": "11",
+        "F_z0": 1,
+        "F_z1": 1,
+        "input": "I3 = 1"
+      }
+    ],
+    "concepts": [
+      "真值表",
+      "按选择变量分组",
+      "MUX 选择规则",
+      "用 MUX 实现函数"
+    ],
+    "prerequisites": [
+      {
+        "from": "真值表",
+        "to": "按选择变量分组",
+        "label": "分组取值"
+      },
+      {
+        "from": "按选择变量分组",
+        "to": "用 MUX 实现函数",
+        "label": "确定数据端"
+      },
+      {
+        "from": "MUX 选择规则",
+        "to": "用 MUX 实现函数",
+        "label": "确定选择端"
+      }
+    ],
+    "takeaway": "直接按真值表分组即可确定四个数据输入，本路线不要求先做卡诺图化简。",
+    "sources": [
+      "02 逻辑代数 · PDF p33、38",
+      "05 组合模块1+代码 · PDF p4、19"
+    ],
+    "source_note": "PDF 页序从 1 开始。前置关系是本次依据课件整理的教学建模；函数与 MUX 数据端已枚举全部 8 组输入核对。"
+  }
+}

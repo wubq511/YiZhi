@@ -1,0 +1,95 @@
+{
+  "ticket": "02-TH-03",
+  "unitId": "KU-013",
+  "method": "独立使用 ord() 与奇偶计数规则计算，不读取正文 JSON",
+  "total": 12,
+  "passed": 12,
+  "failed": 0,
+  "allPass": true,
+  "results": [
+    {
+      "item": "ASCII '5' = 53 = 0110101",
+      "expected": "0110101",
+      "actual": "0110101",
+      "pass": true,
+      "detail": "ord('5')=53"
+    },
+    {
+      "item": "ASCII 'a' = 97 = 1100001",
+      "expected": "1100001",
+      "actual": "1100001",
+      "pass": true,
+      "detail": "ord('a')=97"
+    },
+    {
+      "item": "ASCII space = 32 = 0100000",
+      "expected": "0100000",
+      "actual": "0100000",
+      "pass": true,
+      "detail": "ord(' ')=32"
+    },
+    {
+      "item": "ASCII 'A' = 65 = 1000001",
+      "expected": "1000001",
+      "actual": "1000001",
+      "pass": true,
+      "detail": "ord('A')=65"
+    },
+    {
+      "item": "大小写字母码差 32",
+      "expected": 32,
+      "actual": 32,
+      "pass": true,
+      "detail": "第 5 位（权 32）之差"
+    },
+    {
+      "item": "'A' 7 位码有偶数个 1",
+      "expected": true,
+      "actual": true,
+      "pass": true,
+      "detail": "1000001 共 2 个 1，偶校验位为 0"
+    },
+    {
+      "item": "'A' 偶校验 8 位码",
+      "expected": "01000001",
+      "actual": "01000001",
+      "pass": true,
+      "detail": "偶校验要求总 1 数为偶"
+    },
+    {
+      "item": "'A' 奇校验 8 位码",
+      "expected": "11000001",
+      "actual": "11000001",
+      "pass": true,
+      "detail": "奇校验要求总 1 数为奇"
+    },
+    {
+      "item": "'5' 偶校验 8 位码",
+      "expected": "00110101",
+      "actual": "00110101",
+      "pass": true,
+      "detail": "0110101 共 3 个 1，偶校验补 1"
+    },
+    {
+      "item": "'5' 奇校验 8 位码",
+      "expected": "10110101",
+      "actual": "10110101",
+      "pass": true,
+      "detail": "0110101 共 3 个 1，奇校验补 0"
+    },
+    {
+      "item": "01100101 偶校验通过",
+      "expected": true,
+      "actual": true,
+      "pass": true,
+      "detail": "共 4 个 1，符合偶校验"
+    },
+    {
+      "item": "数值 5 的二进制与 ASCII 不同",
+      "expected": true,
+      "actual": true,
+      "pass": true,
+      "detail": "字符编号 53 与数值 5 语义不同"
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+<div id="local-layout-explainer">
+  <h3>局部让位示意</h3>
+  <div class="viz-controls">
+    <button class="btn btn-primary" type="button" data-toggle aria-expanded="false" aria-controls="layout-illustration">展开例题</button>
+    <span class="text-small" data-status aria-live="polite">收起时使用原有的手动位置。</span>
+  </div>
+  <svg id="layout-illustration" class="layout-illustration" role="img" aria-labelledby="layout-title layout-desc">
+    <title id="layout-title">展开材料与手动布局的关系</title>
+    <desc id="layout-desc">推荐方案示意：展开当前单元中的例题，附近手动摆放的单元临时下移；收起后回到原位置。当前阅读锚点和另一主题保持不动。</desc>
+    <g data-current>
+      <rect class="active-mark" data-current-box rx="5"/>
+      <text x="16" y="29" class="strong">正在阅读的单元</text>
+      <circle cx="18" cy="57" r="4" class="anchor-mark"/>
+      <text x="30" y="62">当前阅读锚点</text>
+      <g data-extra visibility="hidden">
+        <text x="16" y="170">已展开的完整例题</text>
+        <text x="16" y="196" class="secondary">推导、步骤与题解</text>
+      </g>
+    </g>
+    <g data-baseline visibility="hidden">
+      <line class="baseline" data-baseline-line/>
+      <text x="8" y="-8" class="secondary">原来的手动位置</text>
+    </g>
+    <g data-near>
+      <rect class="neutral-mark" data-near-box height="90" rx="5"/>
+      <text x="16" y="30" class="strong">手动摆放的单元</text>
+      <text x="16" y="59">关联笔记随它移动</text>
+    </g>
+    <g data-far>
+      <rect class="neutral-mark" data-far-box height="80" rx="5"/>
+      <text x="16" y="29" class="strong">另一主题</text>
+      <text x="16" y="56" class="secondary">位置保持不变</text>
+    </g>
+  </svg>
+</div>
+<style>
+  #local-layout-explainer .layout-illustration{display:block;width:100%;overflow:visible}
+  #local-layout-explainer .layout-illustration text{fill:var(--foreground);font-family:inherit;font-size:inherit;font-weight:400}
+  #local-layout-explainer .layout-illustration .strong{font-weight:500}
+  #local-layout-explainer .layout-illustration .secondary{fill:var(--muted-foreground)}
+  #local-layout-explainer .active-mark{fill:color-mix(in oklab,var(--viz-series-1) 13%,var(--background));stroke:var(--border);stroke-width:1}
+  #local-layout-explainer .neutral-mark{fill:var(--muted);stroke:var(--border);stroke-width:1}
+  #local-layout-explainer .anchor-mark{fill:var(--viz-series-1)}
+  #local-layout-explainer .baseline{stroke:var(--muted-foreground);stroke-width:1;stroke-dasharray:4 4}
+  #local-layout-explainer .transitioning [data-near]{transition:transform 220ms cubic-bezier(.2,.75,.25,1)}
+  #local-layout-explainer .transitioning [data-current-box]{transition:height 220ms cubic-bezier(.2,.75,.25,1)}
+  @media(prefers-reduced-motion:reduce){#local-layout-explainer .transitioning [data-near],#local-layout-explainer .transitioning [data-current-box]{transition:none}}
+</style>
+<script>
+(() => {
+  const root=document.getElementById('local-layout-explainer');
+  const svg=root.querySelector('svg');
+  const button=root.querySelector('[data-toggle]');
+  let expanded=false,transitionTimer;
+  const restore=value=>{
+    const state=value?.modelContent ?? value;
+    if(typeof state?.expanded==='boolean') expanded=state.expanded;
+  };
+  restore(window.openai?.widgetState);
+  const draw=()=>{
+    const width=Math.max(280,root.getBoundingClientRect().width);
+    const narrow=width<570;
+    const leftWidth=narrow?width-24:Math.min(340,width*.53);
+    const height=narrow?520:420;
+    svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
+    svg.setAttribute('height',String(height));
+    root.querySelector('[data-current]').setAttribute('transform','translate(12 38)');
+    const current=root.querySelector('[data-current-box]');
+    current.setAttribute('width',String(leftWidth));
+    current.style.height=(expanded?215:95)+'px';
+    root.querySelector('[data-extra]').setAttribute('visibility',expanded?'visible':'hidden');
+    const near=root.querySelector('[data-near]');
+    near.style.transform=`translate(24px,${expanded?292:172}px)`;
+    root.querySelector('[data-near-box]').setAttribute('width',String(leftWidth-12));
+    const baseline=root.querySelector('[data-baseline]');
+    baseline.setAttribute('transform','translate(24 172)');
+    baseline.setAttribute('visibility',expanded?'visible':'hidden');
+    root.querySelector('[data-baseline-line]').setAttribute('x2',String(leftWidth-12));
+    const farX=narrow?12:leftWidth+50,farY=narrow?426:38;
+    root.querySelector('[data-far]').setAttribute('transform',`translate(${farX} ${farY})`);
+    root.querySelector('[data-far-box]').setAttribute('width',String(narrow?leftWidth:width-farX-12));
+    button.textContent=expanded?'收起例题':'展开例题';
+    button.setAttribute('aria-expanded',String(expanded));
+    root.querySelector('[data-status]').textContent=expanded?'临时让位；手动位置基线不被改写。':'收起时使用原有的手动位置。';
+  };
+  button.addEventListener('click',()=>{
+    expanded=!expanded;
+    svg.classList.add('transitioning');
+    clearTimeout(transitionTimer);
+    draw();
+    transitionTimer=setTimeout(()=>svg.classList.remove('transitioning'),260);
+    if(window.openai?.setWidgetState) window.openai.setWidgetState({modelContent:{expanded},privateContent:null}).catch(()=>{});
+  });
+  window.addEventListener('openai:set_globals',event=>{
+    if(event.detail?.globals?.widgetState){restore(event.detail.globals.widgetState);draw();}
+  });
+  new ResizeObserver(draw).observe(root);
+  draw();
+})();
+</script>

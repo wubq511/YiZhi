@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "runFile": "run-KanJGk.json",
+  "measurementWindow": "HOST-RESOURCE-V2-COMPLETE-20261027",
+  "finalSnapshotSha256": "980b0edb66187a8ca555dd69ef573fe9a811ad6f423e450dd480d993c75a615e",
+  "cleanup": {
+    "remainingObservedPids": [],
+    "sourceFilesUnchanged": true,
+    "temporaryDirectoryRemoved": true
+  },
+  "failures": []
+}

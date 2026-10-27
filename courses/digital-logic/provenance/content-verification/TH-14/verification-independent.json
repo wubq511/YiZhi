@@ -1,0 +1,271 @@
+{
+  "scope": "TH-14 candidate only",
+  "checks": [
+    {
+      "unitId": "KU-060",
+      "name": "实际P47优先表展开：15非零+1无效行",
+      "cases": 16,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-060",
+      "name": "实际优先表无重叠且完整覆盖16种输入",
+      "cases": 1,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-060",
+      "name": "读取正文P47优先表达式，独立最高优先级比较",
+      "cases": 15,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-060",
+      "name": "普通编码实际公式仅在四个单有效行验证",
+      "cases": 4,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-060",
+      "name": "P48按下标编码的实际公式与V",
+      "cases": 31,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-060",
+      "name": "Q-088从实际题干有效输入独立求优先级",
+      "cases": 1,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-060",
+      "name": "普通8-3实际或门表达式",
+      "cases": 8,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-061",
+      "name": "实际148十行压缩表展开全部输入/使能",
+      "cases": 512,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-061",
+      "name": "148覆盖512组合且无重复",
+      "cases": 1,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-061",
+      "name": "实际147输出表对应全部512个按键电平",
+      "cases": 512,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-061",
+      "name": "147按9键示例实际反码答案",
+      "cases": 1,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-062",
+      "name": "P32真实表格和实际公式：低使能极性8组",
+      "cases": 16,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-062",
+      "name": "Q-093实际共享答案对照128个地址前缀",
+      "cases": 384,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-064",
+      "name": "全加器实际表/接线表达式对照整数三位求和",
+      "cases": 16,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-064",
+      "name": "010-fourvar-even 实际合并公式与原页使能接线对照题干Σm",
+      "cases": 16,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-064",
+      "name": "011-fourvar-general 实际合并公式与原页使能接线对照题干Σm",
+      "cases": 16,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-064",
+      "name": "Q-120真实码表/合并式对照独立整数n+3",
+      "cases": 20,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-064",
+      "name": "Q-120共享题实际最小项集合独立按位反算",
+      "cases": 4,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-064",
+      "name": "Q-120本接线非法BCD的确定电路输出（非余三码定义）",
+      "cases": 6,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-064",
+      "name": "自测实际低有效接线对照题干最小项",
+      "cases": 8,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-065",
+      "name": "从实际逐端接线表重建两片电路：16地址全枚举",
+      "cases": 16,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-065",
+      "name": "实际本地/全局输出编号表",
+      "cases": 16,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-065",
+      "name": "带总使能练习：电气使能条件对照全局4:16定义",
+      "cases": 32,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-066",
+      "name": "二-十进制实际功能表：合法和非法BCD全部16码",
+      "cases": 16,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-066",
+      "name": "实际L5公式对照地址等于5的低有效定义",
+      "cases": 16,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-066",
+      "name": "实际4511段码与独立字形笔画集合对照",
+      "cases": 26,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-066",
+      "name": "实际控制表：全2048组LT/BL/LE/当前值/保存值",
+      "cases": 2048,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-066",
+      "name": "锁存/消隐/试灯实际答案对照独立状态演进",
+      "cases": 6,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-060",
+      "name": "实际figure的640×240框边界、互不遮盖、连线端点",
+      "cases": 34,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-061",
+      "name": "实际figure的640×240框边界、互不遮盖、连线端点",
+      "cases": 26,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-062",
+      "name": "实际figure的640×240框边界、互不遮盖、连线端点",
+      "cases": 19,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-064",
+      "name": "实际figure的640×240框边界、互不遮盖、连线端点",
+      "cases": 13,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-065",
+      "name": "实际figure的640×240框边界、互不遮盖、连线端点",
+      "cases": 27,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-066",
+      "name": "实际figure的640×240框边界、互不遮盖、连线端点",
+      "cases": 28,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "chapter",
+      "name": "validate_reading权威内存副本",
+      "cases": 1,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "chapter",
+      "name": "四正式样本reading保留不变",
+      "cases": 4,
+      "pass": true,
+      "failures": []
+    }
+  ],
+  "allPass": true,
+  "caseCount": 3916,
+  "fragmentSha256": {
+    "KU-060": "98f10b7d28bfe802ff65210305bed09347b9a073d1e08388c4a37fb309cf663c",
+    "KU-061": "7fe098df502847e140935a45b69d2f8a6106299f3b7cbc6845be3f2b1dcdea4b",
+    "KU-062": "cd5ebc28d9418a33b8dbeba163669c354b05c3ac18ed3cff8cf4a5f936b18fdd",
+    "KU-064": "3858734b9c9a8ada4fb654479e1e8df6e274fc888ef5d4dae3173d748886d4ee",
+    "KU-065": "ce4d9e1ba29ed474decfb8bc1399b24c82d3de1ce8c0df186390278765314dcb",
+    "KU-066": "90a3a789d6cf3e8ec68432979a56d524a07b8fa217cb98eea2d2a9d76f7d7d6d"
+  },
+  "limitations": [
+    "原页目视由人工完成，脚本不能替代看图",
+    "未运行浏览器或正式导入"
+  ]
+}

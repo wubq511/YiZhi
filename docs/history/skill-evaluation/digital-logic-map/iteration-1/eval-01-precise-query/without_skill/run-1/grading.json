@@ -1,0 +1,57 @@
+{
+  "expectations": [
+    {
+      "text": "返回的单元 ID 为 KU-064，名称与主题正确，且星级与权威数据一致。",
+      "passed": true,
+      "evidence": "get_KU-064.json 返回 id=KU-064『用译码器实现逻辑函数』，themeId=TH-14『编码器与译码器』（L05），stars=5，answer.md 与之一致。"
+    },
+    {
+      "text": "来源引用准确包含课件第 05 课相关页码，没有把教材或其他课次页面冒充主要来源。",
+      "passed": true,
+      "evidence": "answer.md 列出 SRC-C05 第 35/37/39/42/43 页，并用 pdftotext 抽取原文核对页脚（35/61…43/61，见 pdf_source_pages.txt）；pageCoverage_and_mappings.json 确认五页均为 mapped→KU-064。未用教材或其他课次页面冒充主要来源。"
+    },
+    {
+      "text": "直接关联题目包含习题课【11】，并明确其 direct 角色；未把 support 或其他无关题目列为直接考查。",
+      "passed": true,
+      "evidence": "questions_direct.json 返回唯一 direct 条目 Q-120（习题课【11】，MAP-199，basis=official-solution，SRC-EX07 第 17 页）；answer.md 明确 support 计数为 0。"
+    },
+    {
+      "text": "前置结果仅包含 requires 关系，包含 KU-028 与 KU-062，未把 constructs、improves 或 inverse 当作前置。",
+      "passed": true,
+      "evidence": "related_upstream_requires_depth1.json 的三条边 REL-015(KU-028)、REL-016(KU-062)、REL-040(KU-024) 均为 requires；conditions.required 与权威数据一致，answer.md 还明确区分了 main/auxiliary 视图。"
+    },
+    {
+      "text": "回答依据来自统一查询接口及其 JSON，而不是从 Markdown 或名称猜测。",
+      "passed": true,
+      "evidence": "answer.md『复核依据』声明未用 Markdown/HTML 反推；outputs/ 含 6 组带退出码的原始 JSON、reproduce.sh 复现脚本和 pdf_source_pages.txt 原文抽取，证据链完整。"
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  },
+  "claims": [
+    {
+      "claim": "实际使用了统一接口 期中/工具/知识地图.py",
+      "type": "process",
+      "verified": true,
+      "evidence": "outputs 中 search_unit/get_KU-064/related/questions/check_dataset 与 reproduce.sh 保存了命令、JSON 和退出码。未读取 Skill 的声明由执行者自述，不能单靠这些产物证明。"
+    },
+    {
+      "claim": "正式数据文件 SHA-256 运行前后一致",
+      "type": "factual",
+      "verified": false,
+      "evidence": "本 run 只保存了运行后文件 SHA-256 86d0ef39…2c1bf，没有 before/after 对照。de3039…是 sourceHash，不能据此宣称文件字节哈希前后一致。此额外声明不影响五条既定断言。"
+    }
+  ],
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "reason": "双方都通过，本用例没有显示正确率差异。基线还额外做了原页文本核对；无重复运行和完整用量，不能将耗时差归因于 Skill。"
+      }
+    ],
+    "overall": "五条断言可核查；额外的前后哈希声明证据不足，已单独标注。"
+  }
+}

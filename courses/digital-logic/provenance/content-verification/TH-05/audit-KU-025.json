@@ -1,0 +1,37 @@
+{
+  "unitId": "KU-025",
+  "description": "推气泡法搬运规则与 P24 等价独立枚举复核",
+  "checks": [
+    {
+      "name": "P23 Backward：与非 ≡ 输入取反后进或门",
+      "pass": true,
+      "detail": "通过"
+    },
+    {
+      "name": "P23 Backward：或非 ≡ 输入取反后进与门",
+      "pass": true,
+      "detail": "通过"
+    },
+    {
+      "name": "P23 Forward：输入取反后进或门 ≡ 与非",
+      "pass": true,
+      "detail": "通过"
+    },
+    {
+      "name": "P23 Forward：输入取反后进与门 ≡ 或非",
+      "pass": true,
+      "detail": "通过"
+    },
+    {
+      "name": "P24 两级与非链 overline(overline(AB)·overline(CD)) = AB+CD 16 组全枚举",
+      "pass": true,
+      "detail": "通过"
+    },
+    {
+      "name": "P24 右图与-或实现与化简式一致",
+      "pass": true,
+      "detail": "通过"
+    }
+  ],
+  "allPass": true
+}

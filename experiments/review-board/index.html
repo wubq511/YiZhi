@@ -1,0 +1,1077 @@
+<!doctype html>
+<html lang="zh-CN" data-visualize-standalone>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>数字逻辑 · 复习画板（讨论草图）</title>
+<style>
+:root { color-scheme: light dark; background: light-dark(#f6f3ec, #242822); }
+html, body { width: 100%; height: 100%; max-width: none; margin: 0; padding: 0; overflow: hidden; }
+#codex-visualization { display: block; width: 100%; height: 100% !important; max-width: none; margin: 0; padding: 0; border: 0; }
+#review-fullscreen { position: fixed; top: 16px; right: 16px; z-index: 10; padding: 7px 11px; border: 1px solid light-dark(#c6cabc, #626f5d); border-radius: 7px; background: light-dark(#fffdf8, #30362e); color: light-dark(#303c35, #e7eddf); font: 400 14px/1.55 "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; cursor: pointer; }
+#review-fullscreen:hover { background: light-dark(#e7eedf, #394a33); }
+#review-fullscreen-status { position: fixed; top: 60px; right: 12px; max-width: min(360px, calc(100% - 24px)); margin: 0; padding: 10px 12px; border: 1px solid light-dark(#c6cabc, #626f5d); border-radius: 7px; background: light-dark(#fffdf8, #30362e); color: light-dark(#303c35, #e7eddf); font: 400 14px/1.55 system-ui, sans-serif; z-index: 11; }
+@media (pointer: coarse) { #review-fullscreen { min-height: 44px; } }
+</style>
+
+</head>
+<body>
+<button type="button" id="review-fullscreen" aria-pressed="false" aria-describedby="review-fullscreen-status">全屏</button>
+<p id="review-fullscreen-status" role="status" aria-live="polite" hidden></p>
+
+<iframe id="codex-visualization" sandbox="allow-scripts" referrerpolicy="no-referrer" title="数字逻辑 · 复习画板（讨论草图）" data-srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;zh-CN&quot; data-visualize-standalone&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;
+&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src &#x27;none&#x27;; script-src &#x27;unsafe-inline&#x27; &#x27;unsafe-eval&#x27; &#x27;wasm-unsafe-eval&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src &#x27;unsafe-inline&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src &#x27;none&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;&quot;&gt;
+&lt;title&gt;数字逻辑 · 复习画板（讨论草图）&lt;/title&gt;
+&lt;style&gt;
+:root { color-scheme: light dark; }
+html, body { width: 100%; height: 100%; max-width: none; margin: 0; padding: 0; }
+body { overflow: hidden; }
+button, textarea { font: inherit; }
+.cursor-interaction { cursor: pointer; }
+@media (max-width: 760px), (max-height: 520px) { body { overflow: auto; } }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;script type=&quot;application/json&quot; id=&quot;codex-visualization-widget-state&quot;&gt;__CODEX_VISUALIZATION_WIDGET_STATE__&lt;/script&gt;
+&lt;script&gt;(() =&gt; {
+  const root = document.documentElement;
+  const mediaQuery = globalThis.matchMedia(&quot;(prefers-color-scheme: dark)&quot;);
+  const apply = Reflect.apply;
+  const isArray = Array.isArray;
+  const hasOwn = Object.hasOwn;
+  const parentWindow = globalThis.parent;
+  const stringify = JSON.stringify;
+  const parse = JSON.parse;
+  const encode = TextEncoder.prototype.encode.bind(new TextEncoder());
+  const initialStateElement = document.getElementById(
+    &quot;codex-visualization-widget-state&quot;,
+  );
+  const initialGlobals = parse(initialStateElement?.textContent ?? &quot;{}&quot;);
+  initialStateElement?.remove();
+  /** @type {Record&lt;string, unknown&gt; | null} */
+  let state = initialGlobals.widgetState ?? null;
+  const statePersistence = initialGlobals.statePersistence ?? &quot;none&quot;;
+  let nextStateRequestId = 0;
+  /** @type {Map&lt;number, { resolve: () =&gt; void; reject: (error: Error) =&gt; void; timeout: ReturnType&lt;typeof globalThis.setTimeout&gt;; serializedState: string }&gt;} */
+  const pendingStateWrites = new Map();
+  const persistenceError = () =&gt;
+    Object.assign(
+      new Error(&quot;The host could not persist the widget state update&quot;),
+      {
+        code: -32000,
+        data: { code: &quot;widget_state_persistence_failed&quot;, retryable: false },
+      },
+    );
+  /**
+   * @param {object} prototype
+   * @param {string} property
+   */
+  const getPrototypeGetter = (prototype, property) =&gt; {
+    // oxlint-disable-next-line typescript/unbound-method -- invoked through captured Reflect.apply
+    const getter = Object.getOwnPropertyDescriptor(prototype, property)?.get;
+    if (getter == null) {
+      throw new Error(`Missing ${property} getter`);
+    }
+    return getter;
+  };
+  const getMessageData = getPrototypeGetter(MessageEvent.prototype, &quot;data&quot;);
+  const getMessagePorts = getPrototypeGetter(MessageEvent.prototype, &quot;ports&quot;);
+  const getMessageSource = getPrototypeGetter(MessageEvent.prototype, &quot;source&quot;);
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const addHostMessageListener = MessagePort.prototype.addEventListener;
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const postHostMessage = MessagePort.prototype.postMessage;
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const startHostPort = MessagePort.prototype.start;
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const stopMessagePropagation = Event.prototype.stopImmediatePropagation;
+  /** @type {MessagePort | null} */
+  let hostPort = null;
+  const postToHost = (type, payload) =&gt; {
+    if (hostPort != null) {
+      apply(postHostMessage, hostPort, [{ type, ...payload }]);
+    }
+  };
+  /**
+   * @param {Record&lt;string, unknown&gt; | ((previous: Record&lt;string, unknown&gt; | null) =&gt; Record&lt;string, unknown&gt;)} next
+   * @returns {Promise&lt;void&gt;}
+   */
+  const setWidgetState = async (next) =&gt; {
+    const nextState = typeof next === &quot;function&quot; ? next(state) : next;
+    if (
+      nextState == null ||
+      typeof nextState !== &quot;object&quot; ||
+      isArray(nextState)
+    ) {
+      throw new TypeError(&quot;Widget state must be a JSON object&quot;);
+    }
+    const inputState = stringify(
+      nextState,
+      (_key, /** @type {unknown} */ value) =&gt; {
+        if (
+          typeof value === &quot;undefined&quot; ||
+          typeof value === &quot;function&quot; ||
+          typeof value === &quot;symbol&quot; ||
+          (typeof value === &quot;number&quot; &amp;&amp; !Number.isFinite(value))
+        ) {
+          throw new TypeError(&quot;Widget state must be a JSON object&quot;);
+        }
+        return value;
+      },
+    );
+    const parsedState = parse(inputState);
+    if (
+      parsedState == null ||
+      typeof parsedState !== &quot;object&quot; ||
+      isArray(parsedState)
+    ) {
+      throw new TypeError(&quot;Widget state must be a JSON object&quot;);
+    }
+    const storedState = {
+      modelContent: null,
+      privateContent: null,
+      ...parsedState,
+    };
+    const serializedState = stringify(storedState);
+    if (encode(serializedState).length &gt; 16 * 1024) {
+      throw new TypeError(
+        &quot;Widget state must be a JSON object of at most 16 KiB&quot;,
+      );
+    }
+    if (
+      hasOwn(storedState, &quot;imageIds&quot;) &amp;&amp;
+      (!isArray(storedState.imageIds) ||
+        storedState.imageIds.some(
+          (/** @type {unknown} */ id) =&gt; typeof id !== &quot;string&quot;,
+        ))
+    ) {
+      throw new TypeError(&quot;Widget state imageIds must be an array of strings&quot;);
+    }
+    if (storedState.imageIds?.length &gt; 0) {
+      throw Object.assign(
+        new TypeError(&quot;Visualization state does not support image attachments&quot;),
+        { code: -32602, data: { code: &quot;images_unsupported&quot; } },
+      );
+    }
+    state = storedState;
+    globalThis.openai.widgetState = state;
+    globalThis.dispatchEvent(
+      new CustomEvent(&quot;openai:set_globals&quot;, {
+        detail: { globals: { widgetState: state } },
+      }),
+    );
+    if (statePersistence === &quot;none&quot;) {
+      throw persistenceError();
+    }
+    const id = ++nextStateRequestId;
+    return new Promise((resolve, reject) =&gt; {
+      const timeout = globalThis.setTimeout(() =&gt; {
+        pendingStateWrites.delete(id);
+        reject(persistenceError());
+      }, 30_000);
+      pendingStateWrites.set(id, { resolve, reject, timeout, serializedState });
+      postToHost(&quot;widget-state-write&quot;, { id, state: serializedState });
+    });
+  };
+  const syncTheme = () =&gt; {
+    const theme = mediaQuery.matches ? &quot;dark&quot; : &quot;light&quot;;
+    root.dataset.theme = theme;
+    globalThis.openai = { setWidgetState, widgetState: state };
+    globalThis.dispatchEvent(
+      new CustomEvent(&quot;openai:set_globals&quot;, {
+        detail: { globals: globalThis.openai },
+      }),
+    );
+  };
+  const sendHeight = () =&gt; {
+    postToHost(&quot;height&quot;, {
+      height: Math.ceil(
+        Math.max(
+          document.body.scrollHeight,
+          document.body.getBoundingClientRect().height,
+        ),
+      ),
+    });
+  };
+
+  globalThis.addEventListener(
+    &quot;message&quot;,
+    (event) =&gt; {
+      const data = apply(getMessageData, event, []);
+      const ports = apply(getMessagePorts, event, []);
+      const source = apply(getMessageSource, event, []);
+      if (
+        hostPort != null ||
+        source !== parentWindow ||
+        typeof data !== &quot;object&quot; ||
+        data?.type !== &quot;codex-visualization-initialize&quot; ||
+        !isArray(ports) ||
+        ports.length !== 1
+      ) {
+        return;
+      }
+      apply(stopMessagePropagation, event, []);
+      const nextHostPort = ports[0];
+      try {
+        apply(addHostMessageListener, nextHostPort, [
+          &quot;message&quot;,
+          (event) =&gt; {
+            const data = apply(getMessageData, event, []);
+            if (typeof data === &quot;object&quot; &amp;&amp; data?.type === &quot;measure&quot;) {
+              sendHeight();
+            } else if (
+              typeof data === &quot;object&quot; &amp;&amp;
+              data?.type === &quot;widget-state-result&quot;
+            ) {
+              /** @type {unknown} */
+              const id = data.id;
+              if (typeof id !== &quot;number&quot;) {
+                return;
+              }
+              const pending = pendingStateWrites.get(id);
+              if (pending != null) {
+                pendingStateWrites.delete(id);
+                globalThis.clearTimeout(pending.timeout);
+                if (data.ok === true) {
+                  pending.resolve();
+                } else {
+                  pending.reject(persistenceError());
+                }
+              }
+            }
+          },
+        ]);
+        apply(startHostPort, nextHostPort, []);
+      } catch {
+        return;
+      }
+      hostPort = nextHostPort;
+      for (const [id, { serializedState }] of pendingStateWrites) {
+        postToHost(&quot;widget-state-write&quot;, { id, state: serializedState });
+      }
+      sendHeight();
+    },
+    { capture: true },
+  );
+  document.currentScript?.remove();
+  mediaQuery.addEventListener(&quot;change&quot;, syncTheme);
+  new ResizeObserver(sendHeight).observe(document.body);
+  syncTheme();
+})();
+&lt;/script&gt;
+&lt;style&gt;
+#rcn-canvas {
+  --rcn-paper: light-dark(#f6f3ec, #242822);
+  --rcn-sheet: light-dark(#fffdf8, #30362e);
+  --rcn-chrome: light-dark(#eeece4, #20251f);
+  --rcn-ink: light-dark(#303c35, #e7eddf);
+  --rcn-muted: light-dark(#616b62, #b8c4b3);
+  --rcn-line: light-dark(#c6cabc, #626f5d);
+  --rcn-accent: light-dark(#355d48, #bad8ac);
+  --rcn-on-accent: light-dark(#fffef8, #233821);
+  --rcn-soft: light-dark(#e7eedf, #394a33);
+  --rcn-note: light-dark(#f3e9c2, #49432d);
+  --rcn-shadow: light-dark(#303c3514, #00000030);
+  --rcn-panel-width: 290px;
+  color: var(--rcn-ink); background: var(--rcn-paper);
+  font: 400 14px/1.55 &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, system-ui, sans-serif;
+  width: 100%; min-width: 0; position: relative; overflow-wrap: anywhere;
+  border: 1px solid var(--rcn-line); border-radius: 12px;
+}
+#rcn-canvas *, #rcn-canvas *::before, #rcn-canvas *::after { box-sizing: border-box; }
+#rcn-canvas [hidden] { display: none !important; }
+#rcn-canvas h2, #rcn-canvas h3, #rcn-canvas p { margin: 0; }
+#rcn-canvas strong, #rcn-canvas h2, #rcn-canvas h3 { font-weight: 500; }
+#rcn-canvas h2 { font-size: 18px; }
+#rcn-canvas h3 { font-size: 16px; }
+#rcn-canvas button, #rcn-canvas textarea { font: inherit; color: inherit; }
+#rcn-canvas button { padding: 7px 11px; border: 1px solid var(--rcn-line); background: var(--rcn-sheet); border-radius: 7px; }
+#rcn-canvas button:hover { background: var(--rcn-soft); }
+#rcn-canvas button:disabled { opacity: .45; cursor: default; }
+#rcn-canvas button[aria-pressed=&quot;true&quot;], #rcn-canvas .rcn-primary { background: var(--rcn-accent); color: var(--rcn-on-accent); border-color: var(--rcn-accent); }
+#rcn-canvas .rcn-muted { color: var(--rcn-muted); font-size: 12px; }
+#rcn-canvas .rcn-header { padding: 16px 110px 13px 18px; background: var(--rcn-chrome); border-radius: 12px 12px 0 0; }
+#rcn-canvas .rcn-brand { display: flex; align-items: center; gap: 7px 14px; flex-wrap: wrap; margin-bottom: 4px; }
+#rcn-canvas .rcn-toolbar { padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; border-block: 1px solid var(--rcn-line); }
+#rcn-canvas .rcn-courses { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+#rcn-canvas .rcn-shell { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; }
+#rcn-canvas.rcn-agent-open .rcn-shell { grid-template-columns: minmax(0, 1fr) var(--rcn-panel-width); }
+#rcn-canvas .rcn-stage { height: 710px; position: relative; overflow: hidden; min-width: 0; touch-action: none; cursor: grab; isolation: isolate; }
+#rcn-canvas .rcn-stage.rcn-dragging { cursor: grabbing; }
+#rcn-canvas .rcn-world { width: 1400px; height: 1020px; position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+#rcn-canvas .rcn-world.rcn-moving { transition: transform 430ms cubic-bezier(.22,.7,.25,1); }
+#rcn-canvas .rcn-section-label { position: absolute; top: 34px; font-size: 22px; font-weight: 500; }
+#rcn-canvas .rcn-section-label small { display: block; font-weight: 400; font-size: 18px; margin-top: 4px; color: var(--rcn-muted); }
+#rcn-canvas .rcn-node { position: absolute; padding: 19px 21px; border: 1.3px solid var(--rcn-line); background: var(--rcn-sheet); border-radius: 6px 12px 7px 10px / 11px 5px 12px 7px; box-shadow: 2px 3px 0 var(--rcn-shadow); font-size: 18px; }
+#rcn-canvas .rcn-node.rcn-selected { border-color: var(--rcn-accent); box-shadow: 0 0 0 2px var(--rcn-accent); }
+#rcn-canvas .rcn-node &gt; button[data-select] { border: 0; padding: 0; border-radius: 0; background: transparent; text-align: left; display: block; width: 100%; font-size: 21px; font-weight: 500; margin-bottom: 9px; }
+#rcn-canvas .rcn-node &gt; button[data-select][aria-pressed=&quot;true&quot;] { color: var(--rcn-ink); }
+#rcn-canvas .rcn-node p + p { margin-top: 8px; }
+#rcn-canvas .rcn-node small { display: block; font-size: 18px; color: var(--rcn-muted); }
+#rcn-canvas .rcn-node table { width: 100%; border-collapse: collapse; margin-top: 9px; font-size: 18px; line-height: 1.25; font-variant-numeric: tabular-nums; }
+#rcn-canvas .rcn-node th, #rcn-canvas .rcn-node td { padding: 2px 6px; text-align: center; font-weight: 400; border-bottom: 1px solid var(--rcn-line); }
+#rcn-canvas .rcn-node th { color: var(--rcn-muted); }
+#rcn-canvas .rcn-overview .rcn-node &gt; :not(button[data-select]):not(label) { display: none; }
+#rcn-canvas .rcn-overview .rcn-section-label small { display: none; }
+#rcn-canvas .rcn-overview .rcn-node &gt; button[data-select], #rcn-canvas .rcn-overview .rcn-note label { font-size: var(--rcn-title-size); line-height: 1.35; }
+#rcn-canvas .rcn-overview .rcn-section-label { font-size: var(--rcn-region-size); width: 360px; line-height: 1.4; }
+#rcn-canvas .rcn-overview .rcn-links text { display: none; }
+#rcn-canvas .rcn-function { font-size: 21px; }
+#rcn-canvas .rcn-mux { background: var(--rcn-soft); }
+#rcn-canvas .rcn-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 13px 18px; margin-top: 16px; }
+#rcn-canvas .rcn-inputs button { font-size: 20px; line-height: 1.2; text-align: left; padding: 4px 9px; }
+#rcn-canvas .rcn-inputs small { font-size: 18px; line-height: 1.3; }
+#rcn-canvas .rcn-inputs button[aria-pressed=&quot;true&quot;] small { color: inherit; }
+#rcn-canvas .rcn-note { background: var(--rcn-note); }
+#rcn-canvas .rcn-note label { display: block; margin-bottom: 9px; font-weight: 500; }
+#rcn-canvas textarea { display: block; background: var(--rcn-sheet); border: 1px solid var(--rcn-line); border-radius: 6px; padding: 9px; width: 100%; min-width: 0; font-size: 18px; resize: vertical; }
+#rcn-canvas .rcn-note textarea { background: var(--rcn-note); height: 93px; min-height: 70px; max-height: 160px; }
+#rcn-canvas .rcn-links { position: absolute; inset: 0; width: 1400px; height: 1020px; pointer-events: none; color: var(--rcn-muted); }
+#rcn-canvas .rcn-links path { stroke: currentColor; stroke-width: 1.5px; fill: none; }
+#rcn-canvas .rcn-links text { fill: var(--rcn-ink); font: 400 18px &quot;PingFang SC&quot;, sans-serif; stroke: var(--rcn-paper); stroke-width: 9px; paint-order: stroke; }
+#rcn-canvas .rcn-links marker path { fill: currentColor; stroke: none; }
+#rcn-canvas .rcn-agent-added { background: var(--rcn-soft); }
+#rcn-canvas .rcn-bits { display: flex; gap: 8px; margin-top: 9px; }
+#rcn-canvas .rcn-bits button { font-size: 18px; min-width: 63px; }
+#rcn-canvas .rcn-result { display: block; font-size: 19px; margin-top: 12px; }
+#rcn-canvas .rcn-context { position: absolute; z-index: 5; width: 248px; padding: 10px; border: 1px solid var(--rcn-accent); background: var(--rcn-sheet); border-radius: 9px; box-shadow: 0 8px 28px var(--rcn-shadow); cursor: auto; }
+#rcn-canvas .rcn-context-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px; }
+#rcn-canvas .rcn-context-label button { padding: 3px 7px; }
+#rcn-canvas .rcn-context-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+#rcn-canvas .rcn-context-actions button { padding: 6px; }
+#rcn-canvas .rcn-map { position: absolute; bottom: 16px; right: 16px; width: 182px; height: 143px; z-index: 3; background: var(--rcn-sheet); border: 1px solid var(--rcn-line); border-radius: 8px; padding: 8px; cursor: auto; }
+#rcn-canvas .rcn-map svg { display: block; width: 164px; height: 112px; touch-action: none; }
+#rcn-canvas .rcn-map rect { fill: var(--rcn-soft); stroke: var(--rcn-line); stroke-width: 9px; }
+#rcn-canvas .rcn-map text { fill: var(--rcn-ink); font: 500 140px system-ui; }
+#rcn-canvas .rcn-map .rcn-map-viewport { fill: none; stroke: var(--rcn-accent); stroke-width: 16px; }
+#rcn-canvas .rcn-map button { position: absolute; top: 3px; right: 5px; padding: 0 5px; border: 0; font-size: 12px; }
+#rcn-canvas .rcn-zoom { position: absolute; left: 14px; bottom: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; max-width: calc(100% - 28px); padding: 6px; border: 1px solid var(--rcn-line); border-radius: 9px; background: var(--rcn-sheet); cursor: auto; z-index: 3; }
+#rcn-canvas .rcn-zoom output { min-width: 41px; text-align: center; font-variant-numeric: tabular-nums; font-size: 12px; }
+#rcn-canvas .rcn-zoom button { padding: 4px 9px; }
+#rcn-canvas .rcn-stage-hint { position: absolute; left: 14px; top: 12px; font-size: 12px; color: var(--rcn-muted); pointer-events: none; z-index: 2; }
+#rcn-canvas .rcn-panel { position: relative; padding: 17px; border-left: 1px solid var(--rcn-line); background: var(--rcn-sheet); min-width: 0; }
+#rcn-canvas .rcn-panel-resize { position: absolute; left: -5px; top: 0; bottom: 0; width: 10px; cursor: ew-resize; touch-action: none; }
+#rcn-canvas .rcn-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
+#rcn-canvas .rcn-selection { margin: 20px 0 14px; padding: 12px; border: 1px solid var(--rcn-line); border-radius: 6px; background: var(--rcn-paper); }
+#rcn-canvas .rcn-selection strong { display: block; margin-top: 4px; }
+#rcn-canvas .rcn-intent { color: var(--rcn-accent); margin: 12px 0; }
+#rcn-canvas .rcn-agent-actions { display: grid; gap: 9px; margin-top: 16px; }
+#rcn-canvas .rcn-agent-actions button { text-align: left; padding: 11px; }
+#rcn-canvas .rcn-agent-actions small { display: block; margin-top: 3px; font-size: 12px; }
+#rcn-canvas .rcn-answer { margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--rcn-line); }
+#rcn-canvas .rcn-answer p { margin-top: 8px; }
+#rcn-canvas .rcn-history { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 11px 14px; border-top: 1px solid var(--rcn-line); min-width: 0; }
+#rcn-canvas .rcn-history p { flex: 1 1 220px; font-size: 12px; color: var(--rcn-muted); }
+@media (max-width: 760px) {
+  #rcn-canvas.rcn-agent-open .rcn-shell { grid-template-columns: minmax(0, 1fr); }
+  #rcn-canvas .rcn-stage { height: 620px; }
+  #rcn-canvas .rcn-panel { border-left: 0; border-top: 1px solid var(--rcn-line); }
+  #rcn-canvas .rcn-panel-resize { display: none; }
+  #rcn-canvas .rcn-agent-actions { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+}
+@media (max-width: 480px) {
+  #rcn-canvas .rcn-header { padding-left: 12px; }
+  #rcn-canvas .rcn-toolbar { padding: 9px; }
+  #rcn-canvas .rcn-courses { flex-basis: 100%; }
+  #rcn-canvas .rcn-courses button { flex: 1; padding-inline: 6px; }
+  #rcn-canvas .rcn-map { bottom: 84px; right: 10px; }
+  #rcn-canvas .rcn-stage-hint { max-width: calc(100% - 28px); }
+}
+@media (pointer: coarse) { #rcn-canvas button { min-height: 44px; } #rcn-canvas .rcn-context { width: 248px; } #rcn-canvas .rcn-map button { min-height: 30px; } }
+@media (prefers-reduced-motion: reduce) { #rcn-canvas .rcn-world.rcn-moving { transition: none; } }
+
+/* Standalone viewport layout; no chat preview frame or fixed desktop stage. */
+#rcn-canvas {
+  display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto;
+  height: 100%; max-width: none; margin: 0; border: 0; border-radius: 0;
+  overflow: hidden;
+}
+#rcn-canvas .rcn-header { border-radius: 0; }
+#rcn-canvas .rcn-shell { min-height: 0; }
+#rcn-canvas .rcn-stage { height: 100%; min-height: 0; }
+#rcn-canvas .rcn-panel { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+#rcn-canvas .rcn-panel-resize { left: 0; width: 8px; z-index: 2; }
+@media (min-width: 761px) and (max-height: 520px) {
+  #rcn-canvas { min-height: 520px; }
+}
+@media (max-width: 760px) {
+  #rcn-canvas { height: auto; min-height: 100%; overflow: visible; grid-template-rows: auto auto auto auto; }
+  #rcn-canvas .rcn-stage { height: max(360px, calc(100vh - 240px)); height: max(360px, calc(100dvh - 240px)); }
+  #rcn-canvas .rcn-panel { overflow: visible; }
+}
+&lt;/style&gt;
+&lt;div id=&quot;rcn-canvas&quot; aria-label=&quot;数字逻辑复习画板的交互草图&quot;&gt;
+  &lt;header class=&quot;rcn-header&quot;&gt;
+    &lt;div class=&quot;rcn-brand&quot;&gt;&lt;h2&gt;数字逻辑 · 复习画板&lt;/h2&gt;&lt;span class=&quot;rcn-muted&quot;&gt;讨论草图 · 固定模拟 · 未连接 Agent&lt;/span&gt;&lt;/div&gt;
+    &lt;p class=&quot;rcn-muted&quot;&gt;课程局部示例：02 / 04 / 05 · 非完整 01—06 内容抽取&lt;/p&gt;
+  &lt;/header&gt;
+  &lt;nav class=&quot;rcn-toolbar&quot; aria-label=&quot;在同一画布中定位&quot;&gt;
+    &lt;div class=&quot;rcn-courses&quot;&gt;
+      &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-focus=&quot;02&quot;&gt;02 布尔表示&lt;/button&gt;
+      &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-focus=&quot;04&quot;&gt;04 组合设计&lt;/button&gt;
+      &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-focus=&quot;05&quot;&gt;05 MUX&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-action=&quot;full&quot;&gt;返回全图&lt;/button&gt;
+    &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-action=&quot;back&quot; disabled&gt;上个位置&lt;/button&gt;
+    &lt;button type=&quot;button&quot; class=&quot;cursor-interaction rcn-primary&quot; data-action=&quot;agent&quot; aria-expanded=&quot;false&quot; aria-controls=&quot;rcn-agent-panel&quot;&gt;Agent&lt;/button&gt;
+  &lt;/nav&gt;
+  &lt;div class=&quot;rcn-shell&quot;&gt;
+    &lt;main class=&quot;rcn-stage&quot; aria-label=&quot;可拖动平移的课程画布；课程按钮定位，正负按钮缩放&quot;&gt;
+      &lt;p class=&quot;rcn-stage-hint&quot;&gt;拖动空白平移 · 滚轮缩放 · 点选内容唤起 Agent&lt;/p&gt;
+      &lt;div class=&quot;rcn-world&quot;&gt;
+        &lt;div class=&quot;rcn-section-label&quot; style=&quot;left:40px&quot;&gt;02 · 布尔表示&lt;small&gt;把同一个函数写清楚&lt;/small&gt;&lt;/div&gt;
+        &lt;div class=&quot;rcn-section-label&quot; style=&quot;left:515px&quot;&gt;04 · 组合设计&lt;small&gt;从功能到实现，再验证&lt;/small&gt;&lt;/div&gt;
+        &lt;div class=&quot;rcn-section-label&quot; style=&quot;left:995px&quot;&gt;05 · MUX&lt;small&gt;按选择信号确定四路输入&lt;/small&gt;&lt;/div&gt;
+        &lt;svg class=&quot;rcn-links&quot; viewBox=&quot;0 0 1400 1020&quot; role=&quot;img&quot; aria-label=&quot;真值表取输出为1的行得到最小项；真值表按xy分组得到MUX输入。组合设计依次列真值表、选择实现、验证。&quot;&gt;
+          &lt;defs&gt;&lt;marker id=&quot;rcn-arrow&quot; viewBox=&quot;0 0 10 10&quot; refX=&quot;8&quot; refY=&quot;5&quot; markerWidth=&quot;7&quot; markerHeight=&quot;7&quot; orient=&quot;auto-start-reverse&quot;&gt;&lt;path d=&quot;M0 0 L10 5 L0 10 Z&quot;/&gt;&lt;/marker&gt;&lt;/defs&gt;
+          &lt;g marker-end=&quot;url(#rcn-arrow)&quot;&gt;
+            &lt;path d=&quot;M210 500 Q208 524 210 548&quot;/&gt;
+            &lt;path d=&quot;M680 300 Q682 337 680 374&quot;/&gt;
+            &lt;path d=&quot;M680 515 Q678 555 680 595&quot;/&gt;
+            &lt;path d=&quot;M845 427 Q917 425 990 427&quot;/&gt;
+            &lt;path d=&quot;M1170 292 Q1167 315 1170 338&quot;/&gt;
+            &lt;path d=&quot;M372 180 C430 106 925 106 955 180 L955 350 Q955 380 990 380&quot;/&gt;
+          &lt;/g&gt;
+          &lt;text x=&quot;226&quot; y=&quot;531&quot;&gt;取 F=1 的行&lt;/text&gt;
+          &lt;text x=&quot;697&quot; y=&quot;338&quot;&gt;选择实现&lt;/text&gt;
+          &lt;text x=&quot;695&quot; y=&quot;554&quot;&gt;逐行核对&lt;/text&gt;
+          &lt;text x=&quot;916&quot; y=&quot;409&quot; text-anchor=&quot;middle&quot;&gt;用 MUX 实现&lt;/text&gt;
+          &lt;text x=&quot;1185&quot; y=&quot;319&quot;&gt;确定输入&lt;/text&gt;
+          &lt;text x=&quot;680&quot; y=&quot;126&quot; text-anchor=&quot;middle&quot;&gt;同一真值表，按 xy 分组&lt;/text&gt;
+          &lt;g data-added-edge=&quot;explain&quot; hidden&gt;&lt;path d=&quot;M1170 590 L1170 619&quot; marker-end=&quot;url(#rcn-arrow)&quot;/&gt;&lt;text x=&quot;1185&quot; y=&quot;607&quot;&gt;补充依据&lt;/text&gt;&lt;/g&gt;
+          &lt;g data-added-edge=&quot;sim&quot; hidden&gt;&lt;path d=&quot;M994 540 C910 600 914 840 990 862&quot; marker-end=&quot;url(#rcn-arrow)&quot;/&gt;&lt;text x=&quot;865&quot; y=&quot;739&quot;&gt;切换并验证&lt;/text&gt;&lt;/g&gt;
+        &lt;/svg&gt;
+        &lt;article class=&quot;rcn-node&quot; data-node=&quot;truth&quot; style=&quot;left:40px;top:150px;width:335px;height:350px&quot;&gt;
+          &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-select=&quot;truth&quot;&gt;真值表&lt;/button&gt;
+          &lt;table aria-label=&quot;F等于最小项1、2、6、7之和的真值表&quot;&gt;&lt;thead&gt;&lt;tr&gt;&lt;th scope=&quot;col&quot;&gt;x&lt;/th&gt;&lt;th scope=&quot;col&quot;&gt;y&lt;/th&gt;&lt;th scope=&quot;col&quot;&gt;z&lt;/th&gt;&lt;th scope=&quot;col&quot;&gt;F&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;
+            &lt;tr&gt;&lt;td&gt;0&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;0&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;1&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;0&lt;/td&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;td&gt;1&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;0&lt;/td&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;0&lt;/td&gt;&lt;td&gt;1&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;1&lt;/td&gt;&lt;/tr&gt;
+          &lt;/tbody&gt;&lt;/table&gt;
+        &lt;/article&gt;
+        &lt;article class=&quot;rcn-node&quot; data-node=&quot;minterms&quot; style=&quot;left:40px;top:550px;width:335px;min-height:125px&quot;&gt;
+          &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-select=&quot;minterms&quot;&gt;最小项表示&lt;/button&gt;
+          &lt;p class=&quot;rcn-function&quot;&gt;F = Σm(1,2,6,7)&lt;/p&gt;&lt;small&gt;变量顺序：x、y、z&lt;/small&gt;
+        &lt;/article&gt;
+        &lt;article class=&quot;rcn-node&quot; data-node=&quot;design&quot; style=&quot;left:515px;top:150px;width:330px;min-height:140px&quot;&gt;
+          &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-select=&quot;design&quot;&gt;列真值表&lt;/button&gt;
+          &lt;p&gt;输入：x、y、z；输出：F&lt;/p&gt;&lt;p&gt;F=1 的行：1、2、6、7&lt;/p&gt;
+        &lt;/article&gt;
+        &lt;article class=&quot;rcn-node&quot; data-node=&quot;implement&quot; style=&quot;left:515px;top:375px;width:330px;min-height:125px&quot;&gt;
+          &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-select=&quot;implement&quot;&gt;选择实现&lt;/button&gt;
+          &lt;p&gt;本例：用 4选1 MUX 实现 F&lt;/p&gt;&lt;small&gt;选择信号 S1=x，S0=y&lt;/small&gt;
+        &lt;/article&gt;
+        &lt;article class=&quot;rcn-node&quot; data-node=&quot;verify&quot; style=&quot;left:515px;top:597px;width:330px;min-height:125px&quot;&gt;
+          &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-select=&quot;verify&quot;&gt;验证实现&lt;/button&gt;
+          &lt;p&gt;枚举 8 组 xyz&lt;/p&gt;&lt;p&gt;检查 MUX 输出与真值表一致&lt;/p&gt;
+        &lt;/article&gt;
+        &lt;article class=&quot;rcn-node&quot; data-node=&quot;rules&quot; style=&quot;left:995px;top:150px;width:360px;min-height:105px&quot;&gt;
+          &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-select=&quot;rules&quot;&gt;MUX 选择规则&lt;/button&gt;
+          &lt;p&gt;S1=x，S0=y；F = I&lt;sub&gt;2x+y&lt;/sub&gt;&lt;/p&gt;&lt;small&gt;xy=00 / 01 / 10 / 11 → I0 / I1 / I2 / I3&lt;/small&gt;
+        &lt;/article&gt;
+        &lt;article class=&quot;rcn-node rcn-mux&quot; data-node=&quot;mux&quot; style=&quot;left:995px;top:340px;width:360px;min-height:235px&quot;&gt;
+          &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-overview-label=&quot;MUX 实现函数&quot; data-select=&quot;mux&quot;&gt;例题 · F = Σm(1,2,6,7)&lt;/button&gt;
+          &lt;p&gt;S1=x，S0=y&lt;/p&gt;
+          &lt;div class=&quot;rcn-inputs&quot;&gt;
+            &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-select=&quot;i0&quot;&gt;&lt;small&gt;xy=00&lt;/small&gt;I0=z&lt;/button&gt;
+            &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-select=&quot;i1&quot;&gt;&lt;small&gt;xy=01&lt;/small&gt;I1=¬z&lt;/button&gt;
+            &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-select=&quot;i2&quot;&gt;&lt;small&gt;xy=10&lt;/small&gt;I2=0&lt;/button&gt;
+            &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-select=&quot;i3&quot;&gt;&lt;small&gt;xy=11&lt;/small&gt;I3=1&lt;/button&gt;
+          &lt;/div&gt;
+        &lt;/article&gt;
+        &lt;article class=&quot;rcn-node rcn-agent-added&quot; data-node=&quot;explanation&quot; data-added=&quot;explain&quot; style=&quot;left:995px;top:625px;width:360px;min-height:133px&quot; hidden&gt;
+          &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-select=&quot;explanation&quot;&gt;I1=¬z · 两行解释&lt;/button&gt;
+          &lt;p&gt;xy=01，z=0 → xyz=010 → F=1&lt;/p&gt;&lt;p&gt;xy=01，z=1 → xyz=011 → F=0&lt;/p&gt;&lt;small&gt;所以 I1 随 z 取反 · 模拟添加&lt;/small&gt;
+        &lt;/article&gt;
+        &lt;article class=&quot;rcn-node rcn-agent-added&quot; data-node=&quot;simulator&quot; data-added=&quot;sim&quot; style=&quot;left:995px;top:810px;width:360px;min-height:180px&quot; hidden&gt;
+          &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-select=&quot;simulator&quot;&gt;MUX 输入交互&lt;/button&gt;
+          &lt;div class=&quot;rcn-bits&quot; aria-label=&quot;切换输入值&quot;&gt;
+            &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-bit=&quot;x&quot; aria-pressed=&quot;false&quot;&gt;x=0&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-bit=&quot;y&quot; aria-pressed=&quot;true&quot;&gt;y=1&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-bit=&quot;z&quot; aria-pressed=&quot;false&quot;&gt;z=0&lt;/button&gt;
+          &lt;/div&gt;
+          &lt;output class=&quot;rcn-result&quot; aria-live=&quot;polite&quot;&gt;&lt;/output&gt;&lt;small&gt;模拟添加 · 切换输入，逐行核对&lt;/small&gt;
+        &lt;/article&gt;
+        &lt;section class=&quot;rcn-node rcn-note&quot; style=&quot;left:40px;top:785px;width:335px;min-height:184px&quot; aria-label=&quot;独立保存的个人笔记&quot;&gt;
+          &lt;label for=&quot;rcn-personal-note&quot;&gt;我的笔记&lt;/label&gt;&lt;textarea id=&quot;rcn-personal-note&quot; maxlength=&quot;1200&quot; rows=&quot;3&quot;&gt;这里容易把 xy 顺序写反&lt;/textarea&gt;&lt;small&gt;个人笔记 · 撤回 Agent 更新时保留&lt;/small&gt;
+        &lt;/section&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;rcn-context&quot; aria-label=&quot;选中内容的上下文操作&quot; hidden&gt;
+        &lt;div class=&quot;rcn-context-label&quot;&gt;&lt;span data-context-name&gt;&lt;/span&gt;&lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-action=&quot;close-menu&quot; aria-label=&quot;关闭上下文菜单&quot;&gt;×&lt;/button&gt;&lt;/div&gt;
+        &lt;div class=&quot;rcn-context-actions&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-intent=&quot;提问&quot;&gt;提问&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-intent=&quot;解释&quot;&gt;解释&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-intent=&quot;修改&quot;&gt;修改&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-intent=&quot;新增交互&quot;&gt;新增交互&lt;/button&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;rcn-zoom&quot; aria-label=&quot;画布视口控制&quot;&gt;
+        &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-action=&quot;out&quot; aria-label=&quot;缩小&quot;&gt;−&lt;/button&gt;&lt;output data-zoom&gt;100%&lt;/output&gt;&lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-action=&quot;in&quot; aria-label=&quot;放大&quot;&gt;+&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-action=&quot;mini&quot; aria-pressed=&quot;true&quot;&gt;缩略图&lt;/button&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;rcn-map&quot; aria-label=&quot;缩略全图导航&quot;&gt;
+        &lt;span class=&quot;rcn-muted&quot;&gt;全图定位&lt;/span&gt;&lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-action=&quot;mini&quot; aria-label=&quot;收起缩略导航&quot;&gt;收起&lt;/button&gt;
+        &lt;svg viewBox=&quot;0 0 1400 1020&quot; role=&quot;img&quot; aria-label=&quot;点击缩略区域平移；也可使用顶部02、04、05定位按钮&quot; class=&quot;cursor-interaction&quot;&gt;
+          &lt;rect x=&quot;40&quot; y=&quot;135&quot; width=&quot;335&quot; height=&quot;840&quot; rx=&quot;15&quot;/&gt;&lt;rect x=&quot;515&quot; y=&quot;135&quot; width=&quot;330&quot; height=&quot;590&quot; rx=&quot;15&quot;/&gt;&lt;rect x=&quot;995&quot; y=&quot;135&quot; width=&quot;360&quot; height=&quot;840&quot; rx=&quot;15&quot;/&gt;
+          &lt;text x=&quot;95&quot; y=&quot;420&quot;&gt;02&lt;/text&gt;&lt;text x=&quot;570&quot; y=&quot;420&quot;&gt;04&lt;/text&gt;&lt;text x=&quot;1060&quot; y=&quot;420&quot;&gt;05&lt;/text&gt;&lt;rect class=&quot;rcn-map-viewport&quot; x=&quot;0&quot; y=&quot;0&quot; width=&quot;1400&quot; height=&quot;1020&quot;/&gt;
+        &lt;/svg&gt;
+      &lt;/div&gt;
+    &lt;/main&gt;
+    &lt;aside id=&quot;rcn-agent-panel&quot; class=&quot;rcn-panel&quot; aria-label=&quot;可折叠 Agent 侧栏&quot; hidden&gt;
+      &lt;div class=&quot;rcn-panel-resize&quot; aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;rcn-panel-head&quot;&gt;&lt;h3&gt;Agent&lt;/h3&gt;&lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-action=&quot;agent&quot;&gt;收起&lt;/button&gt;&lt;/div&gt;
+      &lt;p class=&quot;rcn-muted&quot;&gt;三个固定模拟动作 · 未连接 Agent&lt;/p&gt;
+      &lt;div class=&quot;rcn-selection&quot;&gt;&lt;span class=&quot;rcn-muted&quot;&gt;已选对象&lt;/span&gt;&lt;strong data-selected-name&gt;尚未选择&lt;/strong&gt;&lt;/div&gt;
+      &lt;p class=&quot;rcn-intent&quot; data-intent-label&gt;可回答、解释，也可直接改图&lt;/p&gt;
+      &lt;p class=&quot;rcn-muted&quot;&gt;本次模拟统一使用 I1=¬z 例题；不处理任意请求。&lt;/p&gt;
+      &lt;div class=&quot;rcn-agent-actions&quot;&gt;
+        &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-agent=&quot;answer&quot;&gt;模拟回答：为什么 I1=¬z？&lt;small&gt;仅在侧栏解释，画布内容不变&lt;/small&gt;&lt;/button&gt;
+        &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-agent=&quot;explain&quot;&gt;模拟修改：补两行解释&lt;small&gt;直接添加到原画布，可撤回&lt;/small&gt;&lt;/button&gt;
+        &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-agent=&quot;sim&quot;&gt;模拟新增：添加输入交互&lt;small&gt;直接添加 x / y / z 切换控件&lt;/small&gt;&lt;/button&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;rcn-answer&quot; aria-live=&quot;polite&quot;&gt;&lt;strong data-answer-title&gt;等待模拟动作&lt;/strong&gt;&lt;p data-answer&gt;可以只提问，也可以把解释或交互留在画布里。&lt;/p&gt;&lt;/div&gt;
+    &lt;/aside&gt;
+  &lt;/div&gt;
+  &lt;footer class=&quot;rcn-history&quot; aria-label=&quot;Agent 画布修改历史&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-action=&quot;undo&quot; disabled&gt;撤回&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; data-action=&quot;redo&quot; disabled&gt;重做&lt;/button&gt;&lt;p data-history&gt;画布原始状态 · 个人笔记单独保留&lt;/p&gt;&lt;span class=&quot;rcn-muted&quot; data-notice role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;已在全图，可自由移动&lt;/span&gt;&lt;/footer&gt;
+&lt;/div&gt;
+&lt;script&gt;
+(() =&gt; {
+  const root = document.getElementById(&#x27;rcn-canvas&#x27;);
+  const $ = selector =&gt; root.querySelector(selector);
+  const $$ = selector =&gt; [...root.querySelectorAll(selector)];
+  const stage = $(&#x27;.rcn-stage&#x27;), world = $(&#x27;.rcn-world&#x27;), panel = $(&#x27;.rcn-panel&#x27;), menu = $(&#x27;.rcn-context&#x27;);
+  const labels = {truth:&#x27;真值表&#x27;,minterms:&#x27;最小项表示&#x27;,design:&#x27;列真值表&#x27;,implement:&#x27;选择实现&#x27;,verify:&#x27;验证实现&#x27;,rules:&#x27;MUX 选择规则&#x27;,mux:&#x27;MUX 例题&#x27;,i0:&#x27;I0=z&#x27;,i1:&#x27;I1=¬z&#x27;,i2:&#x27;I2=0&#x27;,i3:&#x27;I3=1&#x27;,explanation:&#x27;I1=¬z · 两行解释&#x27;,simulator:&#x27;MUX 输入交互&#x27;};
+  const bounds = { &#x27;02&#x27;: {x:20,y:20,w:385,h:970}, &#x27;04&#x27;: {x:490,y:20,w:385,h:745}, &#x27;05&#x27;: {x:965,y:20,w:410,h:990}, full: {x:0,y:0,w:1400,h:1020} };
+  const state = {view:null,back:[],selected:&#x27;&#x27;,agent:false,intent:&#x27;&#x27;,patches:[],cursor:0,note:&#x27;这里容易把 xy 顺序写反&#x27;,bits:{x:0,y:1,z:0},answered:false,panelWidth:290};
+  const settings = {comfort:true,minimap:true};
+  let menuPoint = null, drag = null, wheelTimer = null, wheelStart = null, transitionTimer = null, lastSize = null, lastSavedContent = &#x27;&#x27;;
+  const clamp = (n,a,b) =&gt; Math.min(b,Math.max(a,n));
+  const copyView = v =&gt; ({x:v.x,y:v.y,s:v.s});
+  const validView = v =&gt; v &amp;&amp; Number.isFinite(v.x) &amp;&amp; Number.isFinite(v.y) &amp;&amp; Number.isFinite(v.s) &amp;&amp; v.s &gt;= .12 &amp;&amp; v.s &lt;= 2.5;
+  const patchesNow = () =&gt; new Set(state.patches.slice(0,state.cursor));
+  function restore(value) {
+    const p = value?.privateContent;
+    if (!p || p.kind !== &#x27;review-canvas-navigation&#x27; || p.version !== 1) return false;
+    state.view = validView(p.view) ? copyView(p.view) : null;
+    state.back = Array.isArray(p.back) ? p.back.filter(validView).slice(-20).map(copyView) : [];
+    state.selected = Object.hasOwn(labels,p.selected) ? p.selected : &#x27;&#x27;;
+    state.agent = p.agent === true;
+    state.intent = [&#x27;提问&#x27;,&#x27;解释&#x27;,&#x27;修改&#x27;,&#x27;新增交互&#x27;].includes(p.intent) ? p.intent : &#x27;&#x27;;
+    state.patches = Array.isArray(p.patches) ? p.patches.filter(k =&gt; k === &#x27;explain&#x27; || k === &#x27;sim&#x27;).slice(0,2) : [];
+    state.cursor = Number.isInteger(p.cursor) ? clamp(p.cursor,0,state.patches.length) : state.patches.length;
+    state.note = typeof p.note === &#x27;string&#x27; ? p.note.slice(0,1200) : state.note;
+    state.bits = Object.fromEntries([&#x27;x&#x27;,&#x27;y&#x27;,&#x27;z&#x27;].map(k =&gt; [k,p.bits?.[k] === 1 ? 1 : 0]));
+    state.answered = p.answered === true;
+    state.panelWidth = Number.isFinite(p.panelWidth) ? clamp(p.panelWidth,260,420) : 290;
+    settings.comfort = p.settings?.comfort !== false; settings.minimap = p.settings?.minimap !== false;
+    return true;
+  }
+  function save() {
+    if (!window.openai?.setWidgetState) return;
+    const privateContent={kind:&#x27;review-canvas-navigation&#x27;,version:1,...state,settings:{...settings}};
+    lastSavedContent=JSON.stringify(privateContent);
+    window.openai.setWidgetState({modelContent:{type:&#x27;review-canvas-navigation&#x27;,selected:labels[state.selected] || null,canvasAdditions:[...patchesNow()],personalNote:state.note},privateContent}).catch(() =&gt; {});
+  }
+  function notice(message) { $(&#x27;[data-notice]&#x27;).textContent = message; }
+  function remember(v = state.view) {
+    if (!v) return;
+    const prev = state.back.at(-1);
+    if (!prev || Math.abs(prev.x-v.x) + Math.abs(prev.y-v.y) + Math.abs(prev.s-v.s)*100 &gt; .5) state.back.push(copyView(v));
+    if (state.back.length &gt; 20) state.back.shift();
+    $(&#x27;[data-action=&quot;back&quot;]&#x27;).disabled = !state.back.length;
+  }
+  function applyView(smooth = false) {
+    if (!state.view) return;
+    clearTimeout(transitionTimer);
+    world.classList.toggle(&#x27;rcn-moving&#x27;,smooth);
+    const v = state.view;
+    const overview = v.s &lt; .6112;
+    world.classList.toggle(&#x27;rcn-overview&#x27;,overview);
+    world.style.setProperty(&#x27;--rcn-title-size&#x27;,`${Math.max(21,12/v.s)}px`);
+    world.style.setProperty(&#x27;--rcn-region-size&#x27;,`${Math.max(22,14/v.s)}px`);
+    $$(&#x27;[data-overview-label]&#x27;).forEach(el =&gt; {el.dataset.detailLabel ||= el.textContent;el.textContent=overview?el.dataset.overviewLabel:el.dataset.detailLabel;});
+    $(&#x27;.rcn-stage-hint&#x27;).textContent=overview?&#x27;全图仅显示标题 · 点 02 / 04 / 05 定位阅读细节&#x27;:&#x27;拖动空白平移 · 滚轮缩放 · 点选内容唤起 Agent&#x27;;
+    world.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.s})`;
+    if (smooth) transitionTimer = setTimeout(() =&gt; world.classList.remove(&#x27;rcn-moving&#x27;),450);
+    $(&#x27;[data-zoom]&#x27;).textContent = `${Math.round(v.s*100)}%`;
+    const r = $(&#x27;.rcn-map-viewport&#x27;);
+    r.setAttribute(&#x27;x&#x27;,-v.x/v.s); r.setAttribute(&#x27;y&#x27;,-v.y/v.s);
+    r.setAttribute(&#x27;width&#x27;,stage.clientWidth/v.s); r.setAttribute(&#x27;height&#x27;,stage.clientHeight/v.s);
+    placeMenu();
+  }
+  function focusArea(key, record = true) {
+    if (record) remember();
+    const active=patchesNow();
+    const b = key===&#x27;05&#x27; ? {...bounds[key],h:active.has(&#x27;sim&#x27;)?990:active.has(&#x27;explain&#x27;)?770:600} : bounds[key], pad = settings.comfort ? 36 : 18;
+    const s = clamp(Math.min((stage.clientWidth-pad)/b.w,(stage.clientHeight-80)/b.h),key === &#x27;full&#x27; ? .12 : .7,1.1);
+    state.view = {x:(stage.clientWidth-b.w*s)/2-b.x*s,y:(stage.clientHeight-b.h*s)/2-b.y*s,s};
+    menu.hidden = true; menuPoint = null; applyView(record);
+    $$(&#x27;[data-focus]&#x27;).forEach(b =&gt; b.setAttribute(&#x27;aria-pressed&#x27;,String(b.dataset.focus === key)));
+    if (record) { notice(key === &#x27;full&#x27; ? &#x27;已返回全图&#x27; : `在同一画布中聚焦 ${key}`); save(); }
+  }
+  function zoom(factor, cx = stage.clientWidth/2, cy = stage.clientHeight/2, record = true) {
+    if (!state.view) return;
+    if (record) remember();
+    const v = state.view, ns = clamp(v.s*factor,.12,2.5), ratio = ns/v.s;
+    state.view = {x:cx-(cx-v.x)*ratio,y:cy-(cy-v.y)*ratio,s:ns};
+    clearNav(); applyView(); if (record) save();
+  }
+  function clearNav() { $$(&#x27;[data-focus]&#x27;).forEach(b =&gt; b.setAttribute(&#x27;aria-pressed&#x27;,&#x27;false&#x27;)); }
+  function placeMenu() {
+    if (!menuPoint || menu.hidden) return;
+    const v=state.view, mw=menu.offsetWidth || 248, mh=menu.offsetHeight || 130;
+    menu.style.left = `${clamp(menuPoint.x*v.s+v.x+12,8,Math.max(8,stage.clientWidth-mw-8))}px`;
+    menu.style.top = `${clamp(menuPoint.y*v.s+v.y+12,38,Math.max(38,stage.clientHeight-mh-75))}px`;
+  }
+  function keepSelectionVisible() {
+    if (!state.agent || !state.selected || !state.view) return;
+    const selected = $(`[data-select=&quot;${state.selected}&quot;]`).closest(&#x27;[data-node]&#x27;);
+    if (!selected || selected.hidden) return;
+    const v=state.view, left=v.x+selected.offsetLeft*v.s, top=v.y+selected.offsetTop*v.s;
+    const width=selected.offsetWidth*v.s, height=selected.offsetHeight*v.s;
+    if (width&gt;stage.clientWidth-32) v.x+=stage.clientWidth/2-(left+width/2);
+    else if (left&lt;16) v.x+=16-left;
+    else if (left+width&gt;stage.clientWidth-16) v.x+=stage.clientWidth-16-left-width;
+    if (height&gt;stage.clientHeight-125) v.y+=stage.clientHeight/2-(top+height/2);
+    else if (top&lt;42) v.y+=42-top;
+    else if (top+height&gt;stage.clientHeight-80) v.y+=stage.clientHeight-80-top-height;
+  }
+  function renderSimulator() {
+    const {x,y,z} = state.bits, index = 2*x+y, inputs = [z,1-z,0,1], output = inputs[index];
+    $$(&#x27;[data-bit]&#x27;).forEach(b =&gt; { const bit=b.dataset.bit; b.textContent=`${bit}=${state.bits[bit]}`; b.setAttribute(&#x27;aria-pressed&#x27;,String(state.bits[bit] === 1)); });
+    $(&#x27;.rcn-result&#x27;).textContent = `xy=${x}${y} → I${index}=${inputs[index]} → F=${output} · 真值表 ${[1,2,6,7].includes(4*x+2*y+z)?1:0}`;
+  }
+  function render() {
+    const active = patchesNow();
+    if ((state.selected === &#x27;explanation&#x27; &amp;&amp; !active.has(&#x27;explain&#x27;)) || (state.selected === &#x27;simulator&#x27; &amp;&amp; !active.has(&#x27;sim&#x27;))) { state.selected=&#x27;i1&#x27;; menu.hidden=true; }
+    root.classList.toggle(&#x27;rcn-agent-open&#x27;,state.agent);
+    root.style.setProperty(&#x27;--rcn-panel-width&#x27;,`${state.panelWidth}px`); panel.hidden = !state.agent;
+    $(&#x27;[data-action=&quot;agent&quot;]&#x27;).setAttribute(&#x27;aria-expanded&#x27;,String(state.agent));
+    $$(&#x27;[data-added]&#x27;).forEach(el =&gt; { el.hidden = !active.has(el.dataset.added); });
+    $$(&#x27;[data-added-edge]&#x27;).forEach(el =&gt; { el.toggleAttribute(&#x27;hidden&#x27;,!active.has(el.dataset.addedEdge)); });
+    $$(&#x27;[data-node]&#x27;).forEach(el =&gt; el.classList.toggle(&#x27;rcn-selected&#x27;,el.dataset.node === state.selected || (el.dataset.node === &#x27;mux&#x27; &amp;&amp; /^i[0-3]$/.test(state.selected))));
+    $$(&#x27;[data-select]&#x27;).forEach(el =&gt; el.setAttribute(&#x27;aria-pressed&#x27;,String(el.dataset.select === state.selected)));
+    $(&#x27;[data-selected-name]&#x27;).textContent = labels[state.selected] || &#x27;尚未选择&#x27;;
+    $(&#x27;[data-context-name]&#x27;).textContent = labels[state.selected] || &#x27;&#x27;;
+    $(&#x27;[data-intent-label]&#x27;).textContent = state.intent ? `当前意图：${state.intent}` : &#x27;可回答、解释，也可直接改图&#x27;;
+    $(&#x27;[data-agent=&quot;explain&quot;]&#x27;).disabled = active.has(&#x27;explain&#x27;); $(&#x27;[data-agent=&quot;sim&quot;]&#x27;).disabled = active.has(&#x27;sim&#x27;);
+    $(&#x27;[data-action=&quot;undo&quot;]&#x27;).disabled = state.cursor === 0; $(&#x27;[data-action=&quot;redo&quot;]&#x27;).disabled = state.cursor === state.patches.length;
+    $(&#x27;[data-action=&quot;back&quot;]&#x27;).disabled = !state.back.length;
+    $(&#x27;[data-history]&#x27;).textContent = active.size ? `已直接更新：${[...active].map(k=&gt;k===&#x27;explain&#x27;?&#x27;I1 两行解释&#x27;:&#x27;输入交互&#x27;).join(&#x27;、&#x27;)} · 可继续修改` : &#x27;画布原始状态 · 个人笔记单独保留&#x27;;
+    $(&#x27;[data-answer-title]&#x27;).textContent = state.answered ? &#x27;固定示例回答 · 为什么 I1=¬z？&#x27; : &#x27;等待模拟动作&#x27;;
+    $(&#x27;[data-answer]&#x27;).textContent = state.answered ? &#x27;当 xy=01，MUX 选择 I1。z=0 对应最小项 2，F=1；z=1 对应最小项 3，F=0。因此 I1=¬z。此次回答只在侧栏展示。&#x27; : &#x27;可以只提问，也可以把解释或交互留在画布里。&#x27;;
+    if ($(&#x27;#rcn-personal-note&#x27;).value !== state.note) $(&#x27;#rcn-personal-note&#x27;).value=state.note;
+    $(&#x27;.rcn-map&#x27;).hidden = !settings.minimap;
+    $(&#x27;[data-action=&quot;mini&quot;]&#x27;).setAttribute(&#x27;aria-pressed&#x27;,String(settings.minimap));
+    $$(&#x27;[data-node]&#x27;).forEach(el =&gt; { el.style.padding=settings.comfort?&#x27;19px 21px&#x27;:&#x27;14px 18px&#x27;; });
+    renderSimulator(); placeMenu();
+  }
+  function selectNode(id, event) {
+    state.selected=id;
+    const node=$(`[data-select=&quot;${id}&quot;]`), box=node.getBoundingClientRect(), sr=stage.getBoundingClientRect();
+    const px=event?.clientX || box.left+box.width/2, py=event?.clientY || box.bottom;
+    menuPoint={x:(px-sr.left-state.view.x)/state.view.s,y:(py-sr.top-state.view.y)/state.view.s};
+    menu.hidden=false; render(); notice(`已选：${labels[id]}`); save();
+  }
+  function addPatch(kind) {
+    if (patchesNow().has(kind)) return;
+    state.patches=state.patches.slice(0,state.cursor); state.patches.push(kind); state.cursor=state.patches.length;
+    render(); focusArea(&#x27;05&#x27;); notice(kind===&#x27;explain&#x27;?&#x27;两行解释已直接添加，可撤回&#x27;:&#x27;输入交互已直接添加，可切换 x / y / z&#x27;); save();
+  }
+  root.addEventListener(&#x27;click&#x27;,event =&gt; {
+    const button=event.target.closest(&#x27;button&#x27;);
+    if (!button || button.disabled || !root.contains(button)) return;
+    if (button.dataset.focus) return focusArea(button.dataset.focus);
+    if (button.dataset.select) return selectNode(button.dataset.select,event);
+    if (button.dataset.bit) { const k=button.dataset.bit; state.bits[k]=1-state.bits[k]; renderSimulator(); save(); return; }
+    if (button.dataset.intent) {
+      state.intent=button.dataset.intent; state.agent=true; menu.hidden=true; render(); notice(&#x27;Agent 侧栏已展开，已带入选中对象&#x27;); save();
+      $(&#x27;[data-agent=&quot;&#x27;+(state.intent===&#x27;修改&#x27;?&#x27;explain&#x27;:state.intent===&#x27;新增交互&#x27;?&#x27;sim&#x27;:&#x27;answer&#x27;)+&#x27;&quot;]&#x27;).focus(); return;
+    }
+    if (button.dataset.agent) {
+      if (button.dataset.agent===&#x27;answer&#x27;) {state.answered=true;render();notice(&#x27;仅在侧栏回答，画布内容未改变&#x27;);save();}
+      else addPatch(button.dataset.agent);
+      return;
+    }
+    switch(button.dataset.action) {
+      case &#x27;full&#x27;: focusArea(&#x27;full&#x27;); break;
+      case &#x27;back&#x27;: if (state.back.length) { state.view=state.back.pop(); menu.hidden=true; clearNav(); applyView(true); render(); notice(&#x27;已返回上个位置&#x27;); save(); } break;
+      case &#x27;in&#x27;: zoom(1.22); break;
+      case &#x27;out&#x27;: zoom(1/1.22); break;
+      case &#x27;agent&#x27;: state.agent=!state.agent; menu.hidden=true; render(); notice(state.agent?&#x27;Agent 侧栏已展开&#x27;:&#x27;Agent 侧栏已收起&#x27;); save(); break;
+      case &#x27;mini&#x27;: settings.minimap=!settings.minimap; render(); save(); break;
+      case &#x27;close-menu&#x27;: menu.hidden=true; break;
+      case &#x27;undo&#x27;: if (state.cursor) {state.cursor--;render();notice(&#x27;已撤回 Agent 更新，个人笔记保留&#x27;);save();} break;
+      case &#x27;redo&#x27;: if (state.cursor&lt;state.patches.length) {state.cursor++;render();notice(&#x27;已重做 Agent 更新&#x27;);save();} break;
+    }
+  });
+  stage.addEventListener(&#x27;click&#x27;,event=&gt;{
+    if (event.target.closest(&#x27;button,textarea,.rcn-context,.rcn-map&#x27;)) return;
+    const node=event.target.closest(&#x27;[data-node]&#x27;);
+    if (node &amp;&amp; !drag?.moved) selectNode(node.dataset.node,event);
+  });
+  $(&#x27;#rcn-personal-note&#x27;).addEventListener(&#x27;input&#x27;,event=&gt;{state.note=event.target.value.slice(0,1200);save();});
+  stage.addEventListener(&#x27;pointerdown&#x27;,event=&gt;{
+    if (event.button!==0 || event.target.closest(&#x27;button,textarea,.rcn-context,.rcn-map,.rcn-node&#x27;)) return;
+    drag={id:event.pointerId,x:event.clientX,y:event.clientY,start:copyView(state.view),moved:false};
+    stage.setPointerCapture(event.pointerId); world.classList.remove(&#x27;rcn-moving&#x27;);
+  });
+  stage.addEventListener(&#x27;pointermove&#x27;,event=&gt;{
+    if (!drag || event.pointerId!==drag.id) return;
+    const dx=event.clientX-drag.x,dy=event.clientY-drag.y;
+    if (!drag.moved &amp;&amp; Math.hypot(dx,dy)&lt;4) return;
+    drag.moved=true; stage.classList.add(&#x27;rcn-dragging&#x27;); menu.hidden=true;
+    state.view={x:drag.start.x+dx,y:drag.start.y+dy,s:drag.start.s};clearNav();applyView();
+  });
+  function endDrag(event) {
+    if (!drag || event.pointerId!==drag.id) return;
+    if (drag.moved) {remember(drag.start);save();} else menu.hidden=true;
+    stage.classList.remove(&#x27;rcn-dragging&#x27;); if(stage.hasPointerCapture(event.pointerId)) stage.releasePointerCapture(event.pointerId);drag=null;
+  }
+  stage.addEventListener(&#x27;pointerup&#x27;,endDrag);stage.addEventListener(&#x27;pointercancel&#x27;,endDrag);
+  stage.addEventListener(&#x27;wheel&#x27;,event=&gt;{
+    if(event.target.closest(&#x27;textarea,.rcn-context,.rcn-map&#x27;)) return;
+    event.preventDefault();
+    if(!wheelStart) wheelStart=copyView(state.view);
+    const rect=stage.getBoundingClientRect(),delta=event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?stage.clientHeight:1);
+    zoom(Math.exp(-clamp(delta,-250,250)*.0018),event.clientX-rect.left,event.clientY-rect.top,false);
+    clearTimeout(wheelTimer);wheelTimer=setTimeout(()=&gt;{remember(wheelStart);wheelStart=null;save();},160);
+  },{passive:false});
+  $(&#x27;.rcn-map svg&#x27;).addEventListener(&#x27;click&#x27;,event=&gt;{
+    const r=event.currentTarget.getBoundingClientRect(); remember();
+    const x=clamp((event.clientX-r.left)/r.width,0,1)*1400,y=clamp((event.clientY-r.top)/r.height,0,1)*1020;
+    state.view={x:stage.clientWidth/2-x*state.view.s,y:stage.clientHeight/2-y*state.view.s,s:state.view.s};menu.hidden=true;clearNav();applyView(true);notice(&#x27;已通过缩略图平移&#x27;);save();
+  });
+  const handle=$(&#x27;.rcn-panel-resize&#x27;); let resizeStart=null;
+  handle.addEventListener(&#x27;pointerdown&#x27;,event=&gt;{if(event.button!==0)return;resizeStart={x:event.clientX,width:state.panelWidth};handle.setPointerCapture(event.pointerId);});
+  handle.addEventListener(&#x27;pointermove&#x27;,event=&gt;{if(!resizeStart)return;state.panelWidth=clamp(resizeStart.width+resizeStart.x-event.clientX,260,Math.min(420,root.clientWidth*.45));root.style.setProperty(&#x27;--rcn-panel-width&#x27;,`${state.panelWidth}px`);});
+  function endPanelResize(event) {if(!resizeStart)return;resizeStart=null;if(handle.hasPointerCapture(event.pointerId))handle.releasePointerCapture(event.pointerId);save();}
+  handle.addEventListener(&#x27;pointerup&#x27;,endPanelResize);handle.addEventListener(&#x27;pointercancel&#x27;,endPanelResize);
+  root.addEventListener(&#x27;keydown&#x27;,event=&gt;{if(event.key===&#x27;Escape&#x27;){menu.hidden=true;}});
+  restore(window.openai?.widgetState); render();
+  if(!state.view) focusArea(&#x27;full&#x27;,false); else applyView();
+  lastSize={w:stage.clientWidth,h:stage.clientHeight};
+  new ResizeObserver(()=&gt;{
+    const w=stage.clientWidth,h=stage.clientHeight;
+    if(w&lt;1 || h&lt;1)return;
+    if(state.view &amp;&amp; lastSize) {state.view.x+=(w-lastSize.w)/2;state.view.y+=(h-lastSize.h)/2;keepSelectionVisible();applyView();}
+    else focusArea(&#x27;full&#x27;,false);
+    lastSize={w,h};
+  }).observe(stage);
+  window.addEventListener(&#x27;openai:set_globals&#x27;,event=&gt;{
+    const incoming=event.detail?.globals?.widgetState;
+    // Acknowledge our own saved snapshot without closing a menu the user just opened.
+    if(incoming?.privateContent &amp;&amp; JSON.stringify(incoming.privateContent)===lastSavedContent)return;
+    if(restore(incoming)){menu.hidden=true;render();if(!state.view)focusArea(&#x27;full&#x27;,false);else applyView();}
+  });
+})();
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+
+<script>(() => {
+  const frame = document.getElementById("codex-visualization");
+  if (!(frame instanceof HTMLIFrameElement)) {
+    return;
+  }
+  const isShare = document.documentElement.classList.contains(
+    "visualization-share-root",
+  );
+  let viewportHeight = globalThis.innerHeight;
+  let sizeFingerprint = null;
+  let sizeWriteTimeout;
+  let lastSize = null;
+  let pendingSize = null;
+  const storageKey = `codex:visualization-widget-state-v2:${JSON.stringify([
+    globalThis.location.pathname,
+    globalThis.location.search,
+  ])}`;
+  const sizeStorageKey = `${storageKey}:share-size-v1`;
+  const parseState = (serializedState) => {
+    if (
+      typeof serializedState !== "string" ||
+      new TextEncoder().encode(serializedState).length > 16 * 1024
+    ) {
+      throw new TypeError(
+        "Widget state must be a JSON object of at most 16 KiB",
+      );
+    }
+    /** @type {unknown} */
+    const state = JSON.parse(serializedState);
+    if (
+      state == null ||
+      typeof state !== "object" ||
+      Array.isArray(state) ||
+      ("imageIds" in state &&
+        (!Array.isArray(state.imageIds) || state.imageIds.length > 0))
+    ) {
+      throw new TypeError("Widget state must be a JSON object");
+    }
+    const storedState = { modelContent: null, privateContent: null, ...state };
+    const canonicalState = JSON.stringify(
+      storedState,
+      (_key, /** @type {unknown} */ value) => {
+        if (typeof value === "number" && !Number.isFinite(value)) {
+          throw new TypeError("Widget state must contain finite numbers");
+        }
+        return value;
+      },
+    );
+    if (new TextEncoder().encode(canonicalState).length > 16 * 1024) {
+      throw new TypeError(
+        "Widget state must be a JSON object of at most 16 KiB",
+      );
+    }
+    return storedState;
+  };
+  let storage = null;
+  let state = null;
+  try {
+    const localStorage = globalThis.localStorage;
+    const probeKey = `${storageKey}:probe`;
+    localStorage.setItem(probeKey, "1");
+    localStorage.removeItem(probeKey);
+    storage = localStorage;
+    const savedState = storage.getItem(storageKey);
+    if (savedState != null) {
+      try {
+        state = parseState(savedState);
+      } catch {
+        // Invalid saved state does not disable future writes.
+      }
+    }
+  } catch {
+    storage = null;
+  }
+  const persistSize = () => {
+    globalThis.clearTimeout(sizeWriteTimeout);
+    if (pendingSize == null) {
+      return;
+    }
+    try {
+      storage?.setItem(sizeStorageKey, pendingSize);
+    } catch {
+      // A denied or full cache must not affect the visualization.
+    }
+    pendingSize = null;
+  };
+  if (isShare) {
+    globalThis.addEventListener("pagehide", persistSize);
+  }
+  const initialGlobals = {
+    widgetState: state,
+    statePersistence: storage == null ? "none" : "local",
+  };
+
+  const channel = new MessageChannel();
+  channel.port1.addEventListener("message", (event) => {
+    const data = event.data;
+    if (typeof data !== "object" || data == null) {
+      return;
+    }
+    if (data.type === "widget-state-write") {
+      if (!Number.isSafeInteger(data.id) || data.id <= 0) {
+        return;
+      }
+      let ok = false;
+      try {
+        if (storage != null) {
+          const state = parseState(data.state);
+          storage.setItem(storageKey, JSON.stringify(state));
+          ok = true;
+        }
+      } catch {
+        // Storage denial, quota limits, and invalid state return a failed receipt.
+      }
+      channel.port1.postMessage({
+        type: "widget-state-result",
+        id: data.id,
+        ok,
+      });
+      return;
+    }
+    if (data.type === "height") {
+      const height = data.height;
+      if (
+        typeof height !== "number" ||
+        !Number.isFinite(height) ||
+        height < 0
+      ) {
+        return;
+      }
+      if (height <= 10_000) {
+        const width = isShare && storage != null ? frame.clientWidth : null;
+        // The standalone app follows the browser viewport, not content height.
+        if (isShare && storage != null) {
+          const size = JSON.stringify({
+            fingerprint: sizeFingerprint,
+            width,
+            viewportHeight: globalThis.innerHeight,
+            dark: globalThis.matchMedia("(prefers-color-scheme: dark)").matches,
+            scale: globalThis.devicePixelRatio,
+            height: Math.ceil(height),
+          });
+          if (size !== lastSize) {
+            lastSize = size;
+            pendingSize = size;
+            globalThis.clearTimeout(sizeWriteTimeout);
+            sizeWriteTimeout = globalThis.setTimeout(persistSize, 100);
+          }
+        }
+      }
+      if (isShare) {
+        // Keep unusually tall content accessible without accepting an unbounded height.
+        if (height > 10_000 && Number.parseFloat(frame.style.height) === 0) {
+          frame.style.removeProperty("height");
+        }
+        frame.scrolling = height > 10_000 ? "auto" : "no";
+        document.documentElement.classList.add("visualization-share-ready");
+      }
+      return;
+    }
+    if (data.type === "scroll-to") {
+      const top = data.top;
+      if (
+        typeof top === "number" &&
+        Number.isFinite(top) &&
+        top >= 0 &&
+        globalThis.navigator.userActivation?.isActive === true
+      ) {
+        globalThis.scrollTo({
+          top: Math.ceil(
+            globalThis.scrollY + frame.getBoundingClientRect().top + top,
+          ),
+        });
+      }
+      return;
+    }
+    if (data.type === "open-external") {
+      const rawHref = data.href;
+      if (typeof rawHref !== "string") {
+        return;
+      }
+      let href;
+      try {
+        const url = new URL(rawHref, document.baseURI);
+        if (url.protocol !== "https:") {
+          return;
+        }
+        href = url.href;
+      } catch {
+        return;
+      }
+      if (globalThis.navigator.userActivation?.isActive === true) {
+        const anchor = document.createElement("a");
+        anchor.href = href;
+        anchor.rel = "noopener noreferrer";
+        anchor.target = "_blank";
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+      }
+      return;
+    }
+    if (data.type === "follow-up") {
+      const prompt = data.prompt;
+      if (
+        typeof prompt !== "string" ||
+        globalThis.navigator.userActivation?.isActive !== true
+      ) {
+        return;
+      }
+      const title = data.title;
+      globalThis.prompt(typeof title === "string" ? title : prompt, prompt);
+    }
+  });
+  channel.port1.start();
+  const srcdoc = frame.dataset.srcdoc;
+  if (srcdoc == null) {
+    return;
+  }
+  globalThis.addEventListener("resize", () => {
+    const height = Number.parseFloat(frame.style.height);
+    if (!isShare && (!Number.isFinite(height) || height <= viewportHeight)) {
+      frame.style.removeProperty("height");
+    }
+    viewportHeight = globalThis.innerHeight;
+    channel.port1.postMessage({ type: "measure" });
+  });
+  frame.addEventListener(
+    "load",
+    () => {
+      frame.contentWindow?.postMessage(
+        { type: "codex-visualization-initialize" },
+        "*",
+        [channel.port2],
+      );
+    },
+    { once: true },
+  );
+  // Match the trusted bootstrap element, not the same text in an authored title.
+  const frameHtml = srcdoc.replace(
+    '<script type="application/json" id="codex-visualization-widget-state">__CODEX_VISUALIZATION_WIDGET_STATE__<\/script>',
+    () =>
+      '<script type="application/json" id="codex-visualization-widget-state">' +
+      JSON.stringify(initialGlobals).replaceAll("<", "\\u003c") +
+      "<\/script>",
+  );
+  if (isShare && storage != null) {
+    // Fingerprint the rendered document, including restored widget state, without
+    // storing its content. This is a layout cache, not a security identity.
+    let hash = 5381;
+    for (let index = 0; index < frameHtml.length; index += 1) {
+      hash = (hash * 33 + frameHtml.charCodeAt(index)) % 4_294_967_296;
+    }
+    sizeFingerprint = hash.toString(36);
+    try {
+      const size = JSON.parse(storage.getItem(sizeStorageKey) ?? "null");
+      if (
+        size?.fingerprint === sizeFingerprint &&
+        size.width === frame.clientWidth &&
+        size.viewportHeight === globalThis.innerHeight &&
+        size.dark ===
+          globalThis.matchMedia("(prefers-color-scheme: dark)").matches &&
+        size.scale === globalThis.devicePixelRatio &&
+        typeof size.height === "number" &&
+        Number.isFinite(size.height) &&
+        size.height >= 0 &&
+        size.height <= 10_000
+      ) {
+        frame.style.height = size.height + "px";
+      }
+    } catch {
+      // Ignore missing or invalid cache entries and measure the live frame.
+    }
+  }
+  frame.srcdoc = frameHtml;
+  delete frame.dataset.srcdoc;
+})();
+</script>
+<script>
+(() => {
+  const button = document.getElementById('review-fullscreen');
+  const status = document.getElementById('review-fullscreen-status');
+  let hideTimer;
+  function showFallback() {
+    status.textContent = '浏览器未允许这次网页全屏。可使用浏览器菜单“全屏”，Windows / Linux 通常为 F11，macOS 通常为 Control + Command + F。';
+    status.hidden = false;
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => { status.hidden = true; }, 12000);
+  }
+  button.addEventListener('click', async () => {
+    if (!document.fullscreenEnabled || !document.documentElement.requestFullscreen) {
+      showFallback(); return;
+    }
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
+      status.hidden = true;
+    } catch { showFallback(); }
+  });
+  document.addEventListener('fullscreenchange', () => {
+    const active = !!document.fullscreenElement;
+    button.textContent = active ? '退出全屏' : '全屏';
+    button.setAttribute('aria-pressed', String(active));
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+{
+  "unitIds": [
+    "KU-051",
+    "KU-052",
+    "KU-053",
+    "KU-054"
+  ],
+  "schemaErrors": [],
+  "sourceSHA256": "632a852047ea5124b5c2a2bc13bfb923dbbcf2e36a899e17a1f38fbd638a7f9c",
+  "fragmentSHA256": {
+    "KU-051": "f00c88fe00bfaa23d3562b9903e541ab2f7dfc717283d6521b2d850b57d27dc8",
+    "KU-052": "d37c45d132a82e470555ba49262478720a6f1d6053e95143b4284d2d262c5219",
+    "KU-053": "a8f6aded0791ad9be291b246b506bfa6403e3f1cd95f90e1c40ab7f6e8f4108c",
+    "KU-054": "28299b4d6dad616b5bc5503561c496d6bf822cbc20ef3dce57a2ff94c6974ba6"
+  },
+  "scope": "candidate-only; memory validation; no canonical/browser/server/import",
+  "status": "passed",
+  "calculationComparisons": 4055,
+  "staticGaps": {
+    "Q-084": [],
+    "Q-085": [],
+    "P52": [
+      [
+        3,
+        7
+      ]
+    ],
+    "bareVariant": [
+      [
+        7,
+        15
+      ]
+    ]
+  },
+  "eventSimulations": 3888,
+  "originalStaticGlitches": 72,
+  "bridgedStaticGlitches": 0,
+  "exampleEvents": [
+    [
+      -1,
+      1
+    ],
+    [
+      2,
+      0
+    ],
+    [
+      5,
+      1
+    ]
+  ],
+  "dynamicEvents": [
+    [
+      -1,
+      0
+    ],
+    [
+      2,
+      1
+    ],
+    [
+      5,
+      0
+    ],
+    [
+      8,
+      1
+    ]
+  ],
+  "method": "actual candidate statements/tables; adjacency plus fixed-variable algebra; deterministic transport events; weighted DAG paths",
+  "limits": "finite delay grid is stress verification; coverage gives two-level/single-input static guarantee; no analog capacitor model"
+}

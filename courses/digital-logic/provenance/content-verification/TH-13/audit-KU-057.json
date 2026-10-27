@@ -1,0 +1,84 @@
+{
+  "scope": "TH-13 candidate only",
+  "checks": [
+    {
+      "unitId": "KU-057",
+      "name": "读取正文级联公式，对照直接地址选择",
+      "cases": 64,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-057",
+      "name": "实际74153功能表展开全部128种输入",
+      "cases": 128,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-057",
+      "name": "P22正文实际数据端接线对照题干最小项",
+      "cases": 32,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-057",
+      "name": "练习两种选择位序：读取答案数据端并重算",
+      "cases": 16,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-057",
+      "name": "8:1的4+2+1选择树：全部数据/地址枚举",
+      "cases": 2048,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-057",
+      "name": "16:1使能和末级选择：单热点覆盖所有通道",
+      "cases": 288,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-057",
+      "name": "四位并行2:1总线选择与整数整体选择",
+      "cases": 512,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-057",
+      "name": "实际figure的640×240框边界、互不遮盖、连线端点",
+      "cases": 26,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "chapter",
+      "name": "validate_reading完整权威内存副本",
+      "cases": 1,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "chapter",
+      "name": "正式四样本reading在内存组合前后保持不变",
+      "cases": 4,
+      "pass": true,
+      "failures": []
+    }
+  ],
+  "allPass": true,
+  "caseCount": 3119,
+  "fragmentSha256": {
+    "KU-057": "cdb7dc524aadbd8a92f107b240982692d5ac122f01b699b1a5eda36cd0c72625"
+  },
+  "limitations": [
+    "原页目视由人工完成，脚本不能代替view_image",
+    "未运行浏览器或正式导入"
+  ]
+}

@@ -1,0 +1,166 @@
+{
+  "capturedAt": "2026-10-27T07:46:35.014Z",
+  "browser": "156.0.8078.48",
+  "trials": [
+    {
+      "ready": true,
+      "phase": "ready",
+      "count": 84,
+      "mode": "all",
+      "loadToReadyMs": 474,
+      "errors": []
+    },
+    {
+      "ready": true,
+      "phase": "ready",
+      "count": 84,
+      "mode": "managed",
+      "loadToReadyMs": 101,
+      "errors": []
+    },
+    {
+      "ready": true,
+      "phase": "ready",
+      "count": 500,
+      "mode": "all",
+      "loadToReadyMs": 1588.800000011921,
+      "errors": []
+    },
+    {
+      "ready": true,
+      "phase": "ready",
+      "count": 500,
+      "mode": "managed",
+      "loadToReadyMs": 150.30000001192093,
+      "errors": []
+    },
+    {
+      "ready": true,
+      "phase": "ready",
+      "count": 84,
+      "mode": "all",
+      "loadToReadyMs": 360.5,
+      "errors": []
+    },
+    {
+      "ready": true,
+      "phase": "ready",
+      "count": 84,
+      "mode": "managed",
+      "loadToReadyMs": 99.89999997615814,
+      "errors": []
+    },
+    {
+      "ready": true,
+      "phase": "ready",
+      "count": 500,
+      "mode": "all",
+      "loadToReadyMs": 2181,
+      "errors": []
+    },
+    {
+      "ready": true,
+      "phase": "ready",
+      "count": 500,
+      "mode": "managed",
+      "loadToReadyMs": 151.30000001192093,
+      "errors": []
+    },
+    {
+      "ready": true,
+      "phase": "ready",
+      "count": 84,
+      "mode": "all",
+      "loadToReadyMs": 380.4000000357628,
+      "errors": []
+    },
+    {
+      "ready": true,
+      "phase": "ready",
+      "count": 84,
+      "mode": "managed",
+      "loadToReadyMs": 98,
+      "errors": []
+    },
+    {
+      "ready": true,
+      "phase": "ready",
+      "count": 500,
+      "mode": "all",
+      "loadToReadyMs": 1583.699999988079,
+      "errors": []
+    },
+    {
+      "ready": true,
+      "phase": "ready",
+      "count": 500,
+      "mode": "managed",
+      "loadToReadyMs": 151.89999997615814,
+      "errors": []
+    },
+    {
+      "ready": true,
+      "phase": "ready",
+      "count": 84,
+      "mode": "all",
+      "loadToReadyMs": 375.0999999642372,
+      "errors": []
+    },
+    {
+      "ready": true,
+      "phase": "ready",
+      "count": 84,
+      "mode": "managed",
+      "loadToReadyMs": 99.5,
+      "errors": []
+    },
+    {
+      "ready": true,
+      "phase": "ready",
+      "count": 500,
+      "mode": "all",
+      "loadToReadyMs": 1563.800000011921,
+      "errors": []
+    },
+    {
+      "ready": true,
+      "phase": "ready",
+      "count": 500,
+      "mode": "managed",
+      "loadToReadyMs": 158,
+      "errors": []
+    },
+    {
+      "ready": true,
+      "phase": "ready",
+      "count": 84,
+      "mode": "all",
+      "loadToReadyMs": 357.5,
+      "errors": []
+    },
+    {
+      "ready": true,
+      "phase": "ready",
+      "count": 84,
+      "mode": "managed",
+      "loadToReadyMs": 100.10000002384186,
+      "errors": []
+    },
+    {
+      "ready": true,
+      "phase": "ready",
+      "count": 500,
+      "mode": "all",
+      "loadToReadyMs": 1570.5999999642372,
+      "errors": []
+    },
+    {
+      "ready": true,
+      "phase": "ready",
+      "count": 500,
+      "mode": "managed",
+      "loadToReadyMs": 149.69999998807907,
+      "errors": []
+    }
+  ]
+}

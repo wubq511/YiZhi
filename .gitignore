@@ -1,0 +1,26 @@
+# Personal course state and local migration records
+/local/*
+!/local/README.md
+/courses/*/.review-board/
+/courses/*/教材/
+/courses/*/理论课/
+/courses/*/习题课/
+/courses/*/实验课/
+/courses/*/笔记/
+/courses/*/.zcode/
+
+# Reproducible runtime and development residue
+**/__pycache__/
+*.py[cod]
+**/.pytest_cache/
+**/node_modules/
+**/.venv/
+*.content.lock
+.DS_Store
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Build outputs are ignored by default. Existing experiment bundles are retained
+# because the recorded measurements identify those exact artifacts.
+/apps/*/dist/
+/apps/*/build/

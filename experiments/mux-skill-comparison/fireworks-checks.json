@@ -1,0 +1,178 @@
+{
+  "brief_sha256": "037f8e3a2d97fe28940a5187959351fb2cc4aa64234700878b11593729f91a3d",
+  "commands": [
+    {
+      "argv": [
+        "/tmp/mux-fireworks/.venv/bin/python",
+        "/tmp/mux-fireworks/scripts/fireworks.py",
+        "version"
+      ],
+      "exit_code": 0,
+      "result": {
+        "commit": "1ca1ff9cfcb67893a43d32b9ef3a1b782c44a46f",
+        "modified": false,
+        "node_for_motion": ">=22.12.0",
+        "schema_version": 1,
+        "skill_root": "/private/tmp/mux-fireworks",
+        "source": "git-checkout",
+        "styles": {
+          "1": "Flat Icon",
+          "2": "Dark Terminal",
+          "3": "Blueprint",
+          "4": "Notion Clean",
+          "5": "Glassmorphism",
+          "6": "Claude Official",
+          "7": "OpenAI",
+          "8": "Dark Luxury",
+          "9": "C4 Review Canvas",
+          "10": "Cloud Fabric",
+          "11": "Event Transit",
+          "12": "Ops Pulse"
+        },
+        "version": "1.2.0"
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/tmp/mux-fireworks/.venv/bin/python",
+        "/tmp/mux-fireworks/scripts/fireworks.py",
+        "validate",
+        "architecture",
+        "/Users/robertwu/Documents/大二上/数字逻辑与部件设计/docs/复习工具调研/04-演示/mux-skill-comparison/fireworks-ir.json"
+      ],
+      "exit_code": 0,
+      "result": {
+        "edges": 5,
+        "input_schema": "v1",
+        "mode": "architecture",
+        "nodes": 11,
+        "ok": true,
+        "schema_version": 1,
+        "semantics": {
+          "details": {},
+          "ok": true,
+          "profile": "generic",
+          "style": 1,
+          "visual_theme": "Flat Icon"
+        },
+        "style": {
+          "id": 1,
+          "name": "Flat Icon"
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/tmp/mux-fireworks/.venv/bin/python",
+        "/tmp/mux-fireworks/scripts/fireworks.py",
+        "render",
+        "architecture",
+        "/Users/robertwu/Documents/大二上/数字逻辑与部件设计/docs/复习工具调研/04-演示/mux-skill-comparison/fireworks-ir.json",
+        "/Users/robertwu/Documents/大二上/数字逻辑与部件设计/docs/复习工具调研/04-演示/mux-skill-comparison/fireworks-mux.svg",
+        "--report",
+        "/Users/robertwu/Documents/大二上/数字逻辑与部件设计/docs/复习工具调研/04-演示/mux-skill-comparison/fireworks-layout.json"
+      ],
+      "exit_code": 0,
+      "result": {
+        "ok": true,
+        "palette": {
+          "below_target": [],
+          "minimum_target": 4.5,
+          "ratios": {
+            "section_sub_fill": 4.76,
+            "text_muted": 4.76,
+            "text_primary": 17.74,
+            "text_secondary": 4.83
+          },
+          "scope": "default opaque canvas text tokens; not a full rendered accessibility audit",
+          "unsupported_tokens": []
+        },
+        "report": "/Users/robertwu/Documents/大二上/数字逻辑与部件设计/docs/复习工具调研/04-演示/mux-skill-comparison/fireworks-layout.json",
+        "svg": "/Users/robertwu/Documents/大二上/数字逻辑与部件设计/docs/复习工具调研/04-演示/mux-skill-comparison/fireworks-mux.svg",
+        "typography": {
+          "complete_text": true,
+          "hint": null,
+          "metrics": "heuristic widths; inspect the actual rendered font",
+          "truncated": []
+        }
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/tmp/mux-fireworks/.venv/bin/python",
+        "/tmp/mux-fireworks/scripts/fireworks.py",
+        "check",
+        "/Users/robertwu/Documents/大二上/数字逻辑与部件设计/docs/复习工具调研/04-演示/mux-skill-comparison/fireworks-mux.svg"
+      ],
+      "exit_code": 0,
+      "result": {
+        "checks": {
+          "collisions": {
+            "details": [],
+            "ok": true
+          },
+          "composition": {
+            "details": [],
+            "ok": true
+          },
+          "geometry": {
+            "details": [],
+            "ok": true
+          },
+          "markers": {
+            "details": [],
+            "ok": true
+          },
+          "xml": {
+            "details": [],
+            "ok": true
+          }
+        },
+        "ok": true
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/tmp/mux-fireworks/.venv/bin/python",
+        "/tmp/mux-fireworks/scripts/fireworks.py",
+        "export-png",
+        "/Users/robertwu/Documents/大二上/数字逻辑与部件设计/docs/复习工具调研/04-演示/mux-skill-comparison/fireworks-mux.svg",
+        "/Users/robertwu/Documents/大二上/数字逻辑与部件设计/docs/复习工具调研/04-演示/mux-skill-comparison/fireworks-mux.png",
+        "--width",
+        "2160"
+      ],
+      "exit_code": 0,
+      "result": {
+        "bytes": 213007,
+        "fallback_notes": [],
+        "height": 1560,
+        "ok": true,
+        "png": "/Users/robertwu/Documents/大二上/数字逻辑与部件设计/docs/复习工具调研/04-演示/mux-skill-comparison/fireworks-mux.png",
+        "renderer": "cairosvg",
+        "width": 2160
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/tmp/mux-fireworks/.venv/bin/python",
+        "/tmp/mux-fireworks/scripts/fireworks.py",
+        "export-html",
+        "/Users/robertwu/Documents/大二上/数字逻辑与部件设计/docs/复习工具调研/04-演示/mux-skill-comparison/fireworks-mux.svg",
+        "/Users/robertwu/Documents/大二上/数字逻辑与部件设计/docs/复习工具调研/04-演示/mux-skill-comparison/fireworks-mux.html",
+        "--title",
+        "用 4 选 1 多路选择器实现布尔函数"
+      ],
+      "exit_code": 0,
+      "result": {
+        "html": "/Users/robertwu/Documents/大二上/数字逻辑与部件设计/docs/复习工具调研/04-演示/mux-skill-comparison/fireworks-mux.html",
+        "ok": true
+      },
+      "stderr": ""
+    }
+  ]
+}

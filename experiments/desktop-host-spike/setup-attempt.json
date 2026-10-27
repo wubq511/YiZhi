@@ -1,0 +1,88 @@
+{
+  "capturedAt": "2026-10-27T09:53:06.277Z",
+  "scope": "Bounded macOS desktop host experiment; no formal application changes",
+  "sample": "Existing built 500 managed dynamic page, derived from 84 real units",
+  "environment": {
+    "os": "ProductName:\t\tmacOS\nProductVersion:\t\t27.0.1\nBuildVersion:\t\t26A434",
+    "kernel": "27.0.0",
+    "arch": "arm64",
+    "cpu": "Apple M5",
+    "node": "v26.0.0"
+  },
+  "cleanup": {
+    "runTemporaryDirectoryRemoved": true,
+    "dependenciesAndCachesRemoved": true
+  },
+  "checks": [
+    {
+      "name": "Original architecture tree byte-for-byte unchanged",
+      "pass": true
+    }
+  ],
+  "hashes": {
+    "architecture": {
+      "README.md": "7dd824ff91723363b268afc8de65d4ebdb0695530a93b48f6e10e7c94eb4d5f6",
+      "THIRD_PARTY_NOTICES.md": "c91c3c3cf1724cfb36d5cb303e7ccda73a4bd100ffd05b483f566bba3939d420",
+      "build.mjs": "24cd8d3e45d2f55dea9bd365bcacc99f6fd46a91203dbe59c501c241f866cafc",
+      "calibrate.mjs": "d7663f3d37845cfe367e4b5f208154f83173c1b4dc36c7643b2d54c749a05343",
+      "dist/app.css": "b03dd66938a9e9ea0b9fd405cb3880a3db6f6d03ece76f2e854ff8a12304af50",
+      "dist/app.js": "09d2dceb53d0c1ddbb0d2f83578ed8ec64c852ef5b1f66264692dc4e1069448f",
+      "dynamic-performance.json": "1b7c61daa679caaec36e35929a4b5c97144ca4a3cfebf16373019d380fdee289",
+      "dynamic-performance.mjs": "7d0f11cd0ea299e6b24d4035972a45616ff0e2281d035da555e6b5744c9ab002",
+      "dynamic-preview.png": "0295030f8c490b88b599beb27ff49f5190b73766d0e43cc3a6b7a3561ff9b4cb",
+      "dynamic-probe.mjs": "d77403b98dfe9b95877e8fe99cc274586fd98006bd3b7f4ccaf99f2eec7eb9f6",
+      "dynamic-results.json": "d92e84b5570eeffc1208fbb98ffbaa7b6284ef8fe77460abad9190520462f21d",
+      "fixture.json": "ff896778b0ff0d81be6a5859c86746fa04ddc89dd6397cf870aa9b29c325ae4b",
+      "heights.json": "6e3ea71beba050b8983a2233cddffcfc3e30a263cf9f9ee61f70ec9085032629",
+      "index.html": "f6960facf97b38bcc993b8ddfdbc2a5ddd5a6d8aec213eb20b794fa15c7b66c3",
+      "package-lock.json": "6ad0e14c5f1b60dd7f9b1e36cdfb614ca86d71279224a8867c90dc6dc61f8dbf",
+      "package.json": "3c0a85de7d42edcdc4b4e4f2a0feddaf3ace76e0a275f453215aef21bbe8c857",
+      "prepare-fixture.py": "3b742ee71c3305a776e110fab69ef11538ce9e7463cde542f3906d2dc05fb3ea",
+      "preview.png": "00c031cfcfd343b3a98951dad200f57b6ecdab15f3f1170d88e52ff13ec41d78",
+      "probe.mjs": "ef91a153f4d836d8852c1d6ccc0800b0833ffd09047f3154f9b8475ab64a3f04",
+      "results.json": "e9fb80c653e2bbf1b57b7fdc4ec9d1c10aed65876cb0cd2f971843244b362792",
+      "source-pages/SRC-C02/VER-SRC-C02-1c152428693e/13.png": "c966bcd3899a6e12d04be5740477f81a37aee820f70ebb3265ded377fb402561",
+      "source-pages/SRC-C02/VER-SRC-C02-1c152428693e/23.png": "a711c78fa7bd4bd76962904ed5eaa50a7491f05345008a497290b9bfb825abe6",
+      "source-pages/SRC-C02/VER-SRC-C02-1c152428693e/24.png": "f10827a395b6128aa86c569e85352df0db5a5fb4e3130706ec0aefed9efd11eb",
+      "source-pages/SRC-C02/VER-SRC-C02-1c152428693e/4.png": "b253b6658a6b46ea6a4b4eccabf9ec5818410a3ae91a48ce57a193c1f24c7518",
+      "source-pages/SRC-C02/VER-SRC-C02-1c152428693e/45.png": "28100f3c461416d83ceaf113f144932c6176e672c4b2c87aada8ef5b70366ec9",
+      "source-pages/SRC-C02/VER-SRC-C02-1c152428693e/50.png": "71bedc63566a8abad4e425da5b2df3912d227e64079a45e4ac19c3b296d09708",
+      "source-pages/SRC-C02/VER-SRC-C02-1c152428693e/7.png": "c151b20f61d1748fa7cfb3fecd22473c1f4aeb491caa4fb11d8577d5700d8d0c",
+      "source-pages/SRC-C03/VER-SRC-C03-8bd0e5dc8fe3/10.png": "af75436c012759de6036f8a0cca71a10dea2eb5763eafdaa49ffec7d6fd8cfb1",
+      "source-pages/SRC-C03/VER-SRC-C03-8bd0e5dc8fe3/21.png": "9be678493b85f77db1e4f8e24ebfed98a7532bc8be61aee91f63f735d691ad6b",
+      "source-pages/SRC-C03/VER-SRC-C03-8bd0e5dc8fe3/31.png": "f13c03c4a59d357c1467304bd978f7fd2cdd5ee5d7548b77b77913db598c6270",
+      "source-pages/SRC-C03/VER-SRC-C03-8bd0e5dc8fe3/38.png": "cbf840ad0ee516b4e01cc92c1c891175a0dcf0a0de7eb6dc9869383f78da8d42",
+      "source-pages/SRC-C05/VER-SRC-C05-ad2a56210ce2/16.png": "1a09879dc436f868c9314002e6c5b6be00e880db518a9d40cbbbdc4bbe2c05a4",
+      "source-pages/SRC-EX07/VER-SRC-EX07-94ba9b89b204/11.png": "c7e9e3482ce9cf35df4a48f48a5e61728806d9bf5073e9b98c8cf427d77ea6bd",
+      "source-pages/SRC-EX07/VER-SRC-EX07-94ba9b89b204/13.png": "fcccce31c0554963f5720c871062e733ce9bd8f842f4d72658712fc3e2ad85ce",
+      "source-pages/SRC-EX07/VER-SRC-EX07-94ba9b89b204/17.png": "5330d962e044be349dbf4ad50c6c18f842b9d7d14d905ffda89e0456c1d66ce2",
+      "source-pages/SRC-EX07/VER-SRC-EX07-94ba9b89b204/5.png": "ac26abc544e3ad1da19144cc923cfe0a29192335e592d728dfab2f77a5160f43",
+      "source-pages/SRC-EX07/VER-SRC-EX07-94ba9b89b204/8.png": "fa7c51c9e8cd7bce384771bde9f997ca6bbdbb5e5421c9ece7831ab0e4cbba13",
+      "source-pages/SRC-HW04/VER-SRC-HW04-b53935c20c83/1.png": "91e8fc0c4aeb4b4aec9d35d8434faae261ae1c0bf26eec0429bf4534846c90c3",
+      "source-pages/SRC-TB/VER-SRC-TB-d1bc6409752a/72.png": "717acda003519b295664d70aba49f761beb25a31b23aba532c41814c0f6738ef",
+      "source-pages/SRC-TI74153/VER-SRC-TI74153-72557fe3909b/1.png": "c53b1b6173fe1e938c08d6ff40f543a3e64d6e8a1855d011216188db3ff1b601",
+      "src/dynamic-layout.js": "f8da71bdff70e5610a27601af53eb654527e634f8b86fb1fd4f49044b117bc03",
+      "src/main.jsx": "b09584560822405d6d4aca1d9295e6f2fa8399540b782099660340f4520a80ed",
+      "src/style.css": "26512552ce7efb77b53d0961e814539ca17bec26c9e811f824eb6d4d1ce88b9b",
+      "start.py": "4359a0dd61c3e52ca63ce68708f5b2dfaacabf0c4bada594e7a8da19674d6337",
+      "startup-trials.json": "c9ad8fc73abae997194171de46dfcba0c1d5a2e38040014ae453fd6a111c4d6a",
+      "动态布局验证.md": "e596b53b8d1312b46736346f06bac11c9c63cdadeb4ad7c4a9b0ef8696a345e3",
+      "验证记录.md": "a567d73536f998ffe9f9f07d4892dd949319d057469c3ca089de2364e6ad006c"
+    },
+    "../style-math-prototype/vendor/mathlive/mathlive.min.js": "51e9ab5c4739209a2951a550042dcecb99ad3047269c1d791d09d7d613226eae",
+    "../../../复习画板/web/content/provider.js": "70a2757f43ca2df32d722f2aeb70e6ea07f78b7eb073c287a35d2254f1385fc7",
+    "run.mjs": "5284e0592a1f9482d038e4026df0801ebdc7bf049159255184b2bbbdee0ba96c",
+    "renderer-probe.js": "25f23606aa3bd4b5399952b17bf9130d304da4b9f158e10a229bc26ebc0cab67",
+    "electron-main.cjs": "f3f7e79542d105575863eb0a356addae7414710aeaec4506455f6f137a26dfad",
+    "preload.cjs": "63c245398186c8ba259976e40769e987fe9453dee991caa2788c4ed7992c68e3",
+    "worker.py": "ec90d19acce6bccbe95d910dbd949f50ba4a258f300773cda9dc02c70362465a",
+    "wk-host.swift": "c52e640bbdb3bf308ef6aabd0a608a33870748451d1ac709b277fd832ff2e90e",
+    "package.json": "2bad7ec5e86c11e16a5633a63a1b88fa6a15881cc90b06e930246b1ef09a11a2",
+    "package-lock.json": "0c860cc31d029ad322a6710f571ae24c6c5a3193f79bbba1cab96459d7c666ef"
+  },
+  "failures": [
+    "Error: ENOENT: no such file or directory, open '/Users/robertwu/Documents/大二上/数字逻辑与部件设计/docs/复习工具调研/04-演示/desktop-host-spike/node_modules/electron/path.txt'\n    at async open (node:internal/fs/promises:1281:25)\n    at async readFile (node:internal/fs/promises:1929:14)\n    at async file:///Users/robertwu/Documents/%E5%A4%A7%E4%BA%8C%E4%B8%8A/%E6%95%B0%E5%AD%97%E9%80%BB%E8%BE%91%E4%B8%8E%E9%83%A8%E4%BB%B6%E8%AE%BE%E8%AE%A1/docs/%E5%A4%8D%E4%B9%A0%E5%B7%A5%E5%85%B7%E8%B0%83%E7%A0%94/04-%E6%BC%94%E7%A4%BA/desktop-host-spike/run.mjs:56:21"
+  ],
+  "url": "http://127.0.0.1:57722/?count=500&mode=managed&dynamic=1",
+  "completedAt": "2026-10-27T09:53:06.447Z"
+}

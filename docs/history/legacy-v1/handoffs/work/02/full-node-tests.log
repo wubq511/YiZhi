@@ -1,0 +1,43 @@
+▶ conversation draft ownership across real client navigation, send acknowledgements and retries
+  ✔ dropdown, new conversation and search navigation save and load the owning draft (121.494792ms)
+  ✔ search opens the identified saved message without losing drafts or moving the board (21.270416ms)
+  ✔ A acknowledgement after switching to B neither navigates nor writes B text into A (36.015625ms)
+  ✔ later typing in A survives its first request acknowledgement (40.686ms)
+  ✔ retyping the same question is a newer draft and must not be consumed by an older acknowledgement (46.650834ms)
+  ✔ a late new-conversation response cannot override a more recent search navigation (713.701416ms)
+  ✔ lost acknowledgement retries the same request while preserving B and the newer A draft (46.474417ms)
+  ✔ lost acknowledgement with no later A input clears only A on successful retry (65.550666ms)
+✔ conversation draft ownership across real client navigation, send acknowledgements and retries (2065.951833ms)
+✔ text and nested block edits preserve identity, references, coverage and unrelated raw fields (9.651583ms)
+✔ formula edits retain the edit and mark bound exploration as uncertain in the same knowledge command (0.376708ms)
+✔ all supported payload editors preserve metadata and reject editing arbitrary fields or shared question stems (0.4495ms)
+✔ a stale content base is rejected without changing saved content or clearing its draft (0.378ms)
+✔ lost acknowledgement retries exactly the original operation, reporting what actually committed (0.508792ms)
+✔ neither optimistic success nor an unrelated operation receipt can clear an unacknowledged draft (0.933875ms)
+✔ independent fragment notes keep exact text, original revision and source refs, including after later content changes (4.565708ms)
+✔ orphan detection rejects ambiguous spans and retired/missing targets without dropping personal objects (0.172833ms)
+✔ drawing plus local layout is one atomic personal command; arrows never become formal relations (1.125459ms)
+✔ coordinates remain local under zoom; opposite-direction arrows preserve their orientation (0.309625ms)
+✔ reassociation changes only current target, retains all original contexts, and moves drawing layout atomically (0.767667ms)
+✔ formal relation requires explicit supported type, direction, value, real refs, valid endpoints and immutable base revisions (0.8935ms)
+✔ undo and redo use only host operation IDs and do not restore personal snapshots (0.460792ms)
+✔ whole-unit movement and size use a separate VE layout record and reject stale transforms (0.332708ms)
+✔ recovering an unacknowledged persisted request retains operation ID, generation and the original CAS payload (0.607875ms)
+﹣ Chrome: local MathLive, semantic content edits, notes, drawing/move/resize, cancel, reload and orphan reassociation (0.275917ms) # SKIP
+✔ relation lost acknowledgement retries the same identity and original generation (5.217875ms)
+✔ formula acknowledgement loss survives reopen and later semantic revision without changing payload (2.233166ms)
+✔ a lost acknowledgement retries the same operation without claiming an early save (5.118042ms)
+✔ typing while a save is in flight preserves later input and rebases only on its own commit (3.747ms)
+✔ replaying a recovered old acknowledgement does not roll back a newer snapshot (1.321334ms)
+✔ windows keep separate drafts; a conflict preserves input until the reader chooses (1.501791ms)
+✔ unchanged data with a different JSON key order does not create an autosave loop (17.257708ms)
+✔ a clean window adopts a restored generation before its next edit (1.133333ms)
+✔ a restore cannot silently rebase an older unsaved draft into a new generation (0.962125ms)
+ℹ tests 34
+ℹ suites 0
+ℹ pass 33
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 2179.555334

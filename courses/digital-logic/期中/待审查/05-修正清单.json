@@ -1,0 +1,3037 @@
+{
+  "base": {
+    "knowledgeDraftSha256": "fc4dd8f9e188cc66a292904f7d3afda6fb7163c5f68dca7ce832d379f8f1b28e",
+    "questionDraftSha256": "1b51ed18f364a402ee5d1b1fd8fcc877488073105038a1e005244a81d16061ec"
+  },
+  "outputs": {
+    "knowledgeReviewedSha256": "393d877d4c8c168812e40351ad95cc7455073d1f9e972ad98c285d0fc928917c",
+    "questionReviewedSha256": "58c0956b42bd5a3d6753a146eb8ec1dcec72ac64f9bfee6bc2c780a997cd7769"
+  },
+  "counts": {
+    "themes": 20,
+    "units": 84,
+    "questions": 121,
+    "mappings": 202,
+    "direct": 162,
+    "support": 40,
+    "changes": 130
+  },
+  "changes": [
+    {
+      "action": "update-unit",
+      "entity": "KU-004",
+      "id": "KU-004",
+      "reason": "补齐容量换算的作业与教材来源，删除无来源的操作系统解释",
+      "detail": {
+        "before": {
+          "summary": "bit 是二进制位，8 位为一字节；容量单位在不同语境下可能按 10^6/10^9 或 2^20/2^30 解释。",
+          "internals": [
+            {
+              "kind": "definition",
+              "text": "1 Byte=8 bit，1 Nibble=4 bit，Word 宽度取决于处理器结构"
+            },
+            {
+              "kind": "caution",
+              "text": "厂商标注 GB 常用 10^9 字节，而操作系统可能按 2^30 解释，导致可用容量显示差异"
+            },
+            {
+              "kind": "example",
+              "text": "教材 1.47 的 50GB 硬盘可用音乐空间换算"
+            }
+          ]
+        },
+        "after": {
+          "summary": "bit 是二进制位，8 位为一字节；容量单位按题目约定使用十进制或二进制倍数。",
+          "internals": [
+            {
+              "kind": "definition",
+              "text": "1 Byte=8 bit，1 Nibble=4 bit，Word 宽度取决于处理器结构"
+            },
+            {
+              "kind": "condition",
+              "text": "厂商 MB、GB 在教材 1.47 中分别按 10^6、10^9 字节定义，换算时先采用题目约定"
+            },
+            {
+              "kind": "example",
+              "text": "教材 1.47 的 50GB 硬盘可用音乐空间换算"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "add-source",
+      "entity": "KU-004",
+      "id": "KU-004",
+      "reason": "补充或校正来源",
+      "detail": {
+        "sourceId": "SRC-HW01",
+        "pdfPages": [
+          1,
+          4
+        ],
+        "visualStatus": "verified",
+        "note": "作业 1.47 的 50GB 硬盘容量换算"
+      }
+    },
+    {
+      "action": "add-source",
+      "entity": "KU-004",
+      "id": "KU-004",
+      "reason": "补充或校正来源",
+      "detail": {
+        "sourceId": "SRC-TB",
+        "pdfPages": [
+          38
+        ],
+        "visualStatus": "verified",
+        "note": "教材 1.47 的 MB/GB 十进制定义",
+        "bookPages": [
+          24
+        ]
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-006",
+      "id": "KU-006",
+      "reason": "区分模运算丢弃最高位进位与溢出判断",
+      "detail": {
+        "before": {
+          "summary": "在模 2^n 的系统中，减法可转换为加上减数的补码并舍弃最高位进位。",
+          "internals": [
+            {
+              "kind": "formula",
+              "text": "N_补=2^n-N（n 位二进制）；N_补=N_反+1"
+            },
+            {
+              "kind": "condition",
+              "text": "求补码时先求反码再加 1；符号位的进位舍弃"
+            },
+            {
+              "kind": "example",
+              "text": "模 12 时钟中 7 的补码是 5，9-7 可写成 9+5 并舍去 12"
+            }
+          ]
+        },
+        "after": {
+          "summary": "在模 2^n 的系统中，减法可转换为加上减数的补码；离开最高位的进位可按模运算舍弃，溢出另行判断。",
+          "internals": [
+            {
+              "kind": "formula",
+              "text": "N_补=2^n-N（n 位二进制）；N_补=N_反+1"
+            },
+            {
+              "kind": "condition",
+              "text": "求补码时先求反码再加 1；模 2^n 运算舍弃的是离开最高位的 Cout，不是“符号位进位”"
+            },
+            {
+              "kind": "example",
+              "text": "模 12 时钟中 7 的补码是 5，9-7 可写成 9+5 并舍去 12"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-007",
+      "id": "KU-007",
+      "reason": "原页表格实际为 4 位，修正补码位宽",
+      "detail": {
+        "before": {
+          "internals": [
+            {
+              "kind": "formula",
+              "text": "整数 X_原 = X (X≥0) 或 2^n-X (X<0)"
+            },
+            {
+              "kind": "formula",
+              "text": "X_反 = X (X≥0) 或 2^{n+1}-1+X (X<0)"
+            },
+            {
+              "kind": "formula",
+              "text": "X_补 = X (X≥0) 或 2^{n+1}+X (X<0)"
+            },
+            {
+              "kind": "variant",
+              "text": "3 位补码可表示 -8，原码/反码不能；补码只有 +0"
+            },
+            {
+              "kind": "caution",
+              "text": "负数补码的数值位不是原值直接取反，需按反码加 1 或定义式求"
+            }
+          ]
+        },
+        "after": {
+          "internals": [
+            {
+              "kind": "formula",
+              "text": "整数 X_原 = X (X≥0) 或 2^n-X (X<0)"
+            },
+            {
+              "kind": "formula",
+              "text": "X_反 = X (X≥0) 或 2^{n+1}-1+X (X<0)"
+            },
+            {
+              "kind": "formula",
+              "text": "X_补 = X (X≥0) 或 2^{n+1}+X (X<0)"
+            },
+            {
+              "kind": "variant",
+              "text": "4 位补码（1 个符号位＋3 个数值位）可表示 -8，4 位原码/反码不能；补码只有 +0"
+            },
+            {
+              "kind": "caution",
+              "text": "原页标题写“3 位”，但码表每项均为 4 位；负数补码的数值位不是原值直接取反，需按反码加 1 或定义式求"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-008",
+      "id": "KU-008",
+      "reason": "明确补码运算的模进位与溢出为两个判断",
+      "detail": {
+        "before": {
+          "outcome": "能用补码完成有符号数加减，并在结果超出位宽时舍弃符号位进位。",
+          "summary": "补码加法直接相加；减法化为加负数的补码；符号位产生的进位舍弃。",
+          "internals": [
+            {
+              "kind": "formula",
+              "text": "[x+y]_补=[x]_补+[y]_补；[x-y]_补=[x]_补+[-y]_补"
+            },
+            {
+              "kind": "caution",
+              "text": "减法转补码时先对减数求反码再加 1，不能只对数值位取反"
+            },
+            {
+              "kind": "example",
+              "text": "12-7 用 5 位补码计算：(12)_补=01100，(-7)_补=11001，和为 00101"
+            }
+          ]
+        },
+        "after": {
+          "outcome": "能用补码完成有符号数加减，按模 2^n 处理离开最高位的进位，并另行判断有符号溢出。",
+          "summary": "补码加法直接相加，减法化为加负数的补码；可按模 2^n 舍弃离开最高位的 Cout，但是否溢出不能由丢进位直接判断。",
+          "internals": [
+            {
+              "kind": "formula",
+              "text": "[x+y]_补=[x]_补+[y]_补；[x-y]_补=[x]_补+[-y]_补"
+            },
+            {
+              "kind": "caution",
+              "text": "减法转补码时先对减数求反码再加 1；模运算丢进位不等于有符号结果一定未溢出"
+            },
+            {
+              "kind": "example",
+              "text": "12-7 用 5 位补码计算：(12)_补=01100，(-7)_补=11001，和为 00101"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-009",
+      "id": "KU-009",
+      "reason": "合并两个有符号溢出单元并保留两种判断方法",
+      "detail": {
+        "before": {
+          "name": "有符号数溢出判断",
+          "outcome": "能用同号相加结果异号判断有符号溢出，并区分无符号进位。",
+          "summary": "有符号溢出只可能发生在两个同号数相加时；结果符号与被加数不同即溢出。",
+          "internals": [
+            {
+              "kind": "condition",
+              "text": "同号相加且结果符号与被加数不同则溢出"
+            },
+            {
+              "kind": "condition",
+              "text": "无符号数看最高有效位的进位/借位"
+            },
+            {
+              "kind": "caution",
+              "text": "有符号溢出不能只看最高位进位；符号位进位差的方法在第 06 课 KU-073 展开"
+            }
+          ]
+        },
+        "after": {
+          "name": "有符号数溢出判断与检测",
+          "outcome": "能用同号相加结果异号或进入/离开符号位的进位异或判断有符号溢出，并区分无符号进位与借位。",
+          "summary": "有符号溢出只可能发生在同号数相加时；可用结果符号判断，也可比较进入符号位与离开符号位的进位。",
+          "internals": [
+            {
+              "kind": "condition",
+              "text": "同号相加且结果符号与被加数不同则溢出"
+            },
+            {
+              "kind": "formula",
+              "text": "V=Cn⊕Cn-1：Cn-1 为进入符号位的进位，Cn=Cout 为离开符号位的进位"
+            },
+            {
+              "kind": "condition",
+              "text": "无符号加法看最高位进位是否溢出；无符号减法按 Cout 判断借位，不能与有符号 V 混用"
+            },
+            {
+              "kind": "example",
+              "text": "+70+80=+150 溢出；-70-80=-150 溢出；+30+40 不溢出"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "add-source",
+      "entity": "KU-009",
+      "id": "KU-009",
+      "reason": "补充或校正来源",
+      "detail": {
+        "sourceId": "SRC-C06",
+        "pdfPages": [
+          21,
+          22
+        ],
+        "visualStatus": "verified",
+        "note": "有符号数溢出判断与检测：溢出标志、两种进位及溢出规律"
+      }
+    },
+    {
+      "action": "remove-unit",
+      "entity": "KU-073",
+      "id": "KU-073",
+      "reason": "与 KU-009 属同一有符号溢出知识，合并保留方法变体",
+      "detail": null
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-014",
+      "id": "KU-014",
+      "reason": "格雷码是无权码；依据作业补齐双向转换方法",
+      "detail": {
+        "before": {
+          "name": "格雷码性质与二进制互转",
+          "outcome": "能写出二进制对应的格雷码，并说明相邻码只有一位变化的可靠性特点。",
+          "summary": "格雷码相邻两数只有一位不同，可减少切换瞬间的错误；可由二进制异或相邻位得到。",
+          "internals": [
+            {
+              "kind": "formula",
+              "text": "G_i=B_i⊕B_{i+1}（最高位 G_msb=B_msb）"
+            },
+            {
+              "kind": "condition",
+              "text": "格雷码是变权码，不能直接按位比较大小或做算术运算"
+            }
+          ]
+        },
+        "after": {
+          "name": "格雷码性质与编码转换",
+          "outcome": "能说明格雷码相邻一位变化的性质，并完成二进制与格雷码的双向转换。",
+          "summary": "格雷码相邻两数只有一位不同，可减少切换瞬间的错误；二进制与格雷码可通过相邻位异或及高位递推双向转换。",
+          "internals": [
+            {
+              "kind": "formula",
+              "text": "二进制→格雷码：G_i=B_i⊕B_{i+1}（最高位 G_msb=B_msb）"
+            },
+            {
+              "kind": "formula",
+              "text": "格雷码→二进制：B_i=G_i⊕B_{i+1}，其中 B_{i+1} 是已解码的高位（最高位 B_msb=G_msb）"
+            },
+            {
+              "kind": "condition",
+              "text": "格雷码是无权码，不能按位权解释数值或直接进行普通算术运算"
+            },
+            {
+              "kind": "example",
+              "text": "作业 04：M=1 时二进制→格雷码；M=0 时格雷码→二进制，利用已求出的高位继续解码"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "add-source",
+      "entity": "KU-014",
+      "id": "KU-014",
+      "reason": "补充或校正来源",
+      "detail": {
+        "sourceId": "SRC-HW04",
+        "pdfPages": [
+          1
+        ],
+        "visualStatus": "verified",
+        "note": "代码转换电路分析：M 控制的双向码变换"
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-036",
+      "id": "KU-036",
+      "reason": "质蕴含的“最大”是局部不可扩大，不是全图最大",
+      "detail": {
+        "before": {
+          "internals": [
+            {
+              "kind": "definition",
+              "text": "质蕴含是卡诺图中最多数目的相邻与项；必要质蕴含包含只被它覆盖的最小项"
+            },
+            {
+              "kind": "method",
+              "text": "①画全部质蕴含 ②找必要质蕴含 ③处理剩余非必要质蕴含"
+            }
+          ]
+        },
+        "after": {
+          "internals": [
+            {
+              "kind": "definition",
+              "text": "质蕴含是不能再扩大为更大合法相邻块的蕴含项；必要质蕴含包含只被它覆盖的最小项"
+            },
+            {
+              "kind": "method",
+              "text": "①画全部质蕴含 ②找必要质蕴含 ③处理剩余非必要质蕴含"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-037",
+      "id": "KU-037",
+      "reason": "保留独立多图邻接单元，补全 8×8 表示与选择码条件",
+      "detail": {
+        "before": {
+          "summary": "5–6 变量卡诺图拆成多张 4 变量图；除图内相邻外，对应位置跨图也相邻。",
+          "internals": [
+            {
+              "kind": "condition",
+              "text": "5 变量用两张 4 变量图，6 变量用四张；对应格子可合并"
+            },
+            {
+              "kind": "caution",
+              "text": "课件建议变量数不超过 5，6 变量图主要说明方法"
+            }
+          ]
+        },
+        "after": {
+          "summary": "5–6 变量卡诺图可用多张子图表示；除图内相邻外，满足选择码条件的对应位置也可合并。",
+          "internals": [
+            {
+              "kind": "condition",
+              "text": "5 变量可用两张 4 变量图，6 变量可画成 8×8 单图或四张 4 变量子图"
+            },
+            {
+              "kind": "condition",
+              "text": "跨子图合并要求选择码只差一位；共同成组须形成合法 2^k 块，不是任意子图对应格都相邻"
+            },
+            {
+              "kind": "caution",
+              "text": "课件建议变量数不超过 5，6 变量图主要说明方法；独立拆分依据是新增图间邻接操作"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-038",
+      "id": "KU-038",
+      "reason": "收窄为卡诺图函数变换与逐格运算，奇函数图样移到异或单元",
+      "detail": {
+        "before": {
+          "name": "卡诺图上的逻辑运算与奇函数识别",
+          "aliases": [
+            "卡诺图运算",
+            "奇函数",
+            "异或"
+          ],
+          "outcome": "能在卡诺图上做与、或、反运算，并识别多变量异或对应的奇函数图样。",
+          "summary": "卡诺图逐格做逻辑运算；三变量及以上异或运算呈棋盘状奇函数图样。",
+          "internals": [
+            {
+              "kind": "condition",
+              "text": "F1·F2 逐格取与，F1+F2 逐格取或，含无关项时按 d 的运算规则"
+            },
+            {
+              "kind": "example",
+              "text": "三变量异或的卡诺图 1 格呈对角分布"
+            }
+          ]
+        },
+        "after": {
+          "name": "卡诺图上的反函数、对偶与逻辑运算",
+          "aliases": [
+            "卡诺图运算",
+            "反函数",
+            "对偶式",
+            "含无关项运算"
+          ],
+          "outcome": "能在卡诺图上求反函数、对偶式，并逐格完成与、或运算及含无关项运算。",
+          "summary": "卡诺图可表示并变换函数；逐格做与、或运算时，含无关项按 d 的运算规则处理。",
+          "internals": [
+            {
+              "kind": "condition",
+              "text": "F1·F2 逐格取与，F1+F2 逐格取或，含无关项时按 d 的运算规则"
+            },
+            {
+              "kind": "example",
+              "text": "反函数与对偶式的卡诺图表示，以及含 d 的逐格逻辑运算"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "remove-source-pages",
+      "entity": "KU-038",
+      "id": "KU-038",
+      "reason": "奇函数图样移到异或性质单元",
+      "detail": {
+        "sourceId": "SRC-C03",
+        "pages": [
+          34
+        ]
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-021",
+      "id": "KU-021",
+      "reason": "补入奇函数的卡诺图图样作为异或性质变体",
+      "detail": {
+        "before": {
+          "internals": [
+            {
+              "kind": "formula",
+              "text": "A⊕A=0，A⊕A′=1，A⊕0=A，A⊕1=A′"
+            },
+            {
+              "kind": "condition",
+              "text": "F=A⊕B⊕C⊕... 在 1 的个数为奇数时为 1"
+            }
+          ]
+        },
+        "after": {
+          "internals": [
+            {
+              "kind": "formula",
+              "text": "A⊕A=0，A⊕A′=1，A⊕0=A，A⊕1=A′"
+            },
+            {
+              "kind": "condition",
+              "text": "F=A⊕B⊕C⊕... 在 1 的个数为奇数时为 1"
+            },
+            {
+              "kind": "example",
+              "text": "多变量异或的卡诺图呈棋盘状奇函数图样"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "add-source",
+      "entity": "KU-021",
+      "id": "KU-021",
+      "reason": "补充或校正来源",
+      "detail": {
+        "sourceId": "SRC-C03",
+        "pdfPages": [
+          34
+        ],
+        "visualStatus": "verified",
+        "note": "多变量异或的奇函数卡诺图图样"
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-039",
+      "id": "KU-039",
+      "reason": "无关项不仅是不会出现的输入，也包括输出取值不影响功能的情况",
+      "detail": {
+        "before": {
+          "summary": "无关项对应不会出现的输入组合，可灵活圈入以扩大合并块，但不必覆盖。",
+          "internals": [
+            {
+              "kind": "condition",
+              "text": "无关项可圈可不圈；目的是使覆盖最大、项数最少"
+            },
+            {
+              "kind": "example",
+              "text": "Y=Σm(1,7,8)+d(3,5,9,10,12,14,15)，按无关项灵活圈组后可得到更简覆盖"
+            },
+            {
+              "kind": "caution",
+              "text": "无关项不能当作确定的 0 或 1 参与真值表结论"
+            }
+          ]
+        },
+        "after": {
+          "summary": "无关项对应不会出现的输入组合，或即使出现、其输出取 0 或 1 也不影响所要求功能的组合；可按需要圈入以扩大合并块。",
+          "internals": [
+            {
+              "kind": "condition",
+              "text": "无关项可圈可不圈；每个 d 可独立选择，不要求全部统一取 0 或 1"
+            },
+            {
+              "kind": "example",
+              "text": "Y=Σm(1,7,8)+d(3,5,9,10,12,14,15)，按无关项灵活圈组后可得到更简覆盖"
+            },
+            {
+              "kind": "caution",
+              "text": "无关项不能当作确定的 0 或 1 参与真值表结论"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-040",
+      "id": "KU-040",
+      "reason": "明确 C03 p31 左侧可用、右侧推导不可用",
+      "detail": {
+        "before": {
+          "internals": [
+            {
+              "kind": "method",
+              "text": "合并所有 0 的最小项，再公式取反；或先对 F 取反并化简，再取反"
+            },
+            {
+              "kind": "method",
+              "text": "两条路径应互相校验：合并 0 得 F′ 后取反，与先化简 F′ 再取反，结果应一致"
+            },
+            {
+              "kind": "caution",
+              "text": "课件 p31 的左式与右侧或-与式不一致；引用该页时先核对原式与卡诺图，不把该例当作等价变换"
+            }
+          ]
+        },
+        "after": {
+          "internals": [
+            {
+              "kind": "method",
+              "text": "合并所有 0 的最小项，再公式取反；或先对 F 取反并化简，再取反"
+            },
+            {
+              "kind": "method",
+              "text": "两条路径应互相校验：合并 0 得 F′ 后取反，与先化简 F′ 再取反，结果应一致"
+            },
+            {
+              "kind": "caution",
+              "text": "课件 p31 左式、左侧卡诺图与左下结果一致；右侧推导与左式不等价，不把右侧当作等价变换"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-044",
+      "id": "KU-044",
+      "reason": "交通灯例属于通用组合设计流程",
+      "detail": {
+        "before": {
+          "internals": [
+            {
+              "kind": "method",
+              "text": "①定输入输出并命名 ②列真值表 ③求最简表达式 ④画逻辑图并验证"
+            },
+            {
+              "kind": "condition",
+              "text": "附加约束包括门数、输入数、传输延迟、连线数和驱动能力"
+            }
+          ]
+        },
+        "after": {
+          "internals": [
+            {
+              "kind": "method",
+              "text": "①定输入输出并命名 ②列真值表 ③求最简表达式 ④画逻辑图并验证"
+            },
+            {
+              "kind": "condition",
+              "text": "附加约束包括门数、输入数、传输延迟、连线数和驱动能力"
+            },
+            {
+              "kind": "example",
+              "text": "练习 5：交通灯故障监视，完整枚举输入并按通用流程设计"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "add-source",
+      "entity": "KU-044",
+      "id": "KU-044",
+      "reason": "补充或校正来源",
+      "detail": {
+        "sourceId": "SRC-C04",
+        "pdfPages": [
+          31,
+          32
+        ],
+        "visualStatus": "verified",
+        "note": "组合逻辑设计流程：交通灯故障监视设计"
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-046",
+      "id": "KU-046",
+      "reason": "只保留真正使用无关项的例子，并合并闰年综合例",
+      "detail": {
+        "before": {
+          "aliases": [
+            "四舍五入",
+            "交通灯监视",
+            "无效码"
+          ],
+          "outcome": "能把不会出现的输入组合作为无关项，化简判别电路并画出门级实现。",
+          "summary": "8421 BCD 的 1010–1111 等无效码可作为无关项，用于化简阈值判别或故障监视电路。",
+          "internals": [
+            {
+              "kind": "example",
+              "text": "例 10：判别 8421BCD≥5；练习 5：交通灯故障监视"
+            },
+            {
+              "kind": "condition",
+              "text": "无效输入组合是否可作为无关项取决于实际系统约束"
+            }
+          ]
+        },
+        "after": {
+          "aliases": [
+            "四舍五入",
+            "无效码",
+            "闰年"
+          ],
+          "outcome": "能把不会出现或输出无关的输入组合作为无关项，化简判别与综合电路并画出门级实现。",
+          "summary": "无效 BCD 组合或其他不影响功能的输入可作为无关项，用于化简阈值判别、故障监视和条件综合电路。",
+          "internals": [
+            {
+              "kind": "example",
+              "text": "例 10：判别 8421BCD≥5；无效码 1010–1111 作为无关项"
+            },
+            {
+              "kind": "formula",
+              "text": "闰年综合例：leap=D4·D100′+D400，利用 10–15 无关项化简"
+            },
+            {
+              "kind": "condition",
+              "text": "输入组合是否可作为无关项取决于实际系统约束"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "add-source",
+      "entity": "KU-046",
+      "id": "KU-046",
+      "reason": "补充或校正来源",
+      "detail": {
+        "sourceId": "SRC-C04",
+        "pdfPages": [
+          35,
+          36,
+          37
+        ],
+        "visualStatus": "verified",
+        "note": "含无关项的判别与设计：闰年计算器综合例"
+      }
+    },
+    {
+      "action": "remove-source-pages",
+      "entity": "KU-046",
+      "id": "KU-046",
+      "reason": "交通灯不含无关项，移到通用组合设计流程",
+      "detail": {
+        "sourceId": "SRC-C04",
+        "pages": [
+          31,
+          32
+        ]
+      }
+    },
+    {
+      "action": "remove-unit",
+      "entity": "KU-049",
+      "id": "KU-049",
+      "reason": "闰年是含无关项组合设计的综合例，不再单设知识单元",
+      "detail": null
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-047",
+      "id": "KU-047",
+      "reason": "补充利用编码间算术关系的码变换方法",
+      "detail": {
+        "before": {
+          "outcome": "能设计两种编码系统之间的组合码变换电路，并用真值表/卡诺图化简各输出。",
+          "internals": [
+            {
+              "kind": "example",
+              "text": "例 11 的码变换；练习 3 的 BCD 转余 3 码；练习 4 的 8421 转格雷码"
+            },
+            {
+              "kind": "method",
+              "text": "列输入/输出真值表，逐输出化简，最后画多输出电路"
+            }
+          ]
+        },
+        "after": {
+          "outcome": "能设计两种编码系统之间的组合码变换电路，可用真值表/卡诺图，也可利用编码间算术关系用加法器实现。",
+          "internals": [
+            {
+              "kind": "example",
+              "text": "例 11 的码变换；练习 3 的 BCD 转余 3 码；练习 4 的 8421 转格雷码"
+            },
+            {
+              "kind": "method",
+              "text": "列输入/输出真值表并逐输出化简；或利用余 3=BCD+3 的算术关系，直接用 4 位二进制加法器完成转换"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-061",
+      "id": "KU-061",
+      "reason": "补全优先编码器低有效使能与课件/常用端名对照",
+      "detail": {
+        "before": {
+          "internals": [
+            {
+              "kind": "condition",
+              "text": "74LS148 有 EI 使能输入、GS 工作标志、EO 扩展输出"
+            },
+            {
+              "kind": "condition",
+              "text": "74LS147 的 9 个输入全为 1 时输出全 1，代表十进制 0 的反码"
+            }
+          ]
+        },
+        "after": {
+          "internals": [
+            {
+              "kind": "condition",
+              "text": "74LS148 的课件端名为 S̄、ȲS、ȲEX；常见资料也写 EI/GS/EO，查阅不同图时先对照名称"
+            },
+            {
+              "kind": "condition",
+              "text": "S̄=0 时 74LS148 正常编码；ȲS、ȲEX 用于工作指示与扩展，具体电平按真值表读取"
+            },
+            {
+              "kind": "condition",
+              "text": "74LS147 的 9 个输入全为 1 时输出全 1，代表十进制 0 的反码"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-062",
+      "id": "KU-062",
+      "reason": "区分高有效与低有效译码器输出变体",
+      "detail": {
+        "before": {
+          "summary": "译码器输出对应输入码的最小项；2:4 译码器包含全部二变量乘积项。",
+          "internals": [
+            {
+              "kind": "formula",
+              "text": "2:4 译码器 Y0=A1′A0′，Y1=A1′A0，Y2=A1A0′，Y3=A1A0"
+            },
+            {
+              "kind": "example",
+              "text": "2:4 译码器用于 4 个 1KB RAM 的片选地址译码"
+            }
+          ]
+        },
+        "after": {
+          "summary": "译码器输出对应输入码的最小项，但输出极性取决于具体器件和使能版本，不能对所有译码器统一套用 Yi=mi。",
+          "internals": [
+            {
+              "kind": "formula",
+              "text": "无使能高有效 2:4 译码器：Y0=A1′A0′，Y1=A1′A0，Y2=A1A0′，Y3=A1A0"
+            },
+            {
+              "kind": "variant",
+              "text": "带使能版本可表现为低有效输出、低电平使能；E=1 时输出全 1，E=0 时选中通道为 0"
+            },
+            {
+              "kind": "example",
+              "text": "2:4 译码器用于 4 个 1KB RAM 的片选地址译码"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-064",
+      "id": "KU-064",
+      "reason": "按输出极性选择合并门，禁止把普通或门套到低有效输出",
+      "detail": {
+        "before": {
+          "outcome": "能用译码器输出（低有效）加与非/或门实现给定最小项之和函数。",
+          "summary": "译码器提供全部最小项；对低有效输出，用与非门实现 Σm，或用或门实现低有效组合。",
+          "internals": [
+            {
+              "kind": "method",
+              "text": "把函数写成 Σm，选择对应输出端，经与非门/或门合并"
+            },
+            {
+              "kind": "example",
+              "text": "用 74138 实现全加器 S=Σm(1,2,4,7)、C=Σm(3,5,6,7)"
+            },
+            {
+              "kind": "caution",
+              "text": "低有效输出取反后才是最小项，门的选择随之改变"
+            }
+          ]
+        },
+        "after": {
+          "outcome": "能根据译码器输出极性选择合并门，实现给定最小项之和函数。",
+          "summary": "高有效译码器输出可用普通或门；低有效输出实现高有效 Σm 时用与非门，或画成带输入反相气泡的等效负逻辑或门。",
+          "internals": [
+            {
+              "kind": "method",
+              "text": "先把函数写成 Σm 并选择对应输出；高有效输出用或门，低有效输出用与非门或等效负逻辑或门"
+            },
+            {
+              "kind": "example",
+              "text": "用 74138 实现全加器 S=Σm(1,2,4,7)、C=Σm(3,5,6,7)"
+            },
+            {
+              "kind": "caution",
+              "text": "低有效输出 Yi′=mi′；直接把这些输出送普通或门不能得到所需的 Σm"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-066",
+      "id": "KU-066",
+      "reason": "补全显示译码输出极性与 LE/BL/LT 控制条件",
+      "detail": {
+        "before": {
+          "summary": "二-十进制译码器把 4 位 BCD 译成 10 个输出；74HC4511 驱动七段数码管，含锁存、灭零和试灯控制。",
+          "internals": [
+            {
+              "kind": "definition",
+              "text": "74HC4511 的 LE 为锁存、BL 为灭零、LT 为试灯"
+            },
+            {
+              "kind": "condition",
+              "text": "LE=0、BL=LT=1 时，10–15 输入也使七段输出全灭"
+            }
+          ]
+        },
+        "after": {
+          "summary": "二-十进制译码器的十路输出为低有效；74HC4511 的七段输出为高有效，含锁存、消隐和试灯控制。",
+          "internals": [
+            {
+              "kind": "definition",
+              "text": "LE=0 透明、LE=1 锁存；LT=0 试灯；LT=1 且 BL=0 时灭灯/消隐（课件标“灭零/全灭”）"
+            },
+            {
+              "kind": "condition",
+              "text": "正常译码时 LE=0、BL=LT=1；10–15 输入使七段输出全灭"
+            },
+            {
+              "kind": "condition",
+              "text": "二-十进制译码器十路输出低有效，74HC4511 七段输出高有效，读图时分别处理"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-068",
+      "id": "KU-068",
+      "reason": "接收端 F 偶是错误指示，不是改用偶校验协议",
+      "detail": {
+        "before": {
+          "internals": [
+            {
+              "kind": "condition",
+              "text": "输入 1 的个数为奇数时 F奇=1、F偶=0；为偶数时相反"
+            },
+            {
+              "kind": "example",
+              "text": "两片 74LS280 构成 8 位数据传输的奇校验发送与偶校验接收"
+            }
+          ]
+        },
+        "after": {
+          "internals": [
+            {
+              "kind": "condition",
+              "text": "输入 1 的个数为奇数时 F奇=1、F偶=0；为偶数时相反"
+            },
+            {
+              "kind": "example",
+              "text": "两片 74LS280 构成奇校验传输：发送端生成奇校验位，接收端利用偶输出检测奇偶性被破坏；F偶=1 可报错"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-069",
+      "id": "KU-069",
+      "reason": "级联输入含义已在原页给出，删除含混的有效电平提醒",
+      "detail": {
+        "before": {
+          "internals": [
+            {
+              "kind": "formula",
+              "text": "A>B=A3B3′+x3A2B2′+x3x2A1B1′+x3x2x1A0B0′"
+            },
+            {
+              "kind": "condition",
+              "text": "8 位级联时低位芯片的 a=b 接高电平，a>b、a<b 接低电平"
+            },
+            {
+              "kind": "caution",
+              "text": "级联输入为低有效/高有效需按 74HC85 真值表确认"
+            }
+          ]
+        },
+        "after": {
+          "internals": [
+            {
+              "kind": "formula",
+              "text": "A>B=A3B3′+x3A2B2′+x3x2A1B1′+x3x2x1A0B0′"
+            },
+            {
+              "kind": "condition",
+              "text": "8 位级联时低位芯片的 a=b 接高电平，a>b、a<b 接低电平"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-075",
+      "id": "KU-075",
+      "reason": "区分无符号加法溢出、无符号减法借位与有符号溢出",
+      "detail": {
+        "before": {
+          "outcome": "能用异或门和进位控制把加法器改成加/减法器，并区分无符号进位与有符号溢出标志。",
+          "internals": [
+            {
+              "kind": "condition",
+              "text": "无符号：C=1 表示进位/借位；有符号：V=1 表示溢出"
+            },
+            {
+              "kind": "caution",
+              "text": "不同教材对借位标志极性约定不同；本课件按 C=1 表示有进位/借位"
+            },
+            {
+              "kind": "formula",
+              "text": "A-B=A+B′+1"
+            },
+            {
+              "kind": "example",
+              "text": "74LS385 四位串行加/减法器"
+            }
+          ]
+        },
+        "after": {
+          "outcome": "能用异或门和进位控制把加法器改成加/减法器，并分别解释无符号加法溢出、减法借位和有符号溢出。",
+          "internals": [
+            {
+              "kind": "condition",
+              "text": "无符号加法：Cout=1 表示进位/溢出；无符号补码减法：通常 Cout=0 表示借位，Cout=1 表示无借位"
+            },
+            {
+              "kind": "caution",
+              "text": "课件 p29 将 C=1 概括为“溢出/借位”，用于减法时不能照抄；需按具体运算和 Cout 极性判断"
+            },
+            {
+              "kind": "condition",
+              "text": "有符号溢出用 V 判断，不能把无符号 Cout 与有符号 V 混为同一标志"
+            },
+            {
+              "kind": "formula",
+              "text": "A-B=A+B′+1"
+            },
+            {
+              "kind": "example",
+              "text": "74LS385 四位串行加/减法器"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-077",
+      "id": "KU-077",
+      "reason": "修正 8 位移位加 3 的修正时机，保留 4 位加 6 变体",
+      "detail": {
+        "before": {
+          "summary": "4 位二进制先左移 4 次，BCD 列达到 10 时加 6；8 位二进制逐次左移 8 次，每列达到 5 时加 3。",
+          "internals": [
+            {
+              "kind": "method",
+              "text": "8 位：左移 8 次；从第 3 次移位起，每次移位后若某 BCD 列 ≥5 则加 3"
+            },
+            {
+              "kind": "example",
+              "text": "1110_2 转 BCD：左移 4 次后 BCD 列达到 10，加 6 得 0001_0100（14）"
+            }
+          ]
+        },
+        "after": {
+          "summary": "4 位二进制可按课件的左移后加 6 变体转换；8 位二进制逐次左移，在后续移位前修正，最后一次移位后终止。",
+          "internals": [
+            {
+              "kind": "method",
+              "text": "8 位：第 3–7 次移位后检查各 BCD 列，若 ≥5 则加 3；等价于第 4–8 次移位前检查；第 8 次移位后不再修正"
+            },
+            {
+              "kind": "condition",
+              "text": "4 位变体按课件在 BCD 列达到 10 时加 6，不与通用 8 位流程混写"
+            },
+            {
+              "kind": "example",
+              "text": "1110_2 转 BCD：左移 4 次后 BCD 列达到 10，加 6 得 0001_0100（14）"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "remove-source-pages",
+      "entity": "KU-078",
+      "id": "KU-078",
+      "reason": "集成电路定义页移到 TTL/CMOS 与器件分类",
+      "detail": {
+        "sourceId": "SRC-C06",
+        "pages": [
+          44
+        ]
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-081",
+      "id": "KU-081",
+      "reason": "删除来源不支持的 TTL/CMOS 悬空规则，补入集成电路概念来源",
+      "detail": {
+        "before": {
+          "internals": [
+            {
+              "kind": "condition",
+              "text": "TTL 输入端悬空通常视为高电平，CMOS 输入端不能悬空"
+            },
+            {
+              "kind": "example",
+              "text": "7400 与非、7402 或非、7404 非门"
+            },
+            {
+              "kind": "caution",
+              "text": "CMOS 门输入阻抗高，闲置输入必须接固定电平"
+            }
+          ]
+        },
+        "after": {
+          "internals": [
+            {
+              "kind": "example",
+              "text": "7400 与非、7402 或非、7404 非门"
+            },
+            {
+              "kind": "condition",
+              "text": "仅保留课件实际支持的器件分类、功耗和结构特点，不把其他语境的规则冒充教师内容"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "add-source",
+      "entity": "KU-081",
+      "id": "KU-081",
+      "reason": "补充或校正来源",
+      "detail": {
+        "sourceId": "SRC-C06",
+        "pdfPages": [
+          44
+        ],
+        "visualStatus": "verified",
+        "note": "集成电路定义、封装、引脚与优点"
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-005",
+      "id": "KU-005",
+      "reason": "补充无符号溢出判断的来源页",
+      "detail": {
+        "before": {},
+        "after": {}
+      }
+    },
+    {
+      "action": "add-source",
+      "entity": "KU-005",
+      "id": "KU-005",
+      "reason": "补充或校正来源",
+      "detail": {
+        "sourceId": "SRC-C01",
+        "pdfPages": [
+          42
+        ],
+        "visualStatus": "verified",
+        "note": "无符号溢出与最高位进位/借位"
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-010",
+      "id": "KU-010",
+      "reason": "p22 只作位宽前置，扩展方法以 p23 为主",
+      "detail": {
+        "before": {},
+        "after": {}
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-026",
+      "id": "KU-026",
+      "reason": "记录课件 p26 的对偶文字与正确规则的冲突",
+      "detail": {
+        "before": {
+          "internals": [
+            {
+              "kind": "condition",
+              "text": "反演与对偶都要保持原运算顺序，必要时加括号"
+            },
+            {
+              "kind": "caution",
+              "text": "对偶式不改变原变量与反变量；反演式才逐变量取反"
+            },
+            {
+              "kind": "example",
+              "text": "F=A′B+CD′ 的反函数为 (A+B′)(C′+D)"
+            }
+          ]
+        },
+        "after": {
+          "internals": [
+            {
+              "kind": "condition",
+              "text": "反演与对偶都要保持原运算顺序，必要时加括号"
+            },
+            {
+              "kind": "caution",
+              "text": "对偶式不改变原变量与反变量；反演式才逐变量取反。课件 p26 对偶文字误写为变量也取反，p28 示例则保持变量不变"
+            },
+            {
+              "kind": "example",
+              "text": "F=A′B+CD′ 的反函数为 (A+B′)(C′+D)"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-082",
+      "id": "KU-082",
+      "reason": "保留 PAL/PLA 设计方法，阵列结构移出",
+      "detail": {
+        "before": {
+          "name": "PLD 结构与 PROM/PAL/PLA 设计",
+          "aliases": [
+            "PLD",
+            "PROM",
+            "PAL",
+            "PLA",
+            "与阵列",
+            "或阵列",
+            "熔丝"
+          ],
+          "outcome": "能说明 PROM/PAL/PLA 的与/或阵列可编程性，并用 PAL/PLA 实现组合函数。",
+          "summary": "PROM 与阵列固定、或阵列可编程；PAL 与阵列可编程、或阵列固定；PLA 两者都可编程。",
+          "internals": [
+            {
+              "kind": "condition",
+              "text": "PROM 用译码器产生全部最小项；PAL/PLA 通过熔丝选择乘积项"
+            },
+            {
+              "kind": "example",
+              "text": "用 PAL 实现 w、x、y、z 四函数，z 复用 w 以减少乘积项"
+            },
+            {
+              "kind": "caution",
+              "text": "PAL 的或阵列固定，乘积项数量受器件限制"
+            }
+          ]
+        },
+        "after": {
+          "name": "用 PAL/PLA 实现组合函数",
+          "aliases": [
+            "PAL",
+            "PLA",
+            "可编程逻辑阵列",
+            "与或阵列"
+          ],
+          "outcome": "能用 PAL 或 PLA 的与/或阵列实现给定组合函数，并根据阵列约束分配乘积项。",
+          "summary": "PAL 的与阵列可编程、或阵列固定；PLA 的与、或阵列均可编程。实现时按函数选择乘积项并处理器件资源限制。",
+          "internals": [
+            {
+              "kind": "method",
+              "text": "PAL/PLA 通过可编程连接选择乘积项；PAL 的或阵列固定，须受乘积项数量约束"
+            },
+            {
+              "kind": "example",
+              "text": "用 PAL 实现 w、x、y、z 四函数，z 复用 w 以减少乘积项"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "remove-source-pages",
+      "entity": "KU-082",
+      "id": "KU-082",
+      "reason": "PLD 分类页移到结构单元",
+      "detail": {
+        "sourceId": "SRC-C06",
+        "pages": [
+          54
+        ]
+      }
+    },
+    {
+      "action": "add-unit",
+      "entity": "KU-084",
+      "id": "KU-084",
+      "reason": "从 KU-082 拆出阵列结构，并纳入 GAL 与 PLD 分类来源",
+      "detail": {
+        "id": "KU-084",
+        "themeId": "TH-20",
+        "kind": "module",
+        "name": "PROM/PAL/PLA 阵列结构",
+        "aliases": [
+          "PROM",
+          "PAL",
+          "PLA",
+          "可编程逻辑阵列",
+          "与或阵列"
+        ],
+        "outcome": "能说明 PROM、PAL、PLA 的与/或阵列可编程性及固定资源差异。",
+        "summary": "PROM 与阵列固定、或阵列可编程；PAL 与阵列可编程、或阵列固定；PLA 两者都可编程。",
+        "internals": [
+          {
+            "kind": "condition",
+            "text": "PROM 用译码器产生全部最小项；PAL/PLA 的可编程与阵列用于选择乘积项"
+          },
+          {
+            "kind": "condition",
+            "text": "三类低密度 PLD 的可编程资源不同，不能把结构识别与具体函数设计混为一个目标"
+          }
+        ],
+        "questionTypes": [
+          "逻辑分析",
+          "逻辑设计"
+        ],
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-C02",
+            "pdfPages": [
+              32
+            ],
+            "visualStatus": "verified",
+            "note": "GAL 的与/或阵列结构，作为可编程阵列补充"
+          },
+          {
+            "sourceId": "SRC-C06",
+            "pdfPages": [
+              54,
+              55,
+              56
+            ],
+            "visualStatus": "verified",
+            "note": "PLD 分类及 PROM/PAL/PLA 的阵列结构"
+          }
+        ]
+      }
+    },
+    {
+      "action": "update-unit",
+      "entity": "KU-083",
+      "id": "KU-083",
+      "reason": "保留独立的 LE/LUT 实现方法，去除 CPLD 结构和乘积项导向",
+      "detail": {
+        "before": {
+          "name": "CPLD/FPGA 结构与 LUT 实现",
+          "aliases": [
+            "FPGA",
+            "CPLD",
+            "复杂可编程逻辑器件",
+            "宏单元",
+            "开关矩阵",
+            "LE",
+            "LUT",
+            "CLB",
+            "IOB"
+          ],
+          "outcome": "能说明 CPLD 的宏单元/开关矩阵与 FPGA 的 LE/LUT 结构，并用 4 输入 LUT 配置实现给定函数。",
+          "summary": "CPLD 用可编程开关矩阵连接多个 PLD/宏单元；FPGA 用 CLB/LE/LUT 和互连资源，适合更大规模逻辑。",
+          "internals": [
+            {
+              "kind": "definition",
+              "text": "CPLD 由可编程开关矩阵连接多个 PLD，每个 PLD 含 8–16 个宏单元；宏单元含与-或阵列、触发器和 I/O"
+            },
+            {
+              "kind": "condition",
+              "text": "宏单元中未使用的乘积项可被邻近宏单元使用"
+            },
+            {
+              "kind": "definition",
+              "text": "FPGA 的 LE 含 4 输入 LUT、进位链、寄存器和同步/异步控制"
+            },
+            {
+              "kind": "condition",
+              "text": "LUT 的无关项不能浮空，必须接固定电平"
+            },
+            {
+              "kind": "example",
+              "text": "用 LE 实现 X=A′BC+ABC′ 与 Y=AB′；两 LE 级联实现 7 变量与"
+            }
+          ]
+        },
+        "after": {
+          "name": "用 LE/LUT 实现组合函数",
+          "aliases": [
+            "FPGA",
+            "LE",
+            "LUT",
+            "查找表",
+            "Cyclone IV"
+          ],
+          "outcome": "能用 4 输入 LE/LUT 配置实现组合函数，并按输入变量数、输出数和函数分解估算所需 LE 数。",
+          "summary": "LE/LUT 按真值表配置组合函数；估算时看输入变量数、输出数与分解方式，而不是与-或阵列的乘积项数。",
+          "internals": [
+            {
+              "kind": "definition",
+              "text": "FPGA 的 LE 含 4 输入 LUT、进位链、寄存器和同步/异步控制"
+            },
+            {
+              "kind": "condition",
+              "text": "LUT 的无关项不能浮空，必须接固定电平"
+            },
+            {
+              "kind": "method",
+              "text": "按输入变量数、输出数及 4 输入 LUT 的分解/配置估算 LE；不要求先做乘积项共享或逻辑综合"
+            },
+            {
+              "kind": "example",
+              "text": "用 LE 实现 X=A′BC+ABC′ 与 Y=AB′；两 LE 级联实现 7 变量与；教材 5.55 的 LE 估算"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": "remove-source-pages",
+      "entity": "KU-083",
+      "id": "KU-083",
+      "reason": "CPLD 结构移到独立单元",
+      "detail": {
+        "sourceId": "SRC-C06",
+        "pages": [
+          61,
+          62
+        ]
+      }
+    },
+    {
+      "action": "add-unit",
+      "entity": "KU-085",
+      "id": "KU-085",
+      "reason": "从 KU-083 拆出 CPLD 结构",
+      "detail": {
+        "id": "KU-085",
+        "themeId": "TH-20",
+        "kind": "module",
+        "name": "CPLD 宏单元与开关矩阵",
+        "aliases": [
+          "CPLD",
+          "复杂可编程逻辑器件",
+          "宏单元",
+          "开关矩阵"
+        ],
+        "outcome": "能说明 CPLD 由可编程开关矩阵连接多个 PLD/宏单元及其基本结构。",
+        "summary": "CPLD 用可编程开关矩阵连接多个 PLD；宏单元包含与-或阵列、触发器和 I/O 资源。",
+        "internals": [
+          {
+            "kind": "definition",
+            "text": "每个 PLD 通常含 8–16 个宏单元；宏单元含与-或阵列、触发器和 I/O"
+          },
+          {
+            "kind": "condition",
+            "text": "宏单元中未使用的乘积项可被邻近宏单元使用"
+          }
+        ],
+        "questionTypes": [
+          "基础支撑"
+        ],
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-C06",
+            "pdfPages": [
+              54,
+              61,
+              62
+            ],
+            "visualStatus": "verified",
+            "note": "CPLD 分类、时序可编程器件与宏单元/开关矩阵结构"
+          }
+        ]
+      }
+    },
+    {
+      "action": "add-unit",
+      "entity": "KU-086",
+      "id": "KU-086",
+      "reason": "从 KU-083 拆出 FPGA 结构",
+      "detail": {
+        "id": "KU-086",
+        "themeId": "TH-20",
+        "kind": "module",
+        "name": "FPGA 的 LE/LUT 结构",
+        "aliases": [
+          "FPGA",
+          "LE",
+          "LUT",
+          "CLB",
+          "IOB",
+          "查找表"
+        ],
+        "outcome": "能说明 FPGA 的 CLB、LE、LUT 与互连结构，以及 LE 中组合和寄存资源的作用。",
+        "summary": "FPGA 由可配置逻辑块、互连和 I/O 组成；LE 中的 LUT 实现组合函数，寄存器和其他资源提供扩展能力。",
+        "internals": [
+          {
+            "kind": "definition",
+            "text": "LE 含 4 输入 LUT、进位链、寄存器和同步/异步控制"
+          },
+          {
+            "kind": "condition",
+            "text": "FPGA 的结构知识用于支撑 LE/LUT 实现，不等同于具体的函数配置操作"
+          }
+        ],
+        "questionTypes": [
+          "逻辑设计"
+        ],
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-C06",
+            "pdfPages": [
+              54,
+              63,
+              64,
+              65
+            ],
+            "visualStatus": "verified",
+            "note": "FPGA 分类、通用结构、Xilinx FPGA 与 Cyclone IV LE"
+          }
+        ]
+      }
+    },
+    {
+      "action": "update-theme-visual",
+      "entity": "TH-05",
+      "id": "TH-05",
+      "reason": "主题范围含公式和图形，按已核对原页记录视觉状态",
+      "detail": null
+    },
+    {
+      "action": "update-theme-visual",
+      "entity": "TH-20",
+      "id": "TH-20",
+      "reason": "主题范围含公式和图形，按已核对原页记录视觉状态",
+      "detail": null
+    },
+    {
+      "action": "delete-mapping",
+      "entity": "Q-005/KU-002",
+      "id": "MAP-006",
+      "reason": "可选路径或无关支撑，不是完成该题所必需",
+      "detail": {
+        "id": "MAP-006",
+        "questionId": "Q-005",
+        "unitId": "KU-002",
+        "role": "support",
+        "basis": "agent-analysis",
+        "note": "也可先读十进制再转写，但不是最直接方法"
+      }
+    },
+    {
+      "action": "delete-mapping",
+      "entity": "Q-006/KU-002",
+      "id": "MAP-008",
+      "reason": "可选路径或无关支撑，不是完成该题所必需",
+      "detail": {
+        "id": "MAP-008",
+        "questionId": "Q-006",
+        "unitId": "KU-002",
+        "role": "support",
+        "basis": "agent-analysis",
+        "note": "进制换算的通用读法"
+      }
+    },
+    {
+      "action": "delete-mapping",
+      "entity": "Q-035/KU-002",
+      "id": "MAP-038",
+      "reason": "可选路径或无关支撑，不是完成该题所必需",
+      "detail": {
+        "id": "MAP-038",
+        "questionId": "Q-035",
+        "unitId": "KU-002",
+        "role": "support",
+        "basis": "agent-analysis",
+        "note": "十进制数值读出"
+      }
+    },
+    {
+      "action": "delete-mapping",
+      "entity": "Q-036/KU-002",
+      "id": "MAP-040",
+      "reason": "可选路径或无关支撑，不是完成该题所必需",
+      "detail": {
+        "id": "MAP-040",
+        "questionId": "Q-036",
+        "unitId": "KU-002",
+        "role": "support",
+        "basis": "agent-analysis",
+        "note": "小数部分十进制读出"
+      }
+    },
+    {
+      "action": "delete-mapping",
+      "entity": "Q-093/KU-064",
+      "id": "MAP-155",
+      "reason": "可选路径或无关支撑，不是完成该题所必需",
+      "detail": {
+        "id": "MAP-155",
+        "questionId": "Q-093",
+        "unitId": "KU-064",
+        "role": "support",
+        "basis": "agent-analysis",
+        "note": "把低有效译码输出与片选逻辑对应"
+      }
+    },
+    {
+      "action": "update-question",
+      "entity": "Q-032",
+      "id": "Q-032",
+      "reason": "原题数值按教材原页校正",
+      "detail": {
+        "before": {
+          "taskSummary": "将 10010101_BCD 转换为二进制。"
+        },
+        "after": {
+          "taskSummary": "将 01101001_BCD 转换为二进制。"
+        }
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-032/KU-002",
+      "id": "MAP-035",
+      "reason": "BCD 读出十进制后再转二进制是题目目标操作",
+      "detail": {
+        "before": {
+          "id": "MAP-035",
+          "questionId": "Q-032",
+          "unitId": "KU-002",
+          "role": "support",
+          "basis": "agent-analysis",
+          "note": "再把十进制数转成二进制"
+        },
+        "after": {
+          "id": "MAP-035",
+          "questionId": "Q-032",
+          "unitId": "KU-002",
+          "role": "direct",
+          "basis": "stem",
+          "note": "先按 BCD 读出十进制，再完成十进制到二进制转换"
+        }
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-049/KU-032",
+      "id": "MAP-054",
+      "reason": "题干明确要求相对简单的组合电路",
+      "detail": {
+        "before": {
+          "id": "MAP-054",
+          "questionId": "Q-049",
+          "unitId": "KU-032",
+          "role": "support",
+          "basis": "agent-analysis",
+          "note": "用最简与-或式控制门数"
+        },
+        "after": {
+          "id": "MAP-054",
+          "questionId": "Q-049",
+          "unitId": "KU-032",
+          "role": "direct",
+          "basis": "stem",
+          "note": "题目直接要求比较简单性或电路成本"
+        }
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-055/KU-032",
+      "id": "MAP-067",
+      "reason": "题干明确要求相对简单的组合电路",
+      "detail": {
+        "before": {
+          "id": "MAP-067",
+          "questionId": "Q-055",
+          "unitId": "KU-032",
+          "role": "support",
+          "basis": "agent-analysis",
+          "note": "用最简与-或式控制门数"
+        },
+        "after": {
+          "id": "MAP-067",
+          "questionId": "Q-055",
+          "unitId": "KU-032",
+          "role": "direct",
+          "basis": "stem",
+          "note": "题目直接要求比较简单性或电路成本"
+        }
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-061/KU-032",
+      "id": "MAP-080",
+      "reason": "题干明确要求相对简单的组合电路",
+      "detail": {
+        "before": {
+          "id": "MAP-080",
+          "questionId": "Q-061",
+          "unitId": "KU-032",
+          "role": "support",
+          "basis": "agent-analysis",
+          "note": "用最简与-或式控制门数"
+        },
+        "after": {
+          "id": "MAP-080",
+          "questionId": "Q-061",
+          "unitId": "KU-032",
+          "role": "direct",
+          "basis": "stem",
+          "note": "题目直接要求比较简单性或电路成本"
+        }
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-050/KU-032",
+      "id": "MAP-056",
+      "reason": "题干明确要求相对简单的组合电路",
+      "detail": {
+        "before": {
+          "id": "MAP-056",
+          "questionId": "Q-050",
+          "unitId": "KU-032",
+          "role": "support",
+          "basis": "agent-analysis",
+          "note": "在限定门型下保持最简"
+        },
+        "after": {
+          "id": "MAP-056",
+          "questionId": "Q-050",
+          "unitId": "KU-032",
+          "role": "direct",
+          "basis": "stem",
+          "note": "题目直接要求比较简单性或电路成本"
+        }
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-056/KU-032",
+      "id": "MAP-069",
+      "reason": "题干明确要求相对简单的组合电路",
+      "detail": {
+        "before": {
+          "id": "MAP-069",
+          "questionId": "Q-056",
+          "unitId": "KU-032",
+          "role": "support",
+          "basis": "agent-analysis",
+          "note": "在限定门型下保持最简"
+        },
+        "after": {
+          "id": "MAP-069",
+          "questionId": "Q-056",
+          "unitId": "KU-032",
+          "role": "direct",
+          "basis": "stem",
+          "note": "题目直接要求比较简单性或电路成本"
+        }
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-062/KU-032",
+      "id": "MAP-082",
+      "reason": "题干明确要求相对简单的组合电路",
+      "detail": {
+        "before": {
+          "id": "MAP-082",
+          "questionId": "Q-062",
+          "unitId": "KU-032",
+          "role": "support",
+          "basis": "agent-analysis",
+          "note": "在限定门型下保持最简"
+        },
+        "after": {
+          "id": "MAP-082",
+          "questionId": "Q-062",
+          "unitId": "KU-032",
+          "role": "direct",
+          "basis": "stem",
+          "note": "题目直接要求比较简单性或电路成本"
+        }
+      }
+    },
+    {
+      "action": "add-mapping",
+      "entity": "Q-051/KU-032",
+      "id": "MAP-203",
+      "reason": "补入被遗漏的明确简单性要求",
+      "detail": {
+        "id": "MAP-203",
+        "questionId": "Q-051",
+        "unitId": "KU-032",
+        "role": "direct",
+        "basis": "stem",
+        "note": "重做 2.7 继承相对简单电路要求"
+      }
+    },
+    {
+      "action": "add-mapping",
+      "entity": "Q-057/KU-032",
+      "id": "MAP-204",
+      "reason": "补入被遗漏的明确简单性要求",
+      "detail": {
+        "id": "MAP-204",
+        "questionId": "Q-057",
+        "unitId": "KU-032",
+        "role": "direct",
+        "basis": "stem",
+        "note": "重做 2.7 继承相对简单电路要求"
+      }
+    },
+    {
+      "action": "add-mapping",
+      "entity": "Q-063/KU-032",
+      "id": "MAP-205",
+      "reason": "补入被遗漏的明确简单性要求",
+      "detail": {
+        "id": "MAP-205",
+        "questionId": "Q-063",
+        "unitId": "KU-032",
+        "role": "direct",
+        "basis": "stem",
+        "note": "重做 2.7 继承相对简单电路要求"
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-065/KU-029",
+      "id": "MAP-089",
+      "reason": "真值表或卡诺图检验是二选一的明确路径",
+      "detail": {
+        "before": {
+          "id": "MAP-089",
+          "questionId": "Q-065",
+          "unitId": "KU-029",
+          "role": "support",
+          "basis": "agent-analysis",
+          "note": "也可用真值表逐行检验"
+        },
+        "after": {
+          "id": "MAP-089",
+          "questionId": "Q-065",
+          "unitId": "KU-029",
+          "role": "direct",
+          "basis": "stem",
+          "note": "真值表或卡诺图检验二选一；K-map 路径与真值表路径任选"
+        }
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-065/KU-029",
+      "id": "MAP-089",
+      "reason": "标记两种检验路径为可选而非全部必需",
+      "detail": {
+        "before": {
+          "id": "MAP-089",
+          "questionId": "Q-065",
+          "unitId": "KU-029",
+          "role": "direct",
+          "basis": "stem",
+          "note": "题干允许真值表或卡诺图二选一检验，不要求两种方法都完成"
+        },
+        "after": {
+          "id": "MAP-089",
+          "questionId": "Q-065",
+          "unitId": "KU-029",
+          "role": "direct",
+          "basis": "stem",
+          "note": "真值表或卡诺图检验二选一；K-map 路径与真值表路径任选"
+        }
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-065/KU-035",
+      "id": "MAP-087",
+      "reason": "标记两种检验路径为可选而非全部必需",
+      "detail": {
+        "before": {
+          "id": "MAP-087",
+          "questionId": "Q-065",
+          "unitId": "KU-035",
+          "role": "direct",
+          "basis": "stem",
+          "note": "用卡诺图检验化简结果"
+        },
+        "after": {
+          "id": "MAP-087",
+          "questionId": "Q-065",
+          "unitId": "KU-035",
+          "role": "direct",
+          "basis": "stem",
+          "note": "真值表或卡诺图检验二选一；K-map 路径与真值表路径任选"
+        }
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-066/KU-029",
+      "id": "MAP-093",
+      "reason": "真值表或卡诺图检验是二选一的明确路径",
+      "detail": {
+        "before": {
+          "id": "MAP-093",
+          "questionId": "Q-066",
+          "unitId": "KU-029",
+          "role": "support",
+          "basis": "agent-analysis",
+          "note": "也可用真值表逐行检验"
+        },
+        "after": {
+          "id": "MAP-093",
+          "questionId": "Q-066",
+          "unitId": "KU-029",
+          "role": "direct",
+          "basis": "stem",
+          "note": "真值表或卡诺图检验二选一；K-map 路径与真值表路径任选"
+        }
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-066/KU-029",
+      "id": "MAP-093",
+      "reason": "标记两种检验路径为可选而非全部必需",
+      "detail": {
+        "before": {
+          "id": "MAP-093",
+          "questionId": "Q-066",
+          "unitId": "KU-029",
+          "role": "direct",
+          "basis": "stem",
+          "note": "题干允许真值表或卡诺图二选一检验，不要求两种方法都完成"
+        },
+        "after": {
+          "id": "MAP-093",
+          "questionId": "Q-066",
+          "unitId": "KU-029",
+          "role": "direct",
+          "basis": "stem",
+          "note": "真值表或卡诺图检验二选一；K-map 路径与真值表路径任选"
+        }
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-066/KU-035",
+      "id": "MAP-091",
+      "reason": "标记两种检验路径为可选而非全部必需",
+      "detail": {
+        "before": {
+          "id": "MAP-091",
+          "questionId": "Q-066",
+          "unitId": "KU-035",
+          "role": "direct",
+          "basis": "stem",
+          "note": "用卡诺图检验化简结果"
+        },
+        "after": {
+          "id": "MAP-091",
+          "questionId": "Q-066",
+          "unitId": "KU-035",
+          "role": "direct",
+          "basis": "stem",
+          "note": "真值表或卡诺图检验二选一；K-map 路径与真值表路径任选"
+        }
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-067/KU-029",
+      "id": "MAP-097",
+      "reason": "真值表或卡诺图检验是二选一的明确路径",
+      "detail": {
+        "before": {
+          "id": "MAP-097",
+          "questionId": "Q-067",
+          "unitId": "KU-029",
+          "role": "support",
+          "basis": "agent-analysis",
+          "note": "也可用真值表逐行检验"
+        },
+        "after": {
+          "id": "MAP-097",
+          "questionId": "Q-067",
+          "unitId": "KU-029",
+          "role": "direct",
+          "basis": "stem",
+          "note": "真值表或卡诺图检验二选一；K-map 路径与真值表路径任选"
+        }
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-067/KU-029",
+      "id": "MAP-097",
+      "reason": "标记两种检验路径为可选而非全部必需",
+      "detail": {
+        "before": {
+          "id": "MAP-097",
+          "questionId": "Q-067",
+          "unitId": "KU-029",
+          "role": "direct",
+          "basis": "stem",
+          "note": "题干允许真值表或卡诺图二选一检验，不要求两种方法都完成"
+        },
+        "after": {
+          "id": "MAP-097",
+          "questionId": "Q-067",
+          "unitId": "KU-029",
+          "role": "direct",
+          "basis": "stem",
+          "note": "真值表或卡诺图检验二选一；K-map 路径与真值表路径任选"
+        }
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-067/KU-035",
+      "id": "MAP-095",
+      "reason": "标记两种检验路径为可选而非全部必需",
+      "detail": {
+        "before": {
+          "id": "MAP-095",
+          "questionId": "Q-067",
+          "unitId": "KU-035",
+          "role": "direct",
+          "basis": "stem",
+          "note": "用卡诺图检验化简结果"
+        },
+        "after": {
+          "id": "MAP-095",
+          "questionId": "Q-067",
+          "unitId": "KU-035",
+          "role": "direct",
+          "basis": "stem",
+          "note": "真值表或卡诺图检验二选一；K-map 路径与真值表路径任选"
+        }
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-077/KU-030",
+      "id": "MAP-119",
+      "reason": "题目还要求写出布尔表达式",
+      "detail": {
+        "before": {
+          "id": "MAP-119",
+          "questionId": "Q-077",
+          "unitId": "KU-030",
+          "role": "support",
+          "basis": "agent-analysis",
+          "note": "从重画后的电路直接读出函数式"
+        },
+        "after": {
+          "id": "MAP-119",
+          "questionId": "Q-077",
+          "unitId": "KU-030",
+          "role": "direct",
+          "basis": "stem",
+          "note": "从重画电路读出并写出布尔表达式"
+        }
+      }
+    },
+    {
+      "action": "set-question-sources",
+      "entity": "Q-077",
+      "id": "Q-077",
+      "reason": "删除与本题无关的前置图页",
+      "detail": [
+        {
+          "sourceId": "SRC-HW03",
+          "pdfPages": [
+            1,
+            5
+          ],
+          "visualStatus": "verified",
+          "note": "2.26、2.27 与图 2-84 均在合并版 P5"
+        }
+      ]
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-080/KU-014",
+      "id": "MAP-129",
+      "reason": "双向码变换分析就是本题目标",
+      "detail": {
+        "before": {
+          "id": "MAP-129",
+          "questionId": "Q-080",
+          "unitId": "KU-014",
+          "role": "support",
+          "basis": "agent-analysis",
+          "note": "识别电路为 4 位二进制/格雷码双向变换，M 控制方向"
+        },
+        "after": {
+          "id": "MAP-129",
+          "questionId": "Q-080",
+          "unitId": "KU-014",
+          "role": "direct",
+          "basis": "agent-analysis",
+          "note": "分析 M=1 的二进制→格雷码与 M=0 的格雷码→二进制"
+        }
+      }
+    },
+    {
+      "action": "add-mapping",
+      "entity": "Q-081/KU-029",
+      "id": "MAP-206",
+      "reason": "保密锁独立要求的真值表到表达式步骤",
+      "detail": {
+        "id": "MAP-206",
+        "questionId": "Q-081",
+        "unitId": "KU-029",
+        "role": "direct",
+        "basis": "stem",
+        "note": "题干明确要求列真值表并由真值表写逻辑表达式"
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-081/KU-045",
+      "id": "MAP-131",
+      "reason": "文字条件解释与真值表到表达式由不同单元承担",
+      "detail": {
+        "before": {
+          "id": "MAP-131",
+          "questionId": "Q-081",
+          "unitId": "KU-045",
+          "role": "direct",
+          "basis": "stem",
+          "note": "由文字条件列真值表"
+        },
+        "after": {
+          "id": "MAP-131",
+          "questionId": "Q-081",
+          "unitId": "KU-045",
+          "role": "direct",
+          "basis": "stem",
+          "note": "解释按键组合并确定 F、G 的有效状态"
+        }
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-082/KU-011",
+      "id": "MAP-135",
+      "reason": "编码范围是使用无关项的前置条件，不是本题直接目标",
+      "detail": {
+        "before": {
+          "id": "MAP-135",
+          "questionId": "Q-082",
+          "unitId": "KU-011",
+          "role": "direct",
+          "basis": "stem",
+          "note": "8421 码的有效码范围"
+        },
+        "after": {
+          "id": "MAP-135",
+          "questionId": "Q-082",
+          "unitId": "KU-011",
+          "role": "support",
+          "basis": "agent-analysis",
+          "note": "8421 有效码范围用于判断无效组合和无关项"
+        }
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-093/KU-063",
+      "id": "MAP-153",
+      "reason": "按题图实际 E 端和极性列式",
+      "detail": {
+        "before": {
+          "id": "MAP-153",
+          "questionId": "Q-093",
+          "unitId": "KU-063",
+          "role": "direct",
+          "basis": "stem",
+          "note": "按图中 74HC138（74138 系列）使能端 S1/S2′/S3′ 与地址端 A2A1A0 列式"
+        },
+        "after": {
+          "id": "MAP-153",
+          "questionId": "Q-093",
+          "unitId": "KU-063",
+          "role": "direct",
+          "basis": "stem",
+          "note": "按图 E1/E2 低有效、E3 高有效；A15/A14/A13 接 A0/A1/A2"
+        }
+      }
+    },
+    {
+      "action": "delete-mapping",
+      "entity": "Q-095/KU-033",
+      "id": "MAP-157",
+      "reason": "4 输入 LUT 可按真值表直接配置，不要求先减少乘积项",
+      "detail": {
+        "id": "MAP-157",
+        "questionId": "Q-095",
+        "unitId": "KU-033",
+        "role": "support",
+        "basis": "agent-analysis",
+        "note": "必要时先看函数能否化简以减少乘积项"
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-096/KU-033",
+      "id": "MAP-159",
+      "reason": "按需要分解函数以适配 4 输入 LUT，不以减少乘积项为目标",
+      "detail": {
+        "before": {
+          "id": "MAP-159",
+          "questionId": "Q-096",
+          "unitId": "KU-033",
+          "role": "support",
+          "basis": "agent-analysis",
+          "note": "必要时先看函数能否化简以减少乘积项"
+        },
+        "after": {
+          "id": "MAP-159",
+          "questionId": "Q-096",
+          "unitId": "KU-033",
+          "role": "support",
+          "basis": "agent-analysis",
+          "note": "按需要分解五变量函数以适配 4 输入 LUT"
+        }
+      }
+    },
+    {
+      "action": "delete-mapping",
+      "entity": "Q-097/KU-033",
+      "id": "MAP-161",
+      "reason": "双输出 LUT 配置不需要泛泛减少乘积项",
+      "detail": {
+        "id": "MAP-161",
+        "questionId": "Q-097",
+        "unitId": "KU-033",
+        "role": "support",
+        "basis": "agent-analysis",
+        "note": "必要时先看函数能否化简以减少乘积项"
+      }
+    },
+    {
+      "action": "add-mapping",
+      "entity": "Q-097/KU-043",
+      "id": "MAP-207",
+      "reason": "双输出函数的实际前置是电路功能分析",
+      "detail": {
+        "id": "MAP-207",
+        "questionId": "Q-097",
+        "unitId": "KU-043",
+        "role": "support",
+        "basis": "agent-analysis",
+        "note": "先由图 2-82 取得两个输出函数，再估算 LUT/LE 配置"
+      }
+    },
+    {
+      "action": "delete-mapping",
+      "entity": "Q-097/KU-041",
+      "id": "MAP-162",
+      "reason": "双输出不等于必须共享乘积项；LUT 按真值表配置",
+      "detail": {
+        "id": "MAP-162",
+        "questionId": "Q-097",
+        "unitId": "KU-041",
+        "role": "support",
+        "basis": "agent-analysis",
+        "note": "2.24 为双输出，需要按公共项分别配置 LUT"
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-095/KU-083",
+      "id": "MAP-156",
+      "reason": "LUT 按输入变量数、输出数与分解配置，不按乘积项配置",
+      "detail": {
+        "before": {
+          "id": "MAP-156",
+          "questionId": "Q-095",
+          "unitId": "KU-083",
+          "role": "direct",
+          "basis": "stem",
+          "note": "按 4 输入 LUT 的变量数与乘积项配置 LE"
+        },
+        "after": {
+          "id": "MAP-156",
+          "questionId": "Q-095",
+          "unitId": "KU-083",
+          "role": "direct",
+          "basis": "stem",
+          "note": "按输入变量数、输出数及 4 输入 LUT 的分解/配置估算 LE"
+        }
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-096/KU-083",
+      "id": "MAP-158",
+      "reason": "LUT 按输入变量数、输出数与分解配置，不按乘积项配置",
+      "detail": {
+        "before": {
+          "id": "MAP-158",
+          "questionId": "Q-096",
+          "unitId": "KU-083",
+          "role": "direct",
+          "basis": "stem",
+          "note": "按 4 输入 LUT 的变量数与乘积项配置 LE"
+        },
+        "after": {
+          "id": "MAP-158",
+          "questionId": "Q-096",
+          "unitId": "KU-083",
+          "role": "direct",
+          "basis": "stem",
+          "note": "按输入变量数、输出数及 4 输入 LUT 的分解/配置估算 LE"
+        }
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-097/KU-083",
+      "id": "MAP-160",
+      "reason": "LUT 按输入变量数、输出数与分解配置，不按乘积项配置",
+      "detail": {
+        "before": {
+          "id": "MAP-160",
+          "questionId": "Q-097",
+          "unitId": "KU-083",
+          "role": "direct",
+          "basis": "stem",
+          "note": "按 4 输入 LUT 的变量数与乘积项配置 LE"
+        },
+        "after": {
+          "id": "MAP-160",
+          "questionId": "Q-097",
+          "unitId": "KU-083",
+          "role": "direct",
+          "basis": "stem",
+          "note": "按输入变量数、输出数及 4 输入 LUT 的分解/配置估算 LE"
+        }
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-098/KU-082",
+      "id": "MAP-163",
+      "reason": "读既有与或阵列属于阵列结构分析",
+      "detail": {
+        "before": {
+          "id": "MAP-163",
+          "questionId": "Q-098",
+          "unitId": "KU-082",
+          "role": "direct",
+          "basis": "stem",
+          "note": "按与阵列/或阵列的可编程连接读乘积项"
+        },
+        "after": {
+          "id": "MAP-163",
+          "questionId": "Q-098",
+          "unitId": "KU-084",
+          "role": "direct",
+          "basis": "stem",
+          "note": "按与/或阵列的可编程连接读出函数"
+        }
+      }
+    },
+    {
+      "action": "add-mapping",
+      "entity": "Q-102/KU-033",
+      "id": "MAP-208",
+      "reason": "习题课【2】实际先进行代数化简",
+      "detail": {
+        "id": "MAP-208",
+        "questionId": "Q-102",
+        "unitId": "KU-033",
+        "role": "direct",
+        "basis": "official-solution",
+        "note": "答案先执行代数展开和消项"
+      }
+    },
+    {
+      "action": "update-mapping",
+      "entity": "Q-102/KU-029",
+      "id": "MAP-174",
+      "reason": "补因子得到标准 Σm 再转换为 ΠM 是实际操作",
+      "detail": {
+        "before": {
+          "id": "MAP-174",
+          "questionId": "Q-102",
+          "unitId": "KU-029",
+          "role": "support",
+          "basis": "agent-analysis",
+          "note": "标准式与最大项编号"
+        },
+        "after": {
+          "id": "MAP-174",
+          "questionId": "Q-102",
+          "unitId": "KU-029",
+          "role": "direct",
+          "basis": "official-solution",
+          "note": "利用补因子得到标准最小项表达式，再写最大项之积"
+        }
+      }
+    },
+    {
+      "action": "delete-mapping",
+      "entity": "Q-102/KU-040",
+      "id": "MAP-175",
+      "reason": "本题未使用卡诺图最大项法或化简 F′ 再取反",
+      "detail": {
+        "id": "MAP-175",
+        "questionId": "Q-102",
+        "unitId": "KU-040",
+        "role": "support",
+        "basis": "agent-analysis",
+        "note": "最大项之积/或-与式的表示"
+      }
+    },
+    {
+      "action": "add-mapping",
+      "entity": "Q-103/KU-045",
+      "id": "MAP-209",
+      "reason": "习题课【3】的文字条件解释",
+      "detail": {
+        "id": "MAP-209",
+        "questionId": "Q-103",
+        "unitId": "KU-045",
+        "role": "direct",
+        "basis": "official-solution",
+        "note": "先把文字条件转换为真值表，再写最小项表达式"
+      }
+    },
+    {
+      "action": "add-mapping",
+      "entity": "Q-105/KU-021",
+      "id": "MAP-210",
+      "reason": "习题课【4】①实际使用异或关系",
+      "detail": {
+        "id": "MAP-210",
+        "questionId": "Q-105",
+        "unitId": "KU-021",
+        "role": "direct",
+        "basis": "official-solution",
+        "note": "答案最后把两个乘积项合写为 B⊕C"
+      }
+    },
+    {
+      "action": "add-mapping",
+      "entity": "Q-113/KU-024",
+      "id": "MAP-211",
+      "reason": "习题课【6】的摩根变换步骤",
+      "detail": {
+        "id": "MAP-211",
+        "questionId": "Q-113",
+        "unitId": "KU-024",
+        "role": "direct",
+        "basis": "official-solution",
+        "note": "答案通过双重取反/摩根变换得到与非实现"
+      }
+    },
+    {
+      "action": "delete-mapping",
+      "entity": "Q-118/KU-029",
+      "id": "MAP-195",
+      "reason": "本题没有标准式/最小项/最大项互转，表达式与真值表转换由 KU-030 覆盖",
+      "detail": {
+        "id": "MAP-195",
+        "questionId": "Q-118",
+        "unitId": "KU-029",
+        "role": "direct",
+        "basis": "official-solution",
+        "note": "由真值表概括多数表决函数"
+      }
+    },
+    {
+      "action": "add-mapping",
+      "entity": "Q-120/KU-047",
+      "id": "MAP-212",
+      "reason": "习题课【11】的码变换设计",
+      "detail": {
+        "id": "MAP-212",
+        "questionId": "Q-120",
+        "unitId": "KU-047",
+        "role": "direct",
+        "basis": "official-solution",
+        "note": "完整执行 8421BCD→余 3 码码变换设计"
+      }
+    },
+    {
+      "action": "add-mapping",
+      "entity": "Q-121/KU-076",
+      "id": "MAP-213",
+      "reason": "习题课【12】的移位相加乘法",
+      "detail": {
+        "id": "MAP-213",
+        "questionId": "Q-121",
+        "unitId": "KU-076",
+        "role": "direct",
+        "basis": "official-solution",
+        "note": "3D=D+2D，左移得到 2D，使用部分积/移位相加原理"
+      }
+    },
+    {
+      "action": "delete-mapping",
+      "entity": "Q-099/KU-075",
+      "id": "MAP-166",
+      "reason": "图中 C-1=0，M/N 为产生的控制信号，没有加/减切换或溢出标志分析的必要前置",
+      "detail": {
+        "id": "MAP-166",
+        "questionId": "Q-099",
+        "unitId": "KU-075",
+        "role": "support",
+        "basis": "agent-analysis",
+        "note": "加/减法器中 B 端取反与进位控制的作用"
+      }
+    },
+    {
+      "action": "update-question",
+      "entity": "Q-099",
+      "id": "Q-099",
+      "reason": "按图明确 M/N 为选择加数的控制信号而非外部控制输入",
+      "detail": {
+        "before": {
+          "taskSummary": "分析由 4 位加法器 74HC283 与异或/与门构成的电路功能；原题文字称 M、N 为控制端，图中 M、N 由门输出。"
+        },
+        "after": {
+          "taskSummary": "分析由 4 位加法器 74HC283 与异或/与门构成的电路功能；M、N 为门网络产生、用于选择加数的控制信号。"
+        }
+      }
+    },
+    {
+      "action": "update-question",
+      "entity": "Q-072",
+      "id": "Q-072",
+      "reason": "同步修正题型标签",
+      "detail": {
+        "before": {
+          "questionTypes": [
+            "函数化简"
+          ]
+        },
+        "after": {
+          "questionTypes": [
+            "函数化简",
+            "逻辑设计"
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-question",
+      "entity": "Q-073",
+      "id": "Q-073",
+      "reason": "同步修正题型标签",
+      "detail": {
+        "before": {
+          "questionTypes": [
+            "函数化简"
+          ]
+        },
+        "after": {
+          "questionTypes": [
+            "函数化简",
+            "逻辑设计"
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-question",
+      "entity": "Q-074",
+      "id": "Q-074",
+      "reason": "同步修正题型标签",
+      "detail": {
+        "before": {
+          "questionTypes": [
+            "函数化简"
+          ]
+        },
+        "after": {
+          "questionTypes": [
+            "函数化简",
+            "逻辑设计"
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-question",
+      "entity": "Q-075",
+      "id": "Q-075",
+      "reason": "同步修正题型标签",
+      "detail": {
+        "before": {
+          "questionTypes": [
+            "函数化简"
+          ]
+        },
+        "after": {
+          "questionTypes": [
+            "函数化简",
+            "逻辑设计"
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-question",
+      "entity": "Q-078",
+      "id": "Q-078",
+      "reason": "同步修正题型标签",
+      "detail": {
+        "before": {
+          "questionTypes": [
+            "逻辑设计"
+          ]
+        },
+        "after": {
+          "questionTypes": [
+            "函数化简",
+            "逻辑设计"
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-question",
+      "entity": "Q-079",
+      "id": "Q-079",
+      "reason": "同步修正题型标签",
+      "detail": {
+        "before": {
+          "questionTypes": [
+            "逻辑设计"
+          ]
+        },
+        "after": {
+          "questionTypes": [
+            "函数化简",
+            "逻辑设计"
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-question",
+      "entity": "Q-081",
+      "id": "Q-081",
+      "reason": "同步修正题型标签",
+      "detail": {
+        "before": {
+          "questionTypes": [
+            "逻辑设计"
+          ]
+        },
+        "after": {
+          "questionTypes": [
+            "函数化简",
+            "逻辑设计"
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-question",
+      "entity": "Q-083",
+      "id": "Q-083",
+      "reason": "同步修正题型标签",
+      "detail": {
+        "before": {
+          "questionTypes": [
+            "逻辑分析"
+          ]
+        },
+        "after": {
+          "questionTypes": [
+            "逻辑分析",
+            "逻辑设计"
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-question",
+      "entity": "Q-084",
+      "id": "Q-084",
+      "reason": "同步修正题型标签",
+      "detail": {
+        "before": {
+          "questionTypes": [
+            "逻辑分析"
+          ]
+        },
+        "after": {
+          "questionTypes": [
+            "逻辑分析",
+            "逻辑设计"
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-question",
+      "entity": "Q-085",
+      "id": "Q-085",
+      "reason": "同步修正题型标签",
+      "detail": {
+        "before": {
+          "questionTypes": [
+            "逻辑分析"
+          ]
+        },
+        "after": {
+          "questionTypes": [
+            "逻辑分析",
+            "逻辑设计"
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-question",
+      "entity": "Q-088",
+      "id": "Q-088",
+      "reason": "同步修正题型标签",
+      "detail": {
+        "before": {
+          "questionTypes": [
+            "逻辑设计"
+          ]
+        },
+        "after": {
+          "questionTypes": [
+            "逻辑分析"
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-question",
+      "entity": "Q-093",
+      "id": "Q-093",
+      "reason": "同步修正题型标签",
+      "detail": {
+        "before": {
+          "questionTypes": [
+            "逻辑设计"
+          ]
+        },
+        "after": {
+          "questionTypes": [
+            "逻辑分析"
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-question",
+      "entity": "Q-098",
+      "id": "Q-098",
+      "reason": "同步修正题型标签",
+      "detail": {
+        "before": {
+          "questionTypes": [
+            "逻辑设计"
+          ]
+        },
+        "after": {
+          "questionTypes": [
+            "逻辑分析"
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-question",
+      "entity": "Q-103",
+      "id": "Q-103",
+      "reason": "同步修正题型标签",
+      "detail": {
+        "before": {
+          "questionTypes": [
+            "函数化简"
+          ]
+        },
+        "after": {
+          "questionTypes": [
+            "逻辑设计"
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-question",
+      "entity": "Q-113",
+      "id": "Q-113",
+      "reason": "同步修正题型标签",
+      "detail": {
+        "before": {
+          "questionTypes": [
+            "逻辑设计"
+          ]
+        },
+        "after": {
+          "questionTypes": [
+            "函数化简",
+            "逻辑设计"
+          ]
+        }
+      }
+    },
+    {
+      "action": "update-question",
+      "entity": "Q-119",
+      "id": "Q-119",
+      "reason": "同步修正题型标签",
+      "detail": {
+        "before": {
+          "questionTypes": [
+            "逻辑设计"
+          ]
+        },
+        "after": {
+          "questionTypes": [
+            "函数化简",
+            "逻辑设计"
+          ]
+        }
+      }
+    },
+    {
+      "action": "set-question-sources",
+      "entity": "Q-109",
+      "id": "Q-109",
+      "reason": "精化习题课子问来源页",
+      "detail": [
+        {
+          "sourceId": "SRC-EX07",
+          "pdfPages": [
+            9
+          ],
+          "visualStatus": "verified",
+          "note": "习题课【5】①②题干与答案均在 P9"
+        }
+      ]
+    },
+    {
+      "action": "set-question-sources",
+      "entity": "Q-110",
+      "id": "Q-110",
+      "reason": "精化习题课子问来源页",
+      "detail": [
+        {
+          "sourceId": "SRC-EX07",
+          "pdfPages": [
+            9
+          ],
+          "visualStatus": "verified",
+          "note": "习题课【5】①②题干与答案均在 P9"
+        }
+      ]
+    },
+    {
+      "action": "set-question-sources",
+      "entity": "Q-111",
+      "id": "Q-111",
+      "reason": "精化习题课子问来源页",
+      "detail": [
+        {
+          "sourceId": "SRC-EX07",
+          "pdfPages": [
+            10
+          ],
+          "visualStatus": "verified",
+          "note": "习题课【5】③④题干与答案均在 P10"
+        }
+      ]
+    },
+    {
+      "action": "set-question-sources",
+      "entity": "Q-112",
+      "id": "Q-112",
+      "reason": "精化习题课子问来源页",
+      "detail": [
+        {
+          "sourceId": "SRC-EX07",
+          "pdfPages": [
+            10
+          ],
+          "visualStatus": "verified",
+          "note": "习题课【5】③④题干与答案均在 P10"
+        }
+      ]
+    },
+    {
+      "action": "update-reference",
+      "entity": "REF-001",
+      "id": "REF-001",
+      "reason": "补基本逻辑门，删除未点名的奇偶校验",
+      "detail": [
+        "KU-001",
+        "KU-002",
+        "KU-003",
+        "KU-005",
+        "KU-006",
+        "KU-007",
+        "KU-008",
+        "KU-009",
+        "KU-011",
+        "KU-014",
+        "KU-018",
+        "KU-019",
+        "KU-022",
+        "KU-078",
+        "KU-079",
+        "KU-080",
+        "KU-081",
+        "KU-017"
+      ]
+    },
+    {
+      "action": "update-reference",
+      "entity": "REF-002",
+      "id": "REF-002",
+      "reason": "补公式化简所依赖的公理与基本定理",
+      "detail": [
+        "KU-027",
+        "KU-028",
+        "KU-029",
+        "KU-030",
+        "KU-031",
+        "KU-033",
+        "KU-034",
+        "KU-035",
+        "KU-036",
+        "KU-039",
+        "KU-040",
+        "KU-041",
+        "KU-023"
+      ]
+    },
+    {
+      "action": "update-reference",
+      "entity": "REF-003",
+      "id": "REF-003",
+      "reason": "补门电路实现组合逻辑",
+      "detail": [
+        "KU-043",
+        "KU-044",
+        "KU-056",
+        "KU-064",
+        "KU-072",
+        "KU-075",
+        "KU-020"
+      ]
+    },
+    {
+      "action": "resolve-issue",
+      "entity": "ISS-207",
+      "id": "ISS-207",
+      "reason": "内容准确性修正",
+      "detail": "修正 BCD 最后移位、低有效译码门类型、无符号借位、4 位补码和奇校验接收端等会直接导致解题错误的内容。"
+    },
+    {
+      "action": "resolve-issue",
+      "entity": "ISS-208",
+      "id": "ISS-208",
+      "reason": "粒度与来源修正",
+      "detail": "合并有符号溢出与闰年例；拆分 PAL/PLA 结构、CPLD、FPGA 与 LUT 实现；修正容量来源、无关项、显示控制、CPLD/CMOS 越界表述等。"
+    },
+    {
+      "action": "resolve-issue",
+      "entity": "ISS-209",
+      "id": "ISS-209",
+      "reason": "题目映射与题型修正",
+      "detail": "按题干和官方答案重审直接/支撑，修正可选路径、LUT、习题课实际步骤、题型标签、子问页码与参考条目。"
+    },
+    {
+      "action": "resolve-issue",
+      "entity": "ISS-210",
+      "id": "ISS-210",
+      "reason": "1.65(c) 题干数值校正",
+      "detail": "DeepSeek 草稿的 10010101_BCD 改为教材原页的 01101001_BCD；其他第 01 次作业数值已对照原页。"
+    },
+    {
+      "action": "resolve-issue",
+      "entity": "ISS-211",
+      "id": "ISS-211",
+      "reason": "补充语义修正",
+      "detail": "格雷码改为无权码；C06 p29 的无符号减法按 Cout 判断借位，未照抄课件概括。"
+    }
+  ]
+}

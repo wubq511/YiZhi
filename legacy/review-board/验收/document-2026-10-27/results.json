@@ -1,0 +1,69 @@
+{
+  "stage": "document",
+  "date": "2026-10-27",
+  "result": "已按当前实现刷新设计系统文档与侧车",
+  "files": [
+    "DESIGN.md",
+    ".impeccable/design.json"
+  ],
+  "preservedDirection": "手帐推演：手绘笔触、端正排版、有含义的内容配色",
+  "changes": [
+    "记录 Excalifont 拉丁子集、Xiaolai 中文、MathLive 数学字形的分工。",
+    "按实际 CSS 级联和浏览器采样记录界面 12/13/14/16px 层级、世界字号、表格字级与行高。",
+    "分开记录重要性、复习状态、笔记、提醒、草稿、错误和界面辅助色。",
+    "记录动态顶栏、窗口与画板容器阈值、面板互斥、工具避让和键盘焦点行为。",
+    "更新 10 个组件预览，修正低对比度旧样例、旧字号和旧提示框；侧车 narrative 由文档原文保持一致。"
+  ],
+  "validation": {
+    "yamlAndJson": "passed",
+    "canonicalSectionOrder": "passed",
+    "componentPropertySchema": "passed",
+    "tokenReferences": "passed",
+    "colorMetadataCount": 44,
+    "typographyRoles": 13,
+    "sidecarNarrativeParity": "passed",
+    "chromiumSnippetParsing": {
+      "components": 10,
+      "allCssAndHtmlParsed": true,
+      "method": "在已打开本地应用的 Chromium 中解析独立 CSSStyleSheet 与 detached HTML；未声称设计面板完整视觉验收。"
+    },
+    "runtimeSamples": [
+      "body = 14px UI",
+      "header action = 12px UI",
+      "reading theme = 50px hand / 70px line",
+      "unit title = 34px hand / 51px line",
+      "unit content = 24px hand / 44.4px line",
+      "table = 21px UI / 34.65px line",
+      "table head = 19px UI / 31.35px line",
+      "agent draft = 16px UI / 28px line",
+      "agent answer = 16px UI / 29.6px line",
+      "blue reading callout = 13px 16px padding, 9px radius, #f1f6fb fill, #27343e text"
+    ],
+    "courseDataHashes": {
+      "知识地图.json": "223f55f8f4ddac71f0036274778ab25de0f40f2cf8fdd9745a8b2cb85d1c1564",
+      "视图布局.json": "c9f0f6b75a0e630cf92b34fc5a5c7980ecd3500fb7b3d5085d2de69181322b93"
+    },
+    "appCodeChanged": false,
+    "testPolicy": "仅文档和侧车修改，运行格式、引用、CSS/HTML 解析与源码/运行时核对；没有重复应用功能测试。"
+  },
+  "detector": {
+    "exitCode": 2,
+    "rawCount": 122,
+    "countsByRule": {
+      "side-tab": 2,
+      "design-system-color": 91,
+      "design-system-font-size": 17,
+      "design-system-radius": 12
+    },
+    "warnings": {
+      "side-tab": 2
+    },
+    "interpretation": "字体越界告警已消失，低对比度告警仍为 0；剩余色值、字号、圆角是局部样式差异，未为消警全部提升成规范。2 条侧边线提示沿用审计的启发式分类。",
+    "limits": "静态扫描不能解析两个服务端 assets 样式别名；本次已检查真实页面最终 computed style。"
+  },
+  "notCanonized": [
+    "未把零散字面量、装饰性眉题或字符图标样式确立为新的通用规范。",
+    "未将未覆盖的触摸、系统缩放和其他浏览器写成已验证。"
+  ],
+  "nextStage": "polish 尚未执行。"
+}

@@ -1,0 +1,813 @@
+{
+  "completedAt": "2026-10-27T13:25:21.351747+00:00",
+  "scope": "Final cleanup after shared core-placement experiment completion; no host or load launched; no runtime installation or download.",
+  "coreCompletionNotice": {
+    "source": "Current coordinating message",
+    "run": "run-KanJGk",
+    "status": "passed",
+    "scenarios": 18,
+    "completedAtUTC": "13:21:22Z",
+    "remainingObservedPids": [],
+    "temporaryTreeRemoved": true
+  },
+  "runtime": {
+    "removedParent": "/var/folders/nn/s5g8qnt93l30cz_m3svlc3gm0000gn/T/desktop-resource-4fefz5ln",
+    "canonicalRemovedParent": "/private/var/folders/nn/s5g8qnt93l30cz_m3svlc3gm0000gn/T/desktop-resource-4fefz5ln",
+    "entriesBeforeDeletion": [
+      "runtime"
+    ],
+    "regularFileLogicalBytesRemoved": 401671127,
+    "regularFilesRemoved": 262,
+    "parentAbsent": true,
+    "runtimeCleanupPending": false
+  },
+  "localCaches": {
+    "removedPycacheDirectories": [],
+    "removedPycFiles": [],
+    "remainingPycacheDirectories": [],
+    "remainingPycFiles": []
+  },
+  "preCleanup": {
+    "processes": {
+      "recordedPidIdentityChecks": [
+        {
+          "pid": 83308,
+          "recordedStartAbstime": 12289857067337,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83346,
+          "recordedStartAbstime": 12289951869509,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83347,
+          "recordedStartAbstime": 12289952057044,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83356,
+          "recordedStartAbstime": 12289958095344,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83475,
+          "recordedStartAbstime": 12290974171556,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83477,
+          "recordedStartAbstime": 12290985802235,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83483,
+          "recordedStartAbstime": 12290987753135,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83486,
+          "recordedStartAbstime": 12290988751710,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83654,
+          "recordedStartAbstime": 12292067354728,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83656,
+          "recordedStartAbstime": 12292070737573,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83659,
+          "recordedStartAbstime": 12292072321788,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83660,
+          "recordedStartAbstime": 12292072732529,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83828,
+          "recordedStartAbstime": 12293102289744,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83829,
+          "recordedStartAbstime": 12293110131672,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83830,
+          "recordedStartAbstime": 12293110277687,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83833,
+          "recordedStartAbstime": 12293115450312,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83971,
+          "recordedStartAbstime": 12294133165601,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83972,
+          "recordedStartAbstime": 12294137159535,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83973,
+          "recordedStartAbstime": 12294137175601,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83976,
+          "recordedStartAbstime": 12294141516085,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 84184,
+          "recordedStartAbstime": 12295157791966,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 84185,
+          "recordedStartAbstime": 12295161123523,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 84188,
+          "recordedStartAbstime": 12295162567273,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 84189,
+          "recordedStartAbstime": 12295162982451,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 86668,
+          "recordedStartAbstime": 12312109232870,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 86671,
+          "recordedStartAbstime": 12312116079281,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 86672,
+          "recordedStartAbstime": 12312116206368,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 86675,
+          "recordedStartAbstime": 12312120843072,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 86904,
+          "recordedStartAbstime": 12313193764633,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 86906,
+          "recordedStartAbstime": 12313206153848,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 86917,
+          "recordedStartAbstime": 12313208579143,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 86920,
+          "recordedStartAbstime": 12313209040296,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87133,
+          "recordedStartAbstime": 12314337885865,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87134,
+          "recordedStartAbstime": 12314341445565,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87137,
+          "recordedStartAbstime": 12314343073983,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87138,
+          "recordedStartAbstime": 12314343494181,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87331,
+          "recordedStartAbstime": 12315426533632,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87332,
+          "recordedStartAbstime": 12315434070510,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87333,
+          "recordedStartAbstime": 12315434230132,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87336,
+          "recordedStartAbstime": 12315439176822,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87527,
+          "recordedStartAbstime": 12316516474745,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87528,
+          "recordedStartAbstime": 12316520666422,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87529,
+          "recordedStartAbstime": 12316520688065,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87532,
+          "recordedStartAbstime": 12316524304970,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87740,
+          "recordedStartAbstime": 12317599832200,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87741,
+          "recordedStartAbstime": 12317603672561,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87744,
+          "recordedStartAbstime": 12317605276112,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87745,
+          "recordedStartAbstime": 12317605694202,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        }
+      ],
+      "remainingObservedPids": [],
+      "dedicatedCommandMatches": []
+    },
+    "ports": [
+      {
+        "host": "127.0.0.1",
+        "port": 55375,
+        "connectReturnCode": 61,
+        "listening": false
+      },
+      {
+        "host": "127.0.0.1",
+        "port": 56703,
+        "connectReturnCode": 61,
+        "listening": false
+      },
+      {
+        "host": "127.0.0.1",
+        "port": 57442,
+        "connectReturnCode": 61,
+        "listening": false
+      }
+    ]
+  },
+  "postCleanup": {
+    "processes": {
+      "recordedPidIdentityChecks": [
+        {
+          "pid": 83308,
+          "recordedStartAbstime": 12289857067337,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83346,
+          "recordedStartAbstime": 12289951869509,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83347,
+          "recordedStartAbstime": 12289952057044,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83356,
+          "recordedStartAbstime": 12289958095344,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83475,
+          "recordedStartAbstime": 12290974171556,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83477,
+          "recordedStartAbstime": 12290985802235,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83483,
+          "recordedStartAbstime": 12290987753135,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83486,
+          "recordedStartAbstime": 12290988751710,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83654,
+          "recordedStartAbstime": 12292067354728,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83656,
+          "recordedStartAbstime": 12292070737573,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83659,
+          "recordedStartAbstime": 12292072321788,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83660,
+          "recordedStartAbstime": 12292072732529,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83828,
+          "recordedStartAbstime": 12293102289744,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83829,
+          "recordedStartAbstime": 12293110131672,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83830,
+          "recordedStartAbstime": 12293110277687,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83833,
+          "recordedStartAbstime": 12293115450312,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83971,
+          "recordedStartAbstime": 12294133165601,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83972,
+          "recordedStartAbstime": 12294137159535,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83973,
+          "recordedStartAbstime": 12294137175601,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 83976,
+          "recordedStartAbstime": 12294141516085,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 84184,
+          "recordedStartAbstime": 12295157791966,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 84185,
+          "recordedStartAbstime": 12295161123523,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 84188,
+          "recordedStartAbstime": 12295162567273,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 84189,
+          "recordedStartAbstime": 12295162982451,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 86668,
+          "recordedStartAbstime": 12312109232870,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 86671,
+          "recordedStartAbstime": 12312116079281,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 86672,
+          "recordedStartAbstime": 12312116206368,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 86675,
+          "recordedStartAbstime": 12312120843072,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 86904,
+          "recordedStartAbstime": 12313193764633,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 86906,
+          "recordedStartAbstime": 12313206153848,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 86917,
+          "recordedStartAbstime": 12313208579143,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 86920,
+          "recordedStartAbstime": 12313209040296,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87133,
+          "recordedStartAbstime": 12314337885865,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87134,
+          "recordedStartAbstime": 12314341445565,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87137,
+          "recordedStartAbstime": 12314343073983,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87138,
+          "recordedStartAbstime": 12314343494181,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87331,
+          "recordedStartAbstime": 12315426533632,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87332,
+          "recordedStartAbstime": 12315434070510,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87333,
+          "recordedStartAbstime": 12315434230132,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87336,
+          "recordedStartAbstime": 12315439176822,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87527,
+          "recordedStartAbstime": 12316516474745,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87528,
+          "recordedStartAbstime": 12316520666422,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87529,
+          "recordedStartAbstime": 12316520688065,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87532,
+          "recordedStartAbstime": 12316524304970,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87740,
+          "recordedStartAbstime": 12317599832200,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87741,
+          "recordedStartAbstime": 12317603672561,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87744,
+          "recordedStartAbstime": 12317605276112,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        },
+        {
+          "pid": 87745,
+          "recordedStartAbstime": 12317605694202,
+          "returnCode": -1,
+          "errno": 3,
+          "startAbstime": null
+        }
+      ],
+      "remainingObservedPids": [],
+      "dedicatedCommandMatches": []
+    },
+    "ports": [
+      {
+        "host": "127.0.0.1",
+        "port": 55375,
+        "connectReturnCode": 61,
+        "listening": false
+      },
+      {
+        "host": "127.0.0.1",
+        "port": 56703,
+        "connectReturnCode": 61,
+        "listening": false
+      },
+      {
+        "host": "127.0.0.1",
+        "port": 57442,
+        "connectReturnCode": 61,
+        "listening": false
+      }
+    ],
+    "dedicatedTemporaryPaths": [
+      {
+        "path": "/private/var/folders/nn/s5g8qnt93l30cz_m3svlc3gm0000gn/T/desktop-focus-2fjzfada",
+        "exists": false,
+        "isSymlink": false
+      },
+      {
+        "path": "/private/var/folders/nn/s5g8qnt93l30cz_m3svlc3gm0000gn/T/desktop-resource-4fefz5ln",
+        "exists": false,
+        "isSymlink": false
+      },
+      {
+        "path": "/private/var/folders/nn/s5g8qnt93l30cz_m3svlc3gm0000gn/T/desktop-resource-v2-mf3dzsxk",
+        "exists": false,
+        "isSymlink": false
+      }
+    ],
+    "remainingMatchingTempDirectories": []
+  },
+  "userOriginalCache": {
+    "path": "/Users/robertwu/Library/Caches/electron/e2ab7f5c7b75e539aecedcad672559729d23bea062f0b954d4ba249cabac1162/electron-v40.10.6-darwin-arm64.zip",
+    "sha256Before": "24e3b1a13ff7243f6b9036ebb743b6f62b19e4a925242d27eaa2be90de90a691",
+    "sha256After": "24e3b1a13ff7243f6b9036ebb743b6f62b19e4a925242d27eaa2be90de90a691",
+    "expectedSha256": "24e3b1a13ff7243f6b9036ebb743b6f62b19e4a925242d27eaa2be90de90a691",
+    "preserved": true,
+    "sizeBytes": 114353947,
+    "statUnchanged": true
+  },
+  "preservedEvidence": {
+    "sha256Before": {
+      "results.json": "90c1caec240fd337140d06545fe6165ecd865a595b0577d7020b5914e9256e6a",
+      "results-v2.json": "ed80909621f94ec77d509bfc7eb9026997d3c6007278abd839bbc4bb8533f9a1",
+      "focus-diagnostic.json": "64cb81da8aef58289900d65eed6decb66237f8934251c448618e284c80db3624",
+      "frame-tails-first-trial.json": "d934561cacb4794e5e7e52ac81e57585e38881ba777674b87f55abd8c81aaf42",
+      "frame-tails-v2.json": "2296e52dcbdecf74db137e16e5891bf926a858dc31faeab3bdcf67e85d7626df"
+    },
+    "sha256After": {
+      "results.json": "90c1caec240fd337140d06545fe6165ecd865a595b0577d7020b5914e9256e6a",
+      "results-v2.json": "ed80909621f94ec77d509bfc7eb9026997d3c6007278abd839bbc4bb8533f9a1",
+      "focus-diagnostic.json": "64cb81da8aef58289900d65eed6decb66237f8934251c448618e284c80db3624",
+      "frame-tails-first-trial.json": "d934561cacb4794e5e7e52ac81e57585e38881ba777674b87f55abd8c81aaf42",
+      "frame-tails-v2.json": "2296e52dcbdecf74db137e16e5891bf926a858dc31faeab3bdcf67e85d7626df"
+    },
+    "allUnchanged": true
+  },
+  "protectedTrees": {
+    "/Users/robertwu/Documents/大二上/数字逻辑与部件设计/docs/复习工具调研/04-演示/architecture-spike": {
+      "files": 47,
+      "unchanged": true
+    },
+    "/Users/robertwu/Documents/大二上/数字逻辑与部件设计/docs/复习工具调研/04-演示/desktop-host-spike": {
+      "files": 20,
+      "unchanged": true
+    }
+  },
+  "passed": true
+}

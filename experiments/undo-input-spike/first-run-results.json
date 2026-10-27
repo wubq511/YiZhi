@@ -1,0 +1,3561 @@
+{
+  "capturedAt": "2026-10-27T11:08:58.172Z",
+  "scope": "Isolated keyboard fact probe; existing built sample; no build, benchmark, CourseService or production implementation",
+  "environment": {
+    "node": "v26.0.0",
+    "platform": "darwin 27.0.0 arm64",
+    "headless": true,
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "deviceScaleFactor": 1,
+    "undo": "Meta+z",
+    "redo": "Meta+Shift+z",
+    "input": "Playwright keyboard.type/press via Chromium automation; not physical keyboard or native IME",
+    "playwright": {
+      "path": "/Users/robertwu/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright-core",
+      "version": "1.62.1",
+      "reused": true,
+      "packageSha256": "07c47543631fef9508760365dee9fbe958c562093ec8d122543949ed231f233f"
+    },
+    "server": {
+      "host": "127.0.0.1",
+      "port": 53360,
+      "pid": 74314,
+      "osAssigned": true
+    },
+    "chromePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "browser": "156.0.8078.48"
+  },
+  "checks": [
+    {
+      "name": "84: actual object count and initially empty storage",
+      "pass": true,
+      "evidence": {
+        "actualObjects": 84,
+        "initialStorage": {}
+      }
+    },
+    {
+      "name": "textarea: keyboard entered expected text and saved it",
+      "pass": true,
+      "evidence": {
+        "label": "typed",
+        "id": "KU-001",
+        "value": "undo84",
+        "saved": "undo84",
+        "storageKey": "architecture-spike-v1:84:dynamic",
+        "sameDOM": true,
+        "connected": true,
+        "focused": true,
+        "selection": {
+          "start": 6,
+          "end": 6,
+          "direction": "none"
+        },
+        "position": null,
+        "rect": {
+          "x": 188.79998779296875,
+          "y": 181.921875,
+          "width": 354.89996337890625,
+          "height": 35
+        },
+        "viewport": {
+          "x": 95,
+          "y": 35,
+          "zoom": 0.7
+        },
+        "owner": "manual",
+        "bodyMounts": 3,
+        "bodyUnmounts": 0
+      }
+    },
+    {
+      "name": "textarea: one keyboard undo returns initial text and synchronizes storage",
+      "pass": true,
+      "evidence": {
+        "label": "undo",
+        "id": "KU-001",
+        "value": "",
+        "saved": "",
+        "storageKey": "architecture-spike-v1:84:dynamic",
+        "sameDOM": true,
+        "connected": true,
+        "focused": true,
+        "selection": {
+          "start": 0,
+          "end": 0,
+          "direction": "none"
+        },
+        "position": null,
+        "rect": {
+          "x": 188.79998779296875,
+          "y": 181.921875,
+          "width": 354.89996337890625,
+          "height": 35
+        },
+        "viewport": {
+          "x": 95,
+          "y": 35,
+          "zoom": 0.7
+        },
+        "owner": "manual",
+        "bodyMounts": 3,
+        "bodyUnmounts": 0
+      }
+    },
+    {
+      "name": "textarea: keyboard redo returns typed text and synchronizes storage",
+      "pass": true,
+      "evidence": {
+        "label": "redo",
+        "id": "KU-001",
+        "value": "undo84",
+        "saved": "undo84",
+        "storageKey": "architecture-spike-v1:84:dynamic",
+        "sameDOM": true,
+        "connected": true,
+        "focused": true,
+        "selection": {
+          "start": 6,
+          "end": 6,
+          "direction": "none"
+        },
+        "position": null,
+        "rect": {
+          "x": 188.79998779296875,
+          "y": 181.921875,
+          "width": 354.89996337890625,
+          "height": 35
+        },
+        "viewport": {
+          "x": 95,
+          "y": 35,
+          "zoom": 0.7
+        },
+        "owner": "manual",
+        "bodyMounts": 3,
+        "bodyUnmounts": 0
+      }
+    },
+    {
+      "name": "textarea: same-object body patch applied while input DOM, value, focus and selection survived",
+      "pass": true,
+      "evidence": {
+        "label": "same-object patch",
+        "id": "KU-001",
+        "value": "undo84",
+        "saved": "undo84",
+        "storageKey": "architecture-spike-v1:84:dynamic",
+        "sameDOM": true,
+        "connected": true,
+        "focused": true,
+        "selection": {
+          "start": 6,
+          "end": 6,
+          "direction": "none"
+        },
+        "position": null,
+        "rect": {
+          "x": 188.79998779296875,
+          "y": 181.921875,
+          "width": 354.89996337890625,
+          "height": 35
+        },
+        "viewport": {
+          "x": 95,
+          "y": 35,
+          "zoom": 0.7
+        },
+        "owner": "manual",
+        "bodyMounts": 3,
+        "bodyUnmounts": 0
+      }
+    },
+    {
+      "name": "textarea: same-object body patch preserves keyboard undo/redo; body patch itself is not undone",
+      "pass": true,
+      "evidence": {
+        "undo": {
+          "label": "undo after same-object patch",
+          "id": "KU-001",
+          "value": "",
+          "saved": "",
+          "storageKey": "architecture-spike-v1:84:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "start": 0,
+            "end": 0,
+            "direction": "none"
+          },
+          "position": null,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 181.921875,
+            "width": 354.89996337890625,
+            "height": 35
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        },
+        "redo": {
+          "label": "redo after same-object patch",
+          "id": "KU-001",
+          "value": "undo84",
+          "saved": "undo84",
+          "storageKey": "architecture-spike-v1:84:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "start": 6,
+            "end": 6,
+            "direction": "none"
+          },
+          "position": null,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 181.921875,
+            "width": 354.89996337890625,
+            "height": 35
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        }
+      }
+    },
+    {
+      "name": "84: no page or console errors",
+      "pass": false,
+      "evidence": [
+        {
+          "type": "console",
+          "message": "Failed to load resource: net::ERR_CONNECTION_RESET"
+        }
+      ]
+    },
+    {
+      "name": "84: all requests are reads on dedicated origin",
+      "pass": true,
+      "evidence": {
+        "count": 14,
+        "methods": [
+          "GET"
+        ]
+      }
+    },
+    {
+      "name": "500: actual object count and initially empty storage",
+      "pass": true,
+      "evidence": {
+        "actualObjects": 500,
+        "initialStorage": {}
+      }
+    },
+    {
+      "name": "MathLive: keyboard appends expected digit and saves formula",
+      "pass": true,
+      "evidence": {
+        "label": "typed",
+        "id": "KU-001",
+        "value": "Y=A\\overline{B}+C7",
+        "saved": "Y=A\\overline{B}+C7",
+        "storageKey": "architecture-spike-v1:500:dynamic",
+        "sameDOM": true,
+        "connected": true,
+        "focused": true,
+        "selection": {
+          "ranges": [
+            [
+              9,
+              9
+            ]
+          ],
+          "direction": "none"
+        },
+        "position": 9,
+        "rect": {
+          "x": 188.79998779296875,
+          "y": 222.52188110351562,
+          "width": 354.89996337890625,
+          "height": 29.399993896484375
+        },
+        "viewport": {
+          "x": 95,
+          "y": 35,
+          "zoom": 0.7
+        },
+        "owner": "manual",
+        "bodyMounts": 3,
+        "bodyUnmounts": 0
+      }
+    },
+    {
+      "name": "MathLive: one keyboard undo returns initial formula and synchronizes storage",
+      "pass": true,
+      "evidence": {
+        "label": "undo",
+        "id": "KU-001",
+        "value": "Y=A\\overline{B}+C",
+        "saved": "Y=A\\overline{B}+C",
+        "storageKey": "architecture-spike-v1:500:dynamic",
+        "sameDOM": true,
+        "connected": true,
+        "focused": true,
+        "selection": {
+          "ranges": [
+            [
+              8,
+              8
+            ]
+          ],
+          "direction": "none"
+        },
+        "position": 8,
+        "rect": {
+          "x": 188.79998779296875,
+          "y": 222.52188110351562,
+          "width": 354.89996337890625,
+          "height": 29.399993896484375
+        },
+        "viewport": {
+          "x": 95,
+          "y": 35,
+          "zoom": 0.7
+        },
+        "owner": "manual",
+        "bodyMounts": 3,
+        "bodyUnmounts": 0
+      }
+    },
+    {
+      "name": "MathLive: keyboard redo returns typed formula and synchronizes storage",
+      "pass": true,
+      "evidence": {
+        "label": "redo",
+        "id": "KU-001",
+        "value": "Y=A\\overline{B}+C7",
+        "saved": "Y=A\\overline{B}+C7",
+        "storageKey": "architecture-spike-v1:500:dynamic",
+        "sameDOM": true,
+        "connected": true,
+        "focused": true,
+        "selection": {
+          "ranges": [
+            [
+              9,
+              9
+            ]
+          ],
+          "direction": "none"
+        },
+        "position": 9,
+        "rect": {
+          "x": 188.79998779296875,
+          "y": 222.52188110351562,
+          "width": 354.89996337890625,
+          "height": 29.399993896484375
+        },
+        "viewport": {
+          "x": 95,
+          "y": 35,
+          "zoom": 0.7
+        },
+        "owner": "manual",
+        "bodyMounts": 3,
+        "bodyUnmounts": 0
+      }
+    },
+    {
+      "name": "MathLive: eight actual other-body updates preserve focused DOM, formula and selection",
+      "pass": true,
+      "evidence": [
+        {
+          "textApplied": true,
+          "focused": true,
+          "sameDOM": true,
+          "value": "Y=A\\overline{B}+C7",
+          "selection": {
+            "ranges": [
+              [
+                9,
+                9
+              ]
+            ],
+            "direction": "none"
+          }
+        },
+        {
+          "textApplied": true,
+          "focused": true,
+          "sameDOM": true,
+          "value": "Y=A\\overline{B}+C7",
+          "selection": {
+            "ranges": [
+              [
+                9,
+                9
+              ]
+            ],
+            "direction": "none"
+          }
+        },
+        {
+          "textApplied": true,
+          "focused": true,
+          "sameDOM": true,
+          "value": "Y=A\\overline{B}+C7",
+          "selection": {
+            "ranges": [
+              [
+                9,
+                9
+              ]
+            ],
+            "direction": "none"
+          }
+        },
+        {
+          "textApplied": true,
+          "focused": true,
+          "sameDOM": true,
+          "value": "Y=A\\overline{B}+C7",
+          "selection": {
+            "ranges": [
+              [
+                9,
+                9
+              ]
+            ],
+            "direction": "none"
+          }
+        },
+        {
+          "textApplied": true,
+          "focused": true,
+          "sameDOM": true,
+          "value": "Y=A\\overline{B}+C7",
+          "selection": {
+            "ranges": [
+              [
+                9,
+                9
+              ]
+            ],
+            "direction": "none"
+          }
+        },
+        {
+          "textApplied": true,
+          "focused": true,
+          "sameDOM": true,
+          "value": "Y=A\\overline{B}+C7",
+          "selection": {
+            "ranges": [
+              [
+                9,
+                9
+              ]
+            ],
+            "direction": "none"
+          }
+        },
+        {
+          "textApplied": true,
+          "focused": true,
+          "sameDOM": true,
+          "value": "Y=A\\overline{B}+C7",
+          "selection": {
+            "ranges": [
+              [
+                9,
+                9
+              ]
+            ],
+            "direction": "none"
+          }
+        },
+        {
+          "textApplied": true,
+          "focused": true,
+          "sameDOM": true,
+          "value": "Y=A\\overline{B}+C7",
+          "selection": {
+            "ranges": [
+              [
+                9,
+                9
+              ]
+            ],
+            "direction": "none"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MathLive: other-object stream preserves keyboard undo/redo; stream itself is not undone",
+      "pass": true,
+      "evidence": {
+        "undo": {
+          "label": "undo after stream",
+          "id": "KU-001",
+          "value": "Y=A\\overline{B}+C",
+          "saved": "Y=A\\overline{B}+C",
+          "storageKey": "architecture-spike-v1:500:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "ranges": [
+              [
+                8,
+                8
+              ]
+            ],
+            "direction": "none"
+          },
+          "position": 8,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 222.52188110351562,
+            "width": 354.89996337890625,
+            "height": 29.399993896484375
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        },
+        "redo": {
+          "label": "redo after stream",
+          "id": "KU-001",
+          "value": "Y=A\\overline{B}+C7",
+          "saved": "Y=A\\overline{B}+C7",
+          "storageKey": "architecture-spike-v1:500:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "ranges": [
+              [
+                9,
+                9
+              ]
+            ],
+            "direction": "none"
+          },
+          "position": 9,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 222.52188110351562,
+            "width": 354.89996337890625,
+            "height": 29.399993896484375
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        }
+      }
+    },
+    {
+      "name": "board: actual drag established; shortcut did not undo movement (observed gap)",
+      "pass": true,
+      "evidence": {
+        "before": {
+          "x": 0,
+          "y": 0
+        },
+        "dragged": {
+          "x": 55.71428571428572,
+          "y": 30.000000000000007
+        },
+        "afterUndo": {
+          "x": 55.71428571428572,
+          "y": 30.000000000000007
+        },
+        "afterRedo": {
+          "x": 55.71428571428572,
+          "y": 30.000000000000007
+        },
+        "focusBefore": {
+          "tag": "BODY",
+          "unit": null
+        },
+        "actualDragMoved": true,
+        "undoRestored": false
+      }
+    },
+    {
+      "name": "500: no page or console errors",
+      "pass": true,
+      "evidence": []
+    },
+    {
+      "name": "500: all requests are reads on dedicated origin",
+      "pass": true,
+      "evidence": {
+        "count": 14,
+        "methods": [
+          "GET"
+        ]
+      }
+    },
+    {
+      "name": "original sample and referenced provider/MathLive files unchanged",
+      "pass": true,
+      "evidence": {
+        "files": 51
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "count": 84,
+      "query": "?count=84&mode=managed&dynamic=1",
+      "errors": [
+        {
+          "type": "console",
+          "message": "Failed to load resource: net::ERR_CONNECTION_RESET"
+        }
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/"
+        },
+        {
+          "method": "GET",
+          "path": "/vendor/mathlive/mathlive-static.css"
+        },
+        {
+          "method": "GET",
+          "path": "/vendor/mathlive/mathlive-fonts.css"
+        },
+        {
+          "method": "GET",
+          "path": "/web/content/content.css"
+        },
+        {
+          "method": "GET",
+          "path": "/dist/app.css"
+        },
+        {
+          "method": "GET",
+          "path": "/vendor/mathlive/mathlive.min.js"
+        },
+        {
+          "method": "GET",
+          "path": "/vendor/roughjs/rough.cjs.js"
+        },
+        {
+          "method": "GET",
+          "path": "/web/content/provider.js"
+        },
+        {
+          "method": "GET",
+          "path": "/dist/app.js"
+        },
+        {
+          "method": "GET",
+          "path": "/fixture.json"
+        },
+        {
+          "method": "GET",
+          "path": "/heights.json"
+        },
+        {
+          "method": "GET",
+          "path": "/vendor/mathlive/fonts/KaTeX_Main-Regular.woff2"
+        },
+        {
+          "method": "GET",
+          "path": "/vendor/mathlive/fonts/KaTeX_Math-Italic.woff2"
+        },
+        {
+          "method": "GET",
+          "path": "/vendor/mathlive/fonts/KaTeX_Size2-Regular.woff2"
+        }
+      ],
+      "stages": [
+        {
+          "label": "initial",
+          "id": "KU-001",
+          "value": "",
+          "saved": null,
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "start": 0,
+            "end": 0,
+            "direction": "none"
+          },
+          "position": null,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 181.921875,
+            "width": 354.89996337890625,
+            "height": 35
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        },
+        {
+          "label": "typed",
+          "id": "KU-001",
+          "value": "undo84",
+          "saved": "undo84",
+          "storageKey": "architecture-spike-v1:84:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "start": 6,
+            "end": 6,
+            "direction": "none"
+          },
+          "position": null,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 181.921875,
+            "width": 354.89996337890625,
+            "height": 35
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        },
+        {
+          "label": "undo",
+          "id": "KU-001",
+          "value": "",
+          "saved": "",
+          "storageKey": "architecture-spike-v1:84:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "start": 0,
+            "end": 0,
+            "direction": "none"
+          },
+          "position": null,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 181.921875,
+            "width": 354.89996337890625,
+            "height": 35
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        },
+        {
+          "label": "redo",
+          "id": "KU-001",
+          "value": "undo84",
+          "saved": "undo84",
+          "storageKey": "architecture-spike-v1:84:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "start": 6,
+            "end": 6,
+            "direction": "none"
+          },
+          "position": null,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 181.921875,
+            "width": 354.89996337890625,
+            "height": 35
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        },
+        {
+          "label": "same-object patch",
+          "id": "KU-001",
+          "value": "undo84",
+          "saved": "undo84",
+          "storageKey": "architecture-spike-v1:84:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "start": 6,
+            "end": 6,
+            "direction": "none"
+          },
+          "position": null,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 181.921875,
+            "width": 354.89996337890625,
+            "height": 35
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        },
+        {
+          "label": "undo after same-object patch",
+          "id": "KU-001",
+          "value": "",
+          "saved": "",
+          "storageKey": "architecture-spike-v1:84:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "start": 0,
+            "end": 0,
+            "direction": "none"
+          },
+          "position": null,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 181.921875,
+            "width": 354.89996337890625,
+            "height": 35
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        },
+        {
+          "label": "redo after same-object patch",
+          "id": "KU-001",
+          "value": "undo84",
+          "saved": "undo84",
+          "storageKey": "architecture-spike-v1:84:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "start": 6,
+            "end": 6,
+            "direction": "none"
+          },
+          "position": null,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 181.921875,
+            "width": 354.89996337890625,
+            "height": 35
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        }
+      ],
+      "actualObjects": 84,
+      "initialStorage": {},
+      "sameObjectPatch": {
+        "paragraphBefore": "位置记数法（positional notation）用一个数字串表示数值时，每个数字携带两部分信息：它自己的值（系数），以及它所处的位置。同一个数字放在不同位置代表的值不同——十进制 222 中三个 2 依次代表 200、20、2，区别只在于位置。位置由「基数的幂」刻画：基数为 r 的记数系统中，从小数点向左第 i 位（从 0 数起）的权是 r^i，向右第 i 位的权是 r^(-i)。基数的含义由此确定：r 进制用 r 个不同数码（0 到 r-1），且逢 r 进一。本课程常用的四种：二进制 r=2 用 {0,1}，八进制 r=8 用 {0..7}，十进制 r=10 用 {0..9}，十六进制 r=16 用 {0..9,A..F}，其中 A、B、C、D、E、F 依次是 10 到 15。C01 第 20 页课件原页给出位置记数法总述与示例，第 28、29 页逐条列出二、八、十六进制的基数、数码集合与进位规则，第 30 页给出按权展开求值的算式。",
+        "expected": "同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。",
+        "actual": "同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。同对象正文模拟修改，不修改输入框。"
+      },
+      "observation": {
+        "phase": "textarea.redo-after-same-object-patch",
+        "events": [
+          {
+            "phase": "load",
+            "type": "focusin",
+            "time": 751.1999999880791,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": null
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "type": "keydown",
+            "time": 818.1999999880791,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "key": "u",
+            "metaKey": false,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": null
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "type": "beforeinput",
+            "time": 818.8999999761581,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "inputType": "insertText",
+            "data": "u",
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": null
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "type": "input",
+            "time": 823.6999999880791,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "inputType": "insertText",
+            "data": "u",
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "u",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "u",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "u"
+            }
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "type": "keydown",
+            "time": 875.3999999761581,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "key": "n",
+            "metaKey": false,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "u",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "u",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "u"
+            }
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "type": "beforeinput",
+            "time": 875.5,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "inputType": "insertText",
+            "data": "n",
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "u",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "u",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "u"
+            }
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "type": "input",
+            "time": 876.1999999880791,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "inputType": "insertText",
+            "data": "n",
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "un",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "un",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "un"
+            }
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "type": "keydown",
+            "time": 913.0999999642372,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "key": "d",
+            "metaKey": false,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "un",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "un",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "un"
+            }
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "type": "beforeinput",
+            "time": 913.3000000119209,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "inputType": "insertText",
+            "data": "d",
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "un",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "un",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "un"
+            }
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "type": "input",
+            "time": 914.1999999880791,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "inputType": "insertText",
+            "data": "d",
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "und",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "und",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "und"
+            }
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "type": "keydown",
+            "time": 951.5,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "key": "o",
+            "metaKey": false,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "und",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "und",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "und"
+            }
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "type": "beforeinput",
+            "time": 951.5999999642372,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "inputType": "insertText",
+            "data": "o",
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "und",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "und",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "und"
+            }
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "type": "input",
+            "time": 952.1999999880791,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "inputType": "insertText",
+            "data": "o",
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "undo",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "undo",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "undo"
+            }
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "type": "keydown",
+            "time": 988.5999999642372,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "key": "8",
+            "metaKey": false,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "undo",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "undo",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "undo"
+            }
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "type": "beforeinput",
+            "time": 988.6999999880791,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "inputType": "insertText",
+            "data": "8",
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "undo",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "undo",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "undo"
+            }
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "type": "input",
+            "time": 989.3000000119209,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "inputType": "insertText",
+            "data": "8",
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "undo8",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "undo8",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "undo8"
+            }
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "type": "keydown",
+            "time": 1026.0999999642372,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "key": "4",
+            "metaKey": false,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "undo8",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "undo8",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "undo8"
+            }
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "type": "beforeinput",
+            "time": 1026.199999988079,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "inputType": "insertText",
+            "data": "4",
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "undo8",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "undo8",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "undo8"
+            }
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "type": "input",
+            "time": 1026.699999988079,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "inputType": "insertText",
+            "data": "4",
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "undo84",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "undo84",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "undo84"
+            }
+          },
+          {
+            "phase": "textarea.undo",
+            "type": "keydown",
+            "time": 1098.5999999642372,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "key": "Meta",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "undo84",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "undo84",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "undo84"
+            }
+          },
+          {
+            "phase": "textarea.undo",
+            "type": "keydown",
+            "time": 1100.5999999642372,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "key": "z",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "undo84",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "undo84",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "undo84"
+            }
+          },
+          {
+            "phase": "textarea.undo",
+            "type": "beforeinput",
+            "time": 1100.699999988079,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "inputType": "historyUndo",
+            "data": null,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "undo84",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "undo84",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "undo84"
+            }
+          },
+          {
+            "phase": "textarea.undo",
+            "type": "input",
+            "time": 1101.300000011921,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "inputType": "historyUndo",
+            "data": null,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": ""
+            }
+          },
+          {
+            "phase": "textarea.redo",
+            "type": "keydown",
+            "time": 1132.8999999761581,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "key": "Meta",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": ""
+            }
+          },
+          {
+            "phase": "textarea.redo",
+            "type": "keydown",
+            "time": 1134,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "key": "Shift",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": true,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": ""
+            }
+          },
+          {
+            "phase": "textarea.redo",
+            "type": "keydown",
+            "time": 1134.3999999761581,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "key": "z",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": true,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": ""
+            }
+          },
+          {
+            "phase": "textarea.redo",
+            "type": "beforeinput",
+            "time": 1134.800000011921,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "inputType": "historyRedo",
+            "data": null,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": ""
+            }
+          },
+          {
+            "phase": "textarea.redo",
+            "type": "input",
+            "time": 1135.3999999761581,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "inputType": "historyRedo",
+            "data": null,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "undo84",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "undo84",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "undo84"
+            }
+          },
+          {
+            "phase": "textarea.undo-after-same-object-patch",
+            "type": "keydown",
+            "time": 1240,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "key": "Meta",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "undo84",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "undo84",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "undo84"
+            }
+          },
+          {
+            "phase": "textarea.undo-after-same-object-patch",
+            "type": "keydown",
+            "time": 1241.300000011921,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "key": "z",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "undo84",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "undo84",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "undo84"
+            }
+          },
+          {
+            "phase": "textarea.undo-after-same-object-patch",
+            "type": "beforeinput",
+            "time": 1241.3999999761581,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "inputType": "historyUndo",
+            "data": null,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "undo84",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "undo84",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "undo84"
+            }
+          },
+          {
+            "phase": "textarea.undo-after-same-object-patch",
+            "type": "input",
+            "time": 1242.5,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "inputType": "historyUndo",
+            "data": null,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": ""
+            }
+          },
+          {
+            "phase": "textarea.redo-after-same-object-patch",
+            "type": "keydown",
+            "time": 1294.300000011921,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "key": "Meta",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": ""
+            }
+          },
+          {
+            "phase": "textarea.redo-after-same-object-patch",
+            "type": "keydown",
+            "time": 1296.199999988079,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "key": "Shift",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": true,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": ""
+            }
+          },
+          {
+            "phase": "textarea.redo-after-same-object-patch",
+            "type": "keydown",
+            "time": 1296.699999988079,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "key": "z",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": true,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": ""
+            }
+          },
+          {
+            "phase": "textarea.redo-after-same-object-patch",
+            "type": "beforeinput",
+            "time": 1296.699999988079,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "inputType": "historyRedo",
+            "data": null,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": ""
+            }
+          },
+          {
+            "phase": "textarea.redo-after-same-object-patch",
+            "type": "input",
+            "time": 1297.5999999642372,
+            "target": "TEXTAREA",
+            "unit": "KU-001",
+            "inputType": "historyRedo",
+            "data": null,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "undo84",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "undo84",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "text": "undo84"
+            }
+          }
+        ],
+        "writes": [
+          {
+            "phase": "textarea.keyboard.type",
+            "time": 823.3000000119209,
+            "key": "architecture-spike-v1:84:dynamic",
+            "bytesUtf8": 77,
+            "drafts": {
+              "KU-001": {
+                "text": "u"
+              }
+            },
+            "patchLengths": {}
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "time": 876.1999999880791,
+            "key": "architecture-spike-v1:84:dynamic",
+            "bytesUtf8": 78,
+            "drafts": {
+              "KU-001": {
+                "text": "un"
+              }
+            },
+            "patchLengths": {}
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "time": 914.0999999642372,
+            "key": "architecture-spike-v1:84:dynamic",
+            "bytesUtf8": 79,
+            "drafts": {
+              "KU-001": {
+                "text": "und"
+              }
+            },
+            "patchLengths": {}
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "time": 952.0999999642372,
+            "key": "architecture-spike-v1:84:dynamic",
+            "bytesUtf8": 80,
+            "drafts": {
+              "KU-001": {
+                "text": "undo"
+              }
+            },
+            "patchLengths": {}
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "time": 989.3000000119209,
+            "key": "architecture-spike-v1:84:dynamic",
+            "bytesUtf8": 81,
+            "drafts": {
+              "KU-001": {
+                "text": "undo8"
+              }
+            },
+            "patchLengths": {}
+          },
+          {
+            "phase": "textarea.keyboard.type",
+            "time": 1026.699999988079,
+            "key": "architecture-spike-v1:84:dynamic",
+            "bytesUtf8": 82,
+            "drafts": {
+              "KU-001": {
+                "text": "undo84"
+              }
+            },
+            "patchLengths": {}
+          },
+          {
+            "phase": "textarea.undo",
+            "time": 1101.300000011921,
+            "key": "architecture-spike-v1:84:dynamic",
+            "bytesUtf8": 76,
+            "drafts": {
+              "KU-001": {
+                "text": ""
+              }
+            },
+            "patchLengths": {}
+          },
+          {
+            "phase": "textarea.redo",
+            "time": 1135.3999999761581,
+            "key": "architecture-spike-v1:84:dynamic",
+            "bytesUtf8": 82,
+            "drafts": {
+              "KU-001": {
+                "text": "undo84"
+              }
+            },
+            "patchLengths": {}
+          },
+          {
+            "phase": "textarea.same-object-body-patch",
+            "time": 1174.5999999642372,
+            "key": "architecture-spike-v1:84:dynamic",
+            "bytesUtf8": 705,
+            "drafts": {
+              "KU-001": {
+                "text": "undo84"
+              }
+            },
+            "patchLengths": {
+              "KU-001": 204
+            }
+          },
+          {
+            "phase": "textarea.undo-after-same-object-patch",
+            "time": 1242.3999999761581,
+            "key": "architecture-spike-v1:84:dynamic",
+            "bytesUtf8": 699,
+            "drafts": {
+              "KU-001": {
+                "text": ""
+              }
+            },
+            "patchLengths": {
+              "KU-001": 204
+            }
+          },
+          {
+            "phase": "textarea.redo-after-same-object-patch",
+            "time": 1297.5,
+            "key": "architecture-spike-v1:84:dynamic",
+            "bytesUtf8": 705,
+            "drafts": {
+              "KU-001": {
+                "text": "undo84"
+              }
+            },
+            "patchLengths": {
+              "KU-001": 204
+            }
+          }
+        ]
+      }
+    },
+    {
+      "count": 500,
+      "query": "?count=500&mode=managed&dynamic=1",
+      "errors": [],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/"
+        },
+        {
+          "method": "GET",
+          "path": "/vendor/mathlive/mathlive-static.css"
+        },
+        {
+          "method": "GET",
+          "path": "/vendor/mathlive/mathlive-fonts.css"
+        },
+        {
+          "method": "GET",
+          "path": "/web/content/content.css"
+        },
+        {
+          "method": "GET",
+          "path": "/dist/app.css"
+        },
+        {
+          "method": "GET",
+          "path": "/vendor/mathlive/mathlive.min.js"
+        },
+        {
+          "method": "GET",
+          "path": "/vendor/roughjs/rough.cjs.js"
+        },
+        {
+          "method": "GET",
+          "path": "/web/content/provider.js"
+        },
+        {
+          "method": "GET",
+          "path": "/dist/app.js"
+        },
+        {
+          "method": "GET",
+          "path": "/fixture.json"
+        },
+        {
+          "method": "GET",
+          "path": "/heights.json"
+        },
+        {
+          "method": "GET",
+          "path": "/vendor/mathlive/fonts/KaTeX_Main-Regular.woff2"
+        },
+        {
+          "method": "GET",
+          "path": "/vendor/mathlive/fonts/KaTeX_Math-Italic.woff2"
+        },
+        {
+          "method": "GET",
+          "path": "/vendor/mathlive/fonts/KaTeX_Size2-Regular.woff2"
+        }
+      ],
+      "stages": [
+        {
+          "label": "initial",
+          "id": "KU-001",
+          "value": "Y=A\\overline{B}+C",
+          "saved": null,
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "ranges": [
+              [
+                8,
+                8
+              ]
+            ],
+            "direction": "none"
+          },
+          "position": 8,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 222.52188110351562,
+            "width": 354.89996337890625,
+            "height": 29.399993896484375
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        },
+        {
+          "label": "typed",
+          "id": "KU-001",
+          "value": "Y=A\\overline{B}+C7",
+          "saved": "Y=A\\overline{B}+C7",
+          "storageKey": "architecture-spike-v1:500:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "ranges": [
+              [
+                9,
+                9
+              ]
+            ],
+            "direction": "none"
+          },
+          "position": 9,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 222.52188110351562,
+            "width": 354.89996337890625,
+            "height": 29.399993896484375
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        },
+        {
+          "label": "undo",
+          "id": "KU-001",
+          "value": "Y=A\\overline{B}+C",
+          "saved": "Y=A\\overline{B}+C",
+          "storageKey": "architecture-spike-v1:500:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "ranges": [
+              [
+                8,
+                8
+              ]
+            ],
+            "direction": "none"
+          },
+          "position": 8,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 222.52188110351562,
+            "width": 354.89996337890625,
+            "height": 29.399993896484375
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        },
+        {
+          "label": "redo",
+          "id": "KU-001",
+          "value": "Y=A\\overline{B}+C7",
+          "saved": "Y=A\\overline{B}+C7",
+          "storageKey": "architecture-spike-v1:500:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "ranges": [
+              [
+                9,
+                9
+              ]
+            ],
+            "direction": "none"
+          },
+          "position": 9,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 222.52188110351562,
+            "width": 354.89996337890625,
+            "height": 29.399993896484375
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        },
+        {
+          "label": "stream 1",
+          "id": "KU-001",
+          "value": "Y=A\\overline{B}+C7",
+          "saved": "Y=A\\overline{B}+C7",
+          "storageKey": "architecture-spike-v1:500:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "ranges": [
+              [
+                9,
+                9
+              ]
+            ],
+            "direction": "none"
+          },
+          "position": 9,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 222.52188110351562,
+            "width": 354.89996337890625,
+            "height": 29.399993896484375
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        },
+        {
+          "label": "stream 2",
+          "id": "KU-001",
+          "value": "Y=A\\overline{B}+C7",
+          "saved": "Y=A\\overline{B}+C7",
+          "storageKey": "architecture-spike-v1:500:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "ranges": [
+              [
+                9,
+                9
+              ]
+            ],
+            "direction": "none"
+          },
+          "position": 9,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 222.52188110351562,
+            "width": 354.89996337890625,
+            "height": 29.399993896484375
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        },
+        {
+          "label": "stream 3",
+          "id": "KU-001",
+          "value": "Y=A\\overline{B}+C7",
+          "saved": "Y=A\\overline{B}+C7",
+          "storageKey": "architecture-spike-v1:500:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "ranges": [
+              [
+                9,
+                9
+              ]
+            ],
+            "direction": "none"
+          },
+          "position": 9,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 222.52188110351562,
+            "width": 354.89996337890625,
+            "height": 29.399993896484375
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        },
+        {
+          "label": "stream 4",
+          "id": "KU-001",
+          "value": "Y=A\\overline{B}+C7",
+          "saved": "Y=A\\overline{B}+C7",
+          "storageKey": "architecture-spike-v1:500:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "ranges": [
+              [
+                9,
+                9
+              ]
+            ],
+            "direction": "none"
+          },
+          "position": 9,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 222.52188110351562,
+            "width": 354.89996337890625,
+            "height": 29.399993896484375
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        },
+        {
+          "label": "stream 5",
+          "id": "KU-001",
+          "value": "Y=A\\overline{B}+C7",
+          "saved": "Y=A\\overline{B}+C7",
+          "storageKey": "architecture-spike-v1:500:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "ranges": [
+              [
+                9,
+                9
+              ]
+            ],
+            "direction": "none"
+          },
+          "position": 9,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 222.52188110351562,
+            "width": 354.89996337890625,
+            "height": 29.399993896484375
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        },
+        {
+          "label": "stream 6",
+          "id": "KU-001",
+          "value": "Y=A\\overline{B}+C7",
+          "saved": "Y=A\\overline{B}+C7",
+          "storageKey": "architecture-spike-v1:500:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "ranges": [
+              [
+                9,
+                9
+              ]
+            ],
+            "direction": "none"
+          },
+          "position": 9,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 222.52188110351562,
+            "width": 354.89996337890625,
+            "height": 29.399993896484375
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        },
+        {
+          "label": "stream 7",
+          "id": "KU-001",
+          "value": "Y=A\\overline{B}+C7",
+          "saved": "Y=A\\overline{B}+C7",
+          "storageKey": "architecture-spike-v1:500:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "ranges": [
+              [
+                9,
+                9
+              ]
+            ],
+            "direction": "none"
+          },
+          "position": 9,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 222.52188110351562,
+            "width": 354.89996337890625,
+            "height": 29.399993896484375
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        },
+        {
+          "label": "stream 8",
+          "id": "KU-001",
+          "value": "Y=A\\overline{B}+C7",
+          "saved": "Y=A\\overline{B}+C7",
+          "storageKey": "architecture-spike-v1:500:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "ranges": [
+              [
+                9,
+                9
+              ]
+            ],
+            "direction": "none"
+          },
+          "position": 9,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 222.52188110351562,
+            "width": 354.89996337890625,
+            "height": 29.399993896484375
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        },
+        {
+          "label": "undo after stream",
+          "id": "KU-001",
+          "value": "Y=A\\overline{B}+C",
+          "saved": "Y=A\\overline{B}+C",
+          "storageKey": "architecture-spike-v1:500:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "ranges": [
+              [
+                8,
+                8
+              ]
+            ],
+            "direction": "none"
+          },
+          "position": 8,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 222.52188110351562,
+            "width": 354.89996337890625,
+            "height": 29.399993896484375
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        },
+        {
+          "label": "redo after stream",
+          "id": "KU-001",
+          "value": "Y=A\\overline{B}+C7",
+          "saved": "Y=A\\overline{B}+C7",
+          "storageKey": "architecture-spike-v1:500:dynamic",
+          "sameDOM": true,
+          "connected": true,
+          "focused": true,
+          "selection": {
+            "ranges": [
+              [
+                9,
+                9
+              ]
+            ],
+            "direction": "none"
+          },
+          "position": 9,
+          "rect": {
+            "x": 188.79998779296875,
+            "y": 222.52188110351562,
+            "width": 354.89996337890625,
+            "height": 29.399993896484375
+          },
+          "viewport": {
+            "x": 95,
+            "y": 35,
+            "zoom": 0.7
+          },
+          "owner": "manual",
+          "bodyMounts": 3,
+          "bodyUnmounts": 0
+        }
+      ],
+      "actualObjects": 500,
+      "initialStorage": {},
+      "expectedTyped": "Y=A\\overline{B}+C7",
+      "stream": {
+        "otherId": "KU-002",
+        "intervalMs": 100,
+        "updates": 8,
+        "samples": [
+          {
+            "expectedText": "其他对象持续模拟修改 1：先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。",
+            "actualText": "其他对象持续模拟修改 1：先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。",
+            "editor": {
+              "label": "stream 1",
+              "id": "KU-001",
+              "value": "Y=A\\overline{B}+C7",
+              "saved": "Y=A\\overline{B}+C7",
+              "storageKey": "architecture-spike-v1:500:dynamic",
+              "sameDOM": true,
+              "connected": true,
+              "focused": true,
+              "selection": {
+                "ranges": [
+                  [
+                    9,
+                    9
+                  ]
+                ],
+                "direction": "none"
+              },
+              "position": 9,
+              "rect": {
+                "x": 188.79998779296875,
+                "y": 222.52188110351562,
+                "width": 354.89996337890625,
+                "height": 29.399993896484375
+              },
+              "viewport": {
+                "x": 95,
+                "y": 35,
+                "zoom": 0.7
+              },
+              "owner": "manual",
+              "bodyMounts": 3,
+              "bodyUnmounts": 0
+            }
+          },
+          {
+            "expectedText": "其他对象持续模拟修改 2：先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。",
+            "actualText": "其他对象持续模拟修改 2：先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。",
+            "editor": {
+              "label": "stream 2",
+              "id": "KU-001",
+              "value": "Y=A\\overline{B}+C7",
+              "saved": "Y=A\\overline{B}+C7",
+              "storageKey": "architecture-spike-v1:500:dynamic",
+              "sameDOM": true,
+              "connected": true,
+              "focused": true,
+              "selection": {
+                "ranges": [
+                  [
+                    9,
+                    9
+                  ]
+                ],
+                "direction": "none"
+              },
+              "position": 9,
+              "rect": {
+                "x": 188.79998779296875,
+                "y": 222.52188110351562,
+                "width": 354.89996337890625,
+                "height": 29.399993896484375
+              },
+              "viewport": {
+                "x": 95,
+                "y": 35,
+                "zoom": 0.7
+              },
+              "owner": "manual",
+              "bodyMounts": 3,
+              "bodyUnmounts": 0
+            }
+          },
+          {
+            "expectedText": "其他对象持续模拟修改 3：先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。",
+            "actualText": "其他对象持续模拟修改 3：先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。",
+            "editor": {
+              "label": "stream 3",
+              "id": "KU-001",
+              "value": "Y=A\\overline{B}+C7",
+              "saved": "Y=A\\overline{B}+C7",
+              "storageKey": "architecture-spike-v1:500:dynamic",
+              "sameDOM": true,
+              "connected": true,
+              "focused": true,
+              "selection": {
+                "ranges": [
+                  [
+                    9,
+                    9
+                  ]
+                ],
+                "direction": "none"
+              },
+              "position": 9,
+              "rect": {
+                "x": 188.79998779296875,
+                "y": 222.52188110351562,
+                "width": 354.89996337890625,
+                "height": 29.399993896484375
+              },
+              "viewport": {
+                "x": 95,
+                "y": 35,
+                "zoom": 0.7
+              },
+              "owner": "manual",
+              "bodyMounts": 3,
+              "bodyUnmounts": 0
+            }
+          },
+          {
+            "expectedText": "其他对象持续模拟修改 4：先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。",
+            "actualText": "其他对象持续模拟修改 4：先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。",
+            "editor": {
+              "label": "stream 4",
+              "id": "KU-001",
+              "value": "Y=A\\overline{B}+C7",
+              "saved": "Y=A\\overline{B}+C7",
+              "storageKey": "architecture-spike-v1:500:dynamic",
+              "sameDOM": true,
+              "connected": true,
+              "focused": true,
+              "selection": {
+                "ranges": [
+                  [
+                    9,
+                    9
+                  ]
+                ],
+                "direction": "none"
+              },
+              "position": 9,
+              "rect": {
+                "x": 188.79998779296875,
+                "y": 222.52188110351562,
+                "width": 354.89996337890625,
+                "height": 29.399993896484375
+              },
+              "viewport": {
+                "x": 95,
+                "y": 35,
+                "zoom": 0.7
+              },
+              "owner": "manual",
+              "bodyMounts": 3,
+              "bodyUnmounts": 0
+            }
+          },
+          {
+            "expectedText": "其他对象持续模拟修改 5：先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。",
+            "actualText": "其他对象持续模拟修改 5：先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。",
+            "editor": {
+              "label": "stream 5",
+              "id": "KU-001",
+              "value": "Y=A\\overline{B}+C7",
+              "saved": "Y=A\\overline{B}+C7",
+              "storageKey": "architecture-spike-v1:500:dynamic",
+              "sameDOM": true,
+              "connected": true,
+              "focused": true,
+              "selection": {
+                "ranges": [
+                  [
+                    9,
+                    9
+                  ]
+                ],
+                "direction": "none"
+              },
+              "position": 9,
+              "rect": {
+                "x": 188.79998779296875,
+                "y": 222.52188110351562,
+                "width": 354.89996337890625,
+                "height": 29.399993896484375
+              },
+              "viewport": {
+                "x": 95,
+                "y": 35,
+                "zoom": 0.7
+              },
+              "owner": "manual",
+              "bodyMounts": 3,
+              "bodyUnmounts": 0
+            }
+          },
+          {
+            "expectedText": "其他对象持续模拟修改 6：先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。",
+            "actualText": "其他对象持续模拟修改 6：先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。",
+            "editor": {
+              "label": "stream 6",
+              "id": "KU-001",
+              "value": "Y=A\\overline{B}+C7",
+              "saved": "Y=A\\overline{B}+C7",
+              "storageKey": "architecture-spike-v1:500:dynamic",
+              "sameDOM": true,
+              "connected": true,
+              "focused": true,
+              "selection": {
+                "ranges": [
+                  [
+                    9,
+                    9
+                  ]
+                ],
+                "direction": "none"
+              },
+              "position": 9,
+              "rect": {
+                "x": 188.79998779296875,
+                "y": 222.52188110351562,
+                "width": 354.89996337890625,
+                "height": 29.399993896484375
+              },
+              "viewport": {
+                "x": 95,
+                "y": 35,
+                "zoom": 0.7
+              },
+              "owner": "manual",
+              "bodyMounts": 3,
+              "bodyUnmounts": 0
+            }
+          },
+          {
+            "expectedText": "其他对象持续模拟修改 7：先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。",
+            "actualText": "其他对象持续模拟修改 7：先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。",
+            "editor": {
+              "label": "stream 7",
+              "id": "KU-001",
+              "value": "Y=A\\overline{B}+C7",
+              "saved": "Y=A\\overline{B}+C7",
+              "storageKey": "architecture-spike-v1:500:dynamic",
+              "sameDOM": true,
+              "connected": true,
+              "focused": true,
+              "selection": {
+                "ranges": [
+                  [
+                    9,
+                    9
+                  ]
+                ],
+                "direction": "none"
+              },
+              "position": 9,
+              "rect": {
+                "x": 188.79998779296875,
+                "y": 222.52188110351562,
+                "width": 354.89996337890625,
+                "height": 29.399993896484375
+              },
+              "viewport": {
+                "x": 95,
+                "y": 35,
+                "zoom": 0.7
+              },
+              "owner": "manual",
+              "bodyMounts": 3,
+              "bodyUnmounts": 0
+            }
+          },
+          {
+            "expectedText": "其他对象持续模拟修改 8：先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。",
+            "actualText": "其他对象持续模拟修改 8：先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。先核对定义，再验证输入组合。",
+            "editor": {
+              "label": "stream 8",
+              "id": "KU-001",
+              "value": "Y=A\\overline{B}+C7",
+              "saved": "Y=A\\overline{B}+C7",
+              "storageKey": "architecture-spike-v1:500:dynamic",
+              "sameDOM": true,
+              "connected": true,
+              "focused": true,
+              "selection": {
+                "ranges": [
+                  [
+                    9,
+                    9
+                  ]
+                ],
+                "direction": "none"
+              },
+              "position": 9,
+              "rect": {
+                "x": 188.79998779296875,
+                "y": 222.52188110351562,
+                "width": 354.89996337890625,
+                "height": 29.399993896484375
+              },
+              "viewport": {
+                "x": 95,
+                "y": 35,
+                "zoom": 0.7
+              },
+              "owner": "manual",
+              "bodyMounts": 3,
+              "bodyUnmounts": 0
+            }
+          }
+        ]
+      },
+      "board": {
+        "before": {
+          "x": 0,
+          "y": 0
+        },
+        "dragged": {
+          "x": 55.71428571428572,
+          "y": 30.000000000000007
+        },
+        "afterUndo": {
+          "x": 55.71428571428572,
+          "y": 30.000000000000007
+        },
+        "afterRedo": {
+          "x": 55.71428571428572,
+          "y": 30.000000000000007
+        },
+        "focusBefore": {
+          "tag": "BODY",
+          "unit": null
+        },
+        "actualDragMoved": true,
+        "undoRestored": false
+      },
+      "observation": {
+        "phase": "board.redo",
+        "events": [
+          {
+            "phase": "load",
+            "type": "keydown",
+            "time": 694.1000000238419,
+            "target": "BODY",
+            "unit": null,
+            "key": "End",
+            "metaKey": false,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": null,
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": null,
+            "focusUnit": null,
+            "savedDraftAfterDispatch": null
+          },
+          {
+            "phase": "load",
+            "type": "focusin",
+            "time": 705.6000000238419,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": null
+          },
+          {
+            "phase": "mathlive.keyboard.type",
+            "type": "keydown",
+            "time": 749.5,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "key": "7",
+            "metaKey": false,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": null
+          },
+          {
+            "phase": "mathlive.keyboard.type",
+            "type": "beforeinput",
+            "time": 752,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "inputType": "insertText",
+            "data": "7",
+            "isComposing": false,
+            "isTrusted": false,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C7",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": null
+          },
+          {
+            "phase": "mathlive.keyboard.type",
+            "type": "input",
+            "time": 764.9000000357628,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "inputType": "insertText",
+            "data": "7",
+            "isComposing": false,
+            "isTrusted": false,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C7",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C7",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C7"
+            }
+          },
+          {
+            "phase": "mathlive.undo",
+            "type": "keydown",
+            "time": 826,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "key": "Meta",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C7",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C7",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C7"
+            }
+          },
+          {
+            "phase": "mathlive.undo",
+            "type": "beforeinput",
+            "time": 829.6000000238419,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "inputType": "historyUndo",
+            "data": "historyUndo",
+            "isComposing": false,
+            "isTrusted": false,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C7",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C7"
+            }
+          },
+          {
+            "phase": "mathlive.undo",
+            "type": "keydown",
+            "time": 832.7000000476837,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "key": "z",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": true,
+            "value": "Y=A\\overline{B}+C",
+            "defaultPreventedAfterDispatch": true,
+            "valueAfterDispatch": "Y=A\\overline{B}+C",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C7"
+            }
+          },
+          {
+            "phase": "mathlive.undo",
+            "type": "input",
+            "time": 851.7000000476837,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "inputType": "historyUndo",
+            "data": "historyUndo",
+            "isComposing": false,
+            "isTrusted": false,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C"
+            }
+          },
+          {
+            "phase": "mathlive.redo",
+            "type": "keydown",
+            "time": 892.3000000119209,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "key": "Meta",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C"
+            }
+          },
+          {
+            "phase": "mathlive.redo",
+            "type": "keydown",
+            "time": 894.7000000476837,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "key": "Shift",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": true,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C"
+            }
+          },
+          {
+            "phase": "mathlive.redo",
+            "type": "beforeinput",
+            "time": 895.9000000357628,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "inputType": "historyRedo",
+            "data": "historyRedo",
+            "isComposing": false,
+            "isTrusted": false,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C7",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C"
+            }
+          },
+          {
+            "phase": "mathlive.redo",
+            "type": "keydown",
+            "time": 898.6000000238419,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "key": "z",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": true,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": true,
+            "value": "Y=A\\overline{B}+C7",
+            "defaultPreventedAfterDispatch": true,
+            "valueAfterDispatch": "Y=A\\overline{B}+C7",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C"
+            }
+          },
+          {
+            "phase": "mathlive.redo",
+            "type": "input",
+            "time": 919,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "inputType": "historyRedo",
+            "data": "historyRedo",
+            "isComposing": false,
+            "isTrusted": false,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C7",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C7",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C7"
+            }
+          },
+          {
+            "phase": "mathlive.undo-after-other-object-stream",
+            "type": "keydown",
+            "time": 2195.100000023842,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "key": "Meta",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C7",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C7",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C7"
+            }
+          },
+          {
+            "phase": "mathlive.undo-after-other-object-stream",
+            "type": "beforeinput",
+            "time": 2200.800000011921,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "inputType": "historyUndo",
+            "data": "historyUndo",
+            "isComposing": false,
+            "isTrusted": false,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C7",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C7"
+            }
+          },
+          {
+            "phase": "mathlive.undo-after-other-object-stream",
+            "type": "keydown",
+            "time": 2203.100000023842,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "key": "z",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": true,
+            "value": "Y=A\\overline{B}+C",
+            "defaultPreventedAfterDispatch": true,
+            "valueAfterDispatch": "Y=A\\overline{B}+C",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C7"
+            }
+          },
+          {
+            "phase": "mathlive.undo-after-other-object-stream",
+            "type": "input",
+            "time": 2223.5,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "inputType": "historyUndo",
+            "data": "historyUndo",
+            "isComposing": false,
+            "isTrusted": false,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C"
+            }
+          },
+          {
+            "phase": "mathlive.redo-after-other-object-stream",
+            "type": "keydown",
+            "time": 2240.300000011921,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "key": "Meta",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C"
+            }
+          },
+          {
+            "phase": "mathlive.redo-after-other-object-stream",
+            "type": "keydown",
+            "time": 2242.300000011921,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "key": "Shift",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": true,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C"
+            }
+          },
+          {
+            "phase": "mathlive.redo-after-other-object-stream",
+            "type": "beforeinput",
+            "time": 2242.900000035763,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "inputType": "historyRedo",
+            "data": "historyRedo",
+            "isComposing": false,
+            "isTrusted": false,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C7",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C"
+            }
+          },
+          {
+            "phase": "mathlive.redo-after-other-object-stream",
+            "type": "keydown",
+            "time": 2245,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "key": "z",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": true,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": true,
+            "value": "Y=A\\overline{B}+C7",
+            "defaultPreventedAfterDispatch": true,
+            "valueAfterDispatch": "Y=A\\overline{B}+C7",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C"
+            }
+          },
+          {
+            "phase": "mathlive.redo-after-other-object-stream",
+            "type": "input",
+            "time": 2264.2000000476837,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "inputType": "historyRedo",
+            "data": "historyRedo",
+            "isComposing": false,
+            "isTrusted": false,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C7",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C7",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C7"
+            }
+          },
+          {
+            "phase": "board.actual-drag",
+            "type": "focusout",
+            "time": 2297,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C7",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C7",
+            "focusUnit": null,
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C7"
+            }
+          },
+          {
+            "phase": "board.undo",
+            "type": "keydown",
+            "time": 2569.600000023842,
+            "target": "BODY",
+            "unit": null,
+            "key": "Meta",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": null,
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": null,
+            "focusUnit": null,
+            "savedDraftAfterDispatch": null
+          },
+          {
+            "phase": "board.undo",
+            "type": "keydown",
+            "time": 2572,
+            "target": "BODY",
+            "unit": null,
+            "key": "z",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": null,
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": null,
+            "focusUnit": null,
+            "savedDraftAfterDispatch": null
+          },
+          {
+            "phase": "board.undo",
+            "type": "focusin",
+            "time": 2575.7000000476837,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C7",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C7",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C7"
+            }
+          },
+          {
+            "phase": "board.redo",
+            "type": "keydown",
+            "time": 2618.400000035763,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "key": "Meta",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": false,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C7",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C7",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C7"
+            }
+          },
+          {
+            "phase": "board.redo",
+            "type": "keydown",
+            "time": 2621.900000035763,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "key": "Shift",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": true,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": false,
+            "value": "Y=A\\overline{B}+C7",
+            "defaultPreventedAfterDispatch": false,
+            "valueAfterDispatch": "Y=A\\overline{B}+C7",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C7"
+            }
+          },
+          {
+            "phase": "board.redo",
+            "type": "keydown",
+            "time": 2625.800000011921,
+            "target": "MATH-FIELD",
+            "unit": "KU-001",
+            "key": "z",
+            "metaKey": true,
+            "ctrlKey": false,
+            "shiftKey": true,
+            "isComposing": false,
+            "isTrusted": true,
+            "defaultPrevented": true,
+            "value": "Y=A\\overline{B}+C7",
+            "defaultPreventedAfterDispatch": true,
+            "valueAfterDispatch": "Y=A\\overline{B}+C7",
+            "focusUnit": "KU-001",
+            "savedDraftAfterDispatch": {
+              "formula": "Y=A\\overline{B}+C7"
+            }
+          }
+        ],
+        "writes": [
+          {
+            "phase": "mathlive.keyboard.type",
+            "time": 764.7000000476837,
+            "key": "architecture-spike-v1:500:dynamic",
+            "bytesUtf8": 98,
+            "drafts": {
+              "KU-001": {
+                "formula": "Y=A\\overline{B}+C7"
+              }
+            },
+            "patchLengths": {}
+          },
+          {
+            "phase": "mathlive.undo",
+            "time": 851.6000000238419,
+            "key": "architecture-spike-v1:500:dynamic",
+            "bytesUtf8": 97,
+            "drafts": {
+              "KU-001": {
+                "formula": "Y=A\\overline{B}+C"
+              }
+            },
+            "patchLengths": {}
+          },
+          {
+            "phase": "mathlive.redo",
+            "time": 918.9000000357628,
+            "key": "architecture-spike-v1:500:dynamic",
+            "bytesUtf8": 98,
+            "drafts": {
+              "KU-001": {
+                "formula": "Y=A\\overline{B}+C7"
+              }
+            },
+            "patchLengths": {}
+          },
+          {
+            "phase": "mathlive.other-object-stream",
+            "time": 985.6000000238419,
+            "key": "architecture-spike-v1:500:dynamic",
+            "bytesUtf8": 270,
+            "drafts": {
+              "KU-001": {
+                "formula": "Y=A\\overline{B}+C7"
+              }
+            },
+            "patchLengths": {
+              "KU-002": 55
+            }
+          },
+          {
+            "phase": "mathlive.other-object-stream",
+            "time": 1144.300000011921,
+            "key": "architecture-spike-v1:500:dynamic",
+            "bytesUtf8": 396,
+            "drafts": {
+              "KU-001": {
+                "formula": "Y=A\\overline{B}+C7"
+              }
+            },
+            "patchLengths": {
+              "KU-002": 97
+            }
+          },
+          {
+            "phase": "mathlive.other-object-stream",
+            "time": 1294.6000000238419,
+            "key": "architecture-spike-v1:500:dynamic",
+            "bytesUtf8": 522,
+            "drafts": {
+              "KU-001": {
+                "formula": "Y=A\\overline{B}+C7"
+              }
+            },
+            "patchLengths": {
+              "KU-002": 139
+            }
+          },
+          {
+            "phase": "mathlive.other-object-stream",
+            "time": 1443.800000011921,
+            "key": "architecture-spike-v1:500:dynamic",
+            "bytesUtf8": 648,
+            "drafts": {
+              "KU-001": {
+                "formula": "Y=A\\overline{B}+C7"
+              }
+            },
+            "patchLengths": {
+              "KU-002": 181
+            }
+          },
+          {
+            "phase": "mathlive.other-object-stream",
+            "time": 1591.2000000476837,
+            "key": "architecture-spike-v1:500:dynamic",
+            "bytesUtf8": 774,
+            "drafts": {
+              "KU-001": {
+                "formula": "Y=A\\overline{B}+C7"
+              }
+            },
+            "patchLengths": {
+              "KU-002": 223
+            }
+          },
+          {
+            "phase": "mathlive.other-object-stream",
+            "time": 1727.6000000238419,
+            "key": "architecture-spike-v1:500:dynamic",
+            "bytesUtf8": 900,
+            "drafts": {
+              "KU-001": {
+                "formula": "Y=A\\overline{B}+C7"
+              }
+            },
+            "patchLengths": {
+              "KU-002": 265
+            }
+          },
+          {
+            "phase": "mathlive.other-object-stream",
+            "time": 1874.7000000476837,
+            "key": "architecture-spike-v1:500:dynamic",
+            "bytesUtf8": 1026,
+            "drafts": {
+              "KU-001": {
+                "formula": "Y=A\\overline{B}+C7"
+              }
+            },
+            "patchLengths": {
+              "KU-002": 307
+            }
+          },
+          {
+            "phase": "mathlive.other-object-stream",
+            "time": 2028.7000000476837,
+            "key": "architecture-spike-v1:500:dynamic",
+            "bytesUtf8": 1152,
+            "drafts": {
+              "KU-001": {
+                "formula": "Y=A\\overline{B}+C7"
+              }
+            },
+            "patchLengths": {
+              "KU-002": 349
+            }
+          },
+          {
+            "phase": "mathlive.undo-after-other-object-stream",
+            "time": 2223.400000035763,
+            "key": "architecture-spike-v1:500:dynamic",
+            "bytesUtf8": 1151,
+            "drafts": {
+              "KU-001": {
+                "formula": "Y=A\\overline{B}+C"
+              }
+            },
+            "patchLengths": {
+              "KU-002": 349
+            }
+          },
+          {
+            "phase": "mathlive.redo-after-other-object-stream",
+            "time": 2264.100000023842,
+            "key": "architecture-spike-v1:500:dynamic",
+            "bytesUtf8": 1152,
+            "drafts": {
+              "KU-001": {
+                "formula": "Y=A\\overline{B}+C7"
+              }
+            },
+            "patchLengths": {
+              "KU-002": 349
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "cleanup": {
+    "browserClosed": true,
+    "serverExited": true,
+    "portClosed": true,
+    "runtimeRemoved": true
+  },
+  "sampleHashesBefore": {
+    "build.mjs": "24cd8d3e45d2f55dea9bd365bcacc99f6fd46a91203dbe59c501c241f866cafc",
+    "calibrate.mjs": "d7663f3d37845cfe367e4b5f208154f83173c1b4dc36c7643b2d54c749a05343",
+    "dist/app.css": "b03dd66938a9e9ea0b9fd405cb3880a3db6f6d03ece76f2e854ff8a12304af50",
+    "dist/app.js": "09d2dceb53d0c1ddbb0d2f83578ed8ec64c852ef5b1f66264692dc4e1069448f",
+    "dynamic-performance.json": "1b7c61daa679caaec36e35929a4b5c97144ca4a3cfebf16373019d380fdee289",
+    "dynamic-performance.mjs": "7d0f11cd0ea299e6b24d4035972a45616ff0e2281d035da555e6b5744c9ab002",
+    "dynamic-preview.png": "0295030f8c490b88b599beb27ff49f5190b73766d0e43cc3a6b7a3561ff9b4cb",
+    "dynamic-probe.mjs": "d77403b98dfe9b95877e8fe99cc274586fd98006bd3b7f4ccaf99f2eec7eb9f6",
+    "dynamic-results.json": "d92e84b5570eeffc1208fbb98ffbaa7b6284ef8fe77460abad9190520462f21d",
+    "fixture.json": "ff896778b0ff0d81be6a5859c86746fa04ddc89dd6397cf870aa9b29c325ae4b",
+    "heights.json": "6e3ea71beba050b8983a2233cddffcfc3e30a263cf9f9ee61f70ec9085032629",
+    "index.html": "f6960facf97b38bcc993b8ddfdbc2a5ddd5a6d8aec213eb20b794fa15c7b66c3",
+    "package-lock.json": "6ad0e14c5f1b60dd7f9b1e36cdfb614ca86d71279224a8867c90dc6dc61f8dbf",
+    "package.json": "3c0a85de7d42edcdc4b4e4f2a0feddaf3ace76e0a275f453215aef21bbe8c857",
+    "prepare-fixture.py": "3b742ee71c3305a776e110fab69ef11538ce9e7463cde542f3906d2dc05fb3ea",
+    "preview.png": "00c031cfcfd343b3a98951dad200f57b6ecdab15f3f1170d88e52ff13ec41d78",
+    "probe.mjs": "ef91a153f4d836d8852c1d6ccc0800b0833ffd09047f3154f9b8475ab64a3f04",
+    "README.md": "7dd824ff91723363b268afc8de65d4ebdb0695530a93b48f6e10e7c94eb4d5f6",
+    "results.json": "e9fb80c653e2bbf1b57b7fdc4ec9d1c10aed65876cb0cd2f971843244b362792",
+    "source-pages/SRC-C02/VER-SRC-C02-1c152428693e/13.png": "c966bcd3899a6e12d04be5740477f81a37aee820f70ebb3265ded377fb402561",
+    "source-pages/SRC-C02/VER-SRC-C02-1c152428693e/23.png": "a711c78fa7bd4bd76962904ed5eaa50a7491f05345008a497290b9bfb825abe6",
+    "source-pages/SRC-C02/VER-SRC-C02-1c152428693e/24.png": "f10827a395b6128aa86c569e85352df0db5a5fb4e3130706ec0aefed9efd11eb",
+    "source-pages/SRC-C02/VER-SRC-C02-1c152428693e/4.png": "b253b6658a6b46ea6a4b4eccabf9ec5818410a3ae91a48ce57a193c1f24c7518",
+    "source-pages/SRC-C02/VER-SRC-C02-1c152428693e/45.png": "28100f3c461416d83ceaf113f144932c6176e672c4b2c87aada8ef5b70366ec9",
+    "source-pages/SRC-C02/VER-SRC-C02-1c152428693e/50.png": "71bedc63566a8abad4e425da5b2df3912d227e64079a45e4ac19c3b296d09708",
+    "source-pages/SRC-C02/VER-SRC-C02-1c152428693e/7.png": "c151b20f61d1748fa7cfb3fecd22473c1f4aeb491caa4fb11d8577d5700d8d0c",
+    "source-pages/SRC-C03/VER-SRC-C03-8bd0e5dc8fe3/10.png": "af75436c012759de6036f8a0cca71a10dea2eb5763eafdaa49ffec7d6fd8cfb1",
+    "source-pages/SRC-C03/VER-SRC-C03-8bd0e5dc8fe3/21.png": "9be678493b85f77db1e4f8e24ebfed98a7532bc8be61aee91f63f735d691ad6b",
+    "source-pages/SRC-C03/VER-SRC-C03-8bd0e5dc8fe3/31.png": "f13c03c4a59d357c1467304bd978f7fd2cdd5ee5d7548b77b77913db598c6270",
+    "source-pages/SRC-C03/VER-SRC-C03-8bd0e5dc8fe3/38.png": "cbf840ad0ee516b4e01cc92c1c891175a0dcf0a0de7eb6dc9869383f78da8d42",
+    "source-pages/SRC-C05/VER-SRC-C05-ad2a56210ce2/16.png": "1a09879dc436f868c9314002e6c5b6be00e880db518a9d40cbbbdc4bbe2c05a4",
+    "source-pages/SRC-EX07/VER-SRC-EX07-94ba9b89b204/11.png": "c7e9e3482ce9cf35df4a48f48a5e61728806d9bf5073e9b98c8cf427d77ea6bd",
+    "source-pages/SRC-EX07/VER-SRC-EX07-94ba9b89b204/13.png": "fcccce31c0554963f5720c871062e733ce9bd8f842f4d72658712fc3e2ad85ce",
+    "source-pages/SRC-EX07/VER-SRC-EX07-94ba9b89b204/17.png": "5330d962e044be349dbf4ad50c6c18f842b9d7d14d905ffda89e0456c1d66ce2",
+    "source-pages/SRC-EX07/VER-SRC-EX07-94ba9b89b204/5.png": "ac26abc544e3ad1da19144cc923cfe0a29192335e592d728dfab2f77a5160f43",
+    "source-pages/SRC-EX07/VER-SRC-EX07-94ba9b89b204/8.png": "fa7c51c9e8cd7bce384771bde9f997ca6bbdbb5e5421c9ece7831ab0e4cbba13",
+    "source-pages/SRC-HW04/VER-SRC-HW04-b53935c20c83/1.png": "91e8fc0c4aeb4b4aec9d35d8434faae261ae1c0bf26eec0429bf4534846c90c3",
+    "source-pages/SRC-TB/VER-SRC-TB-d1bc6409752a/72.png": "717acda003519b295664d70aba49f761beb25a31b23aba532c41814c0f6738ef",
+    "source-pages/SRC-TI74153/VER-SRC-TI74153-72557fe3909b/1.png": "c53b1b6173fe1e938c08d6ff40f543a3e64d6e8a1855d011216188db3ff1b601",
+    "src/dynamic-layout.js": "f8da71bdff70e5610a27601af53eb654527e634f8b86fb1fd4f49044b117bc03",
+    "src/main.jsx": "b09584560822405d6d4aca1d9295e6f2fa8399540b782099660340f4520a80ed",
+    "src/style.css": "26512552ce7efb77b53d0961e814539ca17bec26c9e811f824eb6d4d1ce88b9b",
+    "start.py": "4359a0dd61c3e52ca63ce68708f5b2dfaacabf0c4bada594e7a8da19674d6337",
+    "startup-trials.json": "c9ad8fc73abae997194171de46dfcba0c1d5a2e38040014ae453fd6a111c4d6a",
+    "THIRD_PARTY_NOTICES.md": "c91c3c3cf1724cfb36d5cb303e7ccda73a4bd100ffd05b483f566bba3939d420",
+    "动态布局验证.md": "e596b53b8d1312b46736346f06bac11c9c63cdadeb4ad7c4a9b0ef8696a345e3",
+    "验证记录.md": "a567d73536f998ffe9f9f07d4892dd949319d057469c3ca089de2364e6ad006c",
+    "../style-math-prototype/vendor/mathlive/mathlive.min.js": "51e9ab5c4739209a2951a550042dcecb99ad3047269c1d791d09d7d613226eae",
+    "../style-math-prototype/vendor/mathlive/package.json": "f0b71bcddf62e8245393f04484343d1e3971eab74d5a97cf362c61a2b066a9d3",
+    "../../../../复习画板/web/content/provider.js": "70a2757f43ca2df32d722f2aeb70e6ea07f78b7eb073c287a35d2254f1385fc7",
+    "../../../../复习画板/web/content/content.css": "b075266d9bf39ccac3914402febb7a3ebc49f00aba5153d0efdb2c2c8da71ce5"
+  },
+  "scriptHashes": {
+    "probe.mjs": "60822ad8d2b80ba83d61a2390628492a1570aba14ca7a7103ba2edb70fefaea0",
+    "serve.py": "a4c53996d861a3d037388f807913805af1dfb7c8b23b901c4a59d2494134682d",
+    "package.json": "ac427284c7c6943c1a6914bfbee8e7651f473a8b2b021af35fe8356300060611",
+    "package-lock.json": "86daedd6c28d9ff38e1b480919c804e1ee85ab034a77d15b1a4eee96519c4012"
+  },
+  "serverLog": "{\"port\": 53360}\n",
+  "sampleHashesAfter": {
+    "build.mjs": "24cd8d3e45d2f55dea9bd365bcacc99f6fd46a91203dbe59c501c241f866cafc",
+    "calibrate.mjs": "d7663f3d37845cfe367e4b5f208154f83173c1b4dc36c7643b2d54c749a05343",
+    "dist/app.css": "b03dd66938a9e9ea0b9fd405cb3880a3db6f6d03ece76f2e854ff8a12304af50",
+    "dist/app.js": "09d2dceb53d0c1ddbb0d2f83578ed8ec64c852ef5b1f66264692dc4e1069448f",
+    "dynamic-performance.json": "1b7c61daa679caaec36e35929a4b5c97144ca4a3cfebf16373019d380fdee289",
+    "dynamic-performance.mjs": "7d0f11cd0ea299e6b24d4035972a45616ff0e2281d035da555e6b5744c9ab002",
+    "dynamic-preview.png": "0295030f8c490b88b599beb27ff49f5190b73766d0e43cc3a6b7a3561ff9b4cb",
+    "dynamic-probe.mjs": "d77403b98dfe9b95877e8fe99cc274586fd98006bd3b7f4ccaf99f2eec7eb9f6",
+    "dynamic-results.json": "d92e84b5570eeffc1208fbb98ffbaa7b6284ef8fe77460abad9190520462f21d",
+    "fixture.json": "ff896778b0ff0d81be6a5859c86746fa04ddc89dd6397cf870aa9b29c325ae4b",
+    "heights.json": "6e3ea71beba050b8983a2233cddffcfc3e30a263cf9f9ee61f70ec9085032629",
+    "index.html": "f6960facf97b38bcc993b8ddfdbc2a5ddd5a6d8aec213eb20b794fa15c7b66c3",
+    "package-lock.json": "6ad0e14c5f1b60dd7f9b1e36cdfb614ca86d71279224a8867c90dc6dc61f8dbf",
+    "package.json": "3c0a85de7d42edcdc4b4e4f2a0feddaf3ace76e0a275f453215aef21bbe8c857",
+    "prepare-fixture.py": "3b742ee71c3305a776e110fab69ef11538ce9e7463cde542f3906d2dc05fb3ea",
+    "preview.png": "00c031cfcfd343b3a98951dad200f57b6ecdab15f3f1170d88e52ff13ec41d78",
+    "probe.mjs": "ef91a153f4d836d8852c1d6ccc0800b0833ffd09047f3154f9b8475ab64a3f04",
+    "README.md": "7dd824ff91723363b268afc8de65d4ebdb0695530a93b48f6e10e7c94eb4d5f6",
+    "results.json": "e9fb80c653e2bbf1b57b7fdc4ec9d1c10aed65876cb0cd2f971843244b362792",
+    "source-pages/SRC-C02/VER-SRC-C02-1c152428693e/13.png": "c966bcd3899a6e12d04be5740477f81a37aee820f70ebb3265ded377fb402561",
+    "source-pages/SRC-C02/VER-SRC-C02-1c152428693e/23.png": "a711c78fa7bd4bd76962904ed5eaa50a7491f05345008a497290b9bfb825abe6",
+    "source-pages/SRC-C02/VER-SRC-C02-1c152428693e/24.png": "f10827a395b6128aa86c569e85352df0db5a5fb4e3130706ec0aefed9efd11eb",
+    "source-pages/SRC-C02/VER-SRC-C02-1c152428693e/4.png": "b253b6658a6b46ea6a4b4eccabf9ec5818410a3ae91a48ce57a193c1f24c7518",
+    "source-pages/SRC-C02/VER-SRC-C02-1c152428693e/45.png": "28100f3c461416d83ceaf113f144932c6176e672c4b2c87aada8ef5b70366ec9",
+    "source-pages/SRC-C02/VER-SRC-C02-1c152428693e/50.png": "71bedc63566a8abad4e425da5b2df3912d227e64079a45e4ac19c3b296d09708",
+    "source-pages/SRC-C02/VER-SRC-C02-1c152428693e/7.png": "c151b20f61d1748fa7cfb3fecd22473c1f4aeb491caa4fb11d8577d5700d8d0c",
+    "source-pages/SRC-C03/VER-SRC-C03-8bd0e5dc8fe3/10.png": "af75436c012759de6036f8a0cca71a10dea2eb5763eafdaa49ffec7d6fd8cfb1",
+    "source-pages/SRC-C03/VER-SRC-C03-8bd0e5dc8fe3/21.png": "9be678493b85f77db1e4f8e24ebfed98a7532bc8be61aee91f63f735d691ad6b",
+    "source-pages/SRC-C03/VER-SRC-C03-8bd0e5dc8fe3/31.png": "f13c03c4a59d357c1467304bd978f7fd2cdd5ee5d7548b77b77913db598c6270",
+    "source-pages/SRC-C03/VER-SRC-C03-8bd0e5dc8fe3/38.png": "cbf840ad0ee516b4e01cc92c1c891175a0dcf0a0de7eb6dc9869383f78da8d42",
+    "source-pages/SRC-C05/VER-SRC-C05-ad2a56210ce2/16.png": "1a09879dc436f868c9314002e6c5b6be00e880db518a9d40cbbbdc4bbe2c05a4",
+    "source-pages/SRC-EX07/VER-SRC-EX07-94ba9b89b204/11.png": "c7e9e3482ce9cf35df4a48f48a5e61728806d9bf5073e9b98c8cf427d77ea6bd",
+    "source-pages/SRC-EX07/VER-SRC-EX07-94ba9b89b204/13.png": "fcccce31c0554963f5720c871062e733ce9bd8f842f4d72658712fc3e2ad85ce",
+    "source-pages/SRC-EX07/VER-SRC-EX07-94ba9b89b204/17.png": "5330d962e044be349dbf4ad50c6c18f842b9d7d14d905ffda89e0456c1d66ce2",
+    "source-pages/SRC-EX07/VER-SRC-EX07-94ba9b89b204/5.png": "ac26abc544e3ad1da19144cc923cfe0a29192335e592d728dfab2f77a5160f43",
+    "source-pages/SRC-EX07/VER-SRC-EX07-94ba9b89b204/8.png": "fa7c51c9e8cd7bce384771bde9f997ca6bbdbb5e5421c9ece7831ab0e4cbba13",
+    "source-pages/SRC-HW04/VER-SRC-HW04-b53935c20c83/1.png": "91e8fc0c4aeb4b4aec9d35d8434faae261ae1c0bf26eec0429bf4534846c90c3",
+    "source-pages/SRC-TB/VER-SRC-TB-d1bc6409752a/72.png": "717acda003519b295664d70aba49f761beb25a31b23aba532c41814c0f6738ef",
+    "source-pages/SRC-TI74153/VER-SRC-TI74153-72557fe3909b/1.png": "c53b1b6173fe1e938c08d6ff40f543a3e64d6e8a1855d011216188db3ff1b601",
+    "src/dynamic-layout.js": "f8da71bdff70e5610a27601af53eb654527e634f8b86fb1fd4f49044b117bc03",
+    "src/main.jsx": "b09584560822405d6d4aca1d9295e6f2fa8399540b782099660340f4520a80ed",
+    "src/style.css": "26512552ce7efb77b53d0961e814539ca17bec26c9e811f824eb6d4d1ce88b9b",
+    "start.py": "4359a0dd61c3e52ca63ce68708f5b2dfaacabf0c4bada594e7a8da19674d6337",
+    "startup-trials.json": "c9ad8fc73abae997194171de46dfcba0c1d5a2e38040014ae453fd6a111c4d6a",
+    "THIRD_PARTY_NOTICES.md": "c91c3c3cf1724cfb36d5cb303e7ccda73a4bd100ffd05b483f566bba3939d420",
+    "动态布局验证.md": "e596b53b8d1312b46736346f06bac11c9c63cdadeb4ad7c4a9b0ef8696a345e3",
+    "验证记录.md": "a567d73536f998ffe9f9f07d4892dd949319d057469c3ca089de2364e6ad006c",
+    "../style-math-prototype/vendor/mathlive/mathlive.min.js": "51e9ab5c4739209a2951a550042dcecb99ad3047269c1d791d09d7d613226eae",
+    "../style-math-prototype/vendor/mathlive/package.json": "f0b71bcddf62e8245393f04484343d1e3971eab74d5a97cf362c61a2b066a9d3",
+    "../../../../复习画板/web/content/provider.js": "70a2757f43ca2df32d722f2aeb70e6ea07f78b7eb073c287a35d2254f1385fc7",
+    "../../../../复习画板/web/content/content.css": "b075266d9bf39ccac3914402febb7a3ebc49f00aba5153d0efdb2c2c8da71ce5"
+  },
+  "completedAt": "2026-10-27T11:09:07.341Z",
+  "failedChecks": [
+    "84: no page or console errors"
+  ]
+}

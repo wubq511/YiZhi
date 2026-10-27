@@ -1,0 +1,34 @@
+{
+  "temporaryCourses": "removed after successful acceptance",
+  "temporaryServicesStopped": [
+    8771,
+    8772
+  ],
+  "claim02Released": true,
+  "formalSourcesIndependentOfScratch": true,
+  "removed": [
+    ".scratch/review-board-v1/work/02/runtime/TH-01",
+    ".scratch/review-board-v1/work/02/runtime/TH-01-missing-assets",
+    ".scratch/review-board-v1/work/02/runtime/TH-01-rejected",
+    ".scratch/review-board-v1/work/02/runtime/TH-02",
+    ".scratch/review-board-v1/work/02/runtime/TH-02-missing-assets",
+    ".scratch/review-board-v1/work/02/runtime/TH-02-rejected",
+    ".scratch/review-board-v1/work/02/runtime/TH-10-v2",
+    ".scratch/review-board-v1/work/02/runtime/codex-complete-2026-10-26",
+    ".scratch/review-board-v1/work/02/runtime/codex-migrated-2026-10-26",
+    ".scratch/review-board-v1/work/02/TH-02/map-preview-final.json",
+    ".scratch/review-board-v1/work/02/TH-02/map-preview.json",
+    ".scratch/review-board-v1/work/02/TH-16/map-preview.json",
+    ".scratch/review-board-v1/work/02/TH-18/map-preview.json",
+    ".scratch/review-board-v1/work/02/TH-10/map-preview.json",
+    ".scratch/review-board-v1/work/02/TH-01/map-preview-final.json",
+    ".scratch/review-board-v1/work/02/TH-01/map-preview.json",
+    ".scratch/review-board-v1/work/02/TH-08/map-preview.json",
+    ".scratch/review-board-v1/work/02/TH-15/map-preview.json",
+    ".scratch/review-board-v1/work/02/samples/map-preview.json",
+    ".scratch/review-board-v1/work/02/TH-19/retake.py",
+    ".scratch/review-board-v1/work/02/stage_preview.py",
+    ".scratch/review-board-v1/work/02/land_chapter.py",
+    ".scratch/review-board-v1/work/02/joint-unit-before.json"
+  ]
+}

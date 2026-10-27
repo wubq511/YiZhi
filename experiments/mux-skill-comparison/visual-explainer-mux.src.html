@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-CN" data-register="blueprint">
+<head>
+<title>用 4 选 1 多路选择器实现布尔函数 · 交互 MUX</title>
+<link rel="stylesheet" href="kit.css" data-ve-kit>
+<style>
+main { max-width: 1140px; padding: var(--s-5) var(--s-4); margin: 0 auto; }
+main > header { display: block; width: 100%; max-width: none; min-height: 0; padding: 0; margin: 0 0 var(--s-4); }
+main > header h1 { width: 100%; max-width: none; font-size: var(--t-h2); margin: 0 0 var(--s-2); }
+main > header .eyebrow { margin: 0 0 var(--s-2); }
+main > header .formula { max-width: none; margin: 0; font-family: monospace; font-size: var(--t-body); color: var(--text); }
+.mux-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(290px, 1fr); gap: var(--s-5); align-items: start; }
+.mux-grid figure { margin: 0; }
+h2 { font-size: var(--t-body); margin: 0 0 var(--s-3); }
+.mux-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); min-height: 44px; margin-bottom: var(--s-2); }
+.mux-controls button { padding: var(--s-2) var(--s-4); border: 1px solid var(--border-bright); border-radius: var(--r-1); background: var(--bg); color: var(--text); font: inherit; font-variant-numeric: tabular-nums; cursor: pointer; }
+.mux-controls button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-dim); font-weight: 700; }
+.mux-controls button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.control-hint { font-size: var(--t-small); color: var(--text-dim); }
+.mux-diagram { width: 100%; min-width: 600px; display: block; }
+.mux-body { fill: var(--bg); stroke: var(--border-bright); stroke-width: 2; }
+.mux-label { fill: var(--text); font-size: 20px; font-family: monospace; text-anchor: middle; }
+.mux-detail { fill: var(--text-dim); font-size: 15px; text-anchor: middle; }
+.input-node[data-selected="true"] .sh { stroke: var(--accent); stroke-width: 3; }
+.selected-note { fill: var(--accent); font-size: 15px; font-weight: 700; text-anchor: middle; }
+.selector-note { fill: var(--text); font-size: 17px; text-anchor: middle; font-family: monospace; }
+#output-value { font-size: 25px; font-weight: 700; }
+#selected-route { fill: none; stroke: var(--accent); stroke-width: 3; }
+#selected-port { fill: var(--accent); stroke: var(--bg); stroke-width: 2; }
+#live-result { margin: var(--s-3) 0 var(--s-2); font-size: var(--t-body); font-variant-numeric: tabular-nums; }
+#live-result strong { color: var(--accent); }
+figcaption { font-size: var(--t-small); }
+.mux-cases { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
+.mux-case { padding: var(--s-3); border: 1px solid var(--border); border-radius: var(--r-1); }
+.mux-case[data-active="true"] { border: 2px solid var(--accent); padding: calc(var(--s-3) - 1px); }
+.case-heading { display: flex; justify-content: space-between; align-items: center; gap: var(--s-1); }
+.case-heading h3 { font-size: var(--t-small); margin: 0; }
+.active-tag { font-size: var(--t-label); color: var(--accent); visibility: hidden; }
+.mux-case[data-active="true"] .active-tag { visibility: visible; }
+.assignment { margin: var(--s-2) 0 0; font-family: monospace; font-size: var(--t-body); }
+.mux-case .ve-mini { width: 100%; display: block; }
+.case-in, .case-out { fill: var(--text); font-size: 17px; font-family: monospace; }
+.case-in { fill: var(--text-dim); }
+.case-out { font-weight: 700; }
+.concepts { margin-top: var(--s-5); }
+.concepts figure { margin: 0; }
+.concept-svg { display: block; width: 100%; min-width: 700px; }
+.concept-svg .ve-n text { font-size: 18px; }
+.concept-svg .ve-el { font-size: 15px; }
+.takeaway { margin: var(--s-3) 0 0; font-size: var(--t-body); }
+.sources { margin-top: var(--s-5); padding-top: var(--s-3); border-top: 1px solid var(--border); font-size: var(--t-small); }
+.sources p { margin: var(--s-1) 0; max-width: none; }
+@media (max-width: 840px) { .mux-grid { grid-template-columns: 1fr; } .mux-cases { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media print { .mux-controls { display: none; } .mux-grid { grid-template-columns: 1.7fr 1fr; } }
+</style>
+</head>
+<body>
+<main>
+<header><p class="eyebrow">数字逻辑 · 同题交互讲解</p><h1>用 4 选 1 多路选择器实现布尔函数</h1><p class="formula">F(x,y,z) = Σm(1,2,6,7)</p></header>
+<div class="mux-grid">
+<figure id="mux-live">
+<h2>xy 决定选哪路，z 决定数据值</h2>
+<div id="mux-controls" class="mux-controls" aria-label="切换二进制输入"></div>
+<div class="frame"><svg class="ve-svg mux-diagram" viewBox="0 0 700 325" role="img" aria-labelledby="mux-title mux-desc"><title id="mux-title">4 选 1 多路选择器的当前选择</title><desc id="mux-desc">初始 x=0、y=1、z=0；选中 I1=¬z，输出 F=1。</desc>
+<path class="mux-body" d="M300 18L475 68V228L300 278Z"/>
+<text class="mux-label" x="409" y="195">4 : 1 MUX</text><text class="mux-detail" x="409" y="218">F = I[2x + y]</text>
+<path id="wire-0" class="ve-e" d="M168 50H300"/>
+<g class="ve-n input-node" id="input-0" data-selected="false" data-ref="I0"><rect class="sh" x="18" y="27" width="150" height="46" rx="5"/><text x="93" y="45">I0 = z</text><text class="sub" id="value-0" x="93" y="64">当前值 0</text></g>
+<path id="wire-1" class="ve-e is-hot" d="M168 110H300"/>
+<g class="ve-n input-node" id="input-1" data-selected="true" data-ref="I1"><rect class="sh" x="18" y="87" width="150" height="46" rx="5"/><text x="93" y="105">I1 = ¬z</text><text class="sub" id="value-1" x="93" y="124">当前值 1</text></g>
+<path id="wire-2" class="ve-e" d="M168 170H300"/>
+<g class="ve-n input-node" id="input-2" data-selected="false" data-ref="I2"><rect class="sh" x="18" y="147" width="150" height="46" rx="5"/><text x="93" y="165">I2 = 0</text><text class="sub" id="value-2" x="93" y="184">当前值 0</text></g>
+<path id="wire-3" class="ve-e" d="M168 230H300"/>
+<g class="ve-n input-node" id="input-3" data-selected="false" data-ref="I3"><rect class="sh" x="18" y="207" width="150" height="46" rx="5"/><text x="93" y="225">I3 = 1</text><text class="sub" id="value-3" x="93" y="244">当前值 1</text></g>
+
+<path id="selected-route" d="M300 110H330V148H475"/>
+<circle id="selected-port" cx="300" cy="110" r="5"/>
+<text id="selected-note" class="selected-note" x="232" y="98">选中 I1</text>
+<path class="ve-e is-hot" d="M475 148H548"/>
+<g class="ve-n is-key" data-ref="F"><rect class="sh" x="548" y="120" width="130" height="58" rx="5"/><text id="output-value" x="613" y="149">F = 1</text></g>
+<path class="ve-e" d="M395 292V251"/>
+<text id="selector-note" class="selector-note" x="395" y="313">S1=x=0 · S0=y=1</text>
+</svg></div>
+<p id="live-result" role="status" aria-live="polite">xy = 01 → 选中 I1 = ¬z；z = 0，所以 <strong>F = 1</strong>。</p>
+<figcaption><span class="fig-n">图 1</span>仅当前选中的数据端传到 F；切换 x、y、z 可检验全部 8 种输入。</figcaption>
+</figure>
+<figure id="mux-groups"><h2>四组结果决定四个数据端</h2><div class="cases mux-cases"><div class="case mux-case" data-group="00" data-active="false"><div class="case-heading"><h3>xy = 00</h3><span class="active-tag">当前</span></div><p class="assignment">I0 = z</p><svg class="ve-mini" viewBox="0 0 210 100" role="img" aria-label="xy为00，z为0时F为0，z为1时F为1"><path class="ve-e" d="M65 27H135M65 73H135"/><text class="case-in" x="8" y="33">z = 0</text><text class="case-out" x="146" y="33">F = 0</text><text class="case-in" x="8" y="79">z = 1</text><text class="case-out" x="146" y="79">F = 1</text></svg></div><div class="case mux-case" data-group="01" data-active="true"><div class="case-heading"><h3>xy = 01</h3><span class="active-tag">当前</span></div><p class="assignment">I1 = ¬z</p><svg class="ve-mini" viewBox="0 0 210 100" role="img" aria-label="xy为01，z为0时F为1，z为1时F为0"><path class="ve-e" d="M65 27H135M65 73H135"/><text class="case-in" x="8" y="33">z = 0</text><text class="case-out" x="146" y="33">F = 1</text><text class="case-in" x="8" y="79">z = 1</text><text class="case-out" x="146" y="79">F = 0</text></svg></div><div class="case mux-case" data-group="10" data-active="false"><div class="case-heading"><h3>xy = 10</h3><span class="active-tag">当前</span></div><p class="assignment">I2 = 0</p><svg class="ve-mini" viewBox="0 0 210 100" role="img" aria-label="xy为10，z为0时F为0，z为1时F为0"><path class="ve-e" d="M65 27H135M65 73H135"/><text class="case-in" x="8" y="33">z = 0</text><text class="case-out" x="146" y="33">F = 0</text><text class="case-in" x="8" y="79">z = 1</text><text class="case-out" x="146" y="79">F = 0</text></svg></div><div class="case mux-case" data-group="11" data-active="false"><div class="case-heading"><h3>xy = 11</h3><span class="active-tag">当前</span></div><p class="assignment">I3 = 1</p><svg class="ve-mini" viewBox="0 0 210 100" role="img" aria-label="xy为11，z为0时F为1，z为1时F为1"><path class="ve-e" d="M65 27H135M65 73H135"/><text class="case-in" x="8" y="33">z = 0</text><text class="case-out" x="146" y="33">F = 1</text><text class="case-in" x="8" y="79">z = 1</text><text class="case-out" x="146" y="79">F = 1</text></svg></div></div><figcaption><span class="fig-n">图 2</span>每组固定 xy，再比较 z = 0 与 z = 1 时的 F。</figcaption></figure>
+</div>
+<section class="concepts"><h2>本例连接这四个概念</h2><figure><div class="frame"><svg class="ve-svg concept-svg" viewBox="0 0 930 198" role="img" aria-label="真值表 → 按选择变量分组：分组取值；按选择变量分组 → 用 MUX 实现函数：确定数据端；MUX 选择规则 → 用 MUX 实现函数：确定选择端"><path class="ve-e" d="M185 51H295"/><text class="ve-el" x="240" y="37">分组取值</text><path class="ve-e" d="M505 51H595V86H680"/><text class="ve-el" x="586" y="37">确定数据端</text><path class="ve-e" d="M505 151H620V116H680"/><text class="ve-el" x="593" y="176">确定选择端</text><g class="ve-n"><rect class="sh" x="15" y="25" width="170" height="52" rx="5"/><text x="100" y="51">真值表</text></g><g class="ve-n"><rect class="sh" x="295" y="25" width="210" height="52" rx="5"/><text x="400" y="51">按选择变量分组</text></g><g class="ve-n"><rect class="sh" x="295" y="125" width="210" height="52" rx="5"/><text x="400" y="151">MUX 选择规则</text></g><g class="ve-n"><rect class="sh" x="680" y="65" width="230" height="72" rx="5"/><text x="795" y="101">用 MUX 实现函数</text></g></svg></div><figcaption><span class="fig-n">图 3</span>前置关系指向待学习的概念，边上注明本例中的作用。</figcaption></figure><p class="takeaway">直接按真值表分组即可确定四个数据输入，本路线不要求先做卡诺图化简。</p></section>
+<section class="sources" aria-label="来源"><p><strong>来源</strong>　02 逻辑代数 · PDF p33、38；05 组合模块1+代码 · PDF p4、19</p><p>PDF 页序从 1 开始。前置关系是本次依据课件整理的教学建模；函数与 MUX 数据端已枚举全部 8 组输入核对。</p></section>
+</main>
+<script id="mux-brief" type="application/json">{"title": "用 4 选 1 多路选择器实现布尔函数", "function": "F(x,y,z) = Σm(1,2,6,7)", "variable_order": ["x", "y", "z"], "selectors": {"S1": "x", "S0": "y"}, "data_inputs": {"I0": "z", "I1": "¬z", "I2": "0", "I3": "1"}, "groups": [{"xy": "00", "F_z0": 0, "F_z1": 1, "input": "I0 = z"}, {"xy": "01", "F_z0": 1, "F_z1": 0, "input": "I1 = ¬z"}, {"xy": "10", "F_z0": 0, "F_z1": 0, "input": "I2 = 0"}, {"xy": "11", "F_z0": 1, "F_z1": 1, "input": "I3 = 1"}], "concepts": ["真值表", "按选择变量分组", "MUX 选择规则", "用 MUX 实现函数"], "prerequisites": [{"from": "真值表", "to": "按选择变量分组", "label": "分组取值"}, {"from": "按选择变量分组", "to": "用 MUX 实现函数", "label": "确定数据端"}, {"from": "MUX 选择规则", "to": "用 MUX 实现函数", "label": "确定选择端"}], "takeaway": "直接按真值表分组即可确定四个数据输入，本路线不要求先做卡诺图化简。", "sources": ["02 逻辑代数 · PDF p33、38", "05 组合模块1+代码 · PDF p4、19"], "source_note": "PDF 页序从 1 开始。前置关系是本次依据课件整理的教学建模；函数与 MUX 数据端已枚举全部 8 组输入核对。"}</script>
+<script id="mux-model">
+function model(settings, brief) {
+  const {x, y, z} = settings;
+  if (![x, y, z].every(value => value === 0 || value === 1)) throw new Error('Inputs must be bits');
+  const expressions = {'z': z, '¬z': 1 - z, '0': 0, '1': 1};
+  const values = Object.fromEntries(Object.entries(brief.data_inputs).map(([name, expression]) => {
+    if (!(expression in expressions)) throw new Error('Unsupported data input');
+    return [name, expressions[expression]];
+  }));
+  const index = 2 * x + y;
+  const selected = 'I' + index;
+  return {x, y, z, index, selected, values, F: values[selected], xy: String(x) + String(y)};
+}
+</script>
+<script id="mux-live-script">
+(() => {
+  const brief = JSON.parse(document.getElementById('mux-brief').textContent);
+  const settings = {x: 0, y: 1, z: 0};
+  const buttons = {};
+  const controls = document.getElementById('mux-controls');
+  for (const variable of brief.variable_order) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.id = 'toggle-' + variable;
+    button.addEventListener('click', () => { settings[variable] = 1 - settings[variable]; update(); });
+    buttons[variable] = button;
+    controls.append(button);
+  }
+  const hint = document.createElement('span');
+  hint.className = 'control-hint';
+  hint.textContent = '点击切换 0 / 1';
+  controls.append(hint);
+  function update() {
+    const state = model(settings, brief);
+    for (const variable of brief.variable_order) {
+      buttons[variable].textContent = variable + ' = ' + state[variable];
+      buttons[variable].setAttribute('aria-pressed', String(state[variable] === 1));
+      buttons[variable].setAttribute('aria-label', variable + '，当前为 ' + state[variable] + '，点击切换');
+    }
+    for (let i = 0; i < 4; i++) {
+      document.getElementById('wire-' + i).classList.toggle('is-hot', i === state.index);
+      document.getElementById('input-' + i).dataset.selected = String(i === state.index);
+      document.getElementById('value-' + i).textContent = '当前值 ' + state.values['I' + i];
+    }
+    const y = [50, 110, 170, 230][state.index];
+    document.getElementById('selected-route').setAttribute('d', 'M300 ' + y + 'H330V148H475');
+    document.getElementById('selected-port').setAttribute('cy', String(y));
+    document.getElementById('selected-note').setAttribute('y', String(y - 12));
+    document.getElementById('selected-note').textContent = '选中 ' + state.selected;
+    document.getElementById('output-value').textContent = 'F = ' + state.F;
+    document.getElementById('selector-note').textContent = 'S1=x=' + state.x + ' · S0=y=' + state.y;
+    const result = 'xy = ' + state.xy + ' → 选中 ' + state.selected + ' = ' + brief.data_inputs[state.selected] + '；z = ' + state.z + '，所以 F = ' + state.F + '。';
+    document.getElementById('live-result').textContent = result;
+    document.getElementById('mux-desc').textContent = result;
+    for (const group of document.querySelectorAll('[data-group]')) group.dataset.active = String(group.dataset.group === state.xy);
+  }
+  update();
+})();
+</script>
+</body>
+</html>

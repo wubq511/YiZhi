@@ -1,0 +1,129 @@
+{
+  "status": "passed",
+  "unitIds": [
+    "KU-045",
+    "KU-046",
+    "KU-047",
+    "KU-048",
+    "KU-050",
+    "KU-051",
+    "KU-052",
+    "KU-053",
+    "KU-054"
+  ],
+  "unitCount": 9,
+  "blockCount": 118,
+  "schemaErrors": [],
+  "questionUpdates": [
+    "Q-081",
+    "Q-082",
+    "Q-084",
+    "Q-085",
+    "Q-103",
+    "Q-119",
+    "Q-120"
+  ],
+  "sourceSHA256": "694af76a91e0d37dedf28cf4816991c6cd2a742d10aa48294fd0a71b73225e61",
+  "units": [
+    {
+      "unitId": "KU-045",
+      "outcome": "能根据文字条件直接写出逻辑表达式，必要时才列真值表。",
+      "coverageGoals": [
+        "能根据文字条件直接写出逻辑表达式，必要时才列真值表。"
+      ],
+      "blockCount": 15,
+      "examples": 2,
+      "exercises": 1,
+      "sha256": "1bba0f62f73dfb9e5f023d8f33f67cdf3e2b2b6721f3a7dc4dee77fd203064a7"
+    },
+    {
+      "unitId": "KU-046",
+      "outcome": "能把不会出现或输出无关的输入组合作为无关项，化简判别与综合电路并画出门级实现。",
+      "coverageGoals": [
+        "能把不会出现或输出无关的输入组合作为无关项，化简判别与综合电路并画出门级实现。"
+      ],
+      "blockCount": 13,
+      "examples": 2,
+      "exercises": 1,
+      "sha256": "e91e5044450f5c98304a8c71dceeda5a0c02842fd1a7d4708f62be18480db276"
+    },
+    {
+      "unitId": "KU-047",
+      "outcome": "能设计两种编码系统之间的组合码变换电路，可用真值表/卡诺图，也可利用编码间算术关系用加法器实现。",
+      "coverageGoals": [
+        "能设计两种编码系统之间的组合码变换电路，可用真值表/卡诺图，也可利用编码间算术关系用加法器实现。"
+      ],
+      "blockCount": 13,
+      "examples": 2,
+      "exercises": 1,
+      "sha256": "d7566b5c1d29c9a5660327fa5c1186104a264a7a4ed23d5bb2215296b651a19e"
+    },
+    {
+      "unitId": "KU-048",
+      "outcome": "能把复杂电路分解为可复用的子模块（如一位比较器）并级联成多位比较器。",
+      "coverageGoals": [
+        "能把复杂电路分解为可复用的子模块（如一位比较器）并级联成多位比较器。"
+      ],
+      "blockCount": 9,
+      "examples": 1,
+      "exercises": 1,
+      "sha256": "88ee33a32ae1418038ad7d324d6fe7b09f8a0194c1a19e59d622c484cb602e68"
+    },
+    {
+      "unitId": "KU-050",
+      "outcome": "能用 4 位二进制加法器和修正逻辑实现 1 位 BCD 加法，并产生十进制进位。",
+      "coverageGoals": [
+        "能用 4 位二进制加法器和修正逻辑实现 1 位 BCD 加法，并产生十进制进位。"
+      ],
+      "blockCount": 10,
+      "examples": 1,
+      "exercises": 1,
+      "sha256": "644c569aeb6a0b34de0aefb4872fb2e8174f07ace77f58daf1a4ce8713e813ce"
+    },
+    {
+      "unitId": "KU-051",
+      "outcome": "能区分竞争与冒险，说明临界竞争导致错误输出而毛刺可能无害。",
+      "coverageGoals": [
+        "能区分输入侧竞争、输出冒险与毛刺，按稳态和波形区分静态/动态，理解临界/非临界及何时需要处理。"
+      ],
+      "blockCount": 12,
+      "examples": 1,
+      "exercises": 1,
+      "sha256": "f00c88fe00bfaa23d3562b9903e541ab2f7dfc717283d6521b2d850b57d27dc8"
+    },
+    {
+      "unitId": "KU-052",
+      "outcome": "能用代数法检查 X+X′ 或 X·X′，或用卡诺图圈相切判断冒险。",
+      "coverageGoals": [
+        "能在明确两级实现/单变量假定后，用代数原反路径和卡诺图相邻共同覆盖判断静态险象，并正确处理已有冗余覆盖。"
+      ],
+      "blockCount": 15,
+      "examples": 1,
+      "exercises": 3,
+      "sha256": "d37c45d132a82e470555ba49262478720a6f1d6053e95143b4284d2d262c5219"
+    },
+    {
+      "unitId": "KU-053",
+      "outcome": "能用增加冗余项、输出端并联电容或选通脉冲三种方法消除冒险。",
+      "coverageGoals": [
+        "能按目标过渡选择冗余桥接、电容滤波、选通窗口，完成稳态等价证明并明确静态/动态、单变量和门级边界。"
+      ],
+      "blockCount": 16,
+      "examples": 3,
+      "exercises": 2,
+      "sha256": "a8f6aded0791ad9be291b246b506bfa6403e3f1cd95f90e1c40ab7f6e8f4108c"
+    },
+    {
+      "unitId": "KU-054",
+      "outcome": "能区分传播延迟与最小延迟，找出电路的关键路径和最短路径并计算延迟。",
+      "coverageGoals": [
+        "能区分tpd与tcd，按实际门/端口加权路径求最大稳定时间和最早改变时间，并区分控制/数据路径与适用条件。"
+      ],
+      "blockCount": 15,
+      "examples": 2,
+      "exercises": 1,
+      "sha256": "28299b4d6dad616b5bc5503561c496d6bf822cbc20ef3dce57a2ff94c6974ba6"
+    }
+  ],
+  "scope": "two-chapter memory copy only; no import/browser/server; first batch untouched by this work"
+}

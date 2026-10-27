@@ -1,0 +1,202 @@
+{
+  "ticket": "02",
+  "theme": "TH-08",
+  "scope": [
+    "KU-034"
+  ],
+  "date": "2026-10-25",
+  "tool": "python3 独立枚举（期望来自最小项定义与差一位判据，非复制正文）",
+  "checks": [
+    {
+      "id": "c03-p3-2var",
+      "claim": "课件p3例 F=A'B+AB 的真值表 == {m1,m3}（即 F=B）",
+      "method": "枚举4输入组合",
+      "expect": true,
+      "got": true,
+      "passed": true
+    },
+    {
+      "id": "c03-p4-or",
+      "claim": "课件p4例 F=x+y 的 1 格集合 == {m1,m2,m3}",
+      "method": "枚举4输入组合",
+      "expect": true,
+      "got": true,
+      "passed": true
+    },
+    {
+      "id": "c03-p5-3var",
+      "claim": "课件p5例 F=x'y'z'+xy'z'+x'y'z+x'yz 与 ȳz̄+x̄z 逐点相等（8输入枚举）",
+      "method": "两式逐点比较",
+      "expect": true,
+      "got": true,
+      "passed": true
+    },
+    {
+      "id": "c03-p7-3var",
+      "claim": "课件p7例 F=x'y'+y'z'+yz' 与 x̄ȳ+z̄ 逐点相等（8输入枚举）",
+      "method": "两式逐点比较",
+      "expect": true,
+      "got": true,
+      "passed": true
+    },
+    {
+      "id": "th08-034-example",
+      "claim": "例题 F=Σm(0,2,5,7,8,10,13,15) 与 BD+B̄D̄ 逐点相等（16输入枚举，期望来自独立最小项定义）",
+      "method": "枚举16输入组合",
+      "expect": true,
+      "got": true,
+      "passed": true
+    },
+    {
+      "id": "th08-034-cover",
+      "claim": "圈 BD ∪ B̄D̄ 恰好等于 1 格集合 {0,2,5,7,8,10,13,15}，且无多余格",
+      "method": "由变量定义独立生成两圈集合",
+      "expect": [
+        0,
+        2,
+        5,
+        7,
+        8,
+        10,
+        13,
+        15
+      ],
+      "got": [
+        0,
+        2,
+        5,
+        7,
+        8,
+        10,
+        13,
+        15
+      ],
+      "passed": true
+    },
+    {
+      "id": "th08-034-nb0",
+      "claim": "m0 的相邻格（按差一位判据）== {m1,m2,m4,m8}",
+      "method": "对16格逐一异或判据",
+      "expect": [
+        1,
+        2,
+        4,
+        8
+      ],
+      "got": [
+        1,
+        2,
+        4,
+        8
+      ],
+      "passed": true
+    },
+    {
+      "id": "th08-034-adj-0-2",
+      "claim": "m0,m2 列首尾: 相邻=True",
+      "method": "异或差一位判据",
+      "expect": true,
+      "got": true,
+      "passed": true
+    },
+    {
+      "id": "th08-034-adj-0-8",
+      "claim": "m0,m8 行首尾: 相邻=True",
+      "method": "异或差一位判据",
+      "expect": true,
+      "got": true,
+      "passed": true
+    },
+    {
+      "id": "th08-034-adj-5-13",
+      "claim": "m5,m13 上下: 相邻=True",
+      "method": "异或差一位判据",
+      "expect": true,
+      "got": true,
+      "passed": true
+    },
+    {
+      "id": "th08-034-adj-5-7",
+      "claim": "m5,m7 左右: 相邻=True",
+      "method": "异或差一位判据",
+      "expect": true,
+      "got": true,
+      "passed": true
+    },
+    {
+      "id": "th08-034-adj-5-15",
+      "claim": "m5,m15 斜向不相邻: 相邻=False",
+      "method": "异或差一位判据",
+      "expect": false,
+      "got": false,
+      "passed": true
+    },
+    {
+      "id": "th08-034-adj-0-10",
+      "claim": "m0,m10 对角不相邻: 相邻=False",
+      "method": "异或差一位判据",
+      "expect": false,
+      "got": false,
+      "passed": true
+    },
+    {
+      "id": "th08-034-adj-2-8",
+      "claim": "m2,m8 四角对角不相邻(四角圈只要求边相邻): 相邻=False",
+      "method": "异或差一位判据",
+      "expect": false,
+      "got": false,
+      "passed": true
+    },
+    {
+      "id": "th08-034-corners",
+      "claim": "四角圈 {m0,m2,m8,m10} 跨边粘合后构成 2×2 矩形: 四条边(m0-m2,m0-m8,m10-m2,m10-m8)均相邻",
+      "method": "差一位判据",
+      "expect": 4,
+      "got": 4,
+      "passed": true
+    },
+    {
+      "id": "th08-034-prac-a",
+      "claim": "练习① F=Σm(0,1,4,5,6) 与 ȳ+xz̄ 逐点相等（8输入枚举）",
+      "method": "枚举8输入组合",
+      "expect": true,
+      "got": true,
+      "passed": true
+    },
+    {
+      "id": "th08-034-prac-b",
+      "claim": "练习② G=Σm(0,2,8,10) 与 B̄D̄ 逐点相等（16输入枚举）",
+      "method": "枚举16输入组合",
+      "expect": true,
+      "got": true,
+      "passed": true
+    },
+    {
+      "id": "c03-p10-layout",
+      "claim": "课件p10 4变量布局(行CD×列AB)首行 == [m0,m4,m12,m8]",
+      "method": "按编号=AB拼CD独立重构",
+      "expect": [
+        0,
+        4,
+        12,
+        8
+      ],
+      "got": [
+        0,
+        4,
+        12,
+        8
+      ],
+      "passed": true
+    },
+    {
+      "id": "gray-cyclic",
+      "claim": "格雷序 00,01,11,10 循环相邻均差一位；二进制序中 01 与 10 差两位(不相邻)",
+      "method": "逐对异或",
+      "expect": true,
+      "got": true,
+      "passed": true
+    }
+  ],
+  "summary": "19/19 passed"
+}

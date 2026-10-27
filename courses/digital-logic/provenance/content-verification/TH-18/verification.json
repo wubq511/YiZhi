@@ -1,0 +1,168 @@
+{
+  "allPassed": true,
+  "all8BitInputsChecked": 256,
+  "all4BitInputsChecked": 16,
+  "trace255": [
+    {
+      "shift": 1,
+      "groups": [
+        0,
+        0,
+        1
+      ],
+      "corrected": []
+    },
+    {
+      "shift": 2,
+      "groups": [
+        0,
+        0,
+        3
+      ],
+      "corrected": []
+    },
+    {
+      "shift": 3,
+      "groups": [
+        0,
+        0,
+        10
+      ],
+      "corrected": [
+        2
+      ]
+    },
+    {
+      "shift": 4,
+      "groups": [
+        0,
+        1,
+        8
+      ],
+      "corrected": [
+        2
+      ]
+    },
+    {
+      "shift": 5,
+      "groups": [
+        0,
+        3,
+        1
+      ],
+      "corrected": []
+    },
+    {
+      "shift": 6,
+      "groups": [
+        0,
+        9,
+        3
+      ],
+      "corrected": [
+        1
+      ]
+    },
+    {
+      "shift": 7,
+      "groups": [
+        1,
+        2,
+        10
+      ],
+      "corrected": [
+        2
+      ]
+    },
+    {
+      "shift": 8,
+      "groups": [
+        2,
+        5,
+        5
+      ],
+      "corrected": []
+    }
+  ],
+  "trace128": [
+    {
+      "shift": 1,
+      "groups": [
+        0,
+        0,
+        1
+      ],
+      "corrected": []
+    },
+    {
+      "shift": 2,
+      "groups": [
+        0,
+        0,
+        2
+      ],
+      "corrected": []
+    },
+    {
+      "shift": 3,
+      "groups": [
+        0,
+        0,
+        4
+      ],
+      "corrected": []
+    },
+    {
+      "shift": 4,
+      "groups": [
+        0,
+        0,
+        11
+      ],
+      "corrected": [
+        2
+      ]
+    },
+    {
+      "shift": 5,
+      "groups": [
+        0,
+        1,
+        9
+      ],
+      "corrected": [
+        2
+      ]
+    },
+    {
+      "shift": 6,
+      "groups": [
+        0,
+        3,
+        2
+      ],
+      "corrected": []
+    },
+    {
+      "shift": 7,
+      "groups": [
+        0,
+        9,
+        4
+      ],
+      "corrected": [
+        1
+      ]
+    },
+    {
+      "shift": 8,
+      "groups": [
+        1,
+        2,
+        8
+      ],
+      "corrected": []
+    }
+  ],
+  "note": "每轮先移位；第3–7轮后检查各 BCD 列 >=5 加3；第8轮后停止修正。4位变体在第4次移位后 >=10 加6。"
+}

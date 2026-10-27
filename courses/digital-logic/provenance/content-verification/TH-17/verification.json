@@ -1,0 +1,545 @@
+{
+  "allPass": true,
+  "checks": [
+    {
+      "unitId": "KU-070",
+      "name": "truth tables against integer arithmetic",
+      "cases": 14,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-070",
+      "name": "actual displayed Boolean expressions",
+      "cases": 28,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-070",
+      "name": "semantic figure bounds, label widths, overlap and straight lines",
+      "cases": 35,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-071",
+      "name": "4-bit cascade read from candidate formula",
+      "cases": 512,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-071",
+      "name": "existing example per-bit trace",
+      "cases": 4,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-071",
+      "name": "worst-case carry propagation: each incoming bit matters",
+      "cases": 3,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-071",
+      "name": "literal binary arithmetic in worked prose",
+      "cases": 7,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-071",
+      "name": "semantic figure bounds, label widths, overlap and straight lines",
+      "cases": 20,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-072",
+      "name": "all nested and expanded carries vs independent low-bit integer sums",
+      "cases": 4096,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-072",
+      "name": "actual sum expression uses entering carry",
+      "cases": 512,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-072",
+      "name": "G/P truth table",
+      "cases": 4,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-072",
+      "name": "Q-099 actual gate expressions and mode table",
+      "cases": 68,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-072",
+      "name": "Q-121 actual shared solution wiring for all D",
+      "cases": 8,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-072",
+      "name": "semantic figure bounds, label widths, overlap and straight lines",
+      "cases": 11,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-074",
+      "name": "truth tables against integer arithmetic",
+      "cases": 14,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-074",
+      "name": "actual displayed Boolean expressions",
+      "cases": 24,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-074",
+      "name": "semantic figure bounds, label widths, overlap and straight lines",
+      "cases": 35,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-075",
+      "name": "all 512 add/sub inputs: actual formulas vs signed/unsigned integer arithmetic",
+      "cases": 512,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-075",
+      "name": "actual sign-test equations vs representable integer range",
+      "cases": 512,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-075",
+      "name": "flag comparison table including minimum-negative operands",
+      "cases": 6,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-075",
+      "name": "bit trace five-minus-three-bits",
+      "cases": 7,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-075",
+      "name": "bit trace three-minus-five-bits",
+      "cases": 7,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-075",
+      "name": "bit trace minimum-minus-one-bits",
+      "cases": 5,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-075",
+      "name": "literal binary arithmetic in worked prose",
+      "cases": 8,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-075",
+      "name": "semantic figure bounds, label widths, overlap and straight lines",
+      "cases": 20,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-076",
+      "name": "2x2 actual partial-product/half-adder formulas",
+      "cases": 16,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-076",
+      "name": "actual partial-product term and bit-weight exponent",
+      "cases": 400,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-076",
+      "name": "4x3 candidate integer stage formulas and width",
+      "cases": 128,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-076",
+      "name": "4x3 candidate wiring table, including carried-out T4",
+      "cases": 128,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-076",
+      "name": "example partial-product table four-by-three-rows",
+      "cases": 4,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-076",
+      "name": "example partial-product table four-by-four-rows",
+      "cases": 5,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-076",
+      "name": "example partial-product table practice-rows",
+      "cases": 4,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-076",
+      "name": "Q-121 actual shared solution wiring for all D",
+      "cases": 8,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-076",
+      "name": "literal binary arithmetic in worked prose",
+      "cases": 4,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-076",
+      "name": "semantic figure bounds, label widths, overlap and straight lines",
+      "cases": 40,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-070",
+      "name": "formal CLI identity and goal coverage",
+      "cases": 2,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-071",
+      "name": "formal CLI identity and goal coverage",
+      "cases": 2,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-072",
+      "name": "formal CLI identity and goal coverage",
+      "cases": 2,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-074",
+      "name": "formal CLI identity and goal coverage",
+      "cases": 2,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-075",
+      "name": "formal CLI identity and goal coverage",
+      "cases": 2,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-076",
+      "name": "formal CLI identity and goal coverage",
+      "cases": 2,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "all",
+      "name": "validate_reading on an in-memory copy with all six candidates",
+      "cases": 1,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-070",
+      "name": "source versions, page bounds, viewed-image presence and coverage categories",
+      "cases": 15,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-071",
+      "name": "source versions, page bounds, viewed-image presence and coverage categories",
+      "cases": 17,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-072",
+      "name": "source versions, page bounds, viewed-image presence and coverage categories",
+      "cases": 31,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-074",
+      "name": "source versions, page bounds, viewed-image presence and coverage categories",
+      "cases": 14,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-075",
+      "name": "source versions, page bounds, viewed-image presence and coverage categories",
+      "cases": 28,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-076",
+      "name": "source versions, page bounds, viewed-image presence and coverage categories",
+      "cases": 30,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "all",
+      "name": "read-only provider.render static HTML includes full worked steps",
+      "cases": 6,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "all",
+      "name": "in-memory sensitivity: known content mistakes are rejected",
+      "cases": 4,
+      "pass": true,
+      "failures": []
+    }
+  ],
+  "checkCount": 50,
+  "caseCount": 7367,
+  "candidateSha256": {
+    "KU-070": "99b45896be3560d9fc29ab50cfab659f0e5dc7704cf2116421e7d277c31c1e03",
+    "KU-071": "73622649d94323bdea4704cc1ad9a203985ed41015e03dd6d235acbd3c9684ac",
+    "KU-072": "ce90d65c3337d7207081fee55be655b0e8e096db50a0ca8829e1ef6ba78c16ca",
+    "KU-074": "cd2c349196a1b5672e0a9b992ce8695e361ceefea04fb19950b8f2a6e0aa59c4",
+    "KU-075": "572a405099be4b7a4c20982cd4f0d5c7f944679027a833e047ac84946a298b32",
+    "KU-076": "a754f336fa85c9e898650ad0c06ae514b274922ded74b66b090d38adcd6dd789"
+  },
+  "referenceMethod": "parse actual candidate formulas, tables and binary calculations; compare with independent integer addition/subtraction/multiplication and representable range",
+  "cliQueries": [
+    {
+      "unitId": "KU-070",
+      "kind": "module",
+      "outcome": "能写出半加器、全加器的真值表和表达式，并用两个半加器和一个或门构成全加器。",
+      "internals": [
+        {
+          "kind": "formula",
+          "text": "S=x⊕y，Cout=xy（半加）"
+        },
+        {
+          "kind": "formula",
+          "text": "Si=Ai⊕Bi⊕Ci-1，Ci=AiBi+(Ai⊕Bi)Ci-1（全加）"
+        }
+      ],
+      "directQuestions": []
+    },
+    {
+      "unitId": "KU-071",
+      "kind": "module",
+      "outcome": "能用全加器级联构成多位加法器，并说明进位逐位传递导致延迟长。",
+      "internals": [
+        {
+          "kind": "condition",
+          "text": "n 位加法需要 n 个全加器，最低位进位 C0 接入"
+        },
+        {
+          "kind": "caution",
+          "text": "9 输入 4 位加法若直接列真值表需 512 行，故采用级联"
+        }
+      ],
+      "directQuestions": []
+    },
+    {
+      "unitId": "KU-072",
+      "kind": "module",
+      "outcome": "能用生成/传播信号推导超前进位，并说明 74LS283 的端口与 4 位加法功能。",
+      "internals": [
+        {
+          "kind": "formula",
+          "text": "Gi=AiBi，Pi=Ai⊕Bi，Ci=Gi+PiCi-1"
+        },
+        {
+          "kind": "formula",
+          "text": "C4=G4+P4(G3+P3(G2+P2(G1+P1C0)))"
+        },
+        {
+          "kind": "condition",
+          "text": "74LS283 的 A1–A4、B1–B4 为操作数，C0 进位输入，Σ1–Σ4 和，C4 进位输出"
+        }
+      ],
+      "directQuestions": [
+        "Q-099",
+        "Q-121"
+      ]
+    },
+    {
+      "unitId": "KU-074",
+      "kind": "module",
+      "outcome": "能写出半减器、全减器的真值表和表达式，并用两个半减器和一个或门构成全减器。",
+      "internals": [
+        {
+          "kind": "formula",
+          "text": "D=x⊕y，C=x′y（半减）"
+        },
+        {
+          "kind": "formula",
+          "text": "Di=Ai⊕Bi⊕Ci，Ci+1=(Ai⊕Bi)′Ci+Ai′Bi（全减）"
+        }
+      ],
+      "directQuestions": []
+    },
+    {
+      "unitId": "KU-075",
+      "kind": "module",
+      "outcome": "能用异或门和进位控制把加法器改成加/减法器，并分别解释无符号加法溢出、减法借位和有符号溢出。",
+      "internals": [
+        {
+          "kind": "condition",
+          "text": "无符号加法：Cout=1 表示进位/溢出；无符号补码减法：通常 Cout=0 表示借位，Cout=1 表示无借位"
+        },
+        {
+          "kind": "caution",
+          "text": "课件 p29 将 C=1 概括为“溢出/借位”，用于减法时不能照抄；需按具体运算和 Cout 极性判断"
+        },
+        {
+          "kind": "condition",
+          "text": "有符号溢出用 V 判断，不能把无符号 Cout 与有符号 V 混为同一标志"
+        },
+        {
+          "kind": "formula",
+          "text": "A-B=A+B′+1"
+        },
+        {
+          "kind": "example",
+          "text": "74LS385 四位串行加/减法器"
+        }
+      ],
+      "directQuestions": []
+    },
+    {
+      "unitId": "KU-076",
+      "kind": "module",
+      "outcome": "能说明二进制乘法由部分积移位相加实现，并读懂 2 位/4 位乘法器结构。",
+      "internals": [
+        {
+          "kind": "example",
+          "text": "2 位乘法器：A1A0×B1B0 的部分积与进位"
+        },
+        {
+          "kind": "example",
+          "text": "4-bit by 3-bit 乘法器用两级 4 位加法器"
+        }
+      ],
+      "directQuestions": [
+        "Q-121"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "sourceId": "SRC-C06",
+      "versionId": "VER-SRC-C06-f7d512d6fda5",
+      "path": "理论课/课件/06 组合模块2+代码.pdf",
+      "sha256": "f7d512d6fda52634b3cbd8a413e3a7d435e9fd8092c4a060c00dc240eb319a8d"
+    },
+    {
+      "sourceId": "SRC-EX07",
+      "versionId": "VER-SRC-EX07-94ba9b89b204",
+      "path": "习题课/07 组合习题课+答案.pdf",
+      "sha256": "94ba9b89b204210ae96aa2b0497160dd248053f1cb30abcb7c7f5908a5ca9905"
+    },
+    {
+      "sourceId": "SRC-HW06",
+      "versionId": "VER-SRC-HW06-781b011fcdf6",
+      "path": "理论课/课后作业/整理版/06 组合模块2.pdf",
+      "sha256": "781b011fcdf6ed4a5c5d6f7fbd4590aa1fc4ce172f3ed79630deb346e4a0f4f3"
+    }
+  ],
+  "schemaErrors": [],
+  "mapMode": "in-memory deep copy only; no import/build/browser/package",
+  "staticRender": [
+    {
+      "unitId": "KU-070",
+      "blocks": 12,
+      "htmlBytes": 7605,
+      "failures": []
+    },
+    {
+      "unitId": "KU-071",
+      "blocks": 14,
+      "htmlBytes": 7808,
+      "failures": []
+    },
+    {
+      "unitId": "KU-072",
+      "blocks": 23,
+      "htmlBytes": 12230,
+      "failures": []
+    },
+    {
+      "unitId": "KU-074",
+      "blocks": 12,
+      "htmlBytes": 7296,
+      "failures": []
+    },
+    {
+      "unitId": "KU-075",
+      "blocks": 24,
+      "htmlBytes": 15491,
+      "failures": []
+    },
+    {
+      "unitId": "KU-076",
+      "blocks": 25,
+      "htmlBytes": 15076,
+      "failures": []
+    }
+  ]
+}

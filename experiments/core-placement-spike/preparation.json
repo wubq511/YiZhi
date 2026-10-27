@@ -1,0 +1,77 @@
+{
+  "status": "prepared-not-run",
+  "checkedAt": "2026-10-27T13:14:28.255Z",
+  "staticParserNode": "v26.0.0",
+  "embeddedRuntimeValidated": false,
+  "sqliteExecuted": false,
+  "electronLaunched": false,
+  "timingOrResourceLoadRun": false,
+  "checks": [
+    "CJS syntax only",
+    "Python helper AST syntax only",
+    "84-unit fixture structure",
+    "three fixed carrier orders",
+    "read-only source hashes"
+  ],
+  "codeHashes": {
+    "adapter.cjs": "254809a3fa10f18672e7b09cb9f93deded88d0acbbf11073e238fe4f1b245d1a",
+    "carrier.cjs": "5ad91c19471bc18ce1896e3a77fbe130d6f1d1c06ea493b8871c04cb4e13e250",
+    "check.cjs": "a54b309938c68c383c010dbca96337f50f38af6c7fefad015ba62f2150677b17",
+    "core-entry.cjs": "df116734a3f552802420643f57022701d1fe94829e984f09e39eee1f5b37c889",
+    "electron-main.cjs": "eecdb3bf2f8774260169db508ccb5364dbe98fc1050b9c08a39990efbbc64bcc",
+    "fixture.cjs": "e3512af4e082b45cdce77e58dd181cd8d672ba8d7efbf1410c9053b29b24f02d",
+    "metrics.cjs": "fa9062d3e8cf82daa8ed105e0065126ebe77dc099b2dac2c39ce6a97da564305",
+    "plan.cjs": "45277f43f1a66db14afff33e99d2955f1daefcf98992e802090828d0abbb0bac",
+    "report.cjs": "3c165099941fdd7c9b818c0af5046c1b2ba03fbc43800833ce1e53d20bb4e2a4",
+    "run.cjs": "19d2262fc832b11a19a4902802ed0fe83b7b209aa0a54e2ac54f848c4bf6ff71",
+    "service.cjs": "5d1b50f4c2c53f320038308fb6e8be657b79b50184d91b3dd78b38a8510f1d3b",
+    "phys-footprint.py": "0908ba7515dd40b75dfcf25d17086c7c686b47bdd36e19f6ccb0eb6a9eca02da"
+  },
+  "inputHashes": {
+    "../architecture-spike/fixture.json": "ff896778b0ff0d81be6a5859c86746fa04ddc89dd6397cf870aa9b29c325ae4b",
+    "../history-spike/spike.py": "3278ffbe4c745cc7f60b14edd054a7c66bc106e17b9f5b73c53fb5773b7639e7",
+    "../history-spike/README.md": "754ea30f5dfbff3c5931f4161a47e7466a5f27ba7324d894e19f25799aa9ba6f",
+    "../storage-spike/spike.py": "2d31d2fdd668f49993d607aab93f6876a7f752f1e16cff2ac30e607f58e1b3b9",
+    "../storage-spike/README.md": "98d90894e742488f61500a6b8e44591b5ebd15a0b8d33820c7cee8fab107437f"
+  },
+  "plan": {
+    "schema": "core-placement-1",
+    "electron": "40.10.6",
+    "node": "24.15.0",
+    "fixture": "/Users/robertwu/Documents/大二上/数字逻辑与部件设计/docs/复习工具调研/04-演示/architecture-spike/fixture.json",
+    "rounds": [
+      [
+        "host",
+        "worker",
+        "utility"
+      ],
+      [
+        "worker",
+        "utility",
+        "host"
+      ],
+      [
+        "utility",
+        "host",
+        "worker"
+      ]
+    ],
+    "units": 500,
+    "steps": 80,
+    "operations": 240,
+    "warmupOperations": 12,
+    "echoCount": 40,
+    "idleMs": 400,
+    "timerPeriodMs": 5,
+    "rpcTimeoutMs": 15000,
+    "trialTimeoutMs": 60000,
+    "totalTimeoutMs": 720000,
+    "inputs": [
+      "../architecture-spike/fixture.json",
+      "../history-spike/spike.py",
+      "../history-spike/README.md",
+      "../storage-spike/spike.py",
+      "../storage-spike/README.md"
+    ]
+  }
+}

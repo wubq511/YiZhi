@@ -1,0 +1,656 @@
+{
+  "capturedAt": "2026-10-27T08:58:14.724939+00:00",
+  "environment": {
+    "python": "3.14.6",
+    "sqlite": "3.53.3",
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O"
+  },
+  "fixtureSHA256": "ff896778b0ff0d81be6a5859c86746fa04ddc89dd6397cf870aa9b29c325ae4b",
+  "courseSourceHash": "2588c903a74e05ac80b41e4ff0105c8387109711553f994b47b51cd7ac892adb",
+  "scriptSHA256": "1a080d97f334fdb19d2900cebb548a9d8ab2334b6c771d6bb3064c024a3d5ae4",
+  "boundaries": [
+    "84 real exported units; 500 repeats those units with independent experiment identities.",
+    "Only exported unit metadata and body payloads; no personal notes, conversation history, or source-PDF corpus.",
+    "Substring equivalence for 17 specified literal queries, not semantic relevance or general Chinese tokenization quality.",
+    "No save latency, durability, concurrency, live-index consistency, or application integration claim."
+  ],
+  "scenarios": [
+    {
+      "summary": {
+        "units": 84,
+        "documents": 1299,
+        "unicode61QueriesDifferentFromSubstring": 13,
+        "trigramQueriesDifferentFromSubstring": 6,
+        "trigramWithShortQueryFallbackMatchesAll": true,
+        "derivedIndexRebuildMatches": true
+      },
+      "queries": [
+        {
+          "query": "门",
+          "substringHits": 295,
+          "unicode61": {
+            "hits": 4,
+            "missing": 291,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 0,
+            "missing": 295,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 295,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "码",
+          "substringHits": 327,
+          "unicode61": {
+            "hits": 31,
+            "missing": 296,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 0,
+            "missing": 327,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 327,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "进位",
+          "substringHits": 142,
+          "unicode61": {
+            "hits": 15,
+            "missing": 127,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 0,
+            "missing": 142,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 142,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "补码",
+          "substringHits": 78,
+          "unicode61": {
+            "hits": 11,
+            "missing": 67,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 0,
+            "missing": 78,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 78,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "与门",
+          "substringHits": 87,
+          "unicode61": {
+            "hits": 15,
+            "missing": 72,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 0,
+            "missing": 87,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 87,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "异或",
+          "substringHits": 71,
+          "unicode61": {
+            "hits": 9,
+            "missing": 62,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 0,
+            "missing": 71,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 71,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "最小项",
+          "substringHits": 80,
+          "unicode61": {
+            "hits": 8,
+            "missing": 72,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 80,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 80,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "卡诺图",
+          "substringHits": 55,
+          "unicode61": {
+            "hits": 4,
+            "missing": 51,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 55,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 55,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "无关项",
+          "substringHits": 26,
+          "unicode61": {
+            "hits": 3,
+            "missing": 23,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 26,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 26,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "二进制",
+          "substringHits": 198,
+          "unicode61": {
+            "hits": 24,
+            "missing": 174,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 198,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 198,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "74LS138",
+          "substringHits": 10,
+          "unicode61": {
+            "hits": 10,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 10,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 10,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "74HC138",
+          "substringHits": 4,
+          "unicode61": {
+            "hits": 4,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 4,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 4,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "MUX",
+          "substringHits": 41,
+          "unicode61": {
+            "hits": 39,
+            "missing": 2,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 41,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 41,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "A+B",
+          "substringHits": 102,
+          "unicode61": {
+            "hits": 294,
+            "missing": 8,
+            "extra": 200
+          },
+          "trigram": {
+            "hits": 102,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 102,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "A⊕B",
+          "substringHits": 21,
+          "unicode61": {
+            "hits": 294,
+            "missing": 0,
+            "extra": 273
+          },
+          "trigram": {
+            "hits": 21,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 21,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "KU-055",
+          "substringHits": 6,
+          "unicode61": {
+            "hits": 6,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 6,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 6,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "不存在的查询词XYZ",
+          "substringHits": 0,
+          "unicode61": {
+            "hits": 0,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 0,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 0,
+            "matchesBaseline": true
+          }
+        }
+      ]
+    },
+    {
+      "summary": {
+        "units": 500,
+        "documents": 7732,
+        "unicode61QueriesDifferentFromSubstring": 13,
+        "trigramQueriesDifferentFromSubstring": 6,
+        "trigramWithShortQueryFallbackMatchesAll": true,
+        "derivedIndexRebuildMatches": true
+      },
+      "queries": [
+        {
+          "query": "门",
+          "substringHits": 1763,
+          "unicode61": {
+            "hits": 24,
+            "missing": 1739,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 0,
+            "missing": 1763,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 1763,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "码",
+          "substringHits": 1959,
+          "unicode61": {
+            "hits": 186,
+            "missing": 1773,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 0,
+            "missing": 1959,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 1959,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "进位",
+          "substringHits": 849,
+          "unicode61": {
+            "hits": 90,
+            "missing": 759,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 0,
+            "missing": 849,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 849,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "补码",
+          "substringHits": 468,
+          "unicode61": {
+            "hits": 66,
+            "missing": 402,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 0,
+            "missing": 468,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 468,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "与门",
+          "substringHits": 520,
+          "unicode61": {
+            "hits": 90,
+            "missing": 430,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 0,
+            "missing": 520,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 520,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "异或",
+          "substringHits": 425,
+          "unicode61": {
+            "hits": 54,
+            "missing": 371,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 0,
+            "missing": 425,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 425,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "最小项",
+          "substringHits": 477,
+          "unicode61": {
+            "hits": 48,
+            "missing": 429,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 477,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 477,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "卡诺图",
+          "substringHits": 330,
+          "unicode61": {
+            "hits": 24,
+            "missing": 306,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 330,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 330,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "无关项",
+          "substringHits": 155,
+          "unicode61": {
+            "hits": 18,
+            "missing": 137,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 155,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 155,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "二进制",
+          "substringHits": 1187,
+          "unicode61": {
+            "hits": 144,
+            "missing": 1043,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 1187,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 1187,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "74LS138",
+          "substringHits": 60,
+          "unicode61": {
+            "hits": 60,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 60,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 60,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "74HC138",
+          "substringHits": 24,
+          "unicode61": {
+            "hits": 24,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 24,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 24,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "MUX",
+          "substringHits": 246,
+          "unicode61": {
+            "hits": 234,
+            "missing": 12,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 246,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 246,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "A+B",
+          "substringHits": 608,
+          "unicode61": {
+            "hits": 1755,
+            "missing": 47,
+            "extra": 1194
+          },
+          "trigram": {
+            "hits": 608,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 608,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "A⊕B",
+          "substringHits": 126,
+          "unicode61": {
+            "hits": 1755,
+            "missing": 0,
+            "extra": 1629
+          },
+          "trigram": {
+            "hits": 126,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 126,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "KU-055",
+          "substringHits": 36,
+          "unicode61": {
+            "hits": 36,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 36,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 36,
+            "matchesBaseline": true
+          }
+        },
+        {
+          "query": "不存在的查询词XYZ",
+          "substringHits": 0,
+          "unicode61": {
+            "hits": 0,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigram": {
+            "hits": 0,
+            "missing": 0,
+            "extra": 0
+          },
+          "trigramWithShortQueryFallback": {
+            "hits": 0,
+            "matchesBaseline": true
+          }
+        }
+      ]
+    }
+  ],
+  "passed": true
+}

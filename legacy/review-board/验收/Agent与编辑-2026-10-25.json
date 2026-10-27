@@ -1,0 +1,752 @@
+{
+  "date": "2026-10-25",
+  "scope": "03/04，使用正式源码与一次性课程副本；正式课程正文仍由02维护",
+  "realExecutorTasks": [
+    {
+      "taskId": "TASK-11f6a395-409b-489f-8d0f-348bb11ef995",
+      "requestKind": "edit",
+      "status": "completed",
+      "model": "gpt-6.1-sol",
+      "target": {
+        "objectId": "KU-055"
+      },
+      "executor": {
+        "cliVersion": "codex-cli 0.163.0",
+        "model": "gpt-6.1-sol",
+        "threadId": "01a17333-a9ce-7910-88fb-27c17c34b93d",
+        "turnId": "01a17333-ac85-7a83-8bd7-01aad5f3083b"
+      },
+      "executions": null,
+      "operationIds": [
+        "OP-AGENT-8ca78481b3e055f77d684546b8aa8e18441a58279aee1e0c2e2c438944f5951b"
+      ],
+      "concurrentEdits": [],
+      "searchHits": null,
+      "sourceCitations": null,
+      "answer": "已核对当前单元：S1 为高位、S0 为低位，2:1/4:1 公式与选择规则一致；已有内容、来源和个人笔记均保留。\n\n已保存到画板，修改位置为 KU-055 开头说明段末尾，补充：“选择端决定通道编号，数据端提供被选择的信号值。”"
+    },
+    {
+      "taskId": "TASK-3ab14ab2-28ca-4ac7-bb41-bbf44ccc5766",
+      "requestKind": "edit",
+      "status": "completed",
+      "model": "gpt-6.1-sol",
+      "target": {
+        "objectId": "KU-055"
+      },
+      "executor": {
+        "cliVersion": "codex-cli 0.163.0",
+        "model": "gpt-6.1-sol",
+        "threadId": "01a17340-fd2e-7f82-b04c-ce62da12f991",
+        "turnId": "01a17340-fdc4-7af3-bb14-4bbb4f33fb8e"
+      },
+      "executions": null,
+      "operationIds": [
+        "OP-AGENT-4c5e653d081fd1f12ade5d17a1e5149c568b09397f98207ca9feab210e3ed15a"
+      ],
+      "concurrentEdits": [
+        {
+          "accepted": true,
+          "notifiedAt": "2026-10-25T13:30:17.761462+00:00",
+          "objectId": "KU-055",
+          "operationId": "OP-278d9706-d611-404b-bf8f-67dddd6fdc19"
+        }
+      ],
+      "searchHits": null,
+      "sourceCitations": null,
+      "answer": "依据 C05 第 11 页，四个选择项与组件位序、接线一致；按组件接线代入核对如下：\n\n| S1S0 | 选中数据 | z=0 时 Y | z=1 时 Y |\n|---|---|---|---|\n| 00 | I0=z | 0 | 1 |\n| 01 | I1=¬z | 1 | 0 |\n| 10 | I2=0 | 0 | 0 |\n| 11 | I3=1 | 1 | 1 |\n\n已重读并原样保留你同时修改的 2 选 1 公式（`RB-KU-055-formula-2`，末尾现为 `+0+0`），其他正文、来源和个人笔记均未改动。\n\n已保存到画板；本次仅在 KU-055 开头说明段末尾追加：“先确定通道，再读取数据。”\n\n同时修改记录：KU-055（运行中通知已接收）。学生最新内容经过提交修订核对，冲突部分未覆盖。"
+    },
+    {
+      "taskId": "TASK-49755401-0fb9-40d0-a0a2-c4151b9c10bc",
+      "requestKind": "ask",
+      "status": "completed",
+      "model": "gpt-6.1-sol",
+      "target": {
+        "objectId": "KU-055"
+      },
+      "executor": {
+        "cliVersion": "codex-cli 0.163.0",
+        "model": "gpt-6.1-sol",
+        "threadId": "01a17362-c442-7cf1-a638-eaa46391d3d4",
+        "turnId": "01a17362-c558-76e2-91a3-0617bc46dc13"
+      },
+      "executions": [
+        {
+          "attempt": 1,
+          "cliVersion": "codex-cli 0.163.0",
+          "model": "gpt-6.1-sol",
+          "startedAt": "2026-10-25T14:06:54.327977+00:00",
+          "threadId": "01a17362-c442-7cf1-a638-eaa46391d3d4",
+          "turnId": "01a17362-c558-76e2-91a3-0617bc46dc13"
+        }
+      ],
+      "operationIds": [],
+      "concurrentEdits": [],
+      "searchHits": null,
+      "sourceCitations": [
+        {
+          "contentKind": "text",
+          "displayName": "教师课件 2026-10-12",
+          "location": {
+            "pdfPage": 4
+          },
+          "pageCount": 61,
+          "pageImageUrl": "/source-pages/SRC-C05/VER-SRC-C05-ad2a56210ce2/4.png",
+          "resourceUrl": "/source-files/SRC-C05/VER-SRC-C05-ad2a56210ce2",
+          "sourceId": "SRC-C05",
+          "text": "将多路数据中的某一路数据传送到公共数据线上，实现数据选择功能的逻辑电路。",
+          "title": "05 组合模块1+代码",
+          "type": "courseware",
+          "versionId": "VER-SRC-C05-ad2a56210ce2"
+        },
+        {
+          "displayName": "教师课件 2026-10-12",
+          "location": {
+            "pdfPage": 4
+          },
+          "sourceId": "SRC-C05",
+          "versionId": "VER-SRC-C05-ad2a56210ce2"
+        }
+      ],
+      "answer": "依据《05 组合模块1+代码》（教师课件 2026-10-12，版本 `VER-SRC-C05-ad2a56210ce2`，PDF 第 4 页），**选择端负责决定选中哪一路数据**，例如二选一中 S=0 选 I0、S=1 选 I1。\n**数据端负责提供被选中的信号值**，选中哪一路，公共输出 Y 就等于该路数据端的值。"
+    },
+    {
+      "taskId": "TASK-5ecfa8a9-8b3f-4a71-99ce-647d3a915b49",
+      "requestKind": "ask",
+      "status": "completed",
+      "model": null,
+      "target": {
+        "objectId": "KU-055"
+      },
+      "executor": {
+        "cliVersion": "codex-cli 0.163.0",
+        "model": "gpt-6-astra",
+        "threadId": "01a1732d-3ee1-76f1-b226-ec3833aae1ef",
+        "turnId": "01a1732d-3f96-7ff1-a41e-7e951baff305"
+      },
+      "executions": null,
+      "operationIds": [],
+      "concurrentEdits": [],
+      "searchHits": null,
+      "sourceCitations": null,
+      "answer": "根据当前单元，S1 是高位、S0 是低位，S1S0=01 时选择 **I1**，即 Y=I1。  \nMUX 按普通二进制编码将 00、01、10、11 对应到 I0、I1、I2、I3，不能把卡诺图的格雷码排列顺序当成通道编号顺序，否则会混淆 10 和 11 对应的通道。"
+    },
+    {
+      "taskId": "TASK-7f861d03-ec64-4556-a248-d240a2b96f04",
+      "requestKind": "search",
+      "status": "completed",
+      "model": "gpt-6.1-sol",
+      "target": {
+        "objectId": "KU-055"
+      },
+      "executor": {
+        "cliVersion": "codex-cli 0.163.0",
+        "model": "gpt-6.1-sol",
+        "threadId": "01a1737b-e093-7831-9dc5-2773d4d94e10",
+        "turnId": "01a1737b-e153-7912-821c-7df6db69511e"
+      },
+      "executions": [
+        {
+          "attempt": 1,
+          "cliVersion": "codex-cli 0.163.0",
+          "model": "gpt-6.1-sol",
+          "startedAt": "2026-10-25T14:34:19.869575+00:00",
+          "threadId": "01a1737b-e093-7831-9dc5-2773d4d94e10",
+          "turnId": "01a1737b-e153-7912-821c-7df6db69511e"
+        }
+      ],
+      "operationIds": [],
+      "concurrentEdits": [],
+      "searchHits": [
+        {
+          "id": "KU-055",
+          "location": {
+            "unitId": "KU-055"
+          },
+          "name": "MUX 功能与 2:1/4:1 表达式",
+          "scope": "knowledge",
+          "snippet": "MUX 把多路数据中的一路送到公共输出；选择端编码决定输出通道。",
+          "version": 6
+        },
+        {
+          "id": "SRC-C05",
+          "location": {
+            "pdfPage": 4
+          },
+          "name": "教师课件 2026-10-12",
+          "scope": "sources",
+          "snippet": "                     复用器 MUX\n          （数据选择器、多路转换器、多路开关）\n将多路数据中的某一路数据传送到公共数据线上，实现数据选择功能的逻辑电路。\n   如，   二选一、四选一、八选一、十六选一 ……\n\n                 𝑆       𝑌\n                 0      𝐼0\n                 1      𝐼1\n\n\n               𝒀 = 𝑰𝟎ഥ\n          ",
+          "version": "VER-SRC-C05-ad2a56210ce2"
+        }
+      ],
+      "sourceCitations": null,
+      "answer": "课程课件《05 组合模块1+代码》（教师课件 2026-10-12，PDF 第 4 页）将这种器件称为**复用器 MUX（数据选择器）**。\n\n已找到真实定位：**复用器与分配器 → KU-055「MUX 功能与 2:1/4:1 表达式」**。该单元明确说明：“MUX 把多路数据中的一路送到公共输出；选择端编码决定输出通道。”\n\n本次仅查找，未修改画板。"
+    },
+    {
+      "taskId": "TASK-cb7b84d1-bfd8-4ef8-a800-aae8d7ff72bf",
+      "requestKind": "edit",
+      "status": "interrupted",
+      "model": "gpt-6.1-sol",
+      "target": {
+        "objectId": "KU-036"
+      },
+      "executor": {
+        "cliVersion": "codex-cli 0.163.0",
+        "model": "gpt-6.1-sol",
+        "threadId": "01a1733f-fc31-7f13-ac1f-585b405568f0",
+        "turnId": "01a1733f-ff3e-7b33-8638-0f3a4e10c529"
+      },
+      "executions": null,
+      "operationIds": [],
+      "concurrentEdits": [],
+      "searchHits": null,
+      "sourceCitations": null,
+      "answer": "我先读取固定目标的最新正文，核对 MUX 公式与组件配置；保存时只追加指定句子，并保留你同时编辑的内容。\n"
+    },
+    {
+      "taskId": "TASK-5dfbe758-ff78-4666-9b7c-c1c40d8a86a7",
+      "requestKind": "edit",
+      "status": "completed",
+      "model": "gpt-6.1-sol",
+      "target": {
+        "objectId": "KU-055"
+      },
+      "executor": {
+        "cliVersion": "codex-cli 0.163.0",
+        "model": "gpt-6.1-sol",
+        "threadId": "01a17391-67b2-7772-b2f4-a41e1897666b",
+        "turnId": "01a17391-6ed1-7e33-8614-ad0dfd9423b4"
+      },
+      "operationIds": [
+        "OP-AGENT-4001912ee4ea1be5a58628b2ab420edd6d69a8db70df6b2376f1393ef76fd672"
+      ],
+      "concurrentEdits": [],
+      "sourceCitations": [
+        {
+          "displayName": "教师课件 2026-10-12",
+          "location": {
+            "pdfPage": 4
+          },
+          "sourceId": "SRC-C05",
+          "versionId": "VER-SRC-C05-ad2a56210ce2"
+        }
+      ],
+      "answer": "依据课件《05 组合模块1+代码》第 4 页的选择规则，已在 **KU-055 末尾的可展开补充材料**中保存新增交互示例，使用新稳定块 ID `RB-KU-055-material-mux2-x-notx`。已有内容未修改。\n\n本补充示例接线为 I0=x、I1=¬x：\n\n- **S 决定选哪路**：S=0 时 Y=x；S=1 时 Y=¬x。\n- **x 决定数据值**：固定 S 后，切换 x 会使输出翻转；固定 x 后，切换 S 也会使输出翻转。\n- 初始 **S=0、x=0，因此 Y=0**。"
+    }
+  ],
+  "browser": {
+    "sourceSelection": "真实拖选课件 PDF4 的定义，携带版本与原页向真实 Agent 提问，回答可回查",
+    "agentEditUndo": "真实 Agent 添加说明，后来对象笔记保留，选择性撤回仅删除该次添加",
+    "concurrentEdit": "TASK-3ab14ab2 运行期间手工将公式加上 +0；steer accepted，Agent重读最新修订并仅修改另一块",
+    "formula": "MathLive 点选加号与0保存；服务重启后 +0+0 仍在，绑定探索显示需核对",
+    "drafts": "A/B两对话切换和reload分别保留草稿",
+    "drawings": [
+      {
+        "tool": "wave",
+        "id": "DRAW-28249b56-0211-4bff-bd1e-ffd4e9309ed9",
+        "anchor": {
+          "blockId": "RB-KU-055-core",
+          "objectId": "KU-055",
+          "originalText": "复用器（MUX，也称数据选择器）根据选择端的取值，把多路数据中的一路送到公共输出。2 选 1 有 1 位选择端；4 选 1 有 2 位选择端，S1 是高位、S0 是低位。先确定通道，再读取数据。",
+          "revision": 6,
+          "sourceRefs": [
+            {
+              "note": "2:1 MUX 功能、真值表和表达式",
+              "pdfPages": [
+                4
+              ],
+              "sourceId": "SRC-C05",
+              "versionId": "VER-SRC-C05-ad2a56210ce2",
+              "visualStatus": "verified"
+            },
+            {
+              "note": "4:1 MUX 位序、功能表和表达式",
+              "pdfPages": [
+                11
+              ],
+              "sourceId": "SRC-C05",
+              "versionId": "VER-SRC-C05-ad2a56210ce2",
+              "visualStatus": "verified"
+            }
+          ]
+        },
+        "layout": {
+          "value": {
+            "blockId": "RB-KU-055-core",
+            "flipX": false,
+            "flipY": false,
+            "height": 12.797785339408279,
+            "objectId": "KU-055",
+            "width": 354.65114608033343,
+            "x": 16.8837073599101,
+            "y": 99.14420670165522
+          },
+          "revision": 1
+        }
+      },
+      {
+        "tool": "line",
+        "id": "DRAW-440db6fc-a05e-42d3-815a-6995ee5ab776",
+        "anchor": {
+          "blockId": "RB-KU-055-core",
+          "objectId": "KU-055",
+          "originalText": "复用器（MUX，也称数据选择器）根据选择端的取值，把多路数据中的一路送到公共输出。2 选 1 有 1 位选择端；4 选 1 有 2 位选择端，S1 是高位、S0 是低位。先确定通道，再读取数据。",
+          "revision": 6,
+          "sourceRefs": [
+            {
+              "note": "2:1 MUX 功能、真值表和表达式",
+              "pdfPages": [
+                4
+              ],
+              "sourceId": "SRC-C05",
+              "versionId": "VER-SRC-C05-ad2a56210ce2",
+              "visualStatus": "verified"
+            },
+            {
+              "note": "4:1 MUX 位序、功能表和表达式",
+              "pdfPages": [
+                11
+              ],
+              "sourceId": "SRC-C05",
+              "versionId": "VER-SRC-C05-ad2a56210ce2",
+              "visualStatus": "verified"
+            }
+          ]
+        },
+        "layout": {
+          "value": {
+            "blockId": "RB-KU-055-core",
+            "flipX": false,
+            "flipY": false,
+            "height": 2,
+            "objectId": "KU-055",
+            "width": 354.65114608033343,
+            "x": 16.8837073599101,
+            "y": 58.42398062171982
+          },
+          "revision": 1
+        }
+      },
+      {
+        "tool": "arrow",
+        "id": "DRAW-5025b975-15d3-4f62-a2ef-4499789ee08a",
+        "anchor": {
+          "blockId": "RB-KU-055-core",
+          "objectId": "KU-055",
+          "originalText": "复用器（MUX，也称数据选择器）根据选择端的取值，把多路数据中的一路送到公共输出。2 选 1 有 1 位选择端；4 选 1 有 2 位选择端，S1 是高位、S0 是低位。先确定通道，再读取数据。",
+          "revision": 6,
+          "sourceRefs": [
+            {
+              "note": "2:1 MUX 功能、真值表和表达式",
+              "pdfPages": [
+                4
+              ],
+              "sourceId": "SRC-C05",
+              "versionId": "VER-SRC-C05-ad2a56210ce2",
+              "visualStatus": "verified"
+            },
+            {
+              "note": "4:1 MUX 位序、功能表和表达式",
+              "pdfPages": [
+                11
+              ],
+              "sourceId": "SRC-C05",
+              "versionId": "VER-SRC-C05-ad2a56210ce2",
+              "visualStatus": "verified"
+            }
+          ]
+        },
+        "layout": {
+          "value": {
+            "blockId": "RB-KU-055-core",
+            "flipX": false,
+            "flipY": true,
+            "height": 16.288090431974155,
+            "objectId": "KU-055",
+            "width": 348.8371928659017,
+            "x": 394.7906662979703,
+            "y": 151.4987830901436
+          },
+          "revision": 1
+        }
+      },
+      {
+        "tool": "highlight",
+        "id": "DRAW-60c109d8-fa5f-45f0-9527-42623321b1ec",
+        "anchor": {
+          "blockId": "RB-KU-055-core",
+          "objectId": "KU-055",
+          "originalText": "复用器（MUX，也称数据选择器）根据选择端的取值，把多路数据中的一路送到公共输出。2 选 1 有 1 位选择端；4 选 1 有 2 位选择端，S1 是高位、S0 是低位。先确定通道，再读取数据。",
+          "revision": 6,
+          "sourceRefs": [
+            {
+              "note": "2:1 MUX 功能、真值表和表达式",
+              "pdfPages": [
+                4
+              ],
+              "sourceId": "SRC-C05",
+              "versionId": "VER-SRC-C05-ad2a56210ce2",
+              "visualStatus": "verified"
+            },
+            {
+              "note": "4:1 MUX 位序、功能表和表达式",
+              "pdfPages": [
+                11
+              ],
+              "sourceId": "SRC-C05",
+              "versionId": "VER-SRC-C05-ad2a56210ce2",
+              "visualStatus": "verified"
+            }
+          ]
+        },
+        "layout": {
+          "value": {
+            "blockId": "RB-KU-055-core",
+            "flipX": false,
+            "flipY": false,
+            "height": 24.432135647961246,
+            "objectId": "KU-055",
+            "width": 348.8371928659017,
+            "x": 22.697660574341793,
+            "y": 131.72038756560354
+          },
+          "revision": 1
+        }
+      },
+      {
+        "tool": "rectangle",
+        "id": "DRAW-630f9c9c-0536-47ac-9c9c-25b42f171ffb",
+        "anchor": {
+          "blockId": "RB-KU-055-core",
+          "objectId": "KU-055",
+          "originalText": "复用器（MUX，也称数据选择器）根据选择端的取值，把多路数据中的一路送到公共输出。2 选 1 有 1 位选择端；4 选 1 有 2 位选择端，S1 是高位、S0 是低位。先确定通道，再读取数据。",
+          "revision": 6,
+          "sourceRefs": [
+            {
+              "note": "2:1 MUX 功能、真值表和表达式",
+              "pdfPages": [
+                4
+              ],
+              "sourceId": "SRC-C05",
+              "versionId": "VER-SRC-C05-ad2a56210ce2",
+              "visualStatus": "verified"
+            },
+            {
+              "note": "4:1 MUX 位序、功能表和表达式",
+              "pdfPages": [
+                11
+              ],
+              "sourceId": "SRC-C05",
+              "versionId": "VER-SRC-C05-ad2a56210ce2",
+              "visualStatus": "verified"
+            }
+          ]
+        },
+        "layout": {
+          "value": {
+            "blockId": "RB-KU-055-core",
+            "flipX": false,
+            "flipY": false,
+            "height": 81.4404521598708,
+            "objectId": "KU-055",
+            "width": 249.9999882205629,
+            "x": 383.1627598691069,
+            "y": 52.60680546744334
+          },
+          "revision": 1
+        }
+      },
+      {
+        "tool": "ellipse",
+        "id": "DRAW-9a633d2e-14b5-441f-bd7a-ed74fedc89c0",
+        "anchor": {
+          "blockId": "RB-KU-055-core",
+          "objectId": "KU-055",
+          "originalText": "复用器（MUX，也称数据选择器）根据选择端的取值，把多路数据中的一路送到公共输出。2 选 1 有 1 位选择端；4 选 1 有 2 位选择端，S1 是高位、S0 是低位。先确定通道，再读取数据。",
+          "revision": 6,
+          "sourceRefs": [
+            {
+              "note": "2:1 MUX 功能、真值表和表达式",
+              "pdfPages": [
+                4
+              ],
+              "sourceId": "SRC-C05",
+              "versionId": "VER-SRC-C05-ad2a56210ce2",
+              "visualStatus": "verified"
+            },
+            {
+              "note": "4:1 MUX 位序、功能表和表达式",
+              "pdfPages": [
+                11
+              ],
+              "sourceId": "SRC-C05",
+              "versionId": "VER-SRC-C05-ad2a56210ce2",
+              "visualStatus": "verified"
+            }
+          ]
+        },
+        "layout": {
+          "value": {
+            "blockId": "RB-KU-055-core",
+            "flipX": false,
+            "flipY": false,
+            "height": 104.70915277697674,
+            "objectId": "KU-055",
+            "width": 302.32556715044814,
+            "x": 627.3487948752381,
+            "y": 64.24115577599632
+          },
+          "revision": 3
+        }
+      }
+    ],
+    "unitLayout": {
+      "value": {
+        "height": 2113,
+        "objectId": "KU-055",
+        "width": 1040,
+        "x": 90,
+        "y": 230
+      },
+      "revision": 1
+    },
+    "relation": "UI缺少来源时拒绝；选择实际端点引用后保存，43到44条，再通过工具撤回回43",
+    "orphanNote": {
+      "anchor": {
+        "blockId": "RB-KU-055-core",
+        "objectId": "KU-055",
+        "originalAnchor": {
+          "blockId": "RB-QA-ORPHAN-CONTEXT",
+          "objectId": "KU-055",
+          "originalText": "临时语境：选择端先确定通道。",
+          "revision": 7,
+          "sourceRefs": [
+            {
+              "note": "MUX 功能与 2:1/4:1 表达式：MUX 功能、2:1 与 4:1 表达式",
+              "pdfPages": [
+                4
+              ],
+              "sourceId": "SRC-C05",
+              "versionId": "VER-SRC-C05-ad2a56210ce2",
+              "visualStatus": "verified"
+            },
+            {
+              "note": "MUX 功能与 2:1/4:1 表达式：2:1 MUX 的电路、真值表与逻辑方程；页内 assign 语句属 HDL 排除项",
+              "pdfPages": [
+                5
+              ],
+              "sourceId": "SRC-C05",
+              "versionId": "VER-SRC-C05-ad2a56210ce2",
+              "visualStatus": "verified"
+            },
+            {
+              "note": "MUX 功能与 2:1/4:1 表达式：MUX 功能、2:1 与 4:1 表达式",
+              "pdfPages": [
+                11
+              ],
+              "sourceId": "SRC-C05",
+              "versionId": "VER-SRC-C05-ad2a56210ce2",
+              "visualStatus": "verified"
+            }
+          ]
+        },
+        "originalText": "复用器（MUX，也称数据选择器）根据选择端的取值，把多路数据中的一路送到公共输出。2 选 1 有 1 位选择端；4 选 1 有 2 位选择端，S1 是高位、S0 是低位。先确定通道，再读取数据。",
+        "relocations": [
+          {
+            "at": "2026-10-25T14:40:46.771Z",
+            "blockId": "RB-QA-ORPHAN-CONTEXT",
+            "objectId": "KU-055",
+            "originalText": "临时语境：选择端先确定通道。",
+            "revision": 7,
+            "sourceRefs": [
+              {
+                "note": "MUX 功能与 2:1/4:1 表达式：MUX 功能、2:1 与 4:1 表达式",
+                "pdfPages": [
+                  4
+                ],
+                "sourceId": "SRC-C05",
+                "versionId": "VER-SRC-C05-ad2a56210ce2",
+                "visualStatus": "verified"
+              },
+              {
+                "note": "MUX 功能与 2:1/4:1 表达式：2:1 MUX 的电路、真值表与逻辑方程；页内 assign 语句属 HDL 排除项",
+                "pdfPages": [
+                  5
+                ],
+                "sourceId": "SRC-C05",
+                "versionId": "VER-SRC-C05-ad2a56210ce2",
+                "visualStatus": "verified"
+              },
+              {
+                "note": "MUX 功能与 2:1/4:1 表达式：MUX 功能、2:1 与 4:1 表达式",
+                "pdfPages": [
+                  11
+                ],
+                "sourceId": "SRC-C05",
+                "versionId": "VER-SRC-C05-ad2a56210ce2",
+                "visualStatus": "verified"
+              }
+            ]
+          }
+        ],
+        "revision": 9,
+        "sourceRefs": [
+          {
+            "note": "2:1 MUX 功能、真值表和表达式",
+            "pdfPages": [
+              4
+            ],
+            "sourceId": "SRC-C05",
+            "versionId": "VER-SRC-C05-ad2a56210ce2",
+            "visualStatus": "verified"
+          },
+          {
+            "note": "4:1 MUX 位序、功能表和表达式",
+            "pdfPages": [
+              11
+            ],
+            "sourceId": "SRC-C05",
+            "versionId": "VER-SRC-C05-ad2a56210ce2",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      "noteId": "NOTE-QA-ORPHAN",
+      "objectId": "KU-055",
+      "text": "孤儿笔记验收：删除原块后保留并重新关联。",
+      "updatedAt": "2026-10-25T14:40:46.771Z"
+    },
+    "materialLater": "实际HTTP导入Markdown，全文回查成功；真实UI点击暂不更新已保存，正文哈希未因该选择变化",
+    "materialUpdates": {
+      "UPDATE-34bc867d652cc0d861fd43895371e8d7710278152069dbd5d3222e0119fcaba7": {
+        "value": {
+          "affectedUnitIds": [
+            "KU-055"
+          ],
+          "createdAt": "2026-10-25T14:23:01.819063+00:00",
+          "displayName": "qa-material.md",
+          "sourceId": "SRC-USER-4be2aa5a-0541-47d3-8b23-0007cc8bb476",
+          "status": "later",
+          "updateId": "UPDATE-34bc867d652cc0d861fd43895371e8d7710278152069dbd5d3222e0119fcaba7",
+          "versionId": "VER-4eefd99dfd05dd64b9ab72f7b565ff1d51216965f1021b48586e8190395e79f1"
+        },
+        "revision": 2
+      }
+    },
+    "packageImport": "新CLI识别活跃8771服务并通过HTTP导入，OP-IMPORT-PKG-QA-HANDOFF，正式单一命令账本保存",
+    "wholeHistoryRestore": {
+      "generation": 2,
+      "sequence": 238,
+      "taskFactsPreserved": true,
+      "packageBodyRemoved": true,
+      "newSourceStillReadable": true,
+      "drawingCount": 6,
+      "restorePoints": [
+        {
+          "versionId": "715c8b13-ef82-4193-91b4-f36aede3e7c2",
+          "sequence": 234,
+          "generation": 1,
+          "label": "knowledge.import"
+        },
+        {
+          "versionId": "2973e269-4917-4d8e-a35a-b137a37c8497",
+          "sequence": 237,
+          "generation": 1,
+          "label": "before_restore"
+        },
+        {
+          "versionId": "3decb2de-c9d6-4fd2-94aa-2f2c733d7bb1",
+          "sequence": 238,
+          "generation": 2,
+          "label": "restore"
+        }
+      ]
+    },
+    "masteryConfirmation": {
+      "operationId": "OP-3f100340-f0b4-41a3-96b3-ee5d2353aa7a",
+      "result": "真实UI勾选实质变化，保存后掌握状态保持mastered；侧栏询问，点击保持已掌握后提示关闭",
+      "review": {
+        "value": {
+          "status": "mastered"
+        },
+        "revision": 1
+      },
+      "prompts": {
+        "PROMPT-726b4045c970df3970e6ece47530ec348d4fa1bcc0b016592cf468b1748902f0": {
+          "value": {
+            "createdAt": "2026-10-25T14:56:01.459459+00:00",
+            "operationId": "OP-3f100340-f0b4-41a3-96b3-ee5d2353aa7a",
+            "promptId": "PROMPT-726b4045c970df3970e6ece47530ec348d4fa1bcc0b016592cf468b1748902f0",
+            "reason": "手动编辑改变了重要结论或方法",
+            "resolved": true,
+            "reviewRevision": 1,
+            "unitId": "KU-055"
+          },
+          "revision": 2
+        },
+        "PROMPT-dacbc82e9f233f37b51111a274c853bfd486b37ffab93b1e06fd17b8ad9d0ddf": {
+          "value": {
+            "createdAt": "2026-10-25T14:58:37.534717+00:00",
+            "operationId": "OP-AGENT-4001912ee4ea1be5a58628b2ab420edd6d69a8db70df6b2376f1393ef76fd672",
+            "promptId": "PROMPT-dacbc82e9f233f37b51111a274c853bfd486b37ffab93b1e06fd17b8ad9d0ddf",
+            "reason": "按请求在单元末尾添加 role=material 的可展开补充交互示例，使用受支持的单选择位、双数据端 mux 配置。",
+            "resolved": false,
+            "reviewRevision": 1,
+            "unitId": "KU-055"
+          },
+          "revision": 1
+        }
+      }
+    },
+    "addedInteraction": {
+      "blockId": "RB-KU-055-material-mux2-x-notx",
+      "checks": [
+        "真实Agent通过review_edit新增2:1 MUX并保存",
+        "S=0,x=0 -> I0,x=0",
+        "S=1,x=0 -> I1,¬x=1",
+        "S=1,x=1 -> I1,¬x=0",
+        "reload保留展开、S=1、x=1、输出0与内部滚动426"
+      ],
+      "cameraWhenScrolling": "内部滚动0→426时translate3d与scale(0.86)保持不变"
+    }
+  },
+  "limitations": [
+    "自动文件选择器被浏览器扩展的本地文件访问权限阻止，浏览器选择文件上传未计入通过；服务端真实MD与合法PDF导入已有单独验证",
+    "全84单元与02的最终组合验收仍待正文交付"
+  ],
+  "checks": {
+    "python": {
+      "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=tests rtk test python3 -B -W error::ResourceWarning -m unittest discover -s tests -p 'test_*.py' -v",
+      "passed": 119,
+      "durationSeconds": 106.387
+    },
+    "javascript": {
+      "persistence": 7,
+      "integrationRetry": 2,
+      "editing": 15,
+      "editingStandaloneBrowser": "此前已单独通过；普通Node运行此项跳过，真实课程集成由CUA验收",
+      "conversationHeadlessChrome": 7,
+      "combined": "保存7 + 重试适配器2 + 编辑15 + 对话7场景通过；独立编辑器Chrome综合项在普通Node运行跳过，此前已单独通过"
+    },
+    "syntax": "agent/editing/integration/app的node --check通过",
+    "anchorLifecycle": {
+      "passed": 3,
+      "scope": "真实CourseService开课时明确合并/唯一片段跟随；歧义拆分保留原笔记，不复制",
+      "durationSeconds": 0.261
+    }
+  },
+  "cleanup": {
+    "disposableCourseRemoved": true,
+    "qaServerStopped": true,
+    "qaTabClosed": true,
+    "protocolSchemaRemoved": true,
+    "ownedClaimsReleased": [
+      "03",
+      "04"
+    ]
+  },
+  "deliverable": {
+    "url": "http://127.0.0.1:8769/",
+    "courseId": "COURSE-30937c7c-155a-40d1-bfa5-b36827a91541",
+    "status": "03/04 review，等待02完整课程联合验收"
+  }
+}

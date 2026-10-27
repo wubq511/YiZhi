@@ -1,0 +1,78 @@
+{
+  "unitId": "KU-071",
+  "allPass": true,
+  "candidateSha256": "73622649d94323bdea4704cc1ad9a203985ed41015e03dd6d235acbd3c9684ac",
+  "checks": [
+    {
+      "unitId": "KU-071",
+      "name": "4-bit cascade read from candidate formula",
+      "cases": 512,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-071",
+      "name": "existing example per-bit trace",
+      "cases": 4,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-071",
+      "name": "worst-case carry propagation: each incoming bit matters",
+      "cases": 3,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-071",
+      "name": "literal binary arithmetic in worked prose",
+      "cases": 7,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-071",
+      "name": "semantic figure bounds, label widths, overlap and straight lines",
+      "cases": 20,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-071",
+      "name": "formal CLI identity and goal coverage",
+      "cases": 2,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "all",
+      "name": "validate_reading on an in-memory copy with all six candidates",
+      "cases": 1,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "KU-071",
+      "name": "source versions, page bounds, viewed-image presence and coverage categories",
+      "cases": 17,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "all",
+      "name": "read-only provider.render static HTML includes full worked steps",
+      "cases": 6,
+      "pass": true,
+      "failures": []
+    },
+    {
+      "unitId": "all",
+      "name": "in-memory sensitivity: known content mistakes are rejected",
+      "cases": 4,
+      "pass": true,
+      "failures": []
+    }
+  ],
+  "verificationSource": "verify_independent.py; verification.json"
+}

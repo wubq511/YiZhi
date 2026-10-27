@@ -1,0 +1,132 @@
+{
+  "ticket": "02-TH-03",
+  "unitId": "KU-012",
+  "method": "独立十进制加法/补码定义计算，不读取正文答案，不把正文文本作为期望值",
+  "total": 15,
+  "passed": 15,
+  "failed": 0,
+  "allPass": true,
+  "results": [
+    {
+      "item": "课件例 295+635 = 930",
+      "expected": 930,
+      "actual": 930,
+      "pass": true,
+      "detail": "普通十进制加法对照"
+    },
+    {
+      "item": "295+635 三列结果 BCD 位串",
+      "expected": [
+        "1001",
+        "0011",
+        "0000"
+      ],
+      "actual": [
+        "1001",
+        "0011",
+        "0000"
+      ],
+      "pass": true,
+      "detail": "每列独立按 S>9 时加 6，得到 9/3/0"
+    },
+    {
+      "item": "295+635 最终无百位以上额外进位",
+      "expected": 0,
+      "actual": 0,
+      "pass": true,
+      "detail": "结果仍为三位十进制数"
+    },
+    {
+      "item": "160 的三位十的补 = 840",
+      "expected": 840,
+      "actual": 840,
+      "pass": true,
+      "detail": "定义 10^3−160"
+    },
+    {
+      "item": "+257−160 补码相加后的三位数值",
+      "expected": 97,
+      "actual": 97,
+      "pass": true,
+      "detail": "257+840=1097，十进制补码加法中最高位进位 1 丢弃后为 097"
+    },
+    {
+      "item": "补码相加产生最高位进位",
+      "expected": 1,
+      "actual": 1,
+      "pass": true,
+      "detail": "1097 的百位以上进位为 1，表示够减"
+    },
+    {
+      "item": "练习 47+58 = 105",
+      "expected": 105,
+      "actual": 105,
+      "pass": true,
+      "detail": "普通十进制加法对照"
+    },
+    {
+      "item": "47+58 各列十进制结果",
+      "expected": [
+        1,
+        0,
+        5
+      ],
+      "actual": [
+        1,
+        0,
+        5
+      ],
+      "pass": true,
+      "detail": "百位进位 1、十位 0、个位 5"
+    },
+    {
+      "item": "47+58 个位 raw>9",
+      "expected": true,
+      "actual": true,
+      "pass": true,
+      "detail": "7+8=15，需要加 6"
+    },
+    {
+      "item": "47+58 十位已有进位且 raw=10",
+      "expected": true,
+      "actual": true,
+      "pass": true,
+      "detail": "4+5+1=10，需要加 6"
+    },
+    {
+      "item": "29 的三位十的补 = 971",
+      "expected": 971,
+      "actual": 971,
+      "pass": true,
+      "detail": "定义 1000−29"
+    },
+    {
+      "item": "83−29 补码相加后的三位数值",
+      "expected": 54,
+      "actual": 54,
+      "pass": true,
+      "detail": "83+971=1054，最高位进位丢弃后为 054"
+    },
+    {
+      "item": "83−29 产生最高位进位",
+      "expected": 1,
+      "actual": 1,
+      "pass": true,
+      "detail": "进位为 1 表示够减"
+    },
+    {
+      "item": "01000111 按普通二进制读 = 71",
+      "expected": 71,
+      "actual": 71,
+      "pass": true,
+      "detail": "同一位型按二进制读与按 BCD 读不同"
+    },
+    {
+      "item": "01000111 按 BCD 读 = 47",
+      "expected": 47,
+      "actual": 47,
+      "pass": true,
+      "detail": "每 4 位一组独立读十进制数字"
+    }
+  ]
+}

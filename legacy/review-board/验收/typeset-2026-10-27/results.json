@@ -1,0 +1,216 @@
+{
+  "date": "2026-10-27",
+  "stage": "impeccable typeset",
+  "continued_session": "session_30f20e4a-5b1f-4694-87b0-cdddcafc3077",
+  "changes": [
+    "Excalifont Latin subset reused locally with unicode-range and font-display:swap; Xiaolai Chinese and math fonts preserved",
+    "Screen-space label/control/body/prose roles: 12/13/14/16px at default 16px root; rem units support text scaling",
+    "Canvas body 24px, line-height 1.85 preserved; headings balanced and prose uses pretty wrapping",
+    "Tables use UI font and tabular numerals; semantic labels use 16px canvas units",
+    "Navigation children no longer shrink into overlapping long search results",
+    "Search and review-state controls grow with text"
+  ],
+  "checks": {
+    "client_and_board_tests": {
+      "command": "node --test tests/persistence-client.test.cjs tests/integration-client.test.cjs tests/agent-client.test.cjs tests/editing-client.test.cjs tests/board-client.test.cjs",
+      "exit_code": 0,
+      "failures": 0,
+      "skipped": 1
+    },
+    "board_recheck_after_navigation_fix": {
+      "command": "node --test tests/board-client.test.cjs",
+      "exit_code": 0,
+      "failures": 0,
+      "skipped": 0
+    },
+    "browser": {
+      "desktop": "1440x1000: KU-035, KU-055, long search results and mixed text inspected",
+      "narrow": "390x844: header/canvas controls and assistant inspected; canvas retains panning at reading zoom",
+      "text_scaling": "200% root font at 1440px: search 26px with 41px height; filter 26px with 52.5px height; header does not overflow",
+      "rendered_fonts": [
+        "Xiaolai SC",
+        "Excalifont",
+        "KaTeX_Math-Italic"
+      ],
+      "font_failure": "Blocked Excalifont temporarily; heading and body remain visible with fallback; restored and verified loaded",
+      "assistant": "message and composer computed font-size 16px"
+    },
+    "mechanical_scan": {
+      "before_findings": 81,
+      "after_findings": 22,
+      "remaining": "21 design-size advisories (canvas coordinate sizes, icon/control glyphs and existing title roles); 1 Excalifont family not yet in DESIGN.md. These are intentionally deferred to the document phase. No undersized UI findings remain.",
+      "limitation": "Detector cannot resolve server /assets stylesheet aliases locally; browser computed values and rendered-font checks used instead.",
+      "findings": [
+        {
+          "antipattern": "design-system-font-size",
+          "severity": "advisory",
+          "line": 27,
+          "snippet": "font-size: 23px is off the DESIGN.md type ramp",
+          "file": "复习画板/web/agent.css"
+        },
+        {
+          "antipattern": "design-system-font-size",
+          "severity": "advisory",
+          "line": 186,
+          "snippet": "font-size: 20px is off the DESIGN.md type ramp",
+          "file": "复习画板/web/agent.css"
+        },
+        {
+          "antipattern": "design-system-font-size",
+          "severity": "advisory",
+          "line": 206,
+          "snippet": "font-size: 18px !important is off the DESIGN.md type ramp",
+          "file": "复习画板/web/agent.css"
+        },
+        {
+          "antipattern": "design-system-font-size",
+          "severity": "advisory",
+          "line": 76,
+          "snippet": "font-size: 18px is off the DESIGN.md type ramp",
+          "file": "复习画板/web/editing.css"
+        },
+        {
+          "antipattern": "design-system-font-size",
+          "severity": "advisory",
+          "line": 103,
+          "snippet": "font-size: 25px is off the DESIGN.md type ramp",
+          "file": "复习画板/web/editing.css"
+        },
+        {
+          "antipattern": "design-system-font",
+          "severity": "warning",
+          "line": 5,
+          "snippet": "font-family: Reviewexcalifont is not declared in DESIGN.md typography",
+          "file": "复习画板/web/style.css"
+        },
+        {
+          "antipattern": "design-system-font-size",
+          "severity": "advisory",
+          "line": 91,
+          "snippet": "font-size: 16px is off the DESIGN.md type ramp",
+          "file": "复习画板/web/style.css"
+        },
+        {
+          "antipattern": "design-system-font-size",
+          "severity": "advisory",
+          "line": 92,
+          "snippet": "font-size: 37px is off the DESIGN.md type ramp",
+          "file": "复习画板/web/style.css"
+        },
+        {
+          "antipattern": "design-system-font-size",
+          "severity": "advisory",
+          "line": 119,
+          "snippet": "font-size: 19px is off the DESIGN.md type ramp",
+          "file": "复习画板/web/style.css"
+        },
+        {
+          "antipattern": "design-system-font-size",
+          "severity": "advisory",
+          "line": 152,
+          "snippet": "font-size: 23px is off the DESIGN.md type ramp",
+          "file": "复习画板/web/style.css"
+        },
+        {
+          "antipattern": "design-system-font-size",
+          "severity": "advisory",
+          "line": 163,
+          "snippet": "font-size: 17px is off the DESIGN.md type ramp",
+          "file": "复习画板/web/style.css"
+        },
+        {
+          "antipattern": "design-system-font-size",
+          "severity": "advisory",
+          "line": 231,
+          "snippet": "font-size: 17px is off the DESIGN.md type ramp",
+          "file": "复习画板/web/style.css"
+        },
+        {
+          "antipattern": "design-system-font-size",
+          "severity": "advisory",
+          "line": 269,
+          "snippet": "font-size: 360px is off the DESIGN.md type ramp",
+          "file": "复习画板/web/style.css"
+        },
+        {
+          "antipattern": "design-system-font-size",
+          "severity": "advisory",
+          "line": 273,
+          "snippet": "font-size: 220px is off the DESIGN.md type ramp",
+          "file": "复习画板/web/style.css"
+        },
+        {
+          "antipattern": "design-system-font-size",
+          "severity": "advisory",
+          "line": 282,
+          "snippet": "font-size: 230px is off the DESIGN.md type ramp",
+          "file": "复习画板/web/style.css"
+        },
+        {
+          "antipattern": "design-system-font-size",
+          "severity": "advisory",
+          "line": 303,
+          "snippet": "font-size: 23px is off the DESIGN.md type ramp",
+          "file": "复习画板/web/style.css"
+        },
+        {
+          "antipattern": "design-system-font-size",
+          "severity": "advisory",
+          "line": 411,
+          "snippet": "font-size: 19px is off the DESIGN.md type ramp",
+          "file": "复习画板/web/style.css"
+        },
+        {
+          "antipattern": "design-system-font-size",
+          "severity": "advisory",
+          "line": 414,
+          "snippet": "font-size: 23px is off the DESIGN.md type ramp",
+          "file": "复习画板/web/style.css"
+        },
+        {
+          "antipattern": "design-system-font-size",
+          "severity": "advisory",
+          "line": 441,
+          "snippet": "font-size: 16px is off the DESIGN.md type ramp",
+          "file": "复习画板/web/style.css"
+        },
+        {
+          "antipattern": "design-system-font-size",
+          "severity": "advisory",
+          "line": 474,
+          "snippet": "font-size: 330px is off the DESIGN.md type ramp",
+          "file": "复习画板/web/style.css"
+        },
+        {
+          "antipattern": "design-system-font-size",
+          "severity": "advisory",
+          "line": 478,
+          "snippet": "font-size: 210px is off the DESIGN.md type ramp",
+          "file": "复习画板/web/style.css"
+        },
+        {
+          "antipattern": "design-system-font-size",
+          "severity": "advisory",
+          "line": 487,
+          "snippet": "font-size: 31px is off the DESIGN.md type ramp",
+          "file": "复习画板/web/style.css"
+        }
+      ]
+    }
+  },
+  "course_data": {
+    "期中/数据/知识地图.json": "223f55f8f4ddac71f0036274778ab25de0f40f2cf8fdd9745a8b2cb85d1c1564",
+    "期中/数据/视图布局.json": "c9f0f6b75a0e630cf92b34fc5a5c7980ecd3500fb7b3d5085d2de69181322b93"
+  },
+  "course_data_unchanged": true,
+  "evidence": [
+    "desktop-mux.png"
+  ],
+  "remaining_workflow": [
+    "layout",
+    "audit",
+    "document"
+  ],
+  "design_documents": "DESIGN.md and .impeccable/design.json intentionally unchanged until document; sidecar drift was already reported by context.",
+  "scope_limit": "Only typography and overflow caused by enlarged text addressed. General layout, contrast and full accessibility review remain in the agreed later stages."
+}

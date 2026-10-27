@@ -1,0 +1,440 @@
+{
+  "theme": "TH-19",
+  "generated_by": "verification/check_th19.py",
+  "all_ok": true,
+  "checks": [
+    {
+      "name": "AND level table (ideal diode)",
+      "expected": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          5,
+          0
+        ],
+        [
+          5,
+          0,
+          0
+        ],
+        [
+          5,
+          5,
+          5
+        ]
+      ],
+      "actual": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          5,
+          0
+        ],
+        [
+          5,
+          0,
+          0
+        ],
+        [
+          5,
+          5,
+          5
+        ]
+      ],
+      "ok": true,
+      "note": "SRC-C06 P49"
+    },
+    {
+      "name": "OR level table (ideal diode)",
+      "expected": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          5,
+          5
+        ],
+        [
+          5,
+          0,
+          5
+        ],
+        [
+          5,
+          5,
+          5
+        ]
+      ],
+      "actual": [
+        [
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          5,
+          5
+        ],
+        [
+          5,
+          0,
+          5
+        ],
+        [
+          5,
+          5,
+          5
+        ]
+      ],
+      "ok": true,
+      "note": "SRC-C06 P49"
+    },
+    {
+      "name": "AND truth table",
+      "expected": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "actual": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "ok": true,
+      "note": ""
+    },
+    {
+      "name": "OR truth table",
+      "expected": [
+        0,
+        1,
+        1,
+        1
+      ],
+      "actual": [
+        0,
+        1,
+        1,
+        1
+      ],
+      "ok": true,
+      "note": ""
+    },
+    {
+      "name": "NOT level table",
+      "expected": [
+        [
+          0,
+          5
+        ],
+        [
+          5,
+          0
+        ]
+      ],
+      "actual": [
+        [
+          0,
+          5
+        ],
+        [
+          5,
+          0
+        ]
+      ],
+      "ok": true,
+      "note": "SRC-C06 P49"
+    },
+    {
+      "name": "diode regions",
+      "expected": {
+        "+0.5V": "below-threshold",
+        "-1V": "reverse-off",
+        "-60V": "breakdown"
+      },
+      "actual": {
+        "+0.5V": "below-threshold",
+        "-1V": "reverse-off",
+        "-60V": "breakdown"
+      },
+      "ok": true,
+      "note": "0.5<0.7 未导通; -1 在截止区; -60 < V_BR 击穿"
+    },
+    {
+      "name": "node level after diode drop (Si/Ge)",
+      "expected": [
+        4.3,
+        4.7
+      ],
+      "actual": [
+        4.3,
+        4.7
+      ],
+      "ok": true,
+      "note": ""
+    },
+    {
+      "name": "lamp circuit",
+      "expected": {
+        "closed": {
+          "base_current": true,
+          "state": "saturation",
+          "ce": "short",
+          "lamp": "on"
+        },
+        "open": {
+          "base_current": false,
+          "state": "cutoff",
+          "ce": "open",
+          "lamp": "off"
+        }
+      },
+      "actual": {
+        "closed": {
+          "base_current": true,
+          "state": "saturation",
+          "ce": "short",
+          "lamp": "on"
+        },
+        "open": {
+          "base_current": false,
+          "state": "cutoff",
+          "ce": "open",
+          "lamp": "off"
+        }
+      },
+      "ok": true,
+      "note": "SRC-C06 P48"
+    },
+    {
+      "name": "CMOS NAND (parallel-p series-n)",
+      "expected": [
+        [
+          0,
+          0,
+          1
+        ],
+        [
+          0,
+          1,
+          1
+        ],
+        [
+          1,
+          0,
+          1
+        ],
+        [
+          1,
+          1,
+          0
+        ]
+      ],
+      "actual": [
+        [
+          0,
+          0,
+          1
+        ],
+        [
+          0,
+          1,
+          1
+        ],
+        [
+          1,
+          0,
+          1
+        ],
+        [
+          1,
+          1,
+          0
+        ]
+      ],
+      "ok": true,
+      "note": "P52 虚线框 NAND：两 pMOS 并联、两 nMOS 串联；期望由与非定义独立枚举"
+    },
+    {
+      "name": "CMOS NOR (series-p parallel-n)",
+      "expected": [
+        [
+          0,
+          0,
+          1
+        ],
+        [
+          0,
+          1,
+          0
+        ],
+        [
+          1,
+          0,
+          0
+        ],
+        [
+          1,
+          1,
+          0
+        ]
+      ],
+      "actual": [
+        [
+          0,
+          0,
+          1
+        ],
+        [
+          0,
+          1,
+          0
+        ],
+        [
+          1,
+          0,
+          0
+        ],
+        [
+          1,
+          1,
+          0
+        ]
+      ],
+      "ok": true,
+      "note": "P52 右侧 NOR：两 pMOS 串联、两 nMOS 并联；期望由或非定义独立枚举"
+    },
+    {
+      "name": "NAND->NOT chain truth table",
+      "expected": [
+        [
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          1,
+          0,
+          1,
+          0
+        ],
+        [
+          1,
+          1,
+          0,
+          1
+        ]
+      ],
+      "actual": [
+        [
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          1,
+          1,
+          0
+        ],
+        [
+          1,
+          0,
+          1,
+          0
+        ],
+        [
+          1,
+          1,
+          0,
+          1
+        ]
+      ],
+      "ok": true,
+      "note": "期望由 A·B 定义独立枚举：C=¬(A·B)、D=A·B"
+    },
+    {
+      "name": "nMOS conducts at G=1",
+      "expected": [
+        1,
+        0
+      ],
+      "actual": [
+        1,
+        0
+      ],
+      "ok": true,
+      "note": "nMOS: G=1 通, G=0 断"
+    },
+    {
+      "name": "pMOS conducts at G=0",
+      "expected": [
+        0,
+        1
+      ],
+      "actual": [
+        0,
+        1
+      ],
+      "ok": true,
+      "note": "pMOS: G=0 通, G=1 断"
+    },
+    {
+      "name": "AND with 0.7V drop",
+      "expected": [
+        0.7,
+        0.7,
+        0.7,
+        5.0
+      ],
+      "actual": [
+        0.7,
+        0.7,
+        0.7,
+        5.0
+      ],
+      "ok": true,
+      "note": "有低时钳位点被抬高 vd；全高时上拉到 5"
+    },
+    {
+      "name": "OR with 0.7V drop",
+      "expected": [
+        0.0,
+        4.3,
+        4.3,
+        4.3
+      ],
+      "actual": [
+        0.0,
+        4.3,
+        4.3,
+        4.3
+      ],
+      "ok": true,
+      "note": "有高时输出被压低 vd；全低时下拉到 0"
+    }
+  ]
+}

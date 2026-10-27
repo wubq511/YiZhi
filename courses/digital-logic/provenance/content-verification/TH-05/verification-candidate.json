@@ -1,0 +1,20 @@
+{
+  "schemaErrors": [],
+  "unitIds": [
+    "KU-023",
+    "KU-024",
+    "KU-025",
+    "KU-026"
+  ],
+  "sourceSHA256": "694af76a91e0d37dedf28cf4816991c6cd2a742d10aa48294fd0a71b73225e61",
+  "fragmentSHA256": {
+    "KU-023": "ba29ba70b53353a0082f8a2cdac12e03a1f53fcd3d804ca004143b21e35df2da",
+    "KU-024": "dde2a462dc733211b11823e2ba04552bdc4ab56eeca409a7289846d4272e59c8",
+    "KU-025": "6b6c7085de901fa3cce676409ec2fb389a8f136829525b38b5dfdcc750c7111a",
+    "KU-026": "bbf4c1f64be9b293c5c46326b4428a5b0a788584c26743d50b9f2cf4de2315da"
+  },
+  "scope": "candidate-only; memory copy; no browser/import/server",
+  "calculationComparisons": 630,
+  "status": "passed",
+  "method": "Boolean AST evaluator; exhaustive valuations; actual candidate tables; circuit netlists"
+}

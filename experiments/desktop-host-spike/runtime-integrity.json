@@ -1,0 +1,7 @@
+{
+  "version": "40.10.6",
+  "actual": "24e3b1a13ff7243f6b9036ebb743b6f62b19e4a925242d27eaa2be90de90a691",
+  "expected": "24e3b1a13ff7243f6b9036ebb743b6f62b19e4a925242d27eaa2be90de90a691",
+  "pass": true,
+  "artifact": "Official cached release zip copied read-only into experiment; no Codex.app binary"
+}

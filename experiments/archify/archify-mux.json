@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "MUX 实现函数：四个核心概念",
+    "locale": "zh-CN",
+    "output": "docs/复习工具调研/04-演示/archify/archify-mux.html",
+    "quality_profile": "showcase",
+    "legend": {
+      "entries": {
+        "backend": {
+          "label": "前置知识"
+        },
+        "frontend": {
+          "label": "学习目标"
+        }
+      }
+    }
+  },
+  "components": [
+    {
+      "id": "truth",
+      "type": "backend",
+      "icon": "none",
+      "label": "真值表",
+      "sublabel": "02 / PDF p33, 38",
+      "pos": [
+        40,
+        40
+      ],
+      "size": [
+        176,
+        72
+      ]
+    },
+    {
+      "id": "cofactor",
+      "type": "backend",
+      "icon": "none",
+      "label": "按选择变量分组",
+      "sublabel": "05 / PDF p19",
+      "pos": [
+        360,
+        40
+      ],
+      "size": [
+        176,
+        72
+      ]
+    },
+    {
+      "id": "rule",
+      "type": "backend",
+      "icon": "none",
+      "label": "MUX 选择规则",
+      "sublabel": "05 / PDF p4",
+      "pos": [
+        40,
+        240
+      ],
+      "size": [
+        176,
+        72
+      ]
+    },
+    {
+      "id": "mux",
+      "type": "frontend",
+      "icon": "none",
+      "label": "用 MUX 实现函数",
+      "sublabel": "05 / PDF p19",
+      "pos": [
+        360,
+        240
+      ],
+      "size": [
+        176,
+        72
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "truth-group",
+      "from": "truth",
+      "to": "cofactor",
+      "label": "分组取值"
+    },
+    {
+      "id": "group-mux",
+      "from": "cofactor",
+      "to": "mux",
+      "label": "确定数据端"
+    },
+    {
+      "id": "rule-mux",
+      "from": "rule",
+      "to": "mux",
+      "label": "确定选择端"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "slate",
+      "title": "课件例题 · 05 组合模块1+代码 · PDF p19",
+      "items": [
+        "F(x,y,z)=Σm(1,2,6,7)。选择 S1=x、S0=y，得到 I0=z、I1=¬z、I2=0、I3=1。",
+        "本例已枚举全部 8 组输入核对。"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "怎样阅读这张图",
+      "items": [
+        "箭头由前置知识指向学习目标；这是依据课件整理的教学关系，不是教师公布的正式先修定义。",
+        "本路线直接从真值表确定数据端，因此不需要先做卡诺图化简。来源页码均为 PDF 页序。"
+      ]
+    }
+  ]
+}

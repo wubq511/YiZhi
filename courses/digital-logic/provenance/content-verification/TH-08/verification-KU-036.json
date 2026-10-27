@@ -1,0 +1,158 @@
+{
+ "example_onset": [
+  0,
+  2,
+  3,
+  5,
+  7,
+  8,
+  9,
+  10,
+  11,
+  13,
+  15
+ ],
+ "example_prime_implicants": {
+  "AB̄": [
+   8,
+   9,
+   10,
+   11
+  ],
+  "AD": [
+   9,
+   11,
+   13,
+   15
+  ],
+  "B̄C": [
+   2,
+   3,
+   10,
+   11
+  ],
+  "B̄D̄": [
+   0,
+   2,
+   8,
+   10
+  ],
+  "BD": [
+   5,
+   7,
+   13,
+   15
+  ],
+  "CD": [
+   3,
+   7,
+   11,
+   15
+  ]
+ },
+ "example_essential": [
+  "BD",
+  "B̄D̄"
+ ],
+ "example_remaining_minterms": [
+  3,
+  9,
+  11
+ ],
+ "example_unique_cover_minterms": [
+  0,
+  5
+ ],
+ "example_min_cover_size": 4,
+ "example_minimal_covers": [
+  [
+   "AB̄",
+   "BD",
+   "B̄C",
+   "B̄D̄"
+  ],
+  [
+   "AB̄",
+   "BD",
+   "B̄D̄",
+   "CD"
+  ],
+  [
+   "AD",
+   "BD",
+   "B̄C",
+   "B̄D̄"
+  ],
+  [
+   "AD",
+   "BD",
+   "B̄D̄",
+   "CD"
+  ]
+ ],
+ "check_pis_exact": true,
+ "check_essential_exact": true,
+ "check_m0_only_BnDn": true,
+ "check_m5_only_BD": true,
+ "check_remaining_is_3_9_11": true,
+ "check_P13_done_cells": true,
+ "check_min_size_4": true,
+ "check_lower_bound": true,
+ "check_four_covers_exact": true,
+ "check_four_exprs_equal_F": true,
+ "exercise_onset": [
+  0,
+  1,
+  2,
+  5,
+  6,
+  7
+ ],
+ "exercise_prime_implicants": {
+  "x̄ȳ": [
+   0,
+   1
+  ],
+  "x̄z̄": [
+   0,
+   2
+  ],
+  "xy": [
+   6,
+   7
+  ],
+  "xz": [
+   5,
+   7
+  ],
+  "ȳz": [
+   1,
+   5
+  ],
+  "yz̄": [
+   2,
+   6
+  ]
+ },
+ "exercise_essential": [],
+ "exercise_min_cover_size": 3,
+ "exercise_minimal_covers": [
+  [
+   "xy",
+   "x̄z̄",
+   "ȳz"
+  ],
+  [
+   "xz",
+   "x̄ȳ",
+   "yz̄"
+  ]
+ ],
+ "check_ex_pis_exact": true,
+ "check_ex_no_essential": true,
+ "check_ex_all_cnt2": true,
+ "check_ex_min_size_3": true,
+ "check_ex_two_covers_exact": true,
+ "check_ex_exprs_equal_F": true,
+ "notes": "期望全部来自本脚本独立枚举：蕴含项=积项覆盖集⊆ON 且含至少一个 ON 最小项；质蕴含=覆盖集不被其他合法蕴含项真包含；必要质蕴含=独占某个 ON 最小项；最小覆盖=项数最少且并集覆盖全部 ON。canon() 与集合比较均为顺序无关。例题函数取课件 P11 原题；P13 灰格 d=done 为已被必要质蕴含覆盖的标记（P12 红底同义），非无关项。练习函数为自编 3 变量环形结构（无必要质蕴含情形）。"
+}

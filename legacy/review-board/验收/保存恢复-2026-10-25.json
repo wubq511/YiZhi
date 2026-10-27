@@ -1,0 +1,55 @@
+{
+  "date": "2026-10-25",
+  "ticket": "01",
+  "scope": "真实样本的本地保存与恢复，不代表完整首版或全量正文完成",
+  "automated": {
+    "python": {
+      "count": 17,
+      "suites": [
+        "test_storage",
+        "test_http",
+        "test_launch"
+      ],
+      "result": "passed"
+    },
+    "browserClient": {
+      "count": 5,
+      "suite": "persistence-client.test.cjs",
+      "result": "passed"
+    }
+  },
+  "browser": {
+    "browser": "Chrome",
+    "closedTabAndRestartedService": true,
+    "restartRestoredExactDOMCheckpoint": true,
+    "restoredFields": [
+      "objectNote",
+      "reviewState",
+      "expandedMaterials",
+      "revealedHintsAndAnswers",
+      "inputMode",
+      "stateFilter",
+      "minimap",
+      "cameraTransform",
+      "selectedUnit"
+    ],
+    "portableCourseAtNewPath": true,
+    "portableSourceFilesCopied": 15,
+    "portableOriginalPagesAndFontsLoaded": true,
+    "serverDownDraftPreserved": true,
+    "serverDownDidNotClaimSaved": true,
+    "unconfirmedDraftAbsentFromCourseDatabase": true,
+    "retryCommittedAfterRestart": true,
+    "sourcePanelAndScrollRestored": true,
+    "sourceScrollBefore": 47,
+    "sourceScrollAfter": 47,
+    "canonicalProviderWidgetInputRestored": true,
+    "sampleNoteRemovedAfterAcceptance": true
+  },
+  "limits": [
+    "自动页面全屏被Chrome策略拒绝；备用提示已验证，原生菜单全屏未实点",
+    "物理触控板、中键硬件手感和Safari未单独验收",
+    "Agent、完整正文和正式编辑/标注分别由其他主票验收"
+  ],
+  "temporaryPortableCopyRemoved": true
+}

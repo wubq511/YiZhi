@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 1040" width="1440" height="1040" data-generator="fireworks-tech-graph" data-schema-version="1" data-text-metrics="heuristic-v1" data-style-id="1" data-visual-theme="Flat Icon" data-diagram-type="MUX explanation and concept prerequisites" data-motion-scene="" data-semantic-profile="generic" data-semantic-valid="true" data-quality-profile="showcase" data-max-bends-per-edge="2" data-max-total-bends="8" data-max-route-stretch="1.35" data-max-bridged-crossings="0" data-min-node-gap="40.0" data-min-container-gutter="20.0" data-min-label-clearance="4.0" data-min-segment-length="16.0">
+  <desc>PDF 页序从 1 开始。前置关系是本次依据课件整理的教学建模；函数与 MUX 数据端已枚举全部 8 组输入核对。</desc><defs>
+    <marker id="arrowA" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#7c3aed" />
+    </marker>
+    <marker id="arrowB" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#10b981" />
+    </marker>
+    <marker id="arrowC" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb" />
+    </marker>
+    <marker id="arrowE" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#f97316" />
+    </marker>
+    <marker id="arrowF" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#7c3aed" />
+    </marker>
+    <marker id="arrowG" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444" />
+    </marker>
+    <marker id="arrowH" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280" />
+    </marker>
+    <filter id="shadowSoft" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.12" />
+    </filter>
+    <filter id="shadowGlass" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#020617" flood-opacity="0.28" />
+    </filter>
+    <style>
+    text { font-family: 'Heiti SC', 'Helvetica Neue', Helvetica, Arial, 'PingFang SC', 'Noto Sans CJK SC', 'Microsoft YaHei', 'Microsoft JhengHei', 'SimHei', sans-serif; }
+    .title { font-size: 30px; font-weight: 700; fill: #111827; }
+    .subtitle { font-size: 14px; font-weight: 500; fill: #6b7280; }
+    .section { font-size: 13px; font-weight: 700; fill: #2563eb; letter-spacing: 1.4px; }
+    .section-sub { font-size: 12px; font-weight: 500; fill: #64748b; }
+    .node-title { font-weight: 700; fill: #111827; }
+    .node-sub { font-weight: 500; fill: #6b7280; }
+    .node-type { font-size: 12px; font-weight: 700; fill: #64748b; letter-spacing: 0.08em; }
+    .arrow-label { font-size: 12px; font-weight: 600; fill: #6b7280; }
+    .legend { font-size: 12px; font-weight: 500; fill: #6b7280; }
+    .footnote { font-size: 12px; font-weight: 500; fill: #64748b; }
+    .metric-label { font-size: 8.5px; font-weight: 700; fill: #64748b; text-transform: uppercase; }
+    .metric-value { font-size: 9.5px; font-weight: 700; fill: #111827; }
+    </style>
+  </defs>
+  <rect data-graph-role="background" width="1440.0" height="1040.0" fill="#ffffff" />
+  <text x="720.0" y="56" text-anchor="middle" class="title">用 4 选 1 多路选择器实现布尔函数</text>
+  <text x="720.0" y="82" text-anchor="middle" class="subtitle">F(x,y,z) = Σm(1,2,6,7)  ·  变量顺序：x, y, z</text>
+  <g id="assignments" data-graph-role="container" data-container-id="assignments" data-semantic-role="boundary" data-graph-bounds="40,120,1400,305">
+  <rect data-graph-role="container" x="40.0" y="120.0" width="1360.0" height="185.0" rx="16.0" fill="none" stroke="#dbe5f1" stroke-width="1.4" stroke-dasharray="6 5" />
+  <text x="58.0" y="144.0" class="section">01  四组赋值</text>
+    <rect id="assignments-header" data-graph-role="reserved" data-reserved-kind="container-header" x="48" y="126" width="106.44" height="30" fill="none" stroke="none" />
+  </g>
+  <g id="selection" data-graph-role="container" data-container-id="selection" data-semantic-role="boundary" data-graph-bounds="40,345,1400,545">
+  <rect data-graph-role="container" x="40.0" y="345.0" width="1360.0" height="200.0" rx="16.0" fill="none" stroke="#dbe5f1" stroke-width="1.4" stroke-dasharray="6 5" />
+  <text x="58.0" y="369.0" class="section">02  MUX 选择机制</text>
+    <rect id="selection-header" data-graph-role="reserved" data-reserved-kind="container-header" x="48" y="351" width="136.86" height="30" fill="none" stroke="none" />
+  </g>
+  <g id="concepts" data-graph-role="container" data-container-id="concepts" data-semantic-role="boundary" data-graph-bounds="40,590,1400,850">
+  <rect data-graph-role="container" x="40.0" y="590.0" width="1360.0" height="260.0" rx="16.0" fill="none" stroke="#dbe5f1" stroke-width="1.4" stroke-dasharray="6 5" />
+  <text x="58.0" y="614.0" class="section">03  简洁概念依赖</text>
+    <rect id="concepts-header" data-graph-role="reserved" data-reserved-kind="container-header" x="48" y="596" width="132.44" height="30" fill="none" stroke="none" />
+  </g>
+  <path id="select-signal" data-graph-role="edge" data-edge-id="select-signal" data-source="selectors" data-target="mux" data-edge-kind="flow" data-topic-id="" data-flow="control" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 360,455 L 560,455" fill="none" stroke="#7c3aed" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowA)" stroke-dasharray="6,4" />
+  <path id="selected-data" data-graph-role="edge" data-edge-id="selected-data" data-source="mux" data-target="output" data-edge-kind="flow" data-topic-id="" data-flow="read" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 880,455 L 1080,455" fill="none" stroke="#2563eb" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowC)" />
+  <path id="prerequisite-1" data-graph-role="edge" data-edge-id="prerequisite-1" data-source="truth-table" data-target="grouping" data-edge-kind="flow" data-topic-id="" data-flow="neutral" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 330,680 L 510,680" fill="none" stroke="#6b7280" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowH)" />
+  <path id="prerequisite-2" data-graph-role="edge" data-edge-id="prerequisite-2" data-source="grouping" data-target="realize" data-edge-kind="flow" data-topic-id="" data-flow="neutral" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 810,680 L 1110,680" fill="none" stroke="#6b7280" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowH)" />
+  <path id="prerequisite-3" data-graph-role="edge" data-edge-id="prerequisite-3" data-source="mux-rule" data-target="realize" data-edge-kind="flow" data-topic-id="" data-flow="neutral" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="1" data-route-stretch="1.0" data-bridges="" d="M 810,795 L 1235,795 L 1235,715" fill="none" stroke="#6b7280" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowH)" />
+  <g id="node-group-00" data-graph-role="node" data-node-id="group-00" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="64,170,344,274">
+  <rect x="64.0" y="170.0" width="280.0" height="104.0" rx="10.0" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.8" />
+  <text x="204.0" y="188.0" text-anchor="middle" class="node-type">xy = 00</text>
+  <text data-text-role="title" data-full-text="I0 = z" data-text-max-width="256.0" x="204.0" y="228.0" text-anchor="middle" class="node-title" font-size="25.0">I0 = z</text>
+  <text data-text-role="subtitle" data-full-text="F(z=0) = 0  ·  F(z=1) = 1" data-text-max-width="256.0" x="204.0" y="250.0" text-anchor="middle" class="node-sub" font-size="12">F(z=0) = 0 · F(z=1) = 1</text>
+  </g>
+  <g id="node-group-01" data-graph-role="node" data-node-id="group-01" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="408,170,688,274">
+  <rect x="408.0" y="170.0" width="280.0" height="104.0" rx="10.0" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.8" />
+  <text x="548.0" y="188.0" text-anchor="middle" class="node-type">xy = 01</text>
+  <text data-text-role="title" data-full-text="I1 = ¬z" data-text-max-width="256.0" x="548.0" y="228.0" text-anchor="middle" class="node-title" font-size="25.0">I1 = ¬z</text>
+  <text data-text-role="subtitle" data-full-text="F(z=0) = 1  ·  F(z=1) = 0" data-text-max-width="256.0" x="548.0" y="250.0" text-anchor="middle" class="node-sub" font-size="12">F(z=0) = 1 · F(z=1) = 0</text>
+  </g>
+  <g id="node-group-10" data-graph-role="node" data-node-id="group-10" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="752,170,1032,274">
+  <rect x="752.0" y="170.0" width="280.0" height="104.0" rx="10.0" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.8" />
+  <text x="892.0" y="188.0" text-anchor="middle" class="node-type">xy = 10</text>
+  <text data-text-role="title" data-full-text="I2 = 0" data-text-max-width="256.0" x="892.0" y="228.0" text-anchor="middle" class="node-title" font-size="25.0">I2 = 0</text>
+  <text data-text-role="subtitle" data-full-text="F(z=0) = 0  ·  F(z=1) = 0" data-text-max-width="256.0" x="892.0" y="250.0" text-anchor="middle" class="node-sub" font-size="12">F(z=0) = 0 · F(z=1) = 0</text>
+  </g>
+  <g id="node-group-11" data-graph-role="node" data-node-id="group-11" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="1096,170,1376,274">
+  <rect x="1096.0" y="170.0" width="280.0" height="104.0" rx="10.0" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.8" />
+  <text x="1236.0" y="188.0" text-anchor="middle" class="node-type">xy = 11</text>
+  <text data-text-role="title" data-full-text="I3 = 1" data-text-max-width="256.0" x="1236.0" y="228.0" text-anchor="middle" class="node-title" font-size="25.0">I3 = 1</text>
+  <text data-text-role="subtitle" data-full-text="F(z=0) = 1  ·  F(z=1) = 1" data-text-max-width="256.0" x="1236.0" y="250.0" text-anchor="middle" class="node-sub" font-size="12">F(z=0) = 1 · F(z=1) = 1</text>
+  </g>
+  <g id="node-selectors" data-graph-role="node" data-node-id="selectors" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="80,405,360,505">
+  <rect x="80.0" y="405.0" width="280.0" height="100.0" rx="10.0" fill="#faf5ff" stroke="#c4b5fd" stroke-width="1.8" />
+  <text data-text-role="title" data-full-text="S1 = x · S0 = y" data-text-max-width="256.0" x="220.0" y="455.0" text-anchor="middle" class="node-title" font-size="23.0">S1 = x · S0 = y</text>
+  <text data-text-role="subtitle" data-full-text="xy 决定选中哪个数据端" data-text-max-width="256.0" x="220.0" y="477.0" text-anchor="middle" class="node-sub" font-size="12">xy 决定选中哪个数据端</text>
+  </g>
+  <g id="node-mux" data-graph-role="node" data-node-id="mux" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="560,405,880,505">
+  <rect x="560.0" y="405.0" width="320.0" height="100.0" rx="10.0" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.8" />
+  <text data-text-role="title" data-full-text="4 选 1 MUX" data-text-max-width="296.0" x="720.0" y="455.0" text-anchor="middle" class="node-title" font-size="26.0">4 选 1 MUX</text>
+  <text data-text-role="subtitle" data-full-text="00→I0 · 01→I1 · 10→I2 · 11→I3" data-text-max-width="296.0" x="720.0" y="477.0" text-anchor="middle" class="node-sub" font-size="12">00→I0 · 01→I1 · 10→I2 · 11→I3</text>
+  </g>
+  <g id="node-output" data-graph-role="node" data-node-id="output" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="1080,405,1360,505">
+  <rect x="1080.0" y="405.0" width="280.0" height="100.0" rx="10.0" fill="#f0fdf4" stroke="#86efac" stroke-width="1.8" />
+  <text data-text-role="title" data-full-text="F(x,y,z)" data-text-max-width="256.0" x="1220.0" y="455.0" text-anchor="middle" class="node-title" font-size="26.0">F(x,y,z)</text>
+  <text data-text-role="subtitle" data-full-text="输出当前选中的数据端" data-text-max-width="256.0" x="1220.0" y="477.0" text-anchor="middle" class="node-sub" font-size="12">输出当前选中的数据端</text>
+  </g>
+  <g id="node-truth-table" data-graph-role="node" data-node-id="truth-table" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="80,645,330,715">
+  <rect x="80.0" y="645.0" width="250.0" height="70.0" rx="10.0" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8" />
+  <text data-text-role="title" data-full-text="真值表" data-text-max-width="226.0" x="205.0" y="680.0" text-anchor="middle" class="node-title" font-size="20.0">真值表</text>
+  </g>
+  <g id="node-grouping" data-graph-role="node" data-node-id="grouping" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="510,645,810,715">
+  <rect x="510.0" y="645.0" width="300.0" height="70.0" rx="10.0" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8" />
+  <text data-text-role="title" data-full-text="按选择变量分组" data-text-max-width="276.0" x="660.0" y="680.0" text-anchor="middle" class="node-title" font-size="20.0">按选择变量分组</text>
+  </g>
+  <g id="node-mux-rule" data-graph-role="node" data-node-id="mux-rule" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="510,760,810,830">
+  <rect x="510.0" y="760.0" width="300.0" height="70.0" rx="10.0" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8" />
+  <text data-text-role="title" data-full-text="MUX 选择规则" data-text-max-width="276.0" x="660.0" y="795.0" text-anchor="middle" class="node-title" font-size="20.0">MUX 选择规则</text>
+  </g>
+  <g id="node-realize" data-graph-role="node" data-node-id="realize" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="1110,645,1360,715">
+  <rect x="1110.0" y="645.0" width="250.0" height="70.0" rx="10.0" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8" />
+  <text data-text-role="title" data-full-text="用 MUX 实现函数" data-text-max-width="226.0" x="1235.0" y="680.0" text-anchor="middle" class="node-title" font-size="20.0">用 MUX 实现函数</text>
+  </g>
+  <g id="select-signal-label" data-graph-role="label" data-owner="select-signal" data-graph-bounds="435,424,485,444">
+  <text x="460.0" y="438.0" text-anchor="middle" class="arrow-label">选择端</text>
+  </g>
+  <g id="selected-data-label" data-graph-role="label" data-owner="selected-data" data-graph-bounds="949,424,1011,444">
+  <text x="980.0" y="438.0" text-anchor="middle" class="arrow-label">所选数据</text>
+  </g>
+  <g id="prerequisite-1-label" data-graph-role="label" data-owner="prerequisite-1" data-graph-bounds="389,649,451,669">
+  <text x="420.0" y="663.0" text-anchor="middle" class="arrow-label">分组取值</text>
+  </g>
+  <g id="prerequisite-2-label" data-graph-role="label" data-owner="prerequisite-2" data-graph-bounds="923,649,997,669">
+  <text x="960.0" y="663.0" text-anchor="middle" class="arrow-label">确定数据端</text>
+  </g>
+  <g id="prerequisite-3-label" data-graph-role="label" data-owner="prerequisite-3" data-graph-bounds="985.5,764,1059.5,784">
+  <text x="1022.5" y="778.0" text-anchor="middle" class="arrow-label">确定选择端</text>
+  </g>
+  <g id="legend" data-graph-role="legend">
+    <rect id="legend-zone" data-graph-role="reserved" data-reserved-kind="legend" x="54" y="870" width="350" height="46" rx="10" fill="none" stroke="none" />
+    <line data-graph-role="decoration" x1="64.0" y1="884.0" x2="94.0" y2="884.0" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#arrowA)" />
+    <text data-graph-role="decoration" x="104.0" y="888.0" class="legend">选择信号</text>
+    <line data-graph-role="decoration" x1="180.0" y1="884.0" x2="210.0" y2="884.0" stroke="#2563eb" stroke-width="2.4" marker-end="url(#arrowC)" />
+    <text data-graph-role="decoration" x="220.0" y="888.0" class="legend">输出数据</text>
+    <line data-graph-role="decoration" x1="296.0" y1="884.0" x2="326.0" y2="884.0" stroke="#6b7280" stroke-width="2.4" marker-end="url(#arrowH)" />
+    <text data-graph-role="decoration" x="336.0" y="888.0" class="legend">概念依赖</text>
+  </g>
+  <g id="footer" data-graph-role="reserved" data-graph-bounds="64,922,295,938">
+  <text x="64.0" y="934.0" class="footnote">直接按真值表分组即可确定四个数据输入，本路线不要求先做卡诺图化简。</text>
+  </g>
+<g id="course-evidence" data-graph-role="reserved" data-graph-bounds="64,950,1376,1014"><text x="64" y="969" font-size="13" fill="#4b5563" data-full-text="来源：02 逻辑代数 · PDF p33、38；05 组合模块1+代码 · PDF p4、19" data-text-max-width="1312">来源：02 逻辑代数 · PDF p33、38；05 组合模块1+代码 · PDF p4、19</text><text x="64" y="999" font-size="13" fill="#4b5563" data-full-text="PDF 页序从 1 开始。前置关系是本次依据课件整理的教学建模；函数与 MUX 数据端已枚举全部 8 组输入核对。" data-text-max-width="1312">PDF 页序从 1 开始。前置关系是本次依据课件整理的教学建模；函数与 MUX 数据端已枚举全部 8 组输入核对。</text></g></svg>

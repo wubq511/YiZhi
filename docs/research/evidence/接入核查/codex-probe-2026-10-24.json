@@ -1,0 +1,68 @@
+{
+  "recordedAt": "2026-10-24T23:52:00+08:00",
+  "scope": "Standalone protocol feasibility probes using synthetic MUX content; not browser or course-file integration",
+  "runtime": {
+    "cli": "codex-cli 0.163.0",
+    "transport": "stdio",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "ephemeral": true,
+    "sandbox": "read-only"
+  },
+  "handshake": {
+    "initialize": "passed",
+    "modelList": "passed",
+    "selectedModelAdvertised": true,
+    "selectedEffortAdvertised": true
+  },
+  "qa": {
+    "status": "completed",
+    "agentMessageDeltas": 55,
+    "answer": "当 xy=01 时，复用器输出 F 等于选中的 I1，而 I1=¬z，因此 F=¬z。z=0 时 F=1，z=1 时 F=0。",
+    "outputs": [1, 0]
+  },
+  "concurrentEdit": {
+    "notificationSentAfter": "item/started:reasoning",
+    "steerAccepted": true,
+    "targetId": "mux-selection",
+    "startingRevision": 1,
+    "studentRevision": 2,
+    "studentAddition": "学生补充：x 是选择端高位，y 是低位。",
+    "result": {
+      "baseRevision": 2,
+      "body": "xy=01 时选中 I1，且 I1=¬z。 学生补充：x 是选择端高位，y 是低位。\n选择码 xy=01 表示选择第 1 号输入 I1，输出 F 等于被选中的输入，因此 F=I1=¬z。¬z 表示对 z 取反：当 z=0 时，F=1；当 z=1 时，F=0。",
+      "concurrentEdit": true,
+      "concurrentEditSummary": "修改同一知识对象 mux-selection 期间，你补充了选择端高低位的说明。已基于最新 revision=2，原样保留“学生补充：x 是选择端高位，y 是低位。”，并补齐 F=¬z 的原因及 z=0/1 对应 F=1/0。",
+      "targetId": "mux-selection"
+    },
+    "checks": {
+      "turnCompleted": true,
+      "steerSentWhileReasoning": true,
+      "steerAcknowledged": true,
+      "latestRevisionUsed": true,
+      "studentTextPreserved": true,
+      "concurrentEditDisclosed": true,
+      "stableTarget": true
+    },
+    "agentMessageDeltas": 199,
+    "appliedToInMemoryFixture": true,
+    "appliedToCourseFiles": false
+  },
+  "interrupt": {
+    "acknowledged": true,
+    "status": "interrupted"
+  },
+  "cleanup": {
+    "testProcessExitCodes": [0, 0],
+    "temporaryWorkDirectoriesRemoved": true
+  },
+  "notCovered": [
+    "browser integration",
+    "course-file writes and persistence",
+    "actual tool write interruption",
+    "incompatible concurrent edits",
+    "multi-object edits",
+    "duplicate events and reconnect recovery",
+    "full undo and history restore"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "sha256": {
+    "README-first-trial.md": "70d6ee5256ec304c0261da76a073a1c322e3c73d4d2fd6f02e221d5d31f52a49",
+    "README.md": "044bc222121c2dcd7871568ca36b4f77d7aa78f8dadbcad63b05059f7f69ad7d",
+    "analyze.py": "30701eaad4b7e58371ac970617abe592bb08751d0be09a7480d822ff8835115e",
+    "audit.py": "019cefda991b4da31c7c2b74b8c8743c5a0c76e8ef00388cddb2247e347a06b4",
+    "electron-v2.cjs": "8f9d426e84d6fc1c6187bbe9b388ac6f45d89dd975e035beebd09087e7fa5f2e",
+    "electron.cjs": "29d5753e40675b9ff8854f4fcf23bd8c75497ea9ddb20ffea6f132c1758098e9",
+    "focus-diagnostic.json": "64cb81da8aef58289900d65eed6decb66237f8934251c448618e284c80db3624",
+    "focus-electron.cjs": "d29746a19ab5a4aef0d9dda7fff89ff3260b4e74c3cd8ee9dd0c4b04dce2c17d",
+    "focus.py": "cea3e64d2897c716d208ad6d04a017293aa5abbd1ccd6ca63624939be42c9754",
+    "focus.swift": "6c9771e4e7158840ed99e07dd4ec11c62f6b3944873a60549b08b96e5a1b2e08",
+    "frame-tails-first-trial.json": "d934561cacb4794e5e7e52ac81e57585e38881ba777674b87f55abd8c81aaf42",
+    "frame-tails-v2.json": "2296e52dcbdecf74db137e16e5891bf926a858dc31faeab3bdcf67e85d7626df",
+    "renderer-v2.js": "3223401dc6cd1f2e7bb251cd99997f31bbbdca202a9dc873772714d445e02268",
+    "renderer.js": "8778139b25e33f3f85c8e0c0856038140e6eec57da0254eaa46cbfcf909d6dc1",
+    "results-v2.json": "ed80909621f94ec77d509bfc7eb9026997d3c6007278abd839bbc4bb8533f9a1",
+    "results.json": "90c1caec240fd337140d06545fe6165ecd865a595b0577d7020b5914e9256e6a",
+    "run-v2.py": "4acf9d8e3825f00327eea3fa1071a82624663858b895f3027392bfecc8da5051",
+    "run.py": "828d8435c07c5334c5f4dbcdc282cc4f350af877b58bac20cf6e7806ada5ae15",
+    "wk-v2.swift": "4f3b4a4b32dd76352cad8b95a88e0f834015382ab3340917d29759f2cc0234f5",
+    "wk.swift": "bba8c696512fdd636578a74ed618bcaafa10501d6d197803788aa160e6f3dc83",
+    "final-cleanup.json": "c4a1637d0eddda4a1485a63ed5001b156e55dfa06ccaa00d707e6310d0d5156e"
+  },
+  "scope": "Local reproducible sources, reports, preserved original trial, diagnostic and final three-pair trial; temporary runtime excluded"
+}

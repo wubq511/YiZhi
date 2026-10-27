@@ -1,0 +1,113 @@
+{
+  "unit": "KU-017",
+  "method": "独立 Python 枚举 2 输入全部组合；期望值来自独立定义（任一为 1/全 1 才 1/取反/输入相异为 1/算术加法本位），非正文复制",
+  "checks_total": 10,
+  "checks_passed": 10,
+  "all_passed": true,
+  "failed": [],
+  "results": {
+    "or_rules": {
+      "pass": true,
+      "detail": "{(0, 0): 0, (0, 1): 1, (1, 0): 1, (1, 1): 1}"
+    },
+    "and_rules": {
+      "pass": true,
+      "detail": "{(0, 0): 0, (0, 1): 0, (1, 0): 0, (1, 1): 1}"
+    },
+    "not_rules": {
+      "pass": true,
+      "detail": "{0: 1, 1: 0}"
+    },
+    "truth_table_block": {
+      "pass": true,
+      "detail": "[(0, 0, 0, 0, 1), (0, 1, 1, 0, 1), (1, 0, 1, 0, 0), (1, 1, 1, 1, 0)]"
+    },
+    "xor_derivation": {
+      "pass": true,
+      "detail": {
+        "0+0": {
+          "expr": 0,
+          "xor_def": 0,
+          "sum_bit": 0
+        },
+        "0+1": {
+          "expr": 1,
+          "xor_def": 1,
+          "sum_bit": 1
+        },
+        "1+0": {
+          "expr": 1,
+          "xor_def": 1,
+          "sum_bit": 1
+        },
+        "1+1": {
+          "expr": 0,
+          "xor_def": 0,
+          "sum_bit": 0
+        }
+      }
+    },
+    "five_gate_circuit": {
+      "pass": true,
+      "detail": {
+        "a=0,b=0": {
+          "and1": 0,
+          "and2": 0,
+          "circuit": 0,
+          "xor": 0
+        },
+        "a=0,b=1": {
+          "and1": 1,
+          "and2": 0,
+          "circuit": 1,
+          "xor": 1
+        },
+        "a=1,b=0": {
+          "and1": 0,
+          "and2": 1,
+          "circuit": 1,
+          "xor": 1
+        },
+        "a=1,b=1": {
+          "and1": 0,
+          "and2": 0,
+          "circuit": 0,
+          "xor": 0
+        }
+      }
+    },
+    "example_truth_table": {
+      "pass": true,
+      "detail": "{(0, 0): 0, (0, 1): 1, (1, 0): 1, (1, 1): 0}"
+    },
+    "exercise_q1": {
+      "pass": true,
+      "detail": "[(1, 0), (1, 1)]"
+    },
+    "exercise_q2": {
+      "pass": true,
+      "detail": "NOT(0)=1, NOT(1)=0"
+    },
+    "exercise_q4": {
+      "pass": true,
+      "detail": {
+        "0,0": {
+          "or": 0,
+          "and": 0
+        },
+        "0,1": {
+          "or": 1,
+          "and": 0
+        },
+        "1,0": {
+          "or": 1,
+          "and": 0
+        },
+        "1,1": {
+          "or": 1,
+          "and": 1
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,142 @@
+{
+  "scope": "TH-05 KU-023 正文公式独立复核",
+  "method": "Python 全枚举；期望由与/或/非定义直接计算（OR=任一为1, AND=全为1, NOT翻转），不复制正文答案作为期望",
+  "source": "SRC-C02 VER-SRC-C02-1c152428693e P15-P20, P61（原页已逐一查看）",
+  "unit": "KU-023",
+  "checks": [
+    {
+      "name": "P20: (BC)+B'D+CD == BC+B'D (定义全枚举)",
+      "passed": true,
+      "cases": 8,
+      "detail": null
+    },
+    {
+      "name": "P20: 计算列与原页抄录列逐行一致",
+      "passed": true,
+      "detail": "lhs=[0, 1, 0, 1, 0, 0, 1, 1] rhs=[0, 1, 0, 1, 0, 0, 1, 1] page=[0, 1, 0, 1, 0, 0, 1, 1]"
+    },
+    {
+      "name": "互补律 A+A'=1",
+      "passed": true,
+      "cases": 4,
+      "detail": null
+    },
+    {
+      "name": "互补律 A·A'=0",
+      "passed": true,
+      "cases": 4,
+      "detail": null
+    },
+    {
+      "name": "等幂律 A+A=A",
+      "passed": true,
+      "cases": 4,
+      "detail": null
+    },
+    {
+      "name": "等幂律 A·A=A",
+      "passed": true,
+      "cases": 4,
+      "detail": null
+    },
+    {
+      "name": "吸收律 A+A·B=A",
+      "passed": true,
+      "cases": 4,
+      "detail": null
+    },
+    {
+      "name": "吸收律对偶 A·(A+B)=A",
+      "passed": true,
+      "cases": 4,
+      "detail": null
+    },
+    {
+      "name": "并项律 A·B'+A·B=A",
+      "passed": true,
+      "cases": 4,
+      "detail": null
+    },
+    {
+      "name": "并项律对偶 (A+B')·(A+B)=A",
+      "passed": true,
+      "cases": 4,
+      "detail": null
+    },
+    {
+      "name": "消除律 A+A'·B=A+B",
+      "passed": true,
+      "cases": 4,
+      "detail": null
+    },
+    {
+      "name": "消除律对偶 A·(A'+B)=A·B",
+      "passed": true,
+      "cases": 4,
+      "detail": null
+    },
+    {
+      "name": "特有分配律 A+BC=(A+B)(A+C)",
+      "passed": true,
+      "cases": 8,
+      "detail": null
+    },
+    {
+      "name": "分配律 A(B+C)=AB+AC",
+      "passed": true,
+      "cases": 8,
+      "detail": null
+    },
+    {
+      "name": "摩根 (A+B)'=A'·B'",
+      "passed": true,
+      "cases": 4,
+      "detail": null
+    },
+    {
+      "name": "摩根 (AB)'=A'+B'",
+      "passed": true,
+      "cases": 4,
+      "detail": null
+    },
+    {
+      "name": "三变量摩根 (x+y+z)'=x'·y'·z'",
+      "passed": true,
+      "cases": 8,
+      "detail": null
+    },
+    {
+      "name": "消除 x+x'y=x+y",
+      "passed": true,
+      "cases": 4,
+      "detail": null
+    },
+    {
+      "name": "消项 xy+x'z+yzw=xy+x'z",
+      "passed": true,
+      "cases": 16,
+      "detail": null
+    },
+    {
+      "name": "自反律 (A')'=A",
+      "passed": true,
+      "cases": 4,
+      "detail": null
+    },
+    {
+      "name": "练习答案: A+A·B 与 A 的 4 行值 (0,0),(0,0),(1,1),(1,1)",
+      "passed": true
+    },
+    {
+      "name": "B+1=1（步骤①引用）",
+      "passed": true,
+      "cases": 4,
+      "detail": null
+    }
+  ],
+  "summary": {
+    "passed": 22,
+    "total": 22
+  },
+  "verdict": "passed"
+}

@@ -1,0 +1,61 @@
+{
+  "expectations": [
+    {
+      "text": "所有修改、构建和检查均在临时副本进行，正式知识地图与布局的内容哈希未改变。",
+      "passed": true,
+      "evidence": "answer.md 第 2/6 节：有效与无效副本均在 /tmp/midterm-map-eval03-baseline.DmVo3X 下（另用 MIDTERM_OUTPUT_DIR 建独立输出目录）；hashes.json 与 logs/00、logs/10a 显示 期中/数据/知识地图.json（86d0ef39…2c1bf）与 视图布局.json（c9f0f6b7…2b93）操作前后 SHA-256 完全一致。"
+    },
+    {
+      "text": "有效来源页修改后，build 与 check 通过，Markdown、HTML、画板图和 Agent 查询保持一致。",
+      "passed": true,
+      "evidence": "logs/04a–04c 显示修改后 check --source-only、build、check 退出码均为 0，sourceHash=7c34651a…d207；logs/05a–05d 逐个比对 get KU-003、01-课件知识点.md（P34→P35）、HTML 内嵌 map-data、画板图.json 均为 pdfPages=[35] 且三处 sourceHash 相等（sourceHashesEqual: true）。"
+    },
+    {
+      "text": "无 value 的关系被拒绝，错误指出 REL ID、缺失 value 或其他具体原因。",
+      "passed": true,
+      "evidence": "logs/08a–08c：新增 REL-044（缺 value）后 check --source-only、check、build 退出码均为 1，错误为『关系缺少 value：REL-044』；logs/08d–08e 证明无效副本派生产物前后哈希相同，未被污染。"
+    },
+    {
+      "text": "没有通过修改设计规则、删除校验或忽略错误来伪造通过结果。",
+      "passed": true,
+      "evidence": "logs/10d_tool_hashes.txt 显示副本内 知识地图.py（4eb60ecd…27cc）与 地图生成.py（2b6bf3c2…b224）与正式文件逐字节一致（cmp 退出码 0）；通过链路是真实校验，而非绕过。"
+    },
+    {
+      "text": "输出包含实际执行结果，而不是仅描述应当如何操作。",
+      "passed": true,
+      "evidence": "outputs/logs/ 含 61 个原始日志文件（命令、退出码、JSON、diff、哈希清单），answer.md 的每项结论都引用具体日志文件；reproduce 链路可回放。"
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  },
+  "claims": [
+    {
+      "claim": "本次单元来源页与 pageCoverage 同步后通过检查",
+      "type": "process",
+      "verified": true,
+      "evidence": "answer.md 第 3 节和数据 diff 显示第 34 页移除、第 35 页加入 KU-003，修改后 check exit=0。检查实现会比较两者集合；本 run 没有做『不同步』反例，不能将检查实现的必要性冒充该 run 的对照实验。"
+    },
+    {
+      "claim": "无效关系的 build 未改写既有派生产物",
+      "type": "factual",
+      "verified": true,
+      "evidence": "logs/08 系列显示 build exit=1，产物哈希前后相同。"
+    },
+    {
+      "claim": "基线未借助 SKILL.md 完成任务",
+      "type": "process",
+      "verified": false,
+      "evidence": "这是执行者自述；logs/00b 证明使用过 --help，不能仅据此证明从未读取 Skill。该自述不计入五条既定断言。"
+    }
+  ],
+  "eval_feedback": {
+    "suggestions": [
+      {"reason": "双方均满足五条既定断言，但额外核验工作不同；单次耗时不能归因为 Skill 效果。"}
+    ],
+    "overall": "五条断言有原始日志支撑；未使用 Skill 的自述与不同步反例未被作为已独立验证的事实。"
+  }
+}

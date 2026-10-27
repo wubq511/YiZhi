@@ -1,0 +1,1212 @@
+{
+  "scope": "One diagnostic, 4 seconds per host, one activation each; not another resource round",
+  "startWall": 1793106267.706136,
+  "failures": [],
+  "runs": [
+    {
+      "host": "electron",
+      "launch": {
+        "args": [
+          "/usr/bin/open",
+          "-n",
+          "-W",
+          "-a",
+          "/var/folders/nn/s5g8qnt93l30cz_m3svlc3gm0000gn/T/desktop-resource-4fefz5ln/runtime/Electron.app",
+          "--args",
+          "/Users/robertwu/Documents/大二上/数字逻辑与部件设计/docs/复习工具调研/04-演示/desktop-resource-spike/focus-electron.cjs",
+          "http://127.0.0.1:56703/?count=500&mode=managed&dynamic=1",
+          "/var/folders/nn/s5g8qnt93l30cz_m3svlc3gm0000gn/T/desktop-focus-2fjzfada",
+          "/var/folders/nn/s5g8qnt93l30cz_m3svlc3gm0000gn/T/desktop-focus-2fjzfada/electron.json"
+        ],
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "data": {
+        "host": "Electron",
+        "activationAttempts": 1,
+        "samples": [
+          {
+            "wallTime": 1793106293.287,
+            "nativeKey": true,
+            "nativeWebFocus": true,
+            "document": {
+              "focus": true,
+              "visible": "visible",
+              "width": 1000,
+              "height": 700,
+              "dpr": 2,
+              "ready": true
+            },
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106293.300373
+            }
+          },
+          {
+            "wallTime": 1793106293.491,
+            "nativeKey": true,
+            "nativeWebFocus": true,
+            "document": {
+              "focus": true,
+              "visible": "visible",
+              "width": 1000,
+              "height": 700,
+              "dpr": 2,
+              "ready": true
+            },
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106293.505494
+            }
+          },
+          {
+            "wallTime": 1793106293.697,
+            "nativeKey": true,
+            "nativeWebFocus": true,
+            "document": {
+              "focus": true,
+              "visible": "visible",
+              "width": 1000,
+              "height": 700,
+              "dpr": 2,
+              "ready": true
+            },
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106293.710637
+            }
+          },
+          {
+            "wallTime": 1793106293.899,
+            "nativeKey": true,
+            "nativeWebFocus": true,
+            "document": {
+              "focus": true,
+              "visible": "visible",
+              "width": 1000,
+              "height": 700,
+              "dpr": 2,
+              "ready": true
+            },
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106293.911546
+            }
+          },
+          {
+            "wallTime": 1793106294.101,
+            "nativeKey": true,
+            "nativeWebFocus": true,
+            "document": {
+              "focus": true,
+              "visible": "visible",
+              "width": 1000,
+              "height": 700,
+              "dpr": 2,
+              "ready": true
+            },
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106294.1167688
+            }
+          },
+          {
+            "wallTime": 1793106294.304,
+            "nativeKey": true,
+            "nativeWebFocus": true,
+            "document": {
+              "focus": true,
+              "visible": "visible",
+              "width": 1000,
+              "height": 700,
+              "dpr": 2,
+              "ready": true
+            },
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106294.318047
+            }
+          },
+          {
+            "wallTime": 1793106294.514,
+            "nativeKey": true,
+            "nativeWebFocus": true,
+            "document": {
+              "focus": true,
+              "visible": "visible",
+              "width": 1000,
+              "height": 700,
+              "dpr": 2,
+              "ready": true
+            },
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106294.521116
+            }
+          },
+          {
+            "wallTime": 1793106294.718,
+            "nativeKey": true,
+            "nativeWebFocus": true,
+            "document": {
+              "focus": true,
+              "visible": "visible",
+              "width": 1000,
+              "height": 700,
+              "dpr": 2,
+              "ready": true
+            },
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106294.726289
+            }
+          },
+          {
+            "wallTime": 1793106294.924,
+            "nativeKey": true,
+            "nativeWebFocus": true,
+            "document": {
+              "focus": true,
+              "visible": "visible",
+              "width": 1000,
+              "height": 700,
+              "dpr": 2,
+              "ready": true
+            },
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106294.931437
+            }
+          },
+          {
+            "wallTime": 1793106295.13,
+            "nativeKey": true,
+            "nativeWebFocus": true,
+            "document": {
+              "focus": true,
+              "visible": "visible",
+              "width": 1000,
+              "height": 700,
+              "dpr": 2,
+              "ready": true
+            },
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106295.135509
+            }
+          },
+          {
+            "wallTime": 1793106295.333,
+            "nativeKey": true,
+            "nativeWebFocus": true,
+            "document": {
+              "focus": true,
+              "visible": "visible",
+              "width": 1000,
+              "height": 700,
+              "dpr": 2,
+              "ready": true
+            },
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106295.340688
+            }
+          },
+          {
+            "wallTime": 1793106295.537,
+            "nativeKey": true,
+            "nativeWebFocus": true,
+            "document": {
+              "focus": true,
+              "visible": "visible",
+              "width": 1000,
+              "height": 700,
+              "dpr": 2,
+              "ready": true
+            },
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106295.545862
+            }
+          },
+          {
+            "wallTime": 1793106295.741,
+            "nativeKey": true,
+            "nativeWebFocus": true,
+            "document": {
+              "focus": true,
+              "visible": "visible",
+              "width": 1000,
+              "height": 700,
+              "dpr": 2,
+              "ready": true
+            },
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106295.749588
+            }
+          },
+          {
+            "wallTime": 1793106295.946,
+            "nativeKey": true,
+            "nativeWebFocus": true,
+            "document": {
+              "focus": true,
+              "visible": "visible",
+              "width": 1000,
+              "height": 700,
+              "dpr": 2,
+              "ready": true
+            },
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106295.951139
+            }
+          },
+          {
+            "wallTime": 1793106296.151,
+            "nativeKey": true,
+            "nativeWebFocus": true,
+            "document": {
+              "focus": true,
+              "visible": "visible",
+              "width": 1000,
+              "height": 700,
+              "dpr": 2,
+              "ready": true
+            },
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106296.1531339
+            }
+          },
+          {
+            "wallTime": 1793106296.355,
+            "nativeKey": true,
+            "nativeWebFocus": true,
+            "document": {
+              "focus": true,
+              "visible": "visible",
+              "width": 1000,
+              "height": 700,
+              "dpr": 2,
+              "ready": true
+            },
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106296.3582659
+            }
+          },
+          {
+            "wallTime": 1793106296.56,
+            "nativeKey": true,
+            "nativeWebFocus": true,
+            "document": {
+              "focus": true,
+              "visible": "visible",
+              "width": 1000,
+              "height": 700,
+              "dpr": 2,
+              "ready": true
+            },
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106296.563367
+            }
+          },
+          {
+            "wallTime": 1793106296.765,
+            "nativeKey": true,
+            "nativeWebFocus": true,
+            "document": {
+              "focus": true,
+              "visible": "visible",
+              "width": 1000,
+              "height": 700,
+              "dpr": 2,
+              "ready": true
+            },
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106296.768505
+            }
+          },
+          {
+            "wallTime": 1793106296.967,
+            "nativeKey": true,
+            "nativeWebFocus": true,
+            "document": {
+              "focus": true,
+              "visible": "visible",
+              "width": 1000,
+              "height": 700,
+              "dpr": 2,
+              "ready": true
+            },
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106296.971813
+            }
+          },
+          {
+            "wallTime": 1793106297.17,
+            "nativeKey": true,
+            "nativeWebFocus": true,
+            "document": {
+              "focus": true,
+              "visible": "visible",
+              "width": 1000,
+              "height": 700,
+              "dpr": 2,
+              "ready": true
+            },
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106297.175669
+            }
+          }
+        ],
+        "backgroundThrottling": true
+      },
+      "summary": {
+        "samples": 20,
+        "nativeKeyTrue": 20,
+        "documentFocusTrue": 20,
+        "foregroundBundles": [
+          "com.github.Electron"
+        ],
+        "stableFocusedAllSamples": true,
+        "foregroundSource": "Passive observer (not independently validated across app switches); native/document focus separately recorded"
+      }
+    },
+    {
+      "host": "wk",
+      "launch": {
+        "args": [
+          "/usr/bin/open",
+          "-n",
+          "-W",
+          "-a",
+          "/var/folders/nn/s5g8qnt93l30cz_m3svlc3gm0000gn/T/desktop-focus-2fjzfada/FocusWK.app",
+          "--args",
+          "http://127.0.0.1:56703/?count=500&mode=managed&dynamic=1",
+          "/var/folders/nn/s5g8qnt93l30cz_m3svlc3gm0000gn/T/desktop-focus-2fjzfada/wk.json"
+        ],
+        "code": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "data": {
+        "activationAttempts": 1,
+        "host": "WK",
+        "samples": [
+          {
+            "bundle": "local.robert.desktop-focus-diagnostic",
+            "document": {
+              "dpr": 2,
+              "focus": true,
+              "height": 700,
+              "ready": false,
+              "visible": "visible",
+              "width": 1000
+            },
+            "name": "FocusWK",
+            "nativeActive": true,
+            "nativeKey": true,
+            "pid": 85583,
+            "wallTime": 1793106297.936322,
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106297.984478
+            }
+          },
+          {
+            "bundle": "local.robert.desktop-focus-diagnostic",
+            "document": {
+              "dpr": 2,
+              "focus": true,
+              "height": 700,
+              "ready": true,
+              "visible": "visible",
+              "width": 1000
+            },
+            "name": "FocusWK",
+            "nativeActive": true,
+            "nativeKey": true,
+            "pid": 85583,
+            "wallTime": 1793106298.1362839,
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106298.18962
+            }
+          },
+          {
+            "bundle": "local.robert.desktop-focus-diagnostic",
+            "document": {
+              "dpr": 2,
+              "focus": true,
+              "height": 700,
+              "ready": true,
+              "visible": "visible",
+              "width": 1000
+            },
+            "name": "FocusWK",
+            "nativeActive": true,
+            "nativeKey": true,
+            "pid": 85583,
+            "wallTime": 1793106298.336304,
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106298.393303
+            }
+          },
+          {
+            "bundle": "local.robert.desktop-focus-diagnostic",
+            "document": {
+              "dpr": 2,
+              "focus": true,
+              "height": 700,
+              "ready": true,
+              "visible": "visible",
+              "width": 1000
+            },
+            "name": "FocusWK",
+            "nativeActive": true,
+            "nativeKey": true,
+            "pid": 85583,
+            "wallTime": 1793106298.53631,
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106298.598413
+            }
+          },
+          {
+            "bundle": "local.robert.desktop-focus-diagnostic",
+            "document": {
+              "dpr": 2,
+              "focus": true,
+              "height": 700,
+              "ready": true,
+              "visible": "visible",
+              "width": 1000
+            },
+            "name": "FocusWK",
+            "nativeActive": true,
+            "nativeKey": true,
+            "pid": 85583,
+            "wallTime": 1793106298.735886,
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106298.801237
+            }
+          },
+          {
+            "bundle": "local.robert.desktop-focus-diagnostic",
+            "document": {
+              "dpr": 2,
+              "focus": true,
+              "height": 700,
+              "ready": true,
+              "visible": "visible",
+              "width": 1000
+            },
+            "name": "FocusWK",
+            "nativeActive": true,
+            "nativeKey": true,
+            "pid": 85583,
+            "wallTime": 1793106298.9363651,
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106299.0048308
+            }
+          },
+          {
+            "bundle": "local.robert.desktop-focus-diagnostic",
+            "document": {
+              "dpr": 2,
+              "focus": true,
+              "height": 700,
+              "ready": true,
+              "visible": "visible",
+              "width": 1000
+            },
+            "name": "FocusWK",
+            "nativeActive": true,
+            "nativeKey": true,
+            "pid": 85583,
+            "wallTime": 1793106299.1363292,
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106299.209968
+            }
+          },
+          {
+            "bundle": "local.robert.desktop-focus-diagnostic",
+            "document": {
+              "dpr": 2,
+              "focus": true,
+              "height": 700,
+              "ready": true,
+              "visible": "visible",
+              "width": 1000
+            },
+            "name": "FocusWK",
+            "nativeActive": true,
+            "nativeKey": true,
+            "pid": 85583,
+            "wallTime": 1793106299.336354,
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106299.41086
+            }
+          },
+          {
+            "bundle": "local.robert.desktop-focus-diagnostic",
+            "document": {
+              "dpr": 2,
+              "focus": true,
+              "height": 700,
+              "ready": true,
+              "visible": "visible",
+              "width": 1000
+            },
+            "name": "FocusWK",
+            "nativeActive": true,
+            "nativeKey": true,
+            "pid": 85583,
+            "wallTime": 1793106299.5363379,
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106299.616013
+            }
+          },
+          {
+            "bundle": "local.robert.desktop-focus-diagnostic",
+            "document": {
+              "dpr": 2,
+              "focus": true,
+              "height": 700,
+              "ready": true,
+              "visible": "visible",
+              "width": 1000
+            },
+            "name": "FocusWK",
+            "nativeActive": true,
+            "nativeKey": true,
+            "pid": 85583,
+            "wallTime": 1793106299.735652,
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106299.8211179
+            }
+          },
+          {
+            "bundle": "local.robert.desktop-focus-diagnostic",
+            "document": {
+              "dpr": 2,
+              "focus": true,
+              "height": 700,
+              "ready": true,
+              "visible": "visible",
+              "width": 1000
+            },
+            "name": "FocusWK",
+            "nativeActive": true,
+            "nativeKey": true,
+            "pid": 85583,
+            "wallTime": 1793106299.935456,
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106300.023816
+            }
+          },
+          {
+            "bundle": "local.robert.desktop-focus-diagnostic",
+            "document": {
+              "dpr": 2,
+              "focus": true,
+              "height": 700,
+              "ready": true,
+              "visible": "visible",
+              "width": 1000
+            },
+            "name": "FocusWK",
+            "nativeActive": true,
+            "nativeKey": true,
+            "pid": 85583,
+            "wallTime": 1793106300.135539,
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106300.224736
+            }
+          },
+          {
+            "bundle": "local.robert.desktop-focus-diagnostic",
+            "document": {
+              "dpr": 2,
+              "focus": true,
+              "height": 700,
+              "ready": true,
+              "visible": "visible",
+              "width": 1000
+            },
+            "name": "FocusWK",
+            "nativeActive": true,
+            "nativeKey": true,
+            "pid": 85583,
+            "wallTime": 1793106300.3363771,
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106300.429858
+            }
+          },
+          {
+            "bundle": "local.robert.desktop-focus-diagnostic",
+            "document": {
+              "dpr": 2,
+              "focus": true,
+              "height": 700,
+              "ready": true,
+              "visible": "visible",
+              "width": 1000
+            },
+            "name": "FocusWK",
+            "nativeActive": true,
+            "nativeKey": true,
+            "pid": 85583,
+            "wallTime": 1793106300.536304,
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106300.635031
+            }
+          },
+          {
+            "bundle": "local.robert.desktop-focus-diagnostic",
+            "document": {
+              "dpr": 2,
+              "focus": true,
+              "height": 700,
+              "ready": true,
+              "visible": "visible",
+              "width": 1000
+            },
+            "name": "FocusWK",
+            "nativeActive": true,
+            "nativeKey": true,
+            "pid": 85583,
+            "wallTime": 1793106300.735536,
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106300.635031
+            }
+          },
+          {
+            "bundle": "local.robert.desktop-focus-diagnostic",
+            "document": {
+              "dpr": 2,
+              "focus": true,
+              "height": 700,
+              "ready": true,
+              "visible": "visible",
+              "width": 1000
+            },
+            "name": "FocusWK",
+            "nativeActive": true,
+            "nativeKey": true,
+            "pid": 85583,
+            "wallTime": 1793106300.935553,
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106300.837208
+            }
+          },
+          {
+            "bundle": "local.robert.desktop-focus-diagnostic",
+            "document": {
+              "dpr": 2,
+              "focus": true,
+              "height": 700,
+              "ready": true,
+              "visible": "visible",
+              "width": 1000
+            },
+            "name": "FocusWK",
+            "nativeActive": true,
+            "nativeKey": true,
+            "pid": 85583,
+            "wallTime": 1793106301.135608,
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106301.042361
+            }
+          },
+          {
+            "bundle": "local.robert.desktop-focus-diagnostic",
+            "document": {
+              "dpr": 2,
+              "focus": true,
+              "height": 700,
+              "ready": true,
+              "visible": "visible",
+              "width": 1000
+            },
+            "name": "FocusWK",
+            "nativeActive": true,
+            "nativeKey": true,
+            "pid": 85583,
+            "wallTime": 1793106301.3363972,
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106301.247518
+            }
+          },
+          {
+            "bundle": "local.robert.desktop-focus-diagnostic",
+            "document": {
+              "dpr": 2,
+              "focus": true,
+              "height": 700,
+              "ready": true,
+              "visible": "visible",
+              "width": 1000
+            },
+            "name": "FocusWK",
+            "nativeActive": true,
+            "nativeKey": true,
+            "pid": 85583,
+            "wallTime": 1793106301.536347,
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106301.447774
+            }
+          },
+          {
+            "bundle": "local.robert.desktop-focus-diagnostic",
+            "document": {
+              "dpr": 2,
+              "focus": true,
+              "height": 700,
+              "ready": true,
+              "visible": "visible",
+              "width": 1000
+            },
+            "name": "FocusWK",
+            "nativeActive": true,
+            "nativeKey": true,
+            "pid": 85583,
+            "wallTime": 1793106301.735472,
+            "foreground": {
+              "bundle": "com.github.Electron",
+              "name": "Electron",
+              "pid": 85520,
+              "wallTime": 1793106301.6529121
+            }
+          }
+        ]
+      },
+      "summary": {
+        "samples": 20,
+        "nativeKeyTrue": 20,
+        "documentFocusTrue": 20,
+        "foregroundBundles": [
+          "local.robert.desktop-focus-diagnostic"
+        ],
+        "stableFocusedAllSamples": true,
+        "foregroundSource": "WK in-process NSWorkspace on active AppKit run loop"
+      }
+    }
+  ],
+  "compile": {
+    "args": [
+      "swiftc",
+      "-module-cache-path",
+      "/var/folders/nn/s5g8qnt93l30cz_m3svlc3gm0000gn/T/desktop-focus-2fjzfada/swift-cache",
+      "/Users/robertwu/Documents/大二上/数字逻辑与部件设计/docs/复习工具调研/04-演示/desktop-resource-spike/focus.swift",
+      "-o",
+      "/var/folders/nn/s5g8qnt93l30cz_m3svlc3gm0000gn/T/desktop-focus-2fjzfada/FocusWK.app/Contents/MacOS/FocusWK"
+    ],
+    "code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "foregroundTimeline": [
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106292.891535
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106293.0984669
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106293.300373
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106293.505494
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106293.710637
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106293.911546
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106294.1167688
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106294.318047
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106294.521116
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106294.726289
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106294.931437
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106295.135509
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106295.340688
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106295.545862
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106295.749588
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106295.951139
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106296.1531339
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106296.3582659
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106296.563367
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106296.768505
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106296.971813
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106297.175669
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106297.37916
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106297.583582
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106297.78379
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106297.984478
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106298.18962
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106298.393303
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106298.598413
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106298.801237
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106299.0048308
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106299.209968
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106299.41086
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106299.616013
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106299.8211179
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106300.023816
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106300.224736
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106300.429858
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106300.635031
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106300.837208
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106301.042361
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106301.247518
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106301.447774
+    },
+    {
+      "bundle": "com.github.Electron",
+      "name": "Electron",
+      "pid": 85520,
+      "wallTime": 1793106301.6529121
+    }
+  ],
+  "observerStderr": "",
+  "endWall": 1793106301.887969,
+  "cleanup": {
+    "httpStopped": true,
+    "diagnosticTemporaryDirectoryRemoved": true
+  },
+  "hashes": {
+    "focus.py": "02954d95ad39e47f98520e4ce641598d1ab0bb70cba54a41d90deef056b2b6c0",
+    "focus.swift": "6c9771e4e7158840ed99e07dd4ec11c62f6b3944873a60549b08b96e5a1b2e08",
+    "focus-electron.cjs": "d29746a19ab5a4aef0d9dda7fff89ff3260b4e74c3cd8ee9dd0c4b04dce2c17d"
+  },
+  "summaryCorrection": {
+    "reason": "WK summary incorrectly used passive observer timeline, which remained stale across app switch. Use native in-process foreground sample for WK. No diagnostic rerun.",
+    "priorSummaries": {
+      "electron": {
+        "samples": 20,
+        "nativeKeyTrue": 20,
+        "documentFocusTrue": 20,
+        "foregroundBundles": [
+          "com.github.Electron"
+        ],
+        "stableFocusedAllSamples": true,
+        "foregroundSource": "Passive observer (not independently validated across app switches); native/document focus separately recorded"
+      },
+      "wk": {
+        "samples": 20,
+        "nativeKeyTrue": 20,
+        "documentFocusTrue": 20,
+        "foregroundBundles": [
+          "com.github.Electron"
+        ],
+        "stableFocusedAllSamples": true
+      }
+    }
+  }
+}

@@ -1,0 +1,244 @@
+[
+  {
+    "name": "NotebookLM Mind Maps",
+    "key": "notebooklm",
+    "page_url": "https://workspace.google.com/blog/ai-and-machine-learning/beyond-prompt-mastering-deep-end-generative-ai",
+    "image_url": "https://storage.googleapis.com/gweb-cloudblog-publish/images/5458i_Get_more_out_of_Gemini_inline_image_.max-2000x2000.jpg",
+    "alt": "NotebookLM 根据 Google Cloud Next 2025 资料生成的 Mind Map，展示主题分支和概念关系",
+    "caption": "Google Workspace 官方文章展示作者使用 NotebookLM 生成的 Cloud Next 25 Mind Map；正文明确说明图中是上传会议资料后生成的示例脑图。",
+    "kind": "静态产品效果图（JPEG）",
+    "verification": {
+      "source_page_checked_with_web": true,
+      "related_official_pages": [
+        "https://workspace.google.com/blog/ai-and-machine-learning/beyond-prompt-mastering-deep-end-generative-ai",
+        "https://workspace.google.com/blog/product-announcements/may-workspace-feature-drop-new-ai-features"
+      ],
+      "image_http": {
+        "status": 206,
+        "content_type": "image/jpeg",
+        "dimensions_px": {
+          "width": 2000,
+          "height": 1445
+        },
+        "total_bytes": 106140,
+        "method": "HTTP Range bytes=0-65535；仅读取 65,536 bytes，未保存本地副本"
+      },
+      "additional_official_images": [
+        {
+          "page_url": "https://workspace.google.com/blog/product-announcements/may-workspace-feature-drop-new-ai-features",
+          "image_url": "https://storage.googleapis.com/gweb-cloudblog-publish/original_images/NotebookLM_-_mind_map_1.gif",
+          "alt": "NotebookLM Mind Map 官方动图演示，展示从来源生成的交互式脑图及分支浏览",
+          "caption": "Google Workspace 2025 年 5 月功能发布页的 NotebookLM Mind Map 演示动图；页面图注说明可用脑图概览来源。",
+          "kind": "产品效果动图（GIF）",
+          "image_http": {
+            "status": 206,
+            "content_type": "image/gif",
+            "dimensions_px": {
+              "width": 960,
+              "height": 540
+            },
+            "total_bytes": 15508187,
+            "method": "HTTP Range bytes=0-65535；仅读取 65,536 bytes，未保存本地副本"
+          }
+        }
+      ],
+      "note": "两张图均由 Google Workspace 官方博客直接链接。静态图正文称其为作者使用 NotebookLM 生成的 Cloud Next 25 mind map；GIF 位于 NotebookLM Mind Maps 功能发布段落，并配有对应功能图注。核查范围为以上两个官方页面。"
+    },
+    "status": "verified"
+  },
+  {
+    "name": "Obsidian Canvas / Graph",
+    "key": "obsidian",
+    "page_url": "https://obsidian.md/canvas",
+    "image_url": "https://obsidian.md/images/canvas/obsidian-canvas-cookies.png",
+    "alt": "Obsidian Canvas 画布界面：卡片与连接线组成的可视化工作区",
+    "caption": "官方 Canvas 页面示例，展示卡片、分组和连接线构成的空间画布；Graph 是另一种笔记链接视图，见官方 Graph 帮助页。",
+    "kind": "静态界面截图（PNG）",
+    "verification": {
+      "source_page_checked_with_web": true,
+      "related_page_url": "https://obsidian.md/help/plugins/graph",
+      "image_http": {
+        "status": 206,
+        "content_type": "image/png",
+        "dimensions_px": {
+          "width": 3028,
+          "height": 2120
+        },
+        "total_bytes": 2601027,
+        "method": "HTTP Range bytes=0-131071；未保存本地副本"
+      },
+      "note": "图片由 Obsidian Canvas 官方页面直接链接；页面说明 Canvas 可将笔记、图片、PDF 与带标签连线放在同一画布。"
+    },
+    "status": "verified"
+  },
+  {
+    "name": "Heptabase",
+    "key": "heptabase",
+    "page_url": "https://wiki.heptabase.com/the-best-way-to-acquire-knowledge-from-readings",
+    "image_url": "https://wiki.heptabase.com/assets/images/the-best-way-to-acquire-knowledge-from-readings-Untitled%209-b7d4185f838da7712dc3b86283ac72da.png",
+    "alt": "Heptabase 白板上的主题思维导图，由可复用概念卡组织研究主题",
+    "caption": "官方学习案例中的 Dynamic Medium 白板示例，展示从不同阅读材料提取概念卡并组织成思维导图。",
+    "kind": "静态白板示例图（PNG）",
+    "verification": {
+      "source_page_checked_with_web": true,
+      "image_http": {
+        "status": 206,
+        "content_type": "image/png",
+        "dimensions_px": {
+          "width": 3456,
+          "height": 2160
+        },
+        "total_bytes": 1346578,
+        "method": "HTTP Range bytes=0-131071；未保存本地副本"
+      },
+      "note": "官方案例在该图前说明将来自多本书的概念卡整理到 Dynamic Medium 白板并用 mind map 建立结构；页面图片原 alt 为 Untitled。"
+    },
+    "status": "verified"
+  },
+  {
+    "name": "TheBrain",
+    "key": "thebrain",
+    "page_url": "https://thebrain.com/",
+    "image_url": "https://thebrain.com/images/homepage/one-thought.png",
+    "alt": "TheBrain 知识网络示意：一个 thought 连接到项目、人物、文件、决定与 AI 洞察",
+    "caption": "TheBrain 官方主页中的连接网络示例，展示同一 thought 与项目、人物、文件、决定和 AI 洞察相连。",
+    "kind": "静态产品界面示意图（PNG）",
+    "verification": {
+      "source_page_checked_with_web": true,
+      "image_http": {
+        "status": 206,
+        "content_type": "image/png",
+        "dimensions_px": {
+          "width": 1194,
+          "height": 1194
+        },
+        "total_bytes": 355611,
+        "method": "HTTP Range bytes=0-131071；未保存本地副本"
+      },
+      "note": "图片 alt 与页面正文说明该图表现一个 thought 跨项目、人物、文件、决定和 AI 内容建立联系；不是产品标志。"
+    },
+    "status": "verified"
+  },
+  {
+    "name": "draw.io / diagrams.net + 官方 MCP",
+    "key": "drawio",
+    "page_url": "https://www.drawio.com/mcp/",
+    "image_url": "https://www.drawio.com/img/mcp/drawio-mcp-hero-poster.jpg?v=7",
+    "alt": "draw.io 官方 MCP 效果：AI 助手在聊天中生成可编辑的退款流程图，并提供在 draw.io 中打开、复制和下载入口",
+    "caption": "官方 MCP 页面主效果图，展示从聊天提示生成流程图并继续在 draw.io 编辑；满足 draw.io MCP 生态的界面示例需求。",
+    "kind": "静态 MCP 效果截图（JPEG）",
+    "verification": {
+      "source_page_checked_with_web": true,
+      "related_diagram_page_url": "https://www.drawio.com/docs/diagram-types/dependency-graphs/",
+      "image_http": {
+        "status": 206,
+        "content_type": "image/jpeg",
+        "dimensions_px": {
+          "width": 1280,
+          "height": 720
+        },
+        "total_bytes": 70336,
+        "method": "HTTP Range bytes=0-131071；未保存本地副本"
+      },
+      "note": "图片由 draw.io 官方 MCP 文档直接链接；页面说明 MCP 生成原生可编辑 draw.io 图。依赖图文档另有官方依赖图示例。"
+    },
+    "status": "verified"
+  },
+  {
+    "name": "Next AI Draw.io",
+    "key": "next-ai-drawio",
+    "page_url": "https://github.com/DayuanJiang/next-ai-draw-io/blob/2788253c65a2df0796cdb6954785b96c12b2fa00/README.md",
+    "image_url": "https://raw.githubusercontent.com/DayuanJiang/next-ai-draw-io/2788253c65a2df0796cdb6954785b96c12b2fa00/public/gallery/er-shop.svg",
+    "alt": "在线商店 ER 图示例，包含 customers、orders、products、payments 等实体及关系",
+    "caption": "README 示例提示生成的在线商店 ER 图；官方说明该例由 Claude Opus 5.5 配合 MCP Server 绘制。",
+    "kind": "静态 SVG 示例图（ER 关系图）",
+    "verification": {
+      "source_page_checked_with_web": true,
+      "image_http": {
+        "status": 206,
+        "content_type": "image/svg+xml",
+        "dimensions_px": {
+          "width": 782,
+          "height": 586
+        },
+        "total_bytes": 86530,
+        "method": "HTTP Range bytes=0-131071；未保存本地副本"
+      },
+      "note": "图片相对路径来自该官方 README 的 Examples 表格，README 同行注明模型与 MCP Server；图片包含实际图形内容，不是徽标或统计徽章。"
+    },
+    "status": "verified"
+  },
+  {
+    "name": "Drawnix",
+    "key": "drawnix",
+    "page_url": "https://github.com/plait-board/drawnix/blob/b138ff867943ddff6c4c79560e10ab6ee3b5600e/README.md",
+    "image_url": "https://raw.githubusercontent.com/plait-board/drawnix/b138ff867943ddff6c4c79560e10ab6ee3b5600e/apps/web/public/product_showcase/case-2.png",
+    "alt": "Drawnix 官方 README 中的白板产品展示图",
+    "caption": "官方 README 的 Product showcase 界面示例；该项目将思维导图、流程图和自由画集成在无限画布中。",
+    "kind": "静态产品展示截图（PNG）",
+    "verification": {
+      "source_page_checked_with_web": true,
+      "image_http": {
+        "status": 206,
+        "content_type": "image/png",
+        "dimensions_px": {
+          "width": 3248,
+          "height": 2112
+        },
+        "total_bytes": 251988,
+        "method": "HTTP Range bytes=0-65535；未保存本地副本"
+      },
+      "note": "图片路径为官方 README 的 Product showcase 素材，在 README 对应提交中解析并核验；未使用仓库 logo。"
+    },
+    "status": "verified"
+  },
+  {
+    "name": "AFFiNE",
+    "key": "affine",
+    "page_url": "https://github.com/toeverything/AFFiNE/blob/fbf2cebfa012a7c92b08af7bfa0340177308b2a6/README.md",
+    "image_url": "https://user-images.githubusercontent.com/79301703/230891830-0110681e-8c7e-483b-b6d9-9e42b291b9ef.gif",
+    "alt": "AFFiNE 官方 README 中的产品界面演示动图",
+    "caption": "官方 README 嵌入的产品界面演示 GIF，作为 AFFiNE 文档与画布工作区的整体体验示例；README 未将它标注为 AI Mind Map 专用演示。",
+    "kind": "动图（GIF，产品界面演示）",
+    "verification": {
+      "source_page_checked_with_web": true,
+      "related_ai_mind_map_page_url": "https://affine.pro/ai/mind-map-generator",
+      "image_http": {
+        "status": 206,
+        "content_type": "image/gif",
+        "dimensions_px": {
+          "width": 1167,
+          "height": 722
+        },
+        "total_bytes": 4978786,
+        "method": "HTTP Range bytes=0-65535；未保存本地副本"
+      },
+      "note": "GIF URL 是官方 README 原有的嵌入素材。AFFiNE AI Mind Map 页面已核对，但其产品示意由网页结构呈现，没有可直接嵌入的独立效果图；因此此 GIF 只标作通用产品界面演示。"
+    },
+    "status": "verified"
+  },
+  {
+    "name": "DeepTutor",
+    "key": "deeptutor",
+    "page_url": "https://github.com/HKUDS/DeepTutor/blob/a31d82624c27d75f4e771d4fcb78dce16470b383/README.md",
+    "image_url": "https://raw.githubusercontent.com/HKUDS/DeepTutor/a31d82624c27d75f4e771d4fcb78dce16470b383/assets/figs/web-1.6.5/OVERVIEW.png",
+    "alt": "DeepTutor v1.6.5 Chat 工作区，侧边栏显示各功能入口",
+    "caption": "官方 README 标注为 v1.6.5 当前主页截图，展示 Chat 工作区及应用功能侧栏。",
+    "kind": "静态界面截图（PNG）",
+    "verification": {
+      "source_page_checked_with_web": true,
+      "image_http": {
+        "status": 206,
+        "content_type": "image/png",
+        "dimensions_px": {
+          "width": 1440,
+          "height": 900
+        },
+        "total_bytes": 125011,
+        "method": "HTTP Range bytes=0-131071；未保存本地副本"
+      },
+      "note": "README alt 明确为 DeepTutor home — Chat workspace with every surface in the sidebar，并说明该 overview 对应 v1.6.5。"
+    },
+    "status": "verified"
+  }
+]
