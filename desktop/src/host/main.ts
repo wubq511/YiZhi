@@ -44,6 +44,11 @@ else {
     };
     ipcMain.handle('course:open', async event => { checkSender(event); return core.open(courseDirectory); });
     ipcMain.handle('course:save', async (event, command: SaveParagraph) => { checkSender(event); return core.save(command); });
+    ipcMain.handle('course:saveDraft', (event, input) => { checkSender(event); return core.saveDraft(input); });
+    ipcMain.handle('course:commitEdit', (event, command) => { checkSender(event); return core.commitEdit(command); });
+    ipcMain.handle('course:queryOperation', (event, input) => { checkSender(event); return core.queryOperation(input.sessionId, input.operationId); });
+    ipcMain.handle('course:readEvents', (event, input) => { checkSender(event); return core.readEvents(input.sessionId, input.after, input.limit); });
+    ipcMain.handle('course:read', (event, input) => { checkSender(event); return core.read(input.sessionId); });
     ipcMain.on('window:close-result', async (event, result) => {
       checkSender(event);
       if (!result || result.requestId !== pendingClose || typeof result.saved !== 'boolean') return;
