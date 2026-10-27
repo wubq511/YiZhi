@@ -23,5 +23,7 @@
 | --- | --- | --- |
 | @xyflow/react | 12.12.0 | MIT |
 | roughjs | 4.6.6 | MIT |
+| pdfjs-dist | 6.4.299 | Apache-2.0；本地 worker、CMap、标准字体、ICC 与 WASM 随包复制各自许可 |
+| @napi-rs/canvas | 1.0.13 | MIT；核心只用于 PDF.js Node 支持及图片真实解码，随分发保留包内许可 |
 
 器件样本中的 TI 74153 手册原页复制自已有实验资源；其来源版本和文件摘要见 `fixtures/t04-provenance.json`。该来源页仍保留其原始身份，并非新绘制材料。

@@ -1,0 +1,45 @@
+.source-panel { position: fixed; z-index: 60; top: 0; right: 0; bottom: 0; width: min(590px, 100vw); box-sizing: border-box; padding: 20px 22px; background: #fff; color: #27343e; box-shadow: -8px 0 30px #27343e1a; display: flex; flex-direction: column; gap: 12px; overflow: auto; font: 14px/1.5 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; }
+.source-panel :is(button, input, select) { font: inherit; color: inherit; border: 1px solid #e5e5eb; border-radius: 6px; background: #fff; padding: 6px 9px; max-width: 100%; box-sizing: border-box; }
+.source-panel button { cursor: pointer; white-space: nowrap; }
+.source-panel button:hover { background: #eeedff; border-color: #6965db; }
+.source-panel button:disabled { color: #626b79; background: #f6f6f9; cursor: default; }
+.source-panel button[aria-pressed="true"] { background: #eeedff; color: #514bbe; border-color: #6965db; }
+.source-panel :focus-visible { outline: 2px solid #6965db; outline-offset: 3px; }
+.source-panel ::selection { background: #eeedff; color: #27343e; }
+.source-panel input::placeholder { color: #687080; }
+.source-panel input { caret-color: #6965db; }
+.source-panel h2 { font-size: 22px; margin: 0; }
+.source-panel p { margin: 0 0 8px; overflow-wrap: anywhere; }
+.source-heading, .source-controls, .source-pagination, .source-page-map { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.source-heading { justify-content: space-between; }
+.source-controls label { display: flex; align-items: center; gap: 8px; width: 100%; }
+.source-controls select { flex: 1; min-width: 0; }
+.source-update { padding-block: 8px; }
+.source-update button + button { margin-left: 8px; }
+.source-pagination input { width: 60px; font-variant-numeric: tabular-nums; }
+.source-pagination label { display: flex; align-items: center; gap: 5px; }
+.source-page-map input { width: 164px; }
+.source-scroll { flex: 1 0 220px; min-height: 220px; max-height: 65vh; overflow: auto; background: #f6f6f9; padding: 12px; overscroll-behavior: contain; scrollbar-color: #b6b4d1 #f6f6f9; scrollbar-width: thin; }
+.source-page-frame { position: relative; width: fit-content; min-width: 1px; }
+.source-pdf { position: relative; background: white; line-height: 1; }
+.source-pdf canvas, .source-pdf img { display: block; max-width: none; }
+.source-pdf .textLayer { position: absolute; inset: 0; overflow: clip; line-height: 1; text-align: initial; letter-spacing: normal; word-spacing: normal; text-size-adjust: none; forced-color-adjust: none; transform-origin: 0 0; --min-font-size: 1; --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size)); --min-font-size-inv: calc(1 / var(--min-font-size)); }
+.source-pdf .textLayer :is(span, br) { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0 0; user-select: text; }
+.source-pdf .textLayer > :not(.markedContent), .source-pdf .textLayer .markedContent span:not(.markedContent) { z-index: 1; --font-height: 0; font-size: calc(var(--text-scale-factor) * var(--font-height)); --scale-x: 1; --rotate: 0deg; transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv)); }
+.source-pdf .textLayer ::selection { color: transparent; background: #6965db55; }
+.source-pdf .textLayer .markedContent { display: contents; }
+.source-region-picker { position: absolute; inset: 0; cursor: crosshair; touch-action: none; }
+.source-rubberband { display: none; position: absolute; border: 1px solid #6965db; background: #6965db22; pointer-events: none; }
+.source-citation-marker { position: absolute; pointer-events: none; border: 1px solid #6965db; background: #6965db22; }
+.source-status, .source-context-status { color: #5f6479; font-size: 13px; }
+.source-error { background: #fdf0f0; color: #a13737; padding: 12px; }
+.source-error button { margin-right: 8px; }
+.source-selection button { margin-right: 8px; }
+.source-citations { margin-top: 8px; }
+.source-panel summary { cursor: pointer; color: #514bbe; padding-block: 4px; }
+.source-citations section { padding-block: 12px; border-bottom: 1px solid #e5e5eb; }
+.source-citations blockquote { margin: 0 0 8px; padding: 0; font-size: 16px; white-space: pre-wrap; }
+.source-identity { color: #5f6479; }
+.source-references { border-block: 1px solid #e5e5eb; padding-block: 12px; margin-block: 24px; color: #345d88; font: 16px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; }
+.source-references h3 { font: inherit; font-weight: 600; margin-block: 0 8px; }
+@media (max-width: 760px) { .source-panel { padding: 16px; width: 100vw; } .source-scroll { flex-basis: 180px; min-height: 180px; } }
