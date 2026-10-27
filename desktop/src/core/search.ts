@@ -146,7 +146,7 @@ export class Search {
       catch (error) { this.problem(entity, error); throw error; }
     } else if (entity) candidates = this.documents(entity);
     const doc = candidates.find(d => d.field === hit.field && d.blockId === hit.blockId && d.version === hit.version && d.projectionId === hit.projectionId);
-    if (!doc || !Number.isSafeInteger(hit.start) || !Number.isSafeInteger(hit.end) || hit.start < 0 || hit.end <= hit.start ||
+    if (!doc || !Number.isSafeInteger(hit.start) || !Number.isSafeInteger(hit.end) || hit.start < 0 || hit.end <= hit.start || hit.end > Array.from(doc.text).length ||
       Array.from(doc.text).slice(hit.start, hit.end).join('') !== hit.quote) throw new Error('内容版本已变化，请重新搜索');
     const verified = this.match(doc, hit.quote);
     if (!verified) throw new Error('内容版本已变化，请重新搜索');

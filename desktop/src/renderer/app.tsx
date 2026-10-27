@@ -88,7 +88,7 @@ function BlockContent({ block, onReference, reading, updateReading, onSource, ex
   }
   if (block.kind === 'figure' && payload.config?.nodes) return <figure><figcaption data-search-field="alt">{payload.alt}</figcaption><svg viewBox="0 0 640 250" role="img" aria-label={payload.alt}>{payload.config.edges.map((edge: any, index: number) => { const a = payload.config.nodes.find((node: any) => node.id === edge.from), b = payload.config.nodes.find((node: any) => node.id === edge.to); return <line key={index} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#7798bc" />; })}{payload.config.nodes.map((node: any) => <g key={node.id} data-search-field={`config.nodes.${payload.config.nodes.indexOf(node)}.label`}><rect x={node.x - 45} y={node.y - 20} width="90" height="40" fill="white" stroke="#7798bc" /><text x={node.x} y={node.y} textAnchor="middle" dominantBaseline="middle" fontSize="13">{node.label}</text></g>)}</svg><figcaption data-search-field="config.caption">{payload.config.caption}</figcaption></figure>;
   if (block.kind === 'knowledge-reference') return <p className="reference"><span data-search-field="intent">{payload.intent}</span><br/><button onClick={() => onReference(payload.targetUnitId, block.id)}>前往 {payload.targetUnitId}</button></p>;
-  return <details><summary>保留的内容 · {block.kind}</summary><pre>{JSON.stringify(payload, null, 2)}</pre>{children}</details>;
+  return <details open={reading?.expanded[`${block.id}:retained`] ?? false} onToggle={event => updateReading(`${block.id}:retained`, event.currentTarget.open)}><summary>保留的内容 · {block.kind}</summary><pre>{JSON.stringify(payload, null, 2)}</pre>{children}</details>;
 }
 
 function App() {

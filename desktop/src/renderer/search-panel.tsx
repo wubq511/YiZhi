@@ -69,7 +69,7 @@ export function SearchPanel({ sessionId, narrow, beforeOpen, onOpenChange, locat
       {results && <><p role="status">{results.hits.length ? `找到 ${results.hits.length} 处已有内容` : results.incomplete ? '已检查部分未命中；尚有未索引内容，索引后再查。' : '已检查范围无命中。'}{results.truncated && ' 结果较多，请补充关键词或缩小范围。'}{results.incomplete && results.hits.length > 0 && ' 仍有未索引内容。'}</p>
         {results.hits.map((hit, i) => <article className="search-result" key={`${hit.scope}:${hit.entityId}:${hit.field}:${i}`}><p className="search-result-kind">{labels[hit.scope]}{hit.pdfPageIndex !== undefined && ` · PDF 第 ${hit.pdfPageIndex + 1} 页`}</p><h3>{hit.title}</h3><p className="search-excerpt">{hit.excerpt}</p>
           <details><summary>身份与版本</summary><p>{hit.entityId}{hit.blockId && ` · ${hit.blockId}`} · {hit.field}</p><p>版本 {hit.version}</p>{hit.projectionId && <p>文本投影 {hit.projectionId} · {hit.convention}</p>}</details>
-          <button onClick={() => { void (async () => { try { const current = await window.yizhi.search.locate({ sessionId, hit }); await locate(current); setOpen(false); onOpenChange(false); } catch (e) { setError((e as Error).message); } })(); }}>定位命中</button>
+          <button onClick={() => { void (async () => { try { const current = await window.yizhi.search.locate({ sessionId, hit }); await locate(current); setOpen(false); onOpenChange(false); } catch (e) { setError((e as Error).message); void window.yizhi.search.status({ sessionId }).then(setStatus).catch(() => {}); } })(); }}>定位命中</button>
         </article>)}
       </>}
     </section>

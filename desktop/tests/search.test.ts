@@ -53,6 +53,7 @@ test('batched disposable trigram index and dirty direct search never resurrect s
     const dirty = await find('尚未索引'); assert.ok(dirty.hits.some(h => h.blockId === block.id)); assert.ok(dirty.directChecked > 0);
     const held = dirty.hits.find(h => h.blockId === block.id)!;
     assert.deepEqual(await core.search.locate({ sessionId: c.sessionId, hit: held }), held);
+    await assert.rejects(core.search.locate({ sessionId: c.sessionId, hit: { ...held, start: 0, end: Array.from(held.text).length + 1, quote: held.text } }), /版本已变化|范围/);
     await core.commitEdit({ sessionId: c.sessionId, operationId: 'dirty-two', inputSeq: 2, baseRevision: 2, complete: true, changes: [{ blockId: block.id, text: '已经移走旧命中' }] });
     assert.equal((await find('尚未索引')).hits.length, 0);
     await assert.rejects(core.search.locate({ sessionId: c.sessionId, hit: held }), /版本已变化/);
@@ -165,4 +166,16 @@ test('a failed derived index write remains unindexed and directly searchable, wh
     while (fixed.pending) fixed = await core.search.rebuild({ sessionId: c.sessionId, batchSize: 8 });
     assert.equal(fixed.indexErrors.length, 0);
   } finally { fault?.close(); await core.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('retained opaque payloads stay out of search while actual readable descendants retain a disclosure path', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-search-opaque-')); const core = new CourseService(resolve('dist/worker.cjs'));
+  try {
+    const c = await core.open(root), ids = c.unit.reading.blocks.map(b => b.id);
+    await core.commitEdit({ sessionId: c.sessionId, operationId: 'opaque-search', inputSeq: 1, baseRevision: 1, complete: true, changes: [], patch: { updates: [], correspondence: [], structure: { parentId: c.unit.id, before: ids, after: [...ids, 'retained-container'], inserted: [{ id: 'retained-container', kind: 'unsupported-container', payload: { hidden: '隐藏载荷唯一词' }, children: [{ id: 'visible-descendant', kind: 'paragraph', payload: { text: '实际可读子段落唯一词' } }] }] } } });
+    const child = await core.search.query({ sessionId: c.sessionId, query: '实际可读子段落' });
+    assert.equal(child.hits[0]?.blockId, 'visible-descendant');
+    assert.deepEqual(child.hits[0].disclosure, ['retained-container:retained']);
+    assert.equal((await core.search.query({ sessionId: c.sessionId, query: '隐藏载荷唯一词' })).hits.length, 0);
+  } finally { await core.close(); await rm(root, { recursive: true, force: true }); }
 });

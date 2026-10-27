@@ -28,8 +28,11 @@ export function knowledgeFields(unit: CourseUnit): ReadableField[] {
         p.config.nodes.forEach((n: any, i: number) => add(`config.nodes.${i}.label`, n.label));
       } else if (block.kind === 'interactive' && ['mux', 'decoder', 'kmap'].includes(p.component)) add('title', p.title);
       const childrenPath = ['example', 'exercise'].includes(block.kind) ? [...disclosure, id, ...(block.kind === 'exercise' ? [`${id}:answer`] : [])] : disclosure;
-      // Unknown renderers only show retained JSON; those bytes aren't readable course prose.
       if (['callout', 'steps', 'example', 'exercise'].includes(block.kind)) walk(block.children ?? [], childrenPath);
+      // The fallback reader discloses retained JSON plus real child blocks. Index only those readable descendants.
+      else if (!['paragraph', 'formula', 'table', 'knowledge-reference'].includes(block.kind) &&
+        !(block.kind === 'figure' && (p.asset || p.config?.nodes)) &&
+        !(block.kind === 'interactive' && ['mux', 'decoder', 'kmap'].includes(p.component))) walk(block.children ?? [], [...disclosure, `${id}:retained`]);
     }
   };
   walk(unit.reading.blocks, []); return result;

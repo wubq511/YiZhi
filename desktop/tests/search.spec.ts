@@ -109,3 +109,31 @@ test('source result opens the fixed original page without creating an annotation
     await expect(page.locator('.source-panel canvas')).toHaveAttribute('aria-label', '固定版本测试资料 · PDF 第 2 页');
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
+
+test('a changed or unreadable result is rejected, and exact original repair restores searchable source pages', async () => {
+  const { sourceFixture } = await import('./source-fixture');
+  const { CourseService } = await import('../src/core/course-service');
+  const { writeFile } = await import('node:fs/promises');
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-search-repair-ui-')), path = join(root, 'original.pdf');
+  await sourceFixture(path, 'Literal damaged original evidence');
+  const core = new CourseService(resolve('dist/worker.cjs')), c = await core.open(join(root, 'course'));
+  const version = (await core.sources.importFile({ sessionId: c.sessionId, operationId: 'repair-source-ui', generation: 1, path, title: '待修复资料' })).version;
+  await core.close();
+  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  try {
+    const page = await app.firstWindow(); await resizeBoardWindow(app, page);
+    await page.getByRole('button', { name: '搜索课程', exact: true }).click();
+    await page.getByRole('searchbox').fill('damaged original');
+    await expect(page.getByRole('button', { name: '定位命中' })).toBeVisible();
+    await writeFile(join(root, 'course/resources', version.sha256), 'damaged bytes');
+    await page.getByRole('button', { name: '定位命中' }).click();
+    await expect(page.getByRole('alert')).toContainText('损坏');
+    await page.getByText('未覆盖与不可读内容', { exact: true }).click();
+    await expect(page.getByRole('button', { name: '从原件修复此版本' })).toBeVisible();
+    await app.evaluate(({ dialog }, path) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] }); }, path);
+    await page.getByRole('button', { name: '从原件修复此版本' }).click();
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    await page.getByRole('button', { name: '定位命中' }).click();
+    await expect(page.locator('.source-panel [data-search-current="true"]')).toContainText('damaged original');
+  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+});
