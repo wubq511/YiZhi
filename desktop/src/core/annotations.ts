@@ -177,6 +177,27 @@ export class Annotations {
     });
     return { original: structuredClone(selection), locations };
   }
+  private createStored(selection: AnnotationSelection): Stored {
+        const { original, locations } = this.capture(selection);
+        const now = new Date().toISOString();
+        const stored: Stored = { note: { id: randomUUID(), text: '', version: 1, original, originalVersions: locations.map(l => l.version), current: { status: 'attached', fragments: locations }, createdAt: now, updatedAt: now }, lineage: [structuredClone(locations)] };
+        const all: Head[] = this.db.prepare('SELECT value FROM annotation_heads').all().map(r => parse(r.value));
+        for (const step of this.db.prepare('SELECT value FROM annotation_steps ORDER BY seq').all()) advance(stored, parse(step.value), all);
+        // A durable student projection that has not been formalized keeps its own original basis.
+        for (const l of stored.note.current.fragments) if (!all.some(h => h.block.id === l.blockId && h.version === l.version)) {
+          l.status = 'orphan'; l.reason = '选区来自旧版本或保留草稿，待重新关联';
+        }
+        stored.note.current.status = stored.note.current.fragments.every(l => l.status === 'attached') ? 'attached' : 'orphan';
+        return stored;
+  }
+  /** Internal composition: caller owns the encompassing formal transaction and receipt. */
+  createDrawingRange(selection: AnnotationSelection): PersonalNote {
+        const stored = this.createStored(selection);
+        stored.note.text = '荧光笔标注';
+        this.db.prepare('INSERT INTO personal_notes VALUES(?,?)').run(stored.note.id, json(stored));
+        appendEvent(this.db, { type: 'annotation.changed', noteId: stored.note.id });
+        return stored.note;
+  }
   dispatch(action: string, request: any): any {
     if (action === 'annotations:list') return this.db.prepare('SELECT value FROM personal_notes ORDER BY rowid').all().map(r => parse(r.value).note);
     if (action === 'annotations:query') { const r = this.db.prepare('SELECT result FROM annotation_operations WHERE id=?').get(request.operationId); return r ? parse(r.result) : null; }
@@ -187,16 +208,7 @@ export class Annotations {
       if (prior) { if (prior.digest !== digest) throw new Error('同一操作不能换用不同笔记内容'); return parse(prior.result); }
       let stored: Stored;
       if (action === 'annotations:create') {
-        const { original, locations } = this.capture(request.selection);
-        const now = new Date().toISOString();
-        stored = { note: { id: randomUUID(), text: '', version: 1, original, originalVersions: locations.map(l => l.version), current: { status: 'attached', fragments: locations }, createdAt: now, updatedAt: now }, lineage: [structuredClone(locations)] };
-        const all: Head[] = this.db.prepare('SELECT value FROM annotation_heads').all().map(r => parse(r.value));
-        for (const step of this.db.prepare('SELECT value FROM annotation_steps ORDER BY seq').all()) advance(stored, parse(step.value), all);
-        // A durable student projection that has not been formalized keeps its own original basis.
-        for (const l of stored.note.current.fragments) if (!all.some(h => h.block.id === l.blockId && h.version === l.version)) {
-          l.status = 'orphan'; l.reason = '选区来自旧版本或保留草稿，待重新关联';
-        }
-        stored.note.current.status = stored.note.current.fragments.every(l => l.status === 'attached') ? 'attached' : 'orphan';
+        stored = this.createStored(request.selection);
       } else {
         const row = this.db.prepare('SELECT value FROM personal_notes WHERE id=?').get(request.id);
         if (!row) throw new Error('笔记不存在');

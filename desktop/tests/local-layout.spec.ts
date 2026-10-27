@@ -190,6 +190,7 @@ test('layout persistence failure retains the visible placement and retry confirm
   const root = await mkdtemp(join(tmpdir(), 'yizhi-layout-ui-fault-'));
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   let fault: DatabaseSync | undefined;
+  let completed=false;
   try {
     const page = await app.firstWindow();
     await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
@@ -199,12 +200,13 @@ test('layout persistence failure retains the visible placement and retry confirm
     await width.focus(); await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('status', { name: '布局状态' })).toHaveText('布局未保存');
     await expect(width).toHaveAttribute('aria-valuenow', '674');
-    await app.evaluate(({ app }) => app.quit());
+    await app.evaluate(({ app, ipcMain }) => { (globalThis as any).layoutCloseResult=null; ipcMain.once('window:close-result',(_event,result)=>{(globalThis as any).layoutCloseResult=result.saved;}); app.quit(); });
+    await expect.poll(()=>app.evaluate(()=> (globalThis as any).layoutCloseResult)).toBe(false);
     await expect(page.getByRole('status', { name: '布局状态' })).toHaveText('布局未保存');
     fault.exec('DROP TRIGGER reject_ui_layout');
     await page.getByRole('button', { name: '重试保存布局' }).click();
     await expect(page.getByRole('status', { name: '布局状态' })).toHaveText('布局已保存');
     const saved = await page.evaluate(async () => { const b = (window as any).yizhi; const c = await b.open(); return (await b.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-001'); });
-    expect(saved.width).toBe(674);
-  } finally { fault?.close(); await app.close(); await rm(root, { recursive: true, force: true }); }
+    expect(saved.width).toBe(674);completed=true;
+  } finally { fault?.exec('DROP TRIGGER IF EXISTS reject_ui_layout');fault?.close(); if(completed)await app.close();else app.process().kill('SIGKILL'); await rm(root, { recursive: true, force: true }); }
 });
