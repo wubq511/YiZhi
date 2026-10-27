@@ -4,6 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync, realpathSync, lstat
 import { join, resolve, dirname, basename, relative } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { hashFile, publishResource } from './immutable-resource';
+import { validateRelationGraph } from './relation-validation';
 import { withPdf } from './source-pdf';
 import type { CourseGraph, CourseUnit, ReadingBlock } from '../shared';
 import type { SourceVersion } from '../sources-api';
@@ -64,6 +65,17 @@ function graphFor(knowledge: any, layout: any): CourseGraph {
 }
 function validate(knowledge: any, graph: CourseGraph) {
   if (knowledge.schemaVersion !== 'midterm-map-1' || !knowledge.units.length || !knowledge.units.some((u: any) => u.id === 'KU-001')) throw new Error('不支持的旧课程格式或缺少首单元');
+  for (const name of ['themes','units','questions','mappings','relations','sources','requirementGroups']) {
+    const items = knowledge[name] ?? [];
+    if (!Array.isArray(items) || items.some((item: any) => !item.id) || new Set(items.map((item: any) => item.id)).size !== items.length) throw new Error('课程稳定身份缺失或重复: '+name);
+  }
+  const refs = (value: any) => { if (Array.isArray(value)) value.forEach(refs); else if (value && typeof value === 'object') {
+    if (Array.isArray(value.sourceRefs)) for (const ref of value.sourceRefs) {
+      if (!knowledge.sources.some((s: any) => s.id === ref.sourceId && s.versions?.some((v: any) => v.id === ref.versionId))) throw new Error('固定来源版本不存在');
+    }
+    Object.values(value).forEach(refs);
+  } }; refs(knowledge);
+  validateRelationGraph(graph, knowledge.sources, (knowledge.retiredUnits ?? []).map((u: any) => u.id));
   const ids = new Set(graph.nodes.map(n => n.id)), blocks = new Set<string>();
   if (ids.size !== graph.nodes.length || knowledge.retiredUnits?.some((u: any) => ids.has(u.id))) throw new Error('稳定身份重复或恢复了退休身份');
   const walk = (list: ReadingBlock[]) => { for (const block of list) {
@@ -75,7 +87,7 @@ function validate(knowledge: any, graph: CourseGraph) {
     if (u.reading?.schemaVersion !== 'review-reading-1' || !Array.isArray(u.reading.blocks)) throw new Error('单元正文缺失或格式不支持');
     if (!graph.groups.some(g => g.id === (u.themeId ?? u.theme?.id))) throw new Error('单元主题不存在'); walk(u.reading.blocks);
   }
-  if (graph.layout.nodes.length !== ids.size || graph.layout.nodes.some(n => !ids.has(n.unitId))) throw new Error('布局缺少单元或含失效身份');
+  if (graph.layout.nodes.length !== ids.size || new Set(graph.layout.nodes.map(n => n.unitId)).size !== ids.size || graph.layout.nodes.some(n => !ids.has(n.unitId))) throw new Error('布局缺少单元或含失效身份');
   for (const e of graph.edges) if (!ids.has(e.fromUnitId) || !ids.has(e.toUnitId)) throw new Error('正式关系端点不存在');
   const questions = new Set(knowledge.questions.map((q: any) => q.id));
   for (const m of knowledge.mappings) if (!ids.has(m.unitId) || !questions.has(m.questionId)) throw new Error('题目映射目标不存在');
@@ -110,6 +122,7 @@ export async function convertLegacy(request: MigrationTarget, scheduling?: impor
       const resources = join(stage, 'resources');
       const copy = async (path: string, expected?: string) => publishResource(resources, path, async () => {}, expected);
       for (const source of knowledge.sources) for (const version of source.versions ?? []) {
+        if (!/^[a-f0-9]{64}$/.test(version.sha256)) throw new Error('固定来源版本缺少有效 SHA-256');
         if (byVersion.has(version.id)) throw new Error('来源版本身份重复');
         const path = coursePath(root, version.path), copied = await copy(path, version.sha256);
         report.sourceHashes[version.path] = copied.sha256;
@@ -186,6 +199,7 @@ export async function convertLegacy(request: MigrationTarget, scheduling?: impor
       for (const [file, hash] of Object.entries(report.sourceHashes)) if (hashFile(coursePath(root,file)).sha256 !== hash) throw new Error('转换期间源课程发生变化');
       for (const item of report.resources) if (hashFile(coursePath(stage,item.path)).sha256 !== item.sha256) throw new Error('候选资源校验失败');
       if (child.exitCode !== null || child.killed) throw new Error('源课程写入锁租约已丢失');
+      const resourcesFd = openSync(resources,'r'); try { fsyncSync(resourcesFd); } finally { closeSync(resourcesFd); }
       db.exec('COMMIT'); db.close(); db = undefined;
       durableFile(join(stage, 'content-candidate.json'), json(report));
       const stageFd = openSync(stage,'r'); try { fsyncSync(stageFd); } finally { closeSync(stageFd); }

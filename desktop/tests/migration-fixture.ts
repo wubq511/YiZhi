@@ -28,6 +28,11 @@ export async function legacyFixture(root: string) {
   const layout = { schemaVersion: 'midterm-layout-1', groups: [], edges: [], nodes: [
     { unitId: 'KU-001', x: 104, y: 168, width: 650, height: 86 }, { unitId: 'KU-086', x: 900, y: 168, width: 650, height: 86 }] };
   const manifest = { schemaVersion: 'review-course-1', courseId: 'COURSE-FIXTURE', name: '测试课程', knowledge: 'data/map.json', layout: 'data/layout.json', state: '.review-board/state.sqlite3' };
+  const localRefs = (value: any) => { if (Array.isArray(value)) value.forEach(localRefs); else if (value && typeof value === 'object') {
+    if (Array.isArray(value.sourceRefs)) value.sourceRefs = value.sourceRefs.map((ref: any) => ({ ...ref, sourceId:'SRC-TEST', versionId:'VER-TEST', pdfPages:[1] }));
+    Object.values(value).forEach(localRefs);
+  } };
+  localRefs(knowledge);
   await writeFile(join(root, '课程.json'), JSON.stringify(manifest));
   await writeFile(join(root, 'data/map.json'), JSON.stringify(knowledge));
   await writeFile(join(root, 'data/layout.json'), JSON.stringify(layout));

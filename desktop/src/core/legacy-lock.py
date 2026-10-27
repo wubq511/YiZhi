@@ -77,6 +77,9 @@ def main():
                     if dst.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
                         raise ValueError('旧状态数据库副本校验失败')
                 files[manifest['state']] = hashlib.file_digest(output.open('rb'), 'sha256').hexdigest()
+            for rel, expected in files.items():
+                if rel != manifest['state'] and hashlib.file_digest(inside(root, rel).open('rb'), 'sha256').hexdigest() != expected:
+                    raise ValueError('复制完成前源课程发生变化：' + rel)
             (target / '.review-board').mkdir(exist_ok=True)
             (target / '.review-board/service.lock').touch()
             inside(target.resolve(), manifest['knowledge'] + '.content.lock').touch()

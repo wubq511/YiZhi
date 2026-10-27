@@ -165,3 +165,16 @@ test('missing or changed real resources never publish a candidate or modify lega
     await assert.rejects(core.migration.resource({sessionId:reopened.sessionId,asset:'../../unregistered'}),/未登记/);
   } finally {await core.close();await rm(root,{recursive:true,force:true});}
 });
+
+test('fixed references and layout identities are checked before a candidate can be published', async () => {
+  const {readFile,writeFile,readdir}=await import('node:fs/promises');
+  const root=await mkdtemp(join(tmpdir(),'yizhi-migration-refs-'));const core=new CourseService(resolve('dist/worker.cjs'));
+  try {
+    const source=join(root,'source'),target=join(root,'candidate');await legacyFixture(source);
+    const path=join(source,'data/map.json'),knowledge=JSON.parse(await readFile(path,'utf8'));
+    knowledge.units[1].reading.blocks[0].sourceRefs=[{sourceId:'SRC-TEST',versionId:'VER-NOT-REGISTERED',pdfPages:[1]}];
+    await writeFile(path,JSON.stringify(knowledge));
+    await assert.rejects(core.migration.convert({sourceDirectory:source,directory:target}),/固定来源版本不存在/);
+    assert.deepEqual(await readdir(root),['source']);
+  } finally {await core.close();await rm(root,{recursive:true,force:true});}
+});
