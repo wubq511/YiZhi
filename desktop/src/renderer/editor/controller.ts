@@ -36,7 +36,13 @@ export class ContinuousEditor {
   private protectedIds = new Set<string>();
   private desiredIds = new Set<string>();
   private engaged = false;
+  private protectionFailed = false;
   private destroyed = false;
+  private outsidePointer = (event: PointerEvent) => {
+    if (this.engaged && !this.editor.view.dom.closest('.continuous-editor')?.contains(event.target as globalThis.Node)) {
+      this.engaged = false; this.setProtection([], 'editing');
+    }
+  };
   private shown = new Map<string, { revision: number; version?: number; block: ReadingBlock }>();
   constructor(element: HTMLElement, private course: OpenedCourse, private channel: ParagraphSaveChannel, private options: EditorOptions) {
     channel.useContentPatches();
@@ -90,6 +96,8 @@ export class ContinuousEditor {
     // Paragraph aliases remain programmatically focusable for accessibility/legacy IPC tests,
     // while ProseMirror owns the single native editing focus and selection observer.
     this.editor.view.dom.addEventListener('focusin', event => {
+      const formula = (event.target as HTMLElement).closest<HTMLElement>('.editor-formula');
+      if (formula?.dataset.blockId) { this.engaged = true; this.setProtection([formula.dataset.blockId], 'editing'); }
       if ((event.target as HTMLElement).matches('p[data-block-id]')) queueMicrotask(() => {
         const selection = getSelection(), range = selection?.rangeCount ? selection.getRangeAt(0).cloneRange() : null;
         this.editor.view.dom.focus({ preventScroll: true });
@@ -97,6 +105,7 @@ export class ContinuousEditor {
       });
     });
     element.addEventListener('formula-exit', () => this.editor.commands.focus());
+    document.addEventListener('pointerdown', this.outsidePointer, true);
   }
   /** Actual shown projection for T07. Never substitutes the latest open() body for held DOM offsets. */
   captureSelection() {
@@ -123,8 +132,8 @@ export class ContinuousEditor {
   }
   private protectionMode?: 'editing' | 'selection';
   private setProtection(ids: string[], mode: 'editing' | 'selection') {
-    if (equal([...this.desiredIds], ids) && this.protectionMode === mode) return;
-    const removed = [...this.desiredIds].some(id => !ids.includes(id));
+    if (equal([...this.desiredIds], ids) && this.protectionMode === mode && !this.protectionFailed) return;
+    const removed = [...this.protectedIds].some(id => !ids.includes(id));
     this.desiredIds = new Set(ids); this.protectionMode = mode;
     for (const id of ids) this.protectedIds.add(id);
     const sequence = ++this.protectionSequence;
@@ -133,16 +142,16 @@ export class ContinuousEditor {
       if (removed) {
         await this.channel.flush();
         const p = this.channel.progress();
-        if (p.inputSeq > p.durableInputSeq || this.composing) return;
+        if (p.inputSeq > p.durableInputSeq || this.composing) { this.protectionFailed = true; return; }
       }
       await this.options.commands.protect({ sessionId: this.course.sessionId, editorId: this.editorId, sequence, blockIds: ids, mode,
         inputSeq: this.channel.progress().inputSeq });
-      if (sequence === this.protectionSequence) this.protectedIds = new Set(ids);
+      if (sequence === this.protectionSequence) { this.protectedIds = new Set(ids); this.protectionFailed = false; }
       if (removed) {
         this.options.status(await this.options.commands.recheck({ sessionId: this.course.sessionId }));
         this.reconcile(await this.channel.snapshot());
       }
-    }).catch(error => this.options.status([{ candidateId: 'input-barrier', status: 'waiting', reason: (error as Error).message, objectIds: [...this.protectedIds] }]));
+    }).catch(error => { this.protectionFailed = true; this.options.status([{ candidateId: 'input-barrier', status: 'waiting', reason: (error as Error).message, objectIds: [...this.protectedIds] }]); });
   }
   settleProtection() { return this.protectionWork; }
   async inputConflicts() {
@@ -177,8 +186,13 @@ export class ContinuousEditor {
     this.options.status(await this.options.commands.recheck({ sessionId: snapshot.sessionId }));
   }
   private changed(correspondence: ContentPatch['correspondence'] = [], external = false) {
-    if (this.composing) return;
     const current = blocksOf(this.editor.state.doc);
+    if (this.composing) {
+      // An independent mapped transaction is already formal. It must not become part of
+      // the student's later composition delta, while the live composing range keeps its old basis.
+      if (external) this.previous = this.previous.map(block => this.protectedIds.has(block.id) ? block : current.find(b => b.id === block.id) ?? block);
+      return;
+    }
     const patch = delta(this.previous, current, this.course.unit.id, correspondence);
     if (!external && (patch.updates.length || patch.structure)) {
       // Exact adjacent joins are proven by the actual edited before/after documents.
@@ -244,12 +258,13 @@ export class ContinuousEditor {
   reconcile(snapshot: OpenedCourse): boolean {
     if (snapshot.revision < this.course.revision) return true;
     this.course = snapshot;
+    if (this.protectionFailed && !this.composing) this.setProtection([...this.desiredIds], this.protectionMode ?? 'editing');
     const current = blocksOf(this.editor.state.doc), next = snapshot.unit.reading.blocks;
     const structural = !equal(current.map(b => b.id), next.map(b => b.id));
-    if (structural && (this.composing || this.protectedIds.size || this.channel.pendingTargets().size)) { this.pending = snapshot; return false; }
+    const deferStructure = structural && !!(this.composing || this.protectedIds.size || this.channel.pendingTargets().size);
     let tr = this.editor.state.tr;
-    let blocked = false;
-    if (structural) {
+    let blocked = deferStructure;
+    if (structural && !deferStructure) {
       // Identity-preserving moves/deletions, rather than replacing the document or its editor state.
       for (let index = 0; index < next.length; index++) {
         const incoming = next[index];
@@ -269,6 +284,7 @@ export class ContinuousEditor {
     tr.doc.forEach((node, pos) => positions.push({ node, pos }));
     for (const { node, pos } of positions.reverse()) {
       const incoming = next.find(b => b.id === node.attrs.block.id)!;
+      if (!incoming) { blocked = true; continue; }
       const displayed = current.find(b => b.id === incoming.id);
       if (equal(displayed, incoming)) { this.shown.set(incoming.id, { revision: snapshot.revision, version: snapshot.blockVersions?.[incoming.id], block: structuredClone(incoming) }); continue; }
       if (this.protectedIds.has(incoming.id) || this.drafts.has(incoming.id) || this.channel.pendingTargets().has(incoming.id)) { blocked = true; continue; }
@@ -285,5 +301,5 @@ export class ContinuousEditor {
     return !blocked;
   }
   async finish() { if (this.composing) return false; this.engaged = false; this.setProtection([], 'editing'); await this.settleProtection(); return this.channel.progress().inputSeq <= this.channel.progress().durableInputSeq; }
-  destroy() { this.destroyed = true; this.editor.destroy(); }
+  destroy() { this.destroyed = true; document.removeEventListener('pointerdown', this.outsidePointer, true); this.editor.destroy(); }
 }

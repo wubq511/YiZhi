@@ -189,14 +189,15 @@ export function commitEdit(db: DatabaseSync, command: EditCommand, afterWrite?: 
     }
     const row = db.prepare('SELECT payload, revision FROM units WHERE id=?').get('KU-001')!;
     const unit: CourseUnit = JSON.parse(String(row.payload));
+    if (command.baseRevision > Number(row.revision)) throw new Error('正文版本尚不存在，输入仍保留');
     const stale = Number(row.revision) !== command.baseRevision;
     if (stale && (!command.patch || command.changes.length || command.splits?.length)) throw new Error('正文版本已变化，输入仍保留，请重新核对');
     const patch = command.patch && structuredClone(command.patch);
-    if (stale && patch) for (const update of patch.updates) {
+    if (patch) for (const update of patch.updates) {
       const block = unit.reading.blocks.find(b => b.id === update.blockId);
       if (!block) throw new Error('共同结构已变化，学生草稿仍保留');
       const merged = integrateValue(update.before, block.payload, update.after);
-      if (!merged.compatible) throw new Error(`同处内容不兼容：${block.id}；正式记录与学生草稿均保留`);
+      if (!merged.compatible) throw new Error('当前段落的同时修改不兼容，正式内容与学生草稿均已保留。请在正文处理冲突部分。');
       update.before = block.payload; update.after = merged.value;
     }
     const editorEffect = patch ? applyContentPatch(db, unit, patch) : undefined;

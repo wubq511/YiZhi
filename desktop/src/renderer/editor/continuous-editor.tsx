@@ -54,7 +54,8 @@ export function ContinuousUnitEditor({ course, channel, disabled, saveError, com
       <button disabled={disabled} onClick={() => instance.current?.splitFirst()}>拆分首段为两段</button>
     </div>
     {checks.length > 0 && <div className="editor-integration" role="status" aria-label="同时修改处理">
-      {checks.map(check => <div key={check.candidateId}><p>{check.status === 'committed' ? '已根据最新学生输入整合同时修改。' : check.reason}</p>
+      {checks.map(check => <div key={check.candidateId}><p>{check.status === 'committed' ? '已根据最新学生输入整合同时修改。' : check.status === 'conflict'
+        ? check.reason?.includes('读取依据') ? '这项修改依赖的内容已改变，需要重新推导。当前内容继续保留。' : '此处内容与学生输入不兼容。双方内容均已保留，请选择冲突部分的内容。' : check.reason}</p>
         {check.status === 'conflict' && <><dl>{check.parts?.map(part => <div key={part.objectId}><dt>当前内容</dt><dd>{text(part.current)}</dd><dt>同时修改的候选</dt><dd>{text(part.incoming)}</dd></div>)}</dl>
           <button disabled={resolving} onClick={() => void resolve(() => instance.current!.resolveCandidate(check.candidateId, 'current'))}>保留当前内容</button>
           {!check.reason?.includes('读取依据') && <button disabled={resolving} onClick={() => void resolve(() => instance.current!.resolveCandidate(check.candidateId, 'incoming'))}>此处使用外部修改</button>}</>}

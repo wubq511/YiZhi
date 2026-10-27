@@ -3,6 +3,15 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { CourseService } from '../src/core/course-service';
+import type { ElectronApplication } from '@playwright/test';
+
+async function finish(app: ElectronApplication) {
+  if (app.process().exitCode !== null || app.process().signalCode !== null) return;
+  const page = app.windows()[0];
+  if (page && await page.getByRole('status', { name: '保存状态' }).innerText({ timeout: 500 }).catch(() => '') === '未保存') {
+    const exited = new Promise<void>(done => app.process().once('exit', () => done())); app.process().kill('SIGKILL'); await exited;
+  } else await app.close();
+}
 
 test('actual cross-paragraph selection holds the shown basis while independent formal changes arrive and aligns only after leaving', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-protected-ui-'));
@@ -40,7 +49,44 @@ test('actual cross-paragraph selection holds the shown basis while independent f
     expect(capture.fragments[0].contentVersion).toBe(before.blockVersions[before.unit.reading.blocks[0].id]);
     await page.getByRole('button', { name: '收起目录', exact: true }).click();
     await expect(editor.locator('p[data-block-id]').first()).toHaveText('外部已保存，选文仍显示原文');
-  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+  } finally { await finish(app); await rm(root, { recursive: true, force: true }); }
+});
+
+test('real persisted overlapping versions expose only the conflict and the student choice saves through host IPC without replacing the editor', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-conflict-ui-'));
+  const service = new CourseService(resolve('dist/worker.cjs'));
+  try {
+    const c = await service.open(join(root, 'course')), a = c.unit.reading.blocks[0];
+    const attempt = await service.commands.startAttempt({ sessionId: c.sessionId, taskId: 'conflict-ui' });
+    const basis = await service.commands.read({ sessionId: c.sessionId, attemptId: attempt.attemptId, objectIds: [a.id] });
+    const value = basis.objects.find(o => o.id === a.id)!.value;
+    await service.commands.commit({ sessionId: c.sessionId, attemptId: attempt.attemptId, basisId: basis.basisId, operationId: 'conflict-ui',
+      changes: [{ objectId: a.id, value: { ...value, payload: { ...a.payload, text: '外部的真实已保存版本' } } }] });
+    await service.saveDraft({ sessionId: c.sessionId, inputSeq: 1, baseRevision: 1, complete: true, changes: [], patch: {
+      updates: [{ blockId: a.id, before: a.payload, after: { ...a.payload, text: '学生的真实已保存草稿' } }], correspondence: [] } });
+  } finally { await service.close(); }
+  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  try {
+    const page = await app.firstWindow();
+    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    const editor = page.getByRole('textbox', { name: '连续编辑正文', exact: true });
+    const instance = await editor.evaluateHandle((el: any) => el.editor);
+    const conflict = page.getByRole('region', { name: '学生草稿冲突', exact: true });
+    await expect(conflict).toContainText('外部的真实已保存版本');
+    await expect(conflict).toContainText('学生的真实已保存草稿');
+    await page.setViewportSize({ width: 700, height: 700 });
+    // Viewport emulation only; not physical input/device acceptance.
+    const closeDirectory = page.getByRole('button', { name: '关闭目录', exact: true });
+    if (await closeDirectory.isVisible()) await closeDirectory.click();
+    await conflict.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t06-conflict-narrow.png' });
+    await conflict.getByRole('button', { name: '冲突处保留学生草稿', exact: true }).click();
+    await expect(editor.locator('p[data-block-id]').first()).toHaveText('学生的真实已保存草稿');
+    await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
+    expect(await editor.evaluate((el: any, old: any) => el.editor === old, instance)).toBe(true);
+    expect((await page.evaluate(() => (window as any).yizhi.open())).drafts).toEqual([]);
+    await instance.dispose();
+  } finally { await finish(app); await rm(root, { recursive: true, force: true }); }
 });
 
 test('synthetic composition regression uses real IPC: independent range renders, common ancestor waits, and only student input enters student history', async () => {
@@ -88,6 +134,9 @@ test('synthetic composition regression uses real IPC: independent range renders,
       expect((history[0].after as any).blocks.map((b: any) => b.id)).toEqual([c.unit.reading.blocks[0].id]);
       expect(c.unit.reading.blocks[0].payload.text).toMatch(/^中文候选/);
     } finally { await service.close(); }
+  } catch (error) {
+    if (!closed) { const exited = new Promise<void>(done => app.process().once('exit', () => done())); app.process().kill('SIGKILL'); await exited; closed = true; }
+    throw error;
   } finally { if (!closed) await app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
@@ -133,5 +182,5 @@ test('caret pause and application blur retain the same paragraph, independent up
     editor = page.getByRole('textbox', { name: '连续编辑正文', exact: true });
     await expect(editor.locator('p[data-block-id]').first()).toHaveText(original.unit.reading.blocks[0].payload.text + ' 外部后缀');
     expect((await page.evaluate(() => (window as any).yizhi.open())).unit).toEqual(saved.unit);
-  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+  } finally { await finish(app); await rm(root, { recursive: true, force: true }); }
 });

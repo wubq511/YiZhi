@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { CourseService } from '../src/core/course-service';
 import { ParagraphSaveChannel } from '../src/renderer/save-channel';
+import { DatabaseSync } from 'node:sqlite';
 
 test('current paragraph protection retains its producer while an independent group commits; release rechecks the saved student basis', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-protection-'));
@@ -32,9 +33,60 @@ test('current paragraph protection retains its producer while an independent gro
     const saved = await service.read(c.sessionId);
     assert.equal(saved.unit.reading.blocks.find(x => x.id === a.id)!.payload.text, '学生补充 ' + a.payload.text + ' 外部补充');
     assert.equal(saved.unit.reading.blocks.find(x => x.id === b.id)!.payload.text, '独立部分照常更新');
+    const expected = structuredClone(c.unit);
+    expected.reading.blocks.find(x => x.id === a.id)!.payload.text = '学生补充 ' + a.payload.text + ' 外部补充';
+    expected.reading.blocks.find(x => x.id === b.id)!.payload.text = '独立部分照常更新';
+    assert.deepEqual(saved.unit, expected, 'opaque and unopened payloads keep their exact identity and content');
     assert.equal((await api.query({ sessionId: c.sessionId, operationId: 'waiting-a' })).status, 'retained', 'original operation remains immutable');
     assert.deepEqual(await api.recheck({ sessionId: c.sessionId }), [], 'resolved candidate cannot replay');
   } finally { await service.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('automatic recheck cannot relabel a changed non-target prerequisite, even when the target did not change', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-recheck-prerequisite-'));
+  const service = new CourseService(resolve('dist/worker.cjs'));
+  try {
+    const c = await service.open(root), [a, b] = c.unit.reading.blocks.filter(b => b.kind === 'paragraph'), api = service.commands;
+    const attempt = await api.startAttempt({ sessionId: c.sessionId, taskId: 'dependent-waiter' });
+    const basis = await api.read({ sessionId: c.sessionId, attemptId: attempt.attemptId, objectIds: [a.id, b.id] });
+    await api.protect({ sessionId: c.sessionId, editorId: 'dependent-editor', sequence: 1, blockIds: [b.id], mode: 'editing', inputSeq: 0 });
+    const command = { sessionId: c.sessionId, attemptId: attempt.attemptId, basisId: basis.basisId, operationId: 'dependent-waiter',
+      changes: [{ objectId: b.id, value: { ...basis.objects.find(o => o.id === b.id)!.value, payload: { ...b.payload, text: '根据旧前提推导的结果' } } }] };
+    assert.equal((await api.commit(command)).status, 'retained');
+    await service.commitEdit({ sessionId: c.sessionId, inputSeq: 1, baseRevision: 1, operationId: 'prerequisite-change', complete: true,
+      changes: [{ blockId: a.id, text: '前提已经改变' }] });
+    await api.protect({ sessionId: c.sessionId, editorId: 'dependent-editor', sequence: 2, blockIds: [], mode: 'editing', inputSeq: 1 });
+    const checked = await api.recheck({ sessionId: c.sessionId });
+    assert.equal(checked[0].status, 'conflict'); assert.ok(checked[0].reason!.includes(a.id));
+    await assert.rejects(api.resolveCandidate({ sessionId: c.sessionId, candidateId: command.operationId, basisRevision: 2, choice: 'incoming' }), /前提已变化/);
+    assert.equal((await service.read(c.sessionId)).unit.reading.blocks.find(x => x.id === b.id)!.payload.text, b.payload.text);
+  } finally { await service.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('a real final SQLite rejection rolls automatic integration, receipt, event and candidate consumption back together', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-recheck-atomic-'));
+  const service = new CourseService(resolve('dist/worker.cjs'));
+  let fault: DatabaseSync | undefined;
+  try {
+    const c = await service.open(root), a = c.unit.reading.blocks[0], api = service.commands;
+    const attempt = await api.startAttempt({ sessionId: c.sessionId, taskId: 'atomic-waiter' });
+    const basis = await api.read({ sessionId: c.sessionId, attemptId: attempt.attemptId, objectIds: [a.id] });
+    await api.protect({ sessionId: c.sessionId, editorId: 'atomic-editor', sequence: 1, blockIds: [a.id], mode: 'editing', inputSeq: 0 });
+    const command = { sessionId: c.sessionId, attemptId: attempt.attemptId, basisId: basis.basisId, operationId: 'atomic-waiter',
+      changes: [{ objectId: a.id, value: { ...basis.objects.find(o => o.id === a.id)!.value, payload: { ...a.payload, text: a.payload.text + ' 已核对补充' } } }] };
+    await api.commit(command);
+    await api.protect({ sessionId: c.sessionId, editorId: 'atomic-editor', sequence: 2, blockIds: [], mode: 'editing', inputSeq: 0 });
+    fault = new DatabaseSync(join(root, 'course.sqlite'));
+    fault.exec("CREATE TRIGGER fail_recheck AFTER INSERT ON cg_resolved BEGIN SELECT RAISE(ABORT, 'integration final failure'); END");
+    await assert.rejects(api.recheck({ sessionId: c.sessionId }), /integration final failure/);
+    assert.deepEqual((await service.read(c.sessionId)).unit, c.unit);
+    assert.deepEqual(await api.history({ sessionId: c.sessionId }), []);
+    assert.equal((await api.candidates({ sessionId: c.sessionId })).length, 1);
+    fault.exec('DROP TRIGGER fail_recheck');
+    assert.equal((await api.recheck({ sessionId: c.sessionId }))[0].status, 'committed');
+    assert.equal((await api.history({ sessionId: c.sessionId })).length, 1);
+    assert.deepEqual(await api.recheck({ sessionId: c.sessionId }), []);
+  } finally { fault?.close(); await service.close(); await rm(root, { recursive: true, force: true }); }
 });
 
 test('leave rechecks real prerequisites and attempt eligibility, asks only incompatible groups, and never splits a necessary consistency group', async () => {
@@ -116,6 +168,8 @@ test('external commit before student IPC keeps its history, merges a compatible 
     const states: any[] = [];
     channel = new ParagraphSaveChannel(service, c, s => states.push(s), { pollMs: 0 });
     channel.useContentPatches();
+    // The formal event can be known while a held DOM still shows its original projection.
+    await channel.synchronize();
     channel.edit({ changes: [], patch: { updates: [{ blockId: a.id, before: a.payload, after: { ...a.payload, text: '学生前部 ' + a.payload.text } }], correspondence: [] } });
     assert.notEqual(states.at(-1).status, 'saved');
     assert.equal(await channel.flush(), true);
