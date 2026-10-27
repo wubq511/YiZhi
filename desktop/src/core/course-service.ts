@@ -1,3 +1,4 @@
+import { migrationClient } from '../migration-api';
 import { extensionsClient } from '../extensions-api';
 import { experimentsClient } from '../experiments-api';
 import { agentClient, type AgentEvent, type AgentTask } from '../agent-api';
@@ -10,6 +11,7 @@ import type { CourseGraph, CourseUnit, ReadingState, OpenedCourse, SaveParagraph
 
 /** One instance belongs to the application host, shared by all its windows/courses. */
 export class CourseService {
+  readonly migration = migrationClient((action, payload) => this.request(action, payload));
   readonly extensions = extensionsClient((action, payload) => this.request(action, payload));
   readonly experiments = experimentsClient((action, payload) => this.request(action, payload));
   readonly agent = agentClient((action, payload) => this.request(action, payload));
@@ -26,7 +28,7 @@ export class CourseService {
   private stopped = false;
   private closing?: Promise<void>;
   private failure?: Error;
-  constructor(workerPath: string, options?: { parseScheduling?: ParseScheduling }) {
+  constructor(workerPath: string, options?: { parseScheduling?: ParseScheduling; migrationScheduling?: import('../migration-api').MigrationScheduling }) {
     this.worker = new Worker(workerPath, { workerData: options });
     this.worker.on('message', message => {
       const waiter = this.pending.get(message.id);

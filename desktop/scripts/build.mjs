@@ -33,3 +33,5 @@ await cp('licenses', 'dist/licenses', { recursive: true });
 for (const file of await readdir('fixtures')) await copyFile(`fixtures/${file}`, `dist/fixtures/${file}`);
 
 await cp('src/extensions/packages', 'dist/extensions', { recursive: true });
+
+await copyFile('src/core/legacy-lock.py', 'dist/legacy-lock.py');
