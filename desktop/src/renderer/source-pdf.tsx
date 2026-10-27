@@ -1,3 +1,4 @@
+import type { SearchHit } from '../search-api';
 import { useEffect, useRef } from 'react';
 import { getDocument, GlobalWorkerOptions, PDFDataRangeTransport, TextLayer, type PDFDocumentLoadingTask, type RenderTask } from 'pdfjs-dist';
 import type { PageViewport } from 'pdfjs-dist/types/src/display/page_viewport';
@@ -8,9 +9,9 @@ export type SourceSelection = Pick<CiteSource, 'projectionId' | 'start' | 'end' 
 export const resourceURL = (sessionId: string, versionId: string) => `yizhi-resource://course/${sessionId}/${versionId}`;
 
 /** One page, one canvas, one text layer; destroy the PDF worker/cache on page or version change. */
-export function SourcePdf({ sessionId, version, page, scale, regionMode, citation, onSelection, onReady, onError }: {
+export function SourcePdf({ sessionId, version, page, scale, regionMode, citation, searchHit, onSelection, onReady, onError }: {
   sessionId: string; version: SourceVersion; page: SourcePage; scale: number; regionMode: boolean;
-  citation?: SourceCitation | null;
+  citation?: SourceCitation | null; searchHit?: SearchHit;
   onSelection(value: SourceSelection | null): void; onReady(position?: { x: number; y: number }): void; onError(error: Error): void;
 }) {
   const container = useRef<HTMLDivElement>(null), layerRef = useRef<TextLayer | null>(null);
@@ -33,6 +34,16 @@ export function SourcePdf({ sessionId, version, page, scale, regionMode, citatio
         position = { x: Math.min(rect[0], rect[2]), y: Math.min(rect[1], rect[3]) };
         Object.assign(marker.style, { left: `${position.x}px`, top: `${position.y}px`, width: `${Math.abs(rect[2] - rect[0])}px`, height: `${Math.abs(rect[3] - rect[1])}px` });
         host.append(marker);
+      }
+      if (searchHit) {
+        if (searchHit.projectionId !== page.projection.id || searchHit.versionId !== version.versionId) throw new Error('来源文本版本已变化，请重新搜索');
+        const divs = layerRef.current?.textDivs ?? [];
+        page.projection.items.forEach((item, i) => {
+          if (item.end <= searchHit.start || item.start >= searchHit.end || !divs[i]) return;
+          const span = divs[i]; span.dataset.searchCurrent = 'true'; span.classList.add('source-search-highlight');
+          const box = span.getBoundingClientRect(), parent = host.getBoundingClientRect();
+          position ??= { x: box.x - parent.x, y: box.y - parent.y };
+        });
       }
       callbacks.current.onReady(position);
     };
@@ -129,7 +140,7 @@ export function SourcePdf({ sessionId, version, page, scale, regionMode, citatio
       render?.cancel(); textLayer?.cancel(); layerRef.current = null; viewportRef.current = null;
       void task?.destroy(); host.replaceChildren();
     };
-  }, [sessionId, version.versionId, page.pdfPageIndex, page.projection.id, scale, citation?.id]);
+  }, [sessionId, version.versionId, page.pdfPageIndex, page.projection.id, scale, citation?.id, searchHit]);
   const pdfRegion = (x0: number, y0: number, x1: number, y1: number) => {
     const box = container.current!.getBoundingClientRect();
     const clampX = (x: number) => Math.max(0, Math.min(box.width, x)), clampY = (y: number) => Math.max(0, Math.min(box.height, y));

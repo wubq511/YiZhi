@@ -1,3 +1,6 @@
+import { SearchPanel } from './search-panel';
+import type { SearchHit } from '../search-api';
+import { highlightSearch, paintFrame } from './search-location';
 import { AnnotationPanel, type AnnotationPanelHandle } from './annotation-panel';
 import { CameraController, type FollowState } from './camera-controller';
 import { useLocalLayout, ReadingSurface } from './local-layout';
@@ -58,31 +61,34 @@ function ReadingBoundary({ children }: { children: React.ReactNode }) {
   return <div data-reading-block ref={ref} inert={!visible && !focused} onFocus={() => setFocused(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>{children}</div>;
 }
 
-function Block({ block, onReference, reading, updateReading, onSource, experiment }: { block: ReadingBlock; experiment: { contentScope?: string; unitId: string; sessionId: string; active: boolean; disabled: boolean; composition?: (active: boolean) => void }; onReference: (id: string, blockId: string) => void; reading: ReadingState | null; updateReading: (key: string, value: boolean) => void; onSource: (button: HTMLButtonElement) => void }) {
+function Block(props: Parameters<typeof BlockContent>[0]) {
+  return <div data-search-block={props.block.id}><BlockContent {...props} /></div>;
+}
+function BlockContent({ block, onReference, reading, updateReading, onSource, experiment }: { block: ReadingBlock; experiment: { contentScope?: string; unitId: string; sessionId: string; active: boolean; disabled: boolean; composition?: (active: boolean) => void }; onReference: (id: string, blockId: string) => void; reading: ReadingState | null; updateReading: (key: string, value: boolean) => void; onSource: (button: HTMLButtonElement) => void }) {
   const payload = block.payload;
   const children = block.children?.map(child => <ReadingBoundary key={child.id}><Block block={child} experiment={experiment} onReference={onReference} onSource={onSource} reading={reading} updateReading={updateReading} /></ReadingBoundary>);
-  if (block.kind === 'paragraph') return <p>{payload.text}</p>;
-  if (block.kind === 'formula') return <div className="formula" role="math" aria-label={payload.latex}
+  if (block.kind === 'paragraph') return <p data-search-field="text">{payload.text}</p>;
+  if (block.kind === 'formula') return <div className="formula" data-search-field="latex" role="math" aria-label={payload.latex}
     dangerouslySetInnerHTML={{ __html: katex.renderToString(payload.latex, { throwOnError: false, trust: false, displayMode: true }) }} />;
   if (block.kind === 'table') return <div className="table-scroll" tabIndex={0} aria-label="数制对照表"><table>
-    <thead><tr>{payload.columns.map((column: string, i: number) => <th key={i}>{column}</th>)}</tr></thead>
-    <tbody>{payload.rows.map((row: (string | number)[], i: number) => <tr key={i}>{row.map((cell, j) => <td key={j}>{cell}</td>)}</tr>)}</tbody>
+    <thead><tr>{payload.columns.map((column: string, i: number) => <th key={i} data-search-field={`columns.${i}`}>{column}</th>)}</tr></thead>
+    <tbody>{payload.rows.map((row: (string | number)[], i: number) => <tr key={i}>{row.map((cell, j) => <td key={j} data-search-field={`rows.${i}.${j}`}>{cell}</td>)}</tr>)}</tbody>
   </table></div>;
-  if (block.kind === 'callout') return <aside className="reminder"><p>{payload.text}</p>{children}</aside>;
-  if (block.kind === 'steps') return <ol>{payload.items.map((item: string, i: number) => <li key={i}>{item}</li>)}{children}</ol>;
+  if (block.kind === 'callout') return <aside className="reminder"><p data-search-field="text">{payload.text}</p>{children}</aside>;
+  if (block.kind === 'steps') return <ol>{payload.items.map((item: string, i: number) => <li key={i} data-search-field={`items.${i}`}>{item}</li>)}{children}</ol>;
   if (block.kind === 'example' || block.kind === 'exercise') return <details className="material" open={reading?.expanded[block.id] ?? true} onToggle={event => updateReading(block.id, event.currentTarget.open)}>
-    <summary>{payload.title}</summary>{payload.answerNature && <p className="unit-meta">{{'derived-solution':'据题干推导','official-solution':'官方题解','authored-example':'自编例题','self-test':'自测参考答案'}[payload.answerNature as string] ?? payload.answerNature}</p>}<p>{payload.problem}</p>
-    {payload.hint && <details className="hint" open={reading?.expanded[block.id + ":hint"] ?? false} onToggle={event => updateReading(block.id + ":hint", event.currentTarget.open)}><summary>学习提示</summary><p>{payload.hint}</p></details>}
+    <summary data-search-field="title">{payload.title}</summary>{payload.answerNature && <p className="unit-meta">{{'derived-solution':'据题干推导','official-solution':'官方题解','authored-example':'自编例题','self-test':'自测参考答案'}[payload.answerNature as string] ?? payload.answerNature}</p>}<p data-search-field="problem">{payload.problem}</p>
+    {payload.hint && <details className="hint" open={reading?.expanded[block.id + ":hint"] ?? false} onToggle={event => updateReading(block.id + ":hint", event.currentTarget.open)}><summary>学习提示</summary><p data-search-field="hint">{payload.hint}</p></details>}
     {block.kind === 'exercise' ? <details className="answer" open={reading?.expanded[block.id + ":answer"] ?? false} onToggle={event => updateReading(block.id + ":answer", event.currentTarget.open)}><summary>答案与步骤</summary>{children}</details> : children}
   </details>;
   if (block.kind === 'interactive' && ['mux', 'decoder', 'kmap'].includes(payload.component)) return <BuiltinExperiment block={block} {...experiment} />;
   if (block.kind === 'figure' && payload.asset) {
     const fixedPage = /^\/source-pages\/([^/]+)\/([^/]+)\/(\d+)\.png$/.exec(payload.asset);
-    return <figure><img src={experiment.contentScope === 'content-candidate' ? `yizhi-resource://course/${experiment.sessionId}/content/${encodeURIComponent(payload.asset)}` : './ti74153-1.png'} alt={payload.alt} /><figcaption>{payload.caption}</figcaption><button onClick={event => onSource(event.currentTarget)} data-source-version={fixedPage?.[2] ?? (block.sourceRefs as Array<any> | undefined)?.[0]?.versionId} data-source-page={fixedPage?.[3] ?? (block.sourceRefs as Array<any> | undefined)?.[0]?.pdfPages?.[0]}>查看{experiment.contentScope ? '固定原页' : ' TI 74153 原页'}</button></figure>;
+    return <figure><img data-search-field="alt" src={experiment.contentScope === 'content-candidate' ? `yizhi-resource://course/${experiment.sessionId}/content/${encodeURIComponent(payload.asset)}` : './ti74153-1.png'} alt={payload.alt} /><figcaption data-search-field="caption">{payload.caption}</figcaption><button onClick={event => onSource(event.currentTarget)} data-source-version={fixedPage?.[2] ?? (block.sourceRefs as Array<any> | undefined)?.[0]?.versionId} data-source-page={fixedPage?.[3] ?? (block.sourceRefs as Array<any> | undefined)?.[0]?.pdfPages?.[0]}>查看{experiment.contentScope ? '固定原页' : ' TI 74153 原页'}</button></figure>;
   }
-  if (block.kind === 'figure' && payload.config?.nodes) return <figure><figcaption>{payload.alt}</figcaption><svg viewBox="0 0 640 250" role="img" aria-label={payload.alt}>{payload.config.edges.map((edge: any, index: number) => { const a = payload.config.nodes.find((node: any) => node.id === edge.from), b = payload.config.nodes.find((node: any) => node.id === edge.to); return <line key={index} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#7798bc" />; })}{payload.config.nodes.map((node: any) => <g key={node.id}><rect x={node.x - 45} y={node.y - 20} width="90" height="40" fill="white" stroke="#7798bc" /><text x={node.x} y={node.y} textAnchor="middle" dominantBaseline="middle" fontSize="13">{node.label}</text></g>)}</svg><figcaption>{payload.config.caption}</figcaption></figure>;
-  if (block.kind === 'knowledge-reference') return <p className="reference">{payload.intent}<br/><button onClick={() => onReference(payload.targetUnitId, block.id)}>前往 {payload.targetUnitId}</button></p>;
-  return <details><summary>保留的内容 · {block.kind}</summary><pre>{JSON.stringify(payload, null, 2)}</pre>{children}</details>;
+  if (block.kind === 'figure' && payload.config?.nodes) return <figure><figcaption data-search-field="alt">{payload.alt}</figcaption><svg viewBox="0 0 640 250" role="img" aria-label={payload.alt}>{payload.config.edges.map((edge: any, index: number) => { const a = payload.config.nodes.find((node: any) => node.id === edge.from), b = payload.config.nodes.find((node: any) => node.id === edge.to); return <line key={index} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#7798bc" />; })}{payload.config.nodes.map((node: any) => <g key={node.id} data-search-field={`config.nodes.${payload.config.nodes.indexOf(node)}.label`}><rect x={node.x - 45} y={node.y - 20} width="90" height="40" fill="white" stroke="#7798bc" /><text x={node.x} y={node.y} textAnchor="middle" dominantBaseline="middle" fontSize="13">{node.label}</text></g>)}</svg><figcaption data-search-field="config.caption">{payload.config.caption}</figcaption></figure>;
+  if (block.kind === 'knowledge-reference') return <p className="reference"><span data-search-field="intent">{payload.intent}</span><br/><button onClick={() => onReference(payload.targetUnitId, block.id)}>前往 {payload.targetUnitId}</button></p>;
+  return <details open={reading?.expanded[`${block.id}:retained`] ?? false} onToggle={event => updateReading(`${block.id}:retained`, event.currentTarget.open)}><summary>保留的内容 · {block.kind}</summary><pre>{JSON.stringify(payload, null, 2)}</pre>{children}</details>;
 }
 
 function App() {
@@ -114,6 +120,9 @@ function App() {
   };
   const [minimap, setMinimap] = useState(true);
   const [tool, setTool] = useState<"read" | "select" | "hand">("read");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchOrigin = useRef<(() => Promise<void>) | undefined>(undefined);
+  const [searchReturn, setSearchReturn] = useState<(() => Promise<void>)>();
   const [sourceOpen, setSourceOpen] = useState(false);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [agentOpen, setAgentOpen] = useState(false);
@@ -272,7 +281,7 @@ function App() {
     const position = placementsRef.current.find(node => node.unitId === id);
     if (!position) return;
     setReadError(undefined);
-    try { const unit = await window.yizhi.readUnit(course.sessionId, id); persist(nextState ?? { ...(readingRef.current ?? { expanded: {}, returnStack: [], scrollTop: 0 }), unitId: id, scrollTop: 0, pinnedUnitId: mounted.some(item => item.id === 'KU-001') || id === 'KU-001' ? 'KU-001' : undefined }); setSelected(unit); setDirectoryTheme(unit.theme.id); setMounted(previous => previous.some(item => item.id === id) ? previous : [...previous.filter(item => item.id === 'KU-001'), unit]); }
+    try { const unit = await window.yizhi.readUnit(course.sessionId, id); persist(nextState ?? { ...(readingRef.current ?? { expanded: {}, returnStack: [], scrollTop: 0 }), unitId: id, scrollTop: 0, pinnedUnitId: mounted.some(item => item.id === 'KU-001') || id === 'KU-001' ? 'KU-001' : undefined }); setSelected(unit); setDirectoryTheme(unit.theme.id); setMounted(previous => previous.some(item => item.id === id) ? previous.map(item => item.id === id ? unit : item) : [...previous.filter(item => item.id === 'KU-001'), unit]); }
 
     catch (error) { setSelected(undefined); setReadError((error as Error).message); }
     if (nextState?.camera) await flow.setViewport(nextState.camera, { duration: 0 });
@@ -361,9 +370,61 @@ function App() {
       if (outcome === 'stale') setReadError('复习状态或正文已变化，旧确认已失效。');
     } catch (error) { setReadError((error as Error).message); }
   };
+  const captureSearchScene = () => {
+    const original = structuredClone(readingRef.current), originalCamera = flow.getViewport();
+    const selection = getSelection(), range = selection?.rangeCount ? selection.getRangeAt(0).cloneRange() : undefined;
+    const focused = document.activeElement as HTMLElement | null;
+    const inputSelection = focused instanceof HTMLTextAreaElement || focused instanceof HTMLInputElement ? { start: focused.selectionStart, end: focused.selectionEnd } : undefined;
+    const details = [...document.querySelectorAll<HTMLDetailsElement>('details')].map(el => ({ el, open: el.open }));
+    const sourceScene = sourcesPanel.current?.capture(), noteScene = notesPanel.current?.capture(), agentScene = agentPanel.current?.capture();
+    const restore = async () => {
+      if (sourceScene) await sourcesPanel.current?.restore(sourceScene);
+      if (noteScene) await notesPanel.current?.restore(noteScene);
+      if (agentScene) await agentPanel.current?.restore(agentScene);
+      if (original) { await go(original.unitId, { ...original, camera: originalCamera }); await local.waitForMeasurements([original.unitId]); }
+      else { persist({ unitId: 'KU-001', expanded: {}, returnStack: [], scrollTop: 0, camera: originalCamera }); setSelected(undefined); }
+      for (const { el, open } of details) if (el.isConnected) el.open = open;
+      await paintFrame(); await flow.setViewport(originalCamera, { duration: 0 });
+      document.querySelectorAll('[data-search-current]').forEach(el => el.removeAttribute('data-search-current'));
+      if (focused?.isConnected) { focused.focus({ preventScroll: true }); if (inputSelection && (focused instanceof HTMLTextAreaElement || focused instanceof HTMLInputElement)) focused.setSelectionRange(inputSelection.start, inputSelection.end); }
+      if (range?.startContainer.isConnected && range.endContainer.isConnected) { const next = getSelection(); next?.removeAllRanges(); next?.addRange(range); }
+      setSearchReturn(undefined);
+    };
+    return restore;
+  };
+  const locateSearch = async (hit: SearchHit) => {
+    if (!course) return;
+    if (composing.current || !await channel.current?.flush() || (continuous.current && !await continuous.current.finish())) throw new Error('请先完成当前输入，再定位。');
+    hit = await window.yizhi.search.locate({ sessionId: course.sessionId, hit });
+    const restore = searchOrigin.current ?? captureSearchScene();
+    if (hit.scope === 'notes') await notesPanel.current?.openSearch(hit);
+    else if (hit.scope === 'messages') await agentPanel.current?.openSearch(hit);
+    else if (hit.scope === 'sources') await sourcesPanel.current?.openSearch(hit);
+    else {
+      const next = { ...(readingRef.current ?? { expanded: {}, returnStack: [], scrollTop: 0 }), unitId: hit.unitId!, expanded: { ...readingRef.current?.expanded, ...Object.fromEntries(hit.disclosure.map(key => [key, true])) } };
+      await go(hit.unitId!, next); await paintFrame();
+      await local.waitForMeasurements([hit.unitId!]);
+      if (hit.unitId === course.unit.id) { const latest = await window.yizhi.open(); continuous.current?.reconcile(latest); }
+      await paintFrame();
+      const article = document.querySelector<HTMLElement>(`[data-unit-id="${CSS.escape(hit.unitId!)}"] article`);
+      const block = hit.blockId ? article?.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(hit.blockId)}"], [data-search-block="${CSS.escape(hit.blockId)}"]`) : article;
+      const field = block?.querySelector<HTMLElement>(`[data-search-field="${CSS.escape(hit.field)}"]`) ?? (hit.field === 'text' || hit.field === 'latex' ? block : undefined);
+      if (!field || !article) throw new Error('实际阅读位置暂不可用，请重新搜索。');
+      for (let parent = field.parentElement; parent && parent !== article; parent = parent.parentElement) if (parent instanceof HTMLDetailsElement) parent.open = true;
+      await paintFrame();
+      const shown = hit.field === 'latex' ? field.getAttribute('aria-label') ?? field.querySelector('[role="math"]')?.getAttribute('aria-label') : hit.field === 'alt' && field instanceof HTMLImageElement ? field.alt : field.textContent;
+      if (shown !== hit.text) throw new Error('当前显示版本不同，请重新搜索');
+      highlightSearch(field, hit);
+      const board = boardRef.current!.getBoundingClientRect(), rect = field.getBoundingClientRect();
+      camera.pan(board.left + 40 - rect.left, board.top + 110 - rect.top);
+    }
+    setSearchReturn(() => restore);
+  };
   const status = { draft: '草稿已保留', saved: '已保存', pending: '待保存', saving: '正在保存…', error: '未保存' }[state.status];
   return <>
-    <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen || sourcesOpen || agentOpen || notesOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
+    <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen || sourcesOpen || agentOpen || notesOpen || searchOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
+      {course && <SearchPanel sessionId={course.sessionId} narrow={narrow} beforeOpen={() => { searchOrigin.current = captureSearchScene(); }} onOpenChange={value => { setSearchOpen(value); if (value && narrow) setDirectory(false); }} locate={locateSearch} />}
+      {searchReturn && <button onClick={() => void searchReturn().catch(e => setReadError(e.message))}>返回搜索前位置</button>}
       {course && <AnnotationPanel ref={notesPanel} sessionId={course.sessionId} narrow={narrow} prepare={async () => !!await channel.current?.flush()} onOpenChange={value => { setNotesOpen(value); if (value && narrow) setDirectory(false); }} locate={async note => {
         if (selected?.id !== 'KU-001') await go('KU-001');
         const editor = continuous.current;
@@ -400,7 +461,7 @@ function App() {
       </div>
     </header>
     {state.error && <div className="save-error" role="alert">{state.error}{!state.error.includes('冲突部分') && ' 输入仍保留，请重试保存。'}</div>}
-    <div className="workspace board-workspace" inert={(!cameraReady && !loadError) || (narrow && (sourcesOpen || agentOpen || notesOpen))} aria-busy={!cameraReady && !loadError}>
+    <div className="workspace board-workspace" inert={(!cameraReady && !loadError) || (narrow && (sourcesOpen || agentOpen || notesOpen || searchOpen))} aria-busy={!cameraReady && !loadError}>
       {directory && <nav ref={navRef} inert={sourceOpen || (narrow && (relationsOpen || producerOpen))} aria-label="课程目录" onKeyDown={event => trap(event, closeDirectory)}><h2>课程目录</h2>{narrow && <button onClick={closeDirectory}>关闭目录</button>}
         <label className="review-filter">复习状态筛选 <select aria-label="复习状态筛选" value={reviewFilter} onChange={event => setReviewFilter(event.target.value as typeof reviewFilter)}><option value="all">全部单元</option><option value="pending">待复习</option><option value="weak">薄弱</option><option value="mastered">已掌握</option></select></label>
         {graph?.groups.map(group => { const counts = review?.themes[group.id]; const matches = graph.nodes.filter(node => node.themeId === group.id && (reviewFilter === 'all' ? (directoryTheme ?? selected?.theme.id) === group.id : review?.units[node.id]?.status === reviewFilter)); return <div key={group.id}><button aria-label={group.name} className="directory-theme" onClick={() => { setDirectoryTheme(group.id); const first = matches[0] ?? graph.nodes.find(node => node.themeId === group.id); if (first) { void go(first.id); if (narrow) closeDirectory(); } }}>{group.name}{counts ? <span aria-hidden="true"> · 待复习 {counts.pending} / 薄弱 {counts.weak} / 已掌握 {counts.mastered}</span> : ''}</button>{matches.map(node => <button aria-label={node.name} className="directory-unit" key={node.id} onClick={() => { void go(node.id); if (narrow) closeDirectory(); }}>{node.name}{review ? <span aria-hidden="true"> · {{ pending: '待复习', weak: '薄弱', mastered: '已掌握' }[review.units[node.id].status]}</span> : ''}</button>)}</div>; })}</nav>}
@@ -418,7 +479,7 @@ function App() {
           <ReadingSurface id={unit.id} name={unit.name} position={position} baseline={graph!.layout.nodes.find(node => node.unitId === unit.id)!} active={selected?.id === unit.id} articleRef={articleRef} measure={local.measure} gesture={local.gesture} commit={place} takeover={() => camera.takeover()}>
             <RoughFrame id={unit.id} />
 
-            <h1>{unit.name}</h1><p className="unit-meta">课程重要性 {unit.rating.stars} / 5 · {unit.id}</p>{review && <ReviewControls unitId={unit.id} snapshot={review} change={status => void changeReview(unit.id, status)} confirm={(id, adjust) => void confirmReview(id, adjust)} />}<p className="outcome">{unit.outcome}</p>
+            <h1 data-search-field="name">{unit.name}</h1><div className="unit-aliases">{Array.isArray(unit.aliases) && unit.aliases.map((alias: string, i: number) => <span key={i} data-search-field={`aliases.${i}`}>{alias}</span>)}</div><p className="unit-meta">课程重要性 {unit.rating.stars} / 5 · {unit.id}</p>{review && <ReviewControls unitId={unit.id} snapshot={review} change={status => void changeReview(unit.id, status)} confirm={(id, adjust) => void confirmReview(id, adjust)} />}<p className="outcome" data-search-field="outcome">{unit.outcome}</p>
             {unit.id==='KU-001'&&!course.contentScope&&<ExtensionExperiment sessionId={course.sessionId} active={viewport.zoom>=0.55&&selected?.id===unit.id} disabled={closing}/>}
             <SourceReferences citations={sourceCitations.filter(citation => citation.target?.unitId === unit.id)} onOpen={citation => sourcesPanel.current?.openCitation(citation)} />
             {unit.id === 'KU-001' && channel.current ? <ContinuousUnitEditor course={course} channel={channel.current} disabled={closing || producerBusy || !cameraReady} saveError={state.status === 'error'}
