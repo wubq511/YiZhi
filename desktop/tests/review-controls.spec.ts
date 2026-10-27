@@ -27,6 +27,9 @@ test('review controls persist, answer reveal does not promote, and a substantive
     await window.getByRole('button', { name: '提交可控修改', exact: true }).click();
     await expect(window.getByText(/要将此单元改为待复习吗/)).toBeVisible();
     await window.getByText('可控生产者 · 验证入口', { exact: true }).click();
+    // Actual modification following can move the top-of-unit controls offscreen.
+    // Student navigation explicitly takes control before making the newer choice.
+    await window.getByRole('navigation', { name: '课程目录' }).getByRole('button', { name: '位置记数法与权展开', exact: true }).click();
     await choices.getByRole('button', { name: '薄弱' }).click();
     await window.getByRole('button', { name: '改为待复习' }).click();
     await expect(choices.getByRole('button', { name: '薄弱' })).toHaveAttribute('aria-pressed', 'true');

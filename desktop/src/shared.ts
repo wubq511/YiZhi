@@ -55,6 +55,8 @@ export interface DesktopBridge extends SaveBridge {
   open(): Promise<OpenedCourse>;
   graph(sessionId: string): Promise<CourseGraph>;
   readUnit(sessionId: string, unitId: string): Promise<CourseUnit>;
+  setLayout(sessionId: string, updates: import('./layout').LayoutPlacement[]): Promise<void>;
+  projectLayout(sessionId: string, sizes: import('./layout').LayoutSizes, fixed?: import('./layout').LayoutPlacement): Promise<import('./layout').LayoutNode[]>;
   readingState(sessionId: string): Promise<ReadingState | null>;
   setReadingState(sessionId: string, state: ReadingState): Promise<void>;
   reviewStates(sessionId: string): Promise<ReviewSnapshot>;
@@ -72,6 +74,8 @@ export interface ReviewSnapshot {
 export interface ReviewPrompt { id: string; unitId: string; contentRevision: number; stateVersion: number; semanticVersion: 1 }
 export type ReviewPromptResult = 'adjusted' | 'kept' | 'stale';
 export interface ReadingState {
+  pinnedUnitId?: 'KU-001';
+  modification?: { targetId: string; ended: boolean };
   unitId: string;
   expanded: Record<string, boolean>;
   returnStack: Array<{ unitId: string; blockId: string; scrollTop: number; camera?: { x: number; y: number; zoom: number } }>;
