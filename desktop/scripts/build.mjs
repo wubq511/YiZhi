@@ -13,7 +13,7 @@ const entries = [
 for (const [entry, outfile] of entries) {
   try {
     await build({ entryPoints: [entry], outfile, bundle: true, platform: 'node', format: 'cjs',
-      target: 'node24', external: ['@playwright/test', 'playwright', 'playwright-core', 'electron', 'pdfjs-dist/*', '@napi-rs/canvas'], sourcemap: true });
+      target: 'node24', external: ['electron', 'pdfjs-dist/*', '@napi-rs/canvas', '@playwright/test', 'playwright', 'playwright-core'], sourcemap: true });
   } catch (error) { throw error; }
 }
 try {
@@ -33,3 +33,5 @@ await cp('licenses', 'dist/licenses', { recursive: true });
 for (const file of await readdir('fixtures')) await copyFile(`fixtures/${file}`, `dist/fixtures/${file}`);
 
 await cp('src/extensions/packages', 'dist/extensions', { recursive: true });
+
+await copyFile('src/core/legacy-lock.py', 'dist/legacy-lock.py');

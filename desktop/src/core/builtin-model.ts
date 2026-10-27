@@ -10,11 +10,11 @@ export function validateInputs(d: BuiltinDefinition, inputs: Record<string, numb
 export function definitionFrom(payload: Record<string, any>): BuiltinDefinition {
   const { component: kind, config } = payload;
   const inputs = Object.fromEntries(Object.entries(payload.inputs ?? {}).map(([k, v]) => [k, Number(v)]));
-  if (!['mux', 'decoder', 'kmap'].includes(kind) || !config || Object.keys(inputs).length > 6 || Object.keys(inputs).some(n => !identifier.test(n)) || Object.values(inputs).some(v => !bit(v))) throw new Error('不支持的内置实验定义');
+  if (!['mux', 'decoder', 'kmap'].includes(kind) || !config || Object.keys(inputs).length > (kind === 'mux' ? 11 : 6) || Object.keys(inputs).some(n => !identifier.test(n)) || Object.values(inputs).some(v => !bit(v))) throw new Error('不支持的内置实验定义');
   if (kind === 'mux') {
     const s = config.selectBits, data = config.dataSignals;
-    if (!Array.isArray(s) || ![1, 2].includes(s.length) || new Set(s).size !== s.length || s.some(n => !(n in inputs)) ||
-      !Array.isArray(data) || data.length !== 2 ** s.length || data.some(n => typeof n !== 'string' || (!['0', '1'].includes(n) && !(n.replace(/^¬/, '') in inputs)))) throw new Error('仅支持 2:1／4:1 MUX 字面量配置');
+    if (!Array.isArray(s) || ![1, 2, 3].includes(s.length) || new Set(s).size !== s.length || s.some(n => !(n in inputs)) ||
+      !Array.isArray(data) || data.length !== 2 ** s.length || data.some(n => typeof n !== 'string' || (!['0', '1'].includes(n) && !(n.replace(/^¬/, '') in inputs)))) throw new Error('仅支持 2:1／4:1／8:1 MUX 字面量配置');
   } else if (kind === 'decoder') {
     if (!Array.isArray(config.addressBits) || config.addressBits.length !== 3 || config.outputs !== 8 || config.activeLowOutputs !== true ||
       !config.enable || Object.keys(config.enable).length !== 3 || Object.values(config.enable).filter(v => v === 1).length !== 1 || Object.values(config.enable).filter(v => v === 0).length !== 2 ||

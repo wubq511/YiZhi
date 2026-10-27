@@ -1,10 +1,12 @@
 # 文档导航
 
-当前产品规则由 [PRODUCT.md](../PRODUCT.md)、[CONTEXT.md](../CONTEXT.md)、[DESIGN.md](../DESIGN.md) 分别维护。新版从系统设计定稿进入实施；当前可运行应用仍为 Python／Web 基线。
+当前产品规则由 [PRODUCT.md](../PRODUCT.md)、[CONTEXT.md](../CONTEXT.md)、[DESIGN.md](../DESIGN.md) 分别维护。Electron／TypeScript 桌面实现的运行与验证见 [桌面应用说明](../desktop/README.md)；Python／Web 基线的原始验收保留其历史范围。系统设计定稿继续作为实施合同。
 
 | 要做的事 | 首选入口 |
 | --- | --- |
-| 开始下一阶段开发 | [系统设计定稿](architecture/系统设计定稿.md)：完整合同、阶段顺序与验收条件 |
+| 运行或验证桌面应用 | [桌面应用说明](../desktop/README.md)：启动、验证命令、实际能力与待验边界 |
+| 转换旧课程的完整内容 | [内容转换](../desktop/docs/content-conversion.md)：一致源副本、内容候选和原数据差异；个人迁移与权威切换另行区分 |
+| 继续下一阶段开发 | [系统设计定稿](architecture/系统设计定稿.md)：完整合同、阶段顺序与验收条件 |
 | 理解技术选择及拒绝的方案 | [架构决策总览](architecture/架构决策总览.md)、[ADR](adr/)、[设计取舍记录](adr/设计取舍记录.md) |
 | 处理 Agent 修改、并发与内容身份 | [内容演进与实时修改](architecture/内容演进与实时修改协议.md) |
 | 实现正文编辑与保存 | [正文编辑与保存衔接](architecture/正文编辑与保存衔接设计.md) |

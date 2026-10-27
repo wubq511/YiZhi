@@ -16,6 +16,7 @@ export interface CourseUnit {
   [key: string]: unknown;
 }
 export interface OpenedCourse {
+  contentScope?: 'content-candidate';
   courseId: string;
   sessionId: string;
   revision: number;
