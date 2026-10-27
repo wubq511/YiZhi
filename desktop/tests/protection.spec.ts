@@ -1,3 +1,4 @@
+import { resizeBoardWindow, revealBoardControl } from './board-test-helpers';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -148,6 +149,7 @@ test('caret pause and application blur retain the same paragraph, independent up
   let app = await launch();
   try {
     let page = await app.firstWindow();
+    await resizeBoardWindow(app, page);
     await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     let editor = page.getByRole('textbox', { name: '连续编辑正文', exact: true });
     const first = page.getByRole('textbox', { name: '编辑首段正文', exact: true });
@@ -167,6 +169,8 @@ test('caret pause and application blur retain the same paragraph, independent up
     });
     expect(waiting.status).toBe('retained');
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].blur());
+    // Keep the real pause beyond ProseMirror's 500 ms typing-history grouping window.
+    await page.waitForTimeout(600);
     const checks = await page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return b.commands.recheck({ sessionId: c.sessionId }); });
     expect(checks[0].status).toBe('waiting');
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].focus());
@@ -176,11 +180,17 @@ test('caret pause and application blur retain the same paragraph, independent up
     await page.getByRole('button', { name: '收起目录', exact: true }).click();
     await expect(first).toHaveText('最新 学生前缀 ' + original.unit.reading.blocks[0].payload.text + ' 外部后缀');
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
-    await page.getByRole('button', { name: '撤销正文', exact: true }).click();
+    const undo = page.getByRole('button', { name: '撤销正文', exact: true });
+    await revealBoardControl(page, undo);
+    await undo.click();
+    await expect(first).toHaveText('学生前缀 ' + original.unit.reading.blocks[0].payload.text + ' 外部后缀');
+    await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
+    await undo.click();
     await expect(first).toHaveText(original.unit.reading.blocks[0].payload.text + ' 外部后缀');
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     const saved = await page.evaluate(() => (window as any).yizhi.open());
     await app.close(); app = await launch(); page = await app.firstWindow();
+    await resizeBoardWindow(app, page);
     editor = page.getByRole('textbox', { name: '连续编辑正文', exact: true });
     await expect(editor.locator('p[data-block-id]').first()).toHaveText(original.unit.reading.blocks[0].payload.text + ' 外部后缀');
     expect((await page.evaluate(() => (window as any).yizhi.open())).unit).toEqual(saved.unit);
