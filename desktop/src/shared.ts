@@ -46,6 +46,7 @@ export interface SaveReceipt {
   basedOnRevision?: number;
 }
 export interface DesktopBridge extends SaveBridge {
+  extensions: Omit<import('./extensions-api').ExtensionsAPI, 'resource'>;
   experiments: import('./experiments-api').ExperimentsAPI;
   agent: import('./agent-api').AgentBridge;
   parsing: import('./parsing-api').ParsingBridge;
@@ -125,6 +126,7 @@ export type SaveEventData =
   { type: 'content.committed'; receipt: EditReceipt } |
   { type: 'relations.committed'; operationId: string; revision: number; changedObjectIds: string[] } |
   { type: 'group.committed'; operationId: string; revision: number; changedObjectIds: string[] } |
+  { type: 'extension.changed'; instanceId: string; definitionVersion: string } |
   { type: 'experiment.changed'; instanceId: string; definitionRevision: number } |
   { type: 'source.registered'; versionId: string; sourceId: string } |
   { type: 'source.changed'; kind: string; operationId: string };

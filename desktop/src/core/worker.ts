@@ -1,6 +1,7 @@
 import { initializeLayout, layoutGraph, saveLayout } from './local-layout';
 import { projectLayout } from '../layout';
 
+import { Extensions } from './extensions';
 import { BuiltinExperiments } from './builtin-experiments';
 import { AgentStore } from './agent-store';
 import { parentPort, workerData } from 'node:worker_threads';
@@ -25,6 +26,7 @@ interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; cou
   groups: CommandGroups;
   sources: Sources;
   experiments: BuiltinExperiments;
+  extensions: Extensions;
   parsing: Parsing;
   relations: FormalRelations;
   agent: AgentStore;
@@ -99,15 +101,17 @@ function open(directory: string): OpenedCourse {
       sources.fenceOperation('commands:commit', operationId);
       agent.fence('commands:commit', operationId);
       experiments.fenceOperation('commands:commit', operationId);
+      extensions.fence('commands:commit', operationId);
     });
     const sources = new Sources(db, canonical, sourceUnit);
     const relationCatalog = JSON.parse(readFileSync(join(__dirname, 'fixtures/relation-catalog.json'), 'utf8'));
     const relations = new FormalRelations(db, graph, { retiredUnitIds: relationCatalog.retiredUnitIds,
       get sources() { return sources.relationCatalog(relationCatalog.sources); } });
     const experiments = new BuiltinExperiments(db, sourceUnit);
+    const extensions = new Extensions(db, canonical);
     const parsing = new Parsing(db, canonical, sources, run => { queue = queue.then(run).catch(error => { console.error(error); }); }, workerData?.parseScheduling);
     const agent = new AgentStore(db, sources, sourceUnit);
-    const course: Course = { db, owner, agent, sessionId: randomUUID(), graph, groups, relations, sources, experiments, parsing,
+    const course: Course = { db, owner, agent, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     const result = snapshot(course);
     courses.set(canonical, course);
@@ -151,6 +155,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       course.sources.fenceOperation(fencedAction, payload.operationId);
       course.agent.fence(fencedAction, payload.operationId);
       course.experiments.fenceOperation(fencedAction, payload.operationId);
+      course.extensions.fence(fencedAction, payload.operationId);
     }
     let value: unknown;
     if (action === 'open') value = open(payload.directory);
@@ -177,6 +182,15 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       else if (['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-035', 'KU-055', 'KU-057', 'KU-062'].includes(payload.unitId))
         value = JSON.parse(readFileSync(join(__dirname, `fixtures/unit-${payload.unitId.slice(3)}.json`), 'utf8'));
       else throw new Error('该单元正文尚未加入课程副本');
+    }
+    else if (action === 'extensions:recoverRenderers') { for(const course of courses.values()) {course.experiments.pauseAll();course.extensions.recoverRenderer();} }
+    else if (action.startsWith('extensions:')) {
+      const extension = session(payload.sessionId).extensions;
+      if (action === 'extensions:open') value = await extension.open();
+      else if (action === 'extensions:read') value = extension.read();
+      else if (action === 'extensions:act') value = await extension.act(payload);
+      else if (action === 'extensions:resource') value = extension.resource(payload);
+      else throw new Error('未知扩展接口');
     }
     else if (action.startsWith('experiments:')) {
       const experiments = session(payload.sessionId).experiments;
