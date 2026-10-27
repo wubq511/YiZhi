@@ -8,8 +8,8 @@
     "build": "node scripts/build.mjs",
     "start": "npm run build && electron .",
     "typecheck": "tsc --noEmit",
-    "test": "npm run build && node --test dist/tests/course-service.test.cjs",
-    "test:electron": "npm run build && node scripts/electron-tests.mjs",
+    "test": "npm run build && node scripts/run-tests.mjs",
+    "test:electron": "npm run build && node scripts/run-tests.mjs --electron",
     "test:smoke": "npm run build && playwright test"
   },
   "dependencies": {
