@@ -340,10 +340,10 @@ export class CommandGroups {
       const row = this.db.prepare('SELECT * FROM cg_bases WHERE id=?').get(command.basisId);
       if (!row || Number(row.generation) !== this.generation()) return result('ineligible', '课程或原读取依据已失效');
       const original: CommandObject[] = parse(row.read_values);
-      if (!original.length) return result('conflict', '原读取内容不可用，需要生产者重新读取');
+      if (!original.length) return result('needs-reread', '原读取内容不可用，需要生产者重新读取');
       // Every read prerequisite participates, including ancestor, relation membership and ABA versions.
       for (const old of original) if (!objectIds.includes(old.id) && this.object(old.id).version !== old.version)
-        return result('conflict', `读取依据已变化：${old.id}，需要重新推导该一致组`);
+        return result('needs-reread', `读取依据已变化：${old.id}，需要重新推导该一致组`);
       const scope = new Set(original.map(o => o.id));
       const writes = new Set(objectIds);
       if (readDrafts(this.db).some(d => {

@@ -251,7 +251,12 @@ test('continuous editor saves split/merge and cross-paragraph replacement throug
     expect(saved.unit.reading.blocks[0].payload.text).toBe('甲跨段丁');
     expect(saved.unit.reading.blocks.slice(1)).toEqual(original.unit.reading.blocks.slice(1));
     expect(new Set(saved.unit.reading.blocks.map((b: any) => b.id)).size).toBe(saved.unit.reading.blocks.length);
+    const position = await page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return b.readingState(c.sessionId); });
+    expect(position?.unitId).toBe('KU-001');
     await app.close(); app = await launch(); page = await app.firstWindow();
+    const restoredPosition = await page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return b.readingState(c.sessionId); });
+    expect(restoredPosition?.unitId).toBe(position.unitId);
+    expect(restoredPosition?.camera?.zoom).toBeGreaterThanOrEqual(0.55);
     await expect(page.getByRole('textbox', { name: '编辑首段正文', exact: true })).toHaveText('甲跨段丁');
     const reopened = await page.evaluate(() => (window as any).yizhi.open());
     expect(reopened.unit).toEqual(saved.unit);

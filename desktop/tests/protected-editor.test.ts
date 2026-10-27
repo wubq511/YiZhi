@@ -57,7 +57,7 @@ test('automatic recheck cannot relabel a changed non-target prerequisite, even w
       changes: [{ blockId: a.id, text: '前提已经改变' }] });
     await api.protect({ sessionId: c.sessionId, editorId: 'dependent-editor', sequence: 2, blockIds: [], mode: 'editing', inputSeq: 1 });
     const checked = await api.recheck({ sessionId: c.sessionId });
-    assert.equal(checked[0].status, 'conflict'); assert.ok(checked[0].reason!.includes(a.id));
+    assert.equal(checked[0].status, 'needs-reread'); assert.ok(checked[0].reason!.includes(a.id));
     await assert.rejects(api.resolveCandidate({ sessionId: c.sessionId, candidateId: command.operationId, basisRevision: 2, choice: 'incoming' }), /前提已变化/);
     assert.equal((await service.read(c.sessionId)).unit.reading.blocks.find(x => x.id === b.id)!.payload.text, b.payload.text);
   } finally { await service.close(); await rm(root, { recursive: true, force: true }); }

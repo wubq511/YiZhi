@@ -19,7 +19,7 @@ export interface GroupHistory {
 export interface RetainedCandidate { command: GroupCommand; result: GroupResult }
 export interface EditorProtection { sessionId: string; editorId: string; sequence: number; blockIds: string[];
   mode: 'editing' | 'selection'; inputSeq: number }
-export interface CandidateCheck { candidateId: string; status: 'committed' | 'waiting' | 'conflict' | 'ineligible';
+export interface CandidateCheck { candidateId: string; status: 'committed' | 'waiting' | 'needs-reread' | 'conflict' | 'ineligible';
   reason?: string; objectIds: string[]; receipt?: GroupResult;
   parts?: Array<{ objectId: string; current: Record<string, any>; incoming: Record<string, any> }> }
 export interface InputResolution { sessionId: string; operationId: string; draftSessionId: string; inputSeq: number;

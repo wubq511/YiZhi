@@ -141,6 +141,7 @@ function App() {
   const [review, setReview] = useState<ReviewSnapshot>();
   const [reviewFilter, setReviewFilter] = useState<'all' | ReviewStatus>('all');
   const readingRef = useRef<ReadingState | null>(null);
+  const readingSession = useRef<string | undefined>(undefined);
   const writes = useRef<Promise<void>>(Promise.resolve());
   const [readingSave, setReadingSave] = useState<'saved' | 'pending' | 'error'>('saved');
   const readingFailed = useRef(false);
@@ -172,6 +173,7 @@ function App() {
     setCameraReady(false);
     try {
       const opened = await window.yizhi.open();
+      readingSession.current = opened.sessionId;
       channel.current?.dispose();
       channel.current = new ParagraphSaveChannel(window.yizhi, opened, setState, { onSnapshot: setCourse });
       setCourse(opened);
@@ -191,6 +193,12 @@ function App() {
     setClosing(true);
     await writes.current;
     if (readingFailed.current) { setClosing(false); return false; }
+    // A paragraph boundary can persist input before an in-progress navigation animation
+    // emits onMoveEnd. The close barrier captures the actual viewport as well as content.
+    if (readingRef.current && readingSession.current) {
+      try { await window.yizhi.setReadingState(readingSession.current, { ...readingRef.current, camera: flow.getViewport() }); }
+      catch { readingFailed.current = true; setReadingSave('error'); setClosing(false); return false; }
+    }
     if (sourcesPanel.current && !await sourcesPanel.current.flush()) { setClosing(false); return false; }
     const saved = await channel.current.flush();
     if (saved && continuous.current && !await continuous.current.finish()) { setClosing(false); return false; }
