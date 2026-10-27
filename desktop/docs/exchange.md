@@ -19,7 +19,7 @@ manifest 必须恰好包含以下字段：
 | `pageMaps` | 所需来源版本的已核对印刷页映射；不推断或重写旧引用 |
 | `notes`, `annotationVersions` | 显式选择后才包含个人批注：完整原选段／显示投影／原文版本、现有附着或孤立状态、对应 lineage、所需不可变段落／公式版本；不是全部批注修改历史 |
 
-v1 接受 `paragraph / formula / table / callout / example / steps / exercise / knowledge-reference / figure / interactive` 块。figure 支持已登记 PNG/JPEG 和现有声明节点／边的结构图；interactive 仅支持现有 `definitionFrom` 验证的 MUX／74LS138／固定卡诺图定义。保留其正式定义，不携带运行现场或执行任意代码。未知块／正文版本、未知实验定义明确整包失败；不会筛掉这些块后宣称范围成功。元数据附带字段原样保留，但不成为另一个可写 JSON 权威。
+v1 接受 `paragraph / formula / table / callout / example / steps / exercise / knowledge-reference / figure / interactive` 块。figure 支持已登记 PNG/JPEG 和现有声明节点／边的结构图；interactive 仅支持现有 `definitionFrom` 验证的 MUX／74LS138／固定卡诺图定义。保留其正式定义，不携带运行现场或执行任意代码。PNG／JPEG 来源版本保留 T14 的 `pdfPages=0` 语义，以明确的图片章节定位；不伪装成一页 PDF。未知块／正文版本、未知实验定义明确整包失败；不会筛掉这些块后宣称范围成功。元数据附带字段原样保留，但不成为另一个可写 JSON 权威。
 
 只选择已持久化单元。知识引用必须闭合在所选单元内；跨范围的正式关系明确排除，触及的 AND／OR 组必须包含完整成员。所选块或其批注引用的来源与资源必须齐备，否则导出／导入失败，要求扩大选择或先修复资源。
 

@@ -534,3 +534,76 @@ test('incoming note identity cannot overwrite a personal note in the target cour
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test('a fixed PNG source version retains its actual image semantics and immutable bytes in the declared package', async () => {
+  const { writeFile } = await import('node:fs/promises');
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-exchange-image-source-'));
+  const core = new CourseService(resolve('dist/worker.cjs'));
+  try {
+    await exchangeFixture(join(root, 'legacy'));
+    await core.migration.convert({ sourceDirectory: join(root, 'legacy'), directory: join(root, 'course') });
+    const c = await core.open(join(root, 'course'));
+    const image = await core.migration.resource({
+      sessionId: c.sessionId,
+      asset: '/source-pages/SRC-EXTRA/VER-EXTRA/1.png',
+    });
+    const path = join(root, '中文 Image.PNG');
+    await writeFile(path, image.bytes);
+    const source = await core.sources.importFile({
+      sessionId: c.sessionId,
+      generation: 1,
+      operationId: 'image-source',
+      path,
+      title: '图片固定来源',
+    });
+    assert.equal(source.version.pdfPages, 0);
+    const attempt = await core.commands.startAttempt({ sessionId: c.sessionId, taskId: 'image-ref' });
+    const basis = await core.commands.read({
+      sessionId: c.sessionId,
+      attemptId: attempt.attemptId,
+      objectIds: [c.editableBlockId],
+    });
+    const before = basis.objects.find((o) => o.id === c.editableBlockId)!.value;
+    const receipt = await core.commands.commit({
+      sessionId: c.sessionId,
+      attemptId: attempt.attemptId,
+      operationId: 'image-ref',
+      basisId: basis.basisId,
+      changes: [
+        {
+          objectId: c.editableBlockId,
+          value: {
+            ...before,
+            sourceRefs: [
+              ...(before.sourceRefs ?? []),
+              { sourceId: source.version.sourceId, versionId: source.version.versionId, section: '整张图片' },
+            ],
+          },
+        },
+      ],
+    });
+    assert.equal(receipt.status, 'committed');
+    const directory = join(root, 'package');
+    await core.exchange.exportPackage({
+      sessionId: c.sessionId,
+      directory,
+      unitIds: ['KU-001', 'KU-086'],
+      annotations: false,
+    });
+    const preview = await core.exchange.inspect({ sessionId: c.sessionId, directory });
+    await core.exchange.importPackage({
+      sessionId: c.sessionId,
+      directory,
+      operationId: 'image-package',
+      basis: preview.basis,
+      packageDigest: preview.packageDigest,
+    });
+    assert.deepEqual(
+      await core.sources.getVersion({ sessionId: c.sessionId, versionId: source.version.versionId }),
+      source.version,
+    );
+  } finally {
+    await core.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});

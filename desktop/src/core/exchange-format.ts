@@ -227,7 +227,9 @@ export function validate(p: Package) {
       !id(s.sourceId) ||
       !hash(s.sha256) ||
       !Number.isSafeInteger(s.pdfPages) ||
-      s.pdfPages < 1 ||
+      (s.mediaType === 'application/pdf' ? s.pdfPages < 1 : s.pdfPages !== 0) ||
+      typeof s.title !== 'string' ||
+      (s.importedAt !== null && typeof s.importedAt !== 'string') ||
       !resources.has(s.sha256) ||
       resources.get(s.sha256)!.byteLength !== s.byteLength ||
       resources.get(s.sha256)!.mediaType !== s.mediaType
@@ -245,9 +247,14 @@ export function validate(p: Package) {
           if (
             !s ||
             s.sourceId !== ref.sourceId ||
-            !Array.isArray(ref.pdfPages) ||
-            !ref.pdfPages.length ||
-            ref.pdfPages.some((n: any) => !Number.isSafeInteger(n) || n < 1 || n > s.pdfPages)
+            (s.mediaType === 'application/pdf'
+              ? !Array.isArray(ref.pdfPages) ||
+                !ref.pdfPages.length ||
+                ref.pdfPages.some((n: any) => !Number.isSafeInteger(n) || n < 1 || n > s.pdfPages)
+              : typeof ref.section !== 'string' ||
+                !ref.section.trim() ||
+                (ref.pdfPages !== undefined &&
+                  (!Array.isArray(ref.pdfPages) || ref.pdfPages.some((n: any) => n !== 1))))
           )
             throw new Error('非法固定来源引用');
         }
@@ -326,7 +333,27 @@ export function validate(p: Package) {
       if (b.children !== undefined) walk(b.children, depth + 1);
     }
   };
+  if (
+    p.graph.groups.some((g) => typeof g.name !== 'string') ||
+    p.graph.nodes.some(
+      (n) =>
+        typeof n.name !== 'string' ||
+        typeof n.kind !== 'string' ||
+        !Number.isFinite(n.stars) ||
+        n.stars < 0 ||
+        n.stars > 5 ||
+        !p.graph.groups.some((g) => g.id === n.themeId),
+    )
+  )
+    throw new Error('不支持的课程结构字段');
   for (const u of p.units) {
+    if (
+      typeof u.value.name !== 'string' ||
+      typeof u.value.outcome !== 'string' ||
+      typeof u.value.theme?.name !== 'string' ||
+      !Number.isFinite(u.value.rating?.stars)
+    )
+      throw new Error('不支持的单元元数据载荷');
     if (
       u.value.reading?.schemaVersion !== 'review-reading-1' ||
       !Number.isSafeInteger(u.revision) ||
@@ -343,7 +370,7 @@ export function validate(p: Package) {
       !s ||
       !Number.isSafeInteger(map.pdfPageIndex) ||
       map.pdfPageIndex < 0 ||
-      map.pdfPageIndex >= s.pdfPages ||
+      map.pdfPageIndex >= (s.mediaType === 'application/pdf' ? s.pdfPages : 1) ||
       typeof map.label !== 'string'
     )
       throw new Error('非法印刷页引用');
