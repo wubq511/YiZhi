@@ -224,7 +224,7 @@ function App() {
     if (!board) return;
     const wheel = (event: WheelEvent) => {
       const target = event.target as HTMLElement;
-      if (target.closest('.board-tools, .relations-panel, .source-dialog, .react-flow__minimap, .table-scroll, input, select, textarea, .mux, .builtin-experiment, math-field')) return;
+      if (target.closest('.board-tools, .relations-panel, .source-dialog, .react-flow__minimap, .table-scroll, input, select, textarea, .mux, .builtin-formula-editor, math-field')) return;
       if (!target.closest('.reading-layer') && !event.shiftKey) return;
       event.preventDefault(); event.stopPropagation();
       const current = flow.getViewport();

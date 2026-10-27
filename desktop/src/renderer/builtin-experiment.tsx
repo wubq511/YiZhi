@@ -134,10 +134,10 @@ export function BuiltinExperiment({ block, unitId, sessionId, active, disabled }
     if (host.current) observer.observe(host.current);
     document.addEventListener('visibilitychange', update);
     return () => { observer.disconnect(); document.removeEventListener('visibilitychange', update); client.send({ kind: 'visibility', visible: false }); };
-  }, [client, active]);
+  }, [client, active, client.view?.generation]);
   const v = client.view;
   const title = block.payload.title ?? (block.payload.component === 'kmap' ? '固定卡诺图 · 跨边四格' : '交互 · 多路选择');
-  return <section ref={host} inert={disabled} className="builtin-experiment nodrag nopan nowheel" role="region" aria-label={title}>
+  return <section ref={host} inert={disabled} className="builtin-experiment nodrag nopan" role="region" aria-label={title}>
     <h3>{title}</h3>
     {!v ? <p role="status">{client.error ?? '正在恢复实验现场…'}</p> : <>
       <p className="builtin-scope">{v.definition.kind === 'mux' ? '仅演示通道选择；不模拟器件使能端。' : v.definition.kind === 'decoder' ? '74LS138 式：使能满足时，仅选中输出为低电平。' : '固定 A / BC 示例，列按格雷顺序排列；不改变函数或自动化简。'}</p>

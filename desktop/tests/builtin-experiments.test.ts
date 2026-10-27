@@ -103,12 +103,16 @@ test('offscreen pause drains a bounded step, freezes simulation time, resumes wi
     await wait(290); v = await service.experiments.read({ sessionId, instanceId: v.instanceId });
     assert.ok(v.state.step >= 1);
     await act({ kind: 'visibility', visible: false });
+    const oldPause = { sessionId, instanceId: v.instanceId, generation: v.generation, operationId: `lifecycle-${seq}`, action: { kind: 'visibility' as const, visible: false } };
     const paused = v.state; assert.equal(v.phase, 'paused');
     await wait(570); v = await service.experiments.read({ sessionId, instanceId: v.instanceId });
     assert.deepEqual(v.state, paused);
     await act({ kind: 'visibility', visible: true }); assert.deepEqual(v.state, paused);
     await wait(290); v = await service.experiments.read({ sessionId, instanceId: v.instanceId });
     assert.equal(v.state.step, paused.step + 1); assert.equal(v.state.simulationTime, paused.simulationTime + 250);
+    await service.experiments.act(oldPause);
+    const beforeOldPause = v.state.step; await wait(290);
+    v = await service.experiments.read({ sessionId, instanceId: v.instanceId }); assert.ok(v.state.step > beforeOldPause, 'an old pause receipt must not cancel resumed steps');
     await act({ kind: 'background', enabled: true }); await act({ kind: 'visibility', visible: false });
     const backgroundStep = v.state.step; await wait(290);
     v = await service.experiments.read({ sessionId, instanceId: v.instanceId }); assert.ok(v.state.step > backgroundStep);
@@ -172,4 +176,43 @@ test('supported 2:1 uses its ordered single selector for all eight inputs; fixed
     assert.equal(d.definition.check, 'verified');
     await assert.rejects(service.save({ sessionId, operationId: 'decoder-equivalence', inputSeq: 2, baseRevision: 2, blockId: c.editableBlockId, text: 'must not reuse experiment operation' }), /操作身份/);
   } finally { await service.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('parsing and built-in experiments cannot reuse each other\'s durable operation identity', async () => {
+  const { sourceFixture } = await import('./source-fixture');
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-builtin-parsing-'));
+  const service = new CourseService(resolve('dist/worker.cjs'));
+  try {
+    const c = await service.open(join(root, 'course')), sessionId = c.sessionId;
+    const v = await service.experiments.open({ sessionId, unitId: 'KU-057', blockId: muxId });
+    const action = { kind: 'inputs' as const, inputs: v.state.inputs };
+    await service.experiments.act({ sessionId, instanceId: v.instanceId, generation: v.generation, operationId: 'experiment-identity', action });
+    const path = join(root, 'new-source.pdf'); await sourceFixture(path);
+    const source = await service.sources.importFile({ sessionId, generation: 1, operationId: 'source-for-parse', path, title: 'Public test fixture' });
+    await assert.rejects(service.parsing.start({ sessionId, generation: 1, operationId: 'experiment-identity', versionId: source.version.versionId }), /操作身份/);
+    await service.parsing.start({ sessionId, generation: 1, operationId: 'parse-identity', versionId: source.version.versionId });
+    await assert.rejects(service.experiments.act({ sessionId, instanceId: v.instanceId, generation: v.generation, operationId: 'parse-identity', action }), /操作身份/);
+  } finally { await service.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('close pause barrier stops every instance even if one snapshot cannot be confirmed', async () => {
+  const { DatabaseSync } = await import('node:sqlite');
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-builtin-close-barrier-'));
+  const service = new CourseService(resolve('dist/worker.cjs'));
+  let fault: InstanceType<typeof DatabaseSync> | undefined;
+  try {
+    const { sessionId } = await service.open(root);
+    const mux = await service.experiments.open({ sessionId, unitId: 'KU-057', blockId: muxId });
+    const kmap = await service.experiments.open({ sessionId, unitId: 'KU-035', blockId: 'RB-KU-035-diagram' });
+    for (const v of [mux, kmap]) {
+      await service.experiments.act({ sessionId, instanceId: v.instanceId, generation: v.generation, operationId: `${v.blockId}-background`, action: { kind: 'background', enabled: true } });
+      await service.experiments.act({ sessionId, instanceId: v.instanceId, generation: v.generation, operationId: `${v.blockId}-run`, action: { kind: 'run', running: true } });
+    }
+    fault = new DatabaseSync(join(root, 'course.sqlite'));
+    fault.exec("CREATE TRIGGER one_snapshot_fault BEFORE UPDATE ON builtin_experiments WHEN NEW.id='KU-057/RB-TH-13-057-010-interactive' BEGIN SELECT RAISE(ABORT,'one snapshot failed'); END");
+    await assert.rejects(service.experiments.pauseAll({ sessionId }), /one snapshot failed/);
+    const before = await service.experiments.read({ sessionId, instanceId: kmap.instanceId });
+    await wait(570);
+    assert.deepEqual((await service.experiments.read({ sessionId, instanceId: kmap.instanceId })).state, before.state);
+  } finally { fault?.close(); await service.close(); await rm(root, { recursive: true, force: true }); }
 });

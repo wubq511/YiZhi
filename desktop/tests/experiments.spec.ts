@@ -69,6 +69,46 @@ test('actual built-in controls, diagram, offscreen stop and formula confirmation
     await kmap.getByRole('checkbox', { name: '显示跨边四格', exact: true }).check();
     await expect(kmap.locator('[data-highlighted="true"]')).toHaveCount(4);
     await expect(kmap.getByRole('status', { name: '卡诺图结论' })).toHaveText('四格跨边相邻，A、B 变化，C 恒为 0，所以 F = ¬C。');
+    await reveal(page, kmap.getByRole('status', { name: '卡诺图结论', includeHidden: true }));
     await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t12-kmap.png' });
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+
+test('actual IPC pause failure shows incomplete and confirmed recovery can run again without reviving old input', async () => {
+  const { DatabaseSync } = await import('node:sqlite');
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-builtin-ui-fault-'));
+  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  const appProcess = app.process();
+  let fault: InstanceType<typeof DatabaseSync> | undefined;
+  try {
+    const page = await app.firstWindow();
+    await page.getByRole('button', { name: '复用器与分配器', exact: true }).click();
+    const unit = page.getByRole('navigation', { name: '课程目录' }).getByRole('button', { name: 'MUX 器件、级联与扩展', exact: true }); await unit.click();
+    const lab = page.getByRole('region', { name: '交互 · 4 选 1 的选择语义', exact: true });
+    await reveal(page, lab.getByRole('button', { name: '开始遍历输入', includeHidden: true }));
+    await lab.getByRole('button', { name: '开始遍历输入', exact: true }).click();
+    const read = () => page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return b.experiments.read({ sessionId: c.sessionId, instanceId: 'KU-057/RB-TH-13-057-010-interactive' }); });
+    await expect.poll(async () => (await read()).state.step).toBeGreaterThan(0);
+    fault = new DatabaseSync(join(root, 'course/course.sqlite'));
+    fault.exec("CREATE TRIGGER fail_pause_ui BEFORE UPDATE ON builtin_experiments BEGIN SELECT RAISE(ABORT,'actual UI pause fault'); END");
+    await unit.click();
+    await expect.poll(async () => (await read()).phase).toBe('pause-incomplete');
+    const confirmed = (await read()).state;
+    await page.waitForTimeout(550); expect((await read()).state).toEqual(confirmed);
+    fault.exec('DROP TRIGGER fail_pause_ui'); fault.close(); fault = undefined;
+    const recovery = lab.getByRole('button', { name: '恢复最近确认现场', exact: true, includeHidden: true });
+    await reveal(page, recovery); await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t12-pause-incomplete.png' }); await recovery.click();
+    await expect(lab.getByRole('status', { name: '实验保存状态' })).toHaveText('现场已保存');
+    expect((await read()).state).toEqual(confirmed);
+    await lab.getByRole('button', { name: '开始遍历输入', exact: true }).click();
+    await expect.poll(async () => (await read()).state.step).toBeGreaterThan(confirmed.step);
+    await app.close();
+  } finally {
+    fault?.close();
+    if (appProcess.exitCode === null && appProcess.signalCode === null) {
+      const exited = new Promise<void>(done => appProcess.once('exit', () => done())); appProcess.kill('SIGKILL'); await exited;
+    }
+    await rm(root, { recursive: true, force: true });
+  }
 });

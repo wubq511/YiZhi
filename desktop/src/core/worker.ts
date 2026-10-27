@@ -115,7 +115,7 @@ let queue = Promise.resolve();
 parentPort!.on('message', message => {
   if (message.action === 'experiments:act') {
     const course = [...courses.values()].find(c => c.sessionId === message.payload?.sessionId);
-    course?.experiments.stopIssuing(message.payload);
+    try { course?.experiments.stopIssuing(message.payload); } catch { /* Invalid input is rejected by the ordered dispatcher below. */ }
   }
   queue = queue.then(() => dispatch(message));
 });

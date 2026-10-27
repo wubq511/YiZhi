@@ -36,9 +36,9 @@ export class BuiltinExperiments {
   fenceOperation(action: string, operationId: unknown) {
     if (typeof operationId !== 'string') return;
     if (action === 'experiments:act') {
-      if (['operations', 'cg_candidates', 'source_operations', 'source_imports'].some(table =>
+      if (['operations', 'cg_candidates', 'source_operations', 'source_imports', 'parse_operations'].some(table =>
         this.db.prepare(`SELECT 1 FROM ${table} WHERE id=?`).get(operationId))) throw new Error('操作身份已用于其他正式修改');
-    } else if (['save', 'commitEdit', 'commands:commit', 'relations:commit'].includes(action) || action.startsWith('sources:')) {
+    } else if (['save', 'commitEdit', 'commands:commit', 'relations:commit'].includes(action) || action.startsWith('sources:') || action.startsWith('parsing:')) {
       if (this.db.prepare('SELECT 1 FROM builtin_experiment_operations WHERE id=?').get(operationId)) throw new Error('操作身份已用于实验修改');
     }
   }
@@ -51,7 +51,11 @@ export class BuiltinExperiments {
   /** Called at message arrival, before unrelated asynchronous course work drains. */
   stopIssuing(command: ExperimentCommand) {
     const v = this.live.get(command?.instanceId);
-    if (!v || command.generation !== v.generation) return;
+    if (!v || command.generation !== v.generation || typeof command.operationId !== 'string' ||
+      !command.operationId.length || command.operationId.length > 160 || !command.action || JSON.stringify(command.action).length > 24000) return;
+    try { this.fenceOperation('experiments:act', command.operationId); } catch { return; }
+    // Duplicate/rejected old operations may return their receipt, but cannot stop a new run.
+    if (this.db.prepare('SELECT 1 FROM builtin_experiment_operations WHERE id=?').get(command.operationId)) return;
     const a = command.action;
     if (a?.kind === 'pause' || (a?.kind === 'run' && a.running === false) ||
       (a?.kind === 'visibility' && a.visible === false && !v.background) ||
@@ -124,14 +128,21 @@ export class BuiltinExperiments {
     }, 250));
   }
   pauseAll(): ExperimentView[] {
+    // Stop issuance for ALL instances before any individual confirmation can fail.
+    for (const timer of this.timers.values()) clearTimeout(timer);
+    this.timers.clear();
     const result: ExperimentView[] = [];
+    let failure: Error | undefined;
     for (const [id, old] of this.live) {
-      clearTimeout(this.timers.get(id)); this.timers.delete(id);
-      if (old.phase === 'pause-incomplete') throw new Error('实验暂停未完成，请恢复最近确认现场');
+      if (old.phase === 'pause-incomplete') { failure ??= new Error('实验暂停未完成，请恢复最近确认现场'); continue; }
       const v = { ...structuredClone(old), visible: false, phase: old.definition.check === 'verified' ? 'paused' as const : 'needs-check' as const };
       try { this.persist(v); this.live.set(id, v); result.push(structuredClone(v)); }
-      catch (error) { this.live.set(id, { ...old, running: false, phase: 'pause-incomplete', error: String(error) }); throw error; }
+      catch (error) {
+        this.live.set(id, { ...old, running: false, phase: 'pause-incomplete', error: String(error) });
+        failure ??= error as Error;
+      }
     }
+    if (failure) throw failure;
     return result;
   }
   dispose() { for (const t of this.timers.values()) clearTimeout(t); this.timers.clear(); }
