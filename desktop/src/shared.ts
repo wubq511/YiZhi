@@ -86,7 +86,11 @@ export interface DraftReceipt { sessionId: string; inputSeq: number; cursor: num
 export interface RecoverableDraft { input: DraftInput; receipt: DraftReceipt }
 export interface EditCommand extends DraftInput { operationId: string }
 export interface EditReceipt extends SaveReceipt { blockIds: string[]; cursor: number }
-export interface EditHistory { receipt: SaveReceipt; before: unknown; after: unknown }
+export interface EditHistory {
+  receipt: SaveReceipt; before: unknown; after: unknown;
+  /** Earlier formats may have no recorded commit time. */
+  committedAt: string | null;
+}
 export type SaveEventData =
   { type: 'draft.saved'; sessionId: string; inputSeq: number } |
   { type: 'content.committed'; receipt: EditReceipt } |

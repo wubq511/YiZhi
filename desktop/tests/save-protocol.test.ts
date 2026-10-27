@@ -40,6 +40,7 @@ test('unfinished input recovers with its original basis; stale sequence, differe
 
 test('a multi-paragraph edit and split commit together, retain newer drafts, and retry/query without overwriting later work', async () => {
   await fixture(async (service, root) => {
+    const startedAt = Date.now();
     const opened = await service.open(root);
     const paragraphs = opened.unit.reading.blocks.filter(b => b.kind === 'paragraph');
     const first = paragraphs[0].id, second = paragraphs[1].id;
@@ -63,12 +64,14 @@ test('a multi-paragraph edit and split commit together, retain newer drafts, and
     await assert.rejects(service.commitEdit({ ...command, changes: [] }), /不同内容/);
     const history = await service.history(opened.sessionId);
     assert.deepEqual(history.map((h: any) => h.receipt.operationId), ['two-blocks-and-split', 'later-edit']);
+    assert.ok(history.every(entry => entry.committedAt !== null &&
+      Date.parse(entry.committedAt) >= startedAt && Date.parse(entry.committedAt) <= Date.now()));
     await service.close();
     const next = new CourseService(resolve('dist/worker.cjs'));
     try {
       const reopened = await next.open(root);
       assert.deepEqual(await next.queryOperation(reopened.sessionId, command.operationId), receipt);
-      assert.equal((await next.history(reopened.sessionId)).length, 2);
+      assert.deepEqual(await next.history(reopened.sessionId), history);
     } finally { await next.close(); }
   });
 });
