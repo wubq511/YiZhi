@@ -2,6 +2,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
 import { patchTargets } from '../editor-api';
 import { initializeEditorStore, validatePatch, applyContentPatch } from './editor-store';
+import { integrateValue } from '../content-integration';
 import type { DraftInput, DraftReceipt, RecoverableDraft, EditCommand, EditReceipt, EditHistory, SaveReceipt, CourseUnit, ReadingBlock, SaveEventData } from '../shared';
 
 export function initializeSaveStore(db: DatabaseSync) {
@@ -12,6 +13,7 @@ export function initializeSaveStore(db: DatabaseSync) {
     CREATE TABLE IF NOT EXISTS drafts(session_id TEXT PRIMARY KEY, input TEXT NOT NULL, receipt TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS operation_times(operation_id TEXT PRIMARY KEY REFERENCES operations(id), committed_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS save_events(cursor INTEGER PRIMARY KEY AUTOINCREMENT, event TEXT NOT NULL);`);
+  db.exec('CREATE TABLE IF NOT EXISTS input_resolutions(id TEXT PRIMARY KEY REFERENCES operations(id), digest TEXT NOT NULL)');
 }
 export function eventCursor(db: DatabaseSync): number {
   return Number(db.prepare("SELECT seq FROM sqlite_sequence WHERE name='save_events'").get()?.seq ?? 0);
@@ -47,6 +49,8 @@ function validate(input: DraftInput) {
     throw new Error('未完成公式只能保留为草稿');
 }
 export function transaction<T>(db: DatabaseSync, run: () => T): T {
+  // Internal synchronous composition shares the caller's transaction; it never commits part of it.
+  if (db.isTransaction) return run();
   db.exec('BEGIN IMMEDIATE');
   try { const result = run(); db.exec('COMMIT'); return result; }
   catch (error) {
@@ -54,6 +58,44 @@ export function transaction<T>(db: DatabaseSync, run: () => T): T {
     try { db.exec('ROLLBACK'); } catch { /* Already rolled back by SQLite. */ }
     throw error;
   }
+}
+/** Explicit conflict choice is version checked and consumes only the exact durable draft. */
+export function resolveInput(db: DatabaseSync, request: import('../command-api').InputResolution, afterWrite: () => unknown): EditReceipt {
+  if (!request || !['student', 'external'].includes(request.choice) || !Array.isArray(request.blockIds) ||
+    !request.blockIds.length || request.blockIds.some(id => typeof id !== 'string')) throw new Error('无效的冲突选择');
+  return transaction(db, () => {
+    const old = db.prepare('SELECT digest FROM input_resolutions WHERE id=?').get(request.operationId);
+    if (old) {
+      if (old.digest !== digest(request)) throw new Error('同一冲突处理操作不能换用不同选择');
+      return queryOperation(db, request.operationId) as EditReceipt;
+    }
+    const row = db.prepare("SELECT payload, revision FROM units WHERE id='KU-001'").get()!;
+    if (Number(row.revision) !== request.basisRevision) throw new Error('正文版本已变化，请重新查看冲突部分');
+    const draft = readDrafts(db).find(d => d.input.sessionId === request.draftSessionId && d.input.inputSeq === request.inputSeq);
+    if (!draft?.input.patch || draft.input.patch.structure || draft.input.formulaDrafts?.length || !draft.input.complete)
+      throw new Error('该草稿需要完成输入或结构整合，不能按文本冲突处理');
+    const unit: CourseUnit = JSON.parse(String(row.payload));
+    const patch = structuredClone(draft.input.patch);
+    for (const u of patch.updates) {
+      const block = unit.reading.blocks.find(b => b.id === u.blockId);
+      if (!block) throw new Error('冲突对象已移除，请重新读取');
+      const merged = integrateValue(u.before, block.payload, u.after);
+      if (!merged.compatible) {
+        if (!request.blockIds.includes(u.blockId)) throw new Error(`仍需处理冲突：${u.blockId}`);
+        const field = block.kind === 'paragraph' ? 'text' : block.kind === 'formula' ? 'latex' : undefined;
+        if (!field) throw new Error('当前内容不支持文本冲突选择');
+        u.after = request.choice === 'student' ? { ...block.payload, [field]: u.after[field] } : block.payload;
+      } else u.after = merged.value;
+      u.before = block.payload;
+    }
+    touchDraft(db, draft.input);
+    db.prepare('DELETE FROM drafts WHERE session_id=?').run(draft.input.sessionId);
+    const seq = Number(db.prepare('SELECT seq FROM input_progress WHERE session_id=?').get(request.sessionId)?.seq ?? 0) + 1;
+    const receipt = commitEdit(db, { sessionId: request.sessionId, operationId: request.operationId, inputSeq: seq,
+      baseRevision: request.basisRevision, complete: true, changes: [], patch }, afterWrite);
+    db.prepare('INSERT INTO input_resolutions VALUES (?, ?)').run(request.operationId, digest(request));
+    return receipt;
+  });
 }
 export function appendEvent(db: DatabaseSync, event: SaveEventData): number {
   if (!db.isTransaction) throw new Error('持久事件必须与正式修改或草稿同事务追加');
@@ -146,9 +188,19 @@ export function commitEdit(db: DatabaseSync, command: EditCommand, afterWrite?: 
       if ((draft.input.splits?.length || command.splits?.length || draft.input.patch?.structure || command.patch?.structure)) throw new Error('共同结构上的草稿仍待整合');
     }
     const row = db.prepare('SELECT payload, revision FROM units WHERE id=?').get('KU-001')!;
-    if (Number(row.revision) !== command.baseRevision) throw new Error('正文版本已变化，输入仍保留，请重新核对');
     const unit: CourseUnit = JSON.parse(String(row.payload));
-    const editorEffect = command.patch ? applyContentPatch(db, unit, command.patch) : undefined;
+    if (command.baseRevision > Number(row.revision)) throw new Error('正文版本尚不存在，输入仍保留');
+    const stale = Number(row.revision) !== command.baseRevision;
+    if (stale && (!command.patch || command.changes.length || command.splits?.length)) throw new Error('正文版本已变化，输入仍保留，请重新核对');
+    const patch = command.patch && structuredClone(command.patch);
+    if (patch) for (const update of patch.updates) {
+      const block = unit.reading.blocks.find(b => b.id === update.blockId);
+      if (!block) throw new Error('共同结构已变化，学生草稿仍保留');
+      const merged = integrateValue(update.before, block.payload, update.after);
+      if (!merged.compatible) throw new Error('当前段落的同时修改不兼容，正式内容与学生草稿均已保留。请在正文处理冲突部分。');
+      update.before = block.payload; update.after = merged.value;
+    }
+    const editorEffect = patch ? applyContentPatch(db, unit, patch) : undefined;
     const find = (blocks: ReadingBlock[], id: string, parentId = unit.id): { block: ReadingBlock; siblings: ReadingBlock[]; parentId: string } | undefined => {
       for (const block of blocks) {
         if (block.id === id) return { block, siblings: blocks, parentId };
@@ -188,6 +240,7 @@ export function commitEdit(db: DatabaseSync, command: EditCommand, afterWrite?: 
       found.siblings.splice(found.siblings.indexOf(found.block) + 1, 0, next);
     }
     const receipt: EditReceipt = { operationId: command.operationId, sessionId: command.sessionId,
+      basedOnRevision: command.baseRevision,
       inputSeq: command.inputSeq, revision: Number(row.revision) + 1,
       blockId: command.changes[0]?.blockId ?? command.splits?.[0]?.blockId ?? patchTargets(command.patch)[0] ?? unit.id, blockIds: [...affected], cursor: 0 };
     db.prepare('UPDATE units SET payload=?, revision=? WHERE id=?').run(JSON.stringify(unit), receipt.revision, unit.id);

@@ -141,6 +141,7 @@ function App() {
   const [review, setReview] = useState<ReviewSnapshot>();
   const [reviewFilter, setReviewFilter] = useState<'all' | ReviewStatus>('all');
   const readingRef = useRef<ReadingState | null>(null);
+  const navigation = useRef<Promise<void>>(Promise.resolve());
   const writes = useRef<Promise<void>>(Promise.resolve());
   const [readingSave, setReadingSave] = useState<'saved' | 'pending' | 'error'>('saved');
   const readingFailed = useRef(false);
@@ -231,6 +232,8 @@ function App() {
     // A failed course open owns no editable input and must still allow normal exit.
     if (!channel.current) return true;
     setClosing(true);
+    try { await navigation.current; }
+    catch { setClosing(false); return false; }
     await writes.current;
     await layoutWrites.current;
     if (layoutPending.current.size) { setClosing(false); return false; }
@@ -246,13 +249,14 @@ function App() {
     if (!await flushBuiltinExperiments(window.yizhi, current.sessionId)) { setReadError('实验现场尚未确认，请返回实验重试保存或恢复最近确认现场。'); setClosing(false); return false; }
     if (agentPanel.current && !await agentPanel.current.flush()) { setClosing(false); return false; }
     const saved = await channel.current.flush();
+    if (saved && continuous.current && !await continuous.current.finish()) { setClosing(false); return false; }
     if (!saved) setClosing(false);
     return saved;
   }), []);
   useEffect(() => {
     if (course) setMounted(previous => previous.map(unit => unit.id === course.unit.id ? course.unit : unit));
   }, [course, selected]);
-  const go = async (id: string, nextState?: ReadingState) => {
+  const navigate = async (id: string, nextState?: ReadingState): Promise<void> => {
     if (!course || !graph) return;
     camera.takeover();
     if (composing.current) { setReadError('请先完成中文候选输入，再切换阅读位置。'); return; }
@@ -264,6 +268,9 @@ function App() {
     catch (error) { setSelected(undefined); setReadError((error as Error).message); }
     if (nextState?.camera) await flow.setViewport(nextState.camera, { duration: 0 });
     else await flow.setCenter(position.x + 325, position.y + 250, { zoom: 0.85, duration: 0 });
+  };
+  const go = (id: string, nextState?: ReadingState): Promise<void> => {
+    const pending = navigate(id, nextState); navigation.current = pending; return pending;
   };
   useEffect(() => {
     if (!course || !graph || !nodesReady || restored.current) return;
@@ -365,7 +372,7 @@ function App() {
         {state.status === 'error' && <button onClick={() => void channel.current?.flush()}>重试保存</button>}
       </div>
     </header>
-    {state.error && <div className="save-error" role="alert">{state.error} 输入仍保留，请重试保存。</div>}
+    {state.error && <div className="save-error" role="alert">{state.error}{!state.error.includes('冲突部分') && ' 输入仍保留，请重试保存。'}</div>}
     <div className="workspace board-workspace" inert={(!cameraReady && !loadError) || (narrow && (sourcesOpen || agentOpen))} aria-busy={!cameraReady && !loadError}>
       {directory && <nav ref={navRef} inert={sourceOpen || (narrow && (relationsOpen || producerOpen))} aria-label="课程目录" onKeyDown={event => trap(event, closeDirectory)}><h2>课程目录</h2>{narrow && <button onClick={closeDirectory}>关闭目录</button>}
         <label className="review-filter">复习状态筛选 <select aria-label="复习状态筛选" value={reviewFilter} onChange={event => setReviewFilter(event.target.value as typeof reviewFilter)}><option value="all">全部单元</option><option value="pending">待复习</option><option value="weak">薄弱</option><option value="mastered">已掌握</option></select></label>
@@ -386,7 +393,7 @@ function App() {
 
             <h1>{unit.name}</h1><p className="unit-meta">课程重要性 {unit.rating.stars} / 5 · {unit.id}</p>{review && <ReviewControls unitId={unit.id} snapshot={review} change={status => void changeReview(unit.id, status)} confirm={(id, adjust) => void confirmReview(id, adjust)} />}<p className="outcome">{unit.outcome}</p>
             <SourceReferences citations={sourceCitations.filter(citation => citation.target?.unitId === unit.id)} onOpen={citation => sourcesPanel.current?.openCitation(citation)} />
-            {unit.id === 'KU-001' && channel.current ? <ContinuousUnitEditor course={course} channel={channel.current} disabled={closing || producerBusy || !cameraReady}
+            {unit.id === 'KU-001' && channel.current ? <ContinuousUnitEditor course={course} channel={channel.current} disabled={closing || producerBusy || !cameraReady} saveError={state.status === 'error'}
               composition={active => { composing.current = active; }} controller={instance => { continuous.current = instance; }}
               renderBlock={block => <ReadingBoundary><Block block={block} experiment={{ unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing, composition: active => { composing.current = active; } }} reading={reading} updateReading={updateReading}
                 onSource={button => { sourceTrigger.current = button; setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;

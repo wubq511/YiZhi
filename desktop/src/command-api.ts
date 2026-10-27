@@ -17,7 +17,19 @@ export interface GroupHistory {
   changes: { objectId: string; before: Record<string, any> | null; after: Record<string, any> | null; beforeVersion: number; afterVersion: number }[];
 }
 export interface RetainedCandidate { command: GroupCommand; result: GroupResult }
+export interface EditorProtection { sessionId: string; editorId: string; sequence: number; blockIds: string[];
+  mode: 'editing' | 'selection'; inputSeq: number }
+export interface CandidateCheck { candidateId: string; status: 'committed' | 'waiting' | 'needs-reread' | 'conflict' | 'ineligible';
+  reason?: string; objectIds: string[]; receipt?: GroupResult;
+  parts?: Array<{ objectId: string; current: Record<string, any>; incoming: Record<string, any> }> }
+export interface InputResolution { sessionId: string; operationId: string; draftSessionId: string; inputSeq: number;
+  basisRevision: number; blockIds: string[]; choice: 'student' | 'external' }
 export interface CommandAPI {
+  protect(request: EditorProtection): Promise<void>;
+  releaseView(request: { sessionId: string }): Promise<void>;
+  recheck(request: { sessionId: string }): Promise<CandidateCheck[]>;
+  resolveInput(request: InputResolution): Promise<import('./shared').EditReceipt>;
+  resolveCandidate(request: { sessionId: string; candidateId: string; basisRevision: number; choice: 'current' | 'incoming' }): Promise<GroupResult | null>;
   startAttempt(request: AttemptRequest): Promise<Attempt>;
   read(request: CommandRead): Promise<CommandBasis>;
   commit(command: GroupCommand): Promise<GroupResult>;
@@ -28,6 +40,11 @@ export interface CommandAPI {
 }
 export function commandClient(request: (action: string, payload: unknown) => Promise<any>): CommandAPI {
   return {
+    protect: payload => request('commands:protect', payload),
+    releaseView: payload => request('commands:releaseView', payload),
+    recheck: payload => request('commands:recheck', payload),
+    resolveInput: payload => request('commands:resolveInput', payload),
+    resolveCandidate: payload => request('commands:resolveCandidate', payload),
     startAttempt: payload => request('commands:startAttempt', payload),
     read: payload => request('commands:read', payload),
     commit: payload => request('commands:commit', payload),

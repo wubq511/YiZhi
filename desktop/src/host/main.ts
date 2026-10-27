@@ -27,6 +27,11 @@ let exiting = false;
 let closeSequence = 0;
 let pendingClose: number | undefined;
 let closeTimer: ReturnType<typeof setTimeout> | undefined;
+let activeSessionId: string | undefined;
+function detachView() {
+  if (core && activeSessionId) void core.commands.releaseView({ sessionId: activeSessionId })
+    .then(() => core.commands.recheck({ sessionId: activeSessionId! })).catch(() => { /* Durable drafts remain guarded, including after renderer death. */ });
+}
 
 // Acquire before creating Worker or touching any course. Secondary launch rejoins this host.
 if (!app.requestSingleInstanceLock()) app.exit(0);
@@ -58,7 +63,7 @@ else {
     for (const method of ['start','continue','stop','get','list','artifact','artifacts','correct','query'] as const) {
       ipcMain.handle(`parsing:${method}`, (event, request) => { checkSender(event); return core.parsing[method](request); });
     }
-    ipcMain.handle('course:open', async event => { checkSender(event); return core.open(courseDirectory); });
+    ipcMain.handle('course:open', async event => { checkSender(event); const opened = await core.open(courseDirectory); activeSessionId = opened.sessionId; return opened; });
     ipcMain.handle('course:graph', async (event, sessionId: string) => { checkSender(event); return core.graph(sessionId); });
     ipcMain.handle('course:read-unit', async (event, sessionId: string, unitId: string) => { checkSender(event); return core.readUnit(sessionId, unitId); });
     ipcMain.handle('course:set-layout', async (event, sessionId: string, updates) => { checkSender(event); return core.setLayout(sessionId, updates); });
@@ -77,7 +82,7 @@ else {
     for (const method of ['open', 'read', 'snapshot', 'act', 'pauseAll'] as const) {
       ipcMain.handle(`experiments:${method}`, (event, payload) => { checkSender(event); return core.experiments[method](payload); });
     }
-    for (const method of ['startAttempt', 'read', 'commit', 'stop', 'query', 'candidates', 'history'] as const) {
+    for (const method of ['protect', 'releaseView', 'recheck', 'resolveInput', 'resolveCandidate', 'startAttempt', 'read', 'commit', 'stop', 'query', 'candidates', 'history'] as const) {
       ipcMain.handle(`commands:${method}`, (event, payload) => { checkSender(event); return core.commands[method](payload); });
     }
     for (const method of ['read', 'commit', 'query', 'prerequisites'] as const) {
@@ -133,7 +138,8 @@ async function showWindow() {
     webPreferences: { preload: join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', event => event.preventDefault());
+  window.webContents.on('render-process-gone', detachView);
   window.on('close', event => { if (!exiting) { event.preventDefault(); requestClose(); } });
-  window.on('closed', () => { window = undefined; pendingClose = undefined; clearTimeout(closeTimer); });
+  window.on('closed', () => { detachView(); window = undefined; pendingClose = undefined; clearTimeout(closeTimer); });
   await window.loadURL('yizhi-app://app/index.html');
 }

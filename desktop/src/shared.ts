@@ -24,6 +24,7 @@ export interface OpenedCourse {
   drafts: RecoverableDraft[];
   eventCursor: number;
   unit: CourseUnit;
+  blockVersions?: Record<string, number>;
   runtime: { node: string; electron?: string; sqlite: string;
     pragmas: { journalMode: string; foreignKeys: number; synchronous: number } };
 }
@@ -41,6 +42,8 @@ export interface SaveReceipt {
   inputSeq: number;
   revision: number;
   blockId: string;
+  /** Exact original input basis, even when the core integrated independent intervening edits. */
+  basedOnRevision?: number;
 }
 export interface DesktopBridge extends SaveBridge {
   experiments: import('./experiments-api').ExperimentsAPI;

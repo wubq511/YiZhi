@@ -16,6 +16,7 @@ import type { CourseGraph, OpenedCourse, SaveParagraph, SaveReceipt, EditCommand
 
 import { initializeSaveStore, readDrafts, saveDraft, eventCursor, commitEdit, queryOperation, history, confirmedInput, readEvents } from './save-store';
 import { transaction } from './save-store';
+import { resolveInput } from './save-store';
 import { initializeReviewState, reviewSnapshot, setReviewStatus, confirmReviewPrompt } from './review-state';
 
 const EDITABLE = 'RB-TH-01-01-what-is-positional-notation';
@@ -37,6 +38,7 @@ function session(id: string): Course {
 function snapshot(course: Course): OpenedCourse {
   const row = course.db.prepare('SELECT payload, revision FROM units WHERE id = ?').get('KU-001')!;
   return { courseId: course.courseId, sessionId: course.sessionId, revision: Number(row.revision),
+    blockVersions: Object.fromEntries(course.db.prepare("SELECT id, version FROM cg_objects WHERE kind='block'").all().map(r => [String(r.id), Number(r.version)])),
     drafts: readDrafts(course.db), eventCursor: eventCursor(course.db),
     confirmedInputSeq: confirmedInput(course.db, course.sessionId), editableBlockId: EDITABLE, unit: JSON.parse(String(row.payload)),
     runtime: { node: process.versions.node, electron: process.versions.electron,
@@ -93,7 +95,11 @@ function open(directory: string): OpenedCourse {
     };
     const graph = JSON.parse(readFileSync(join(__dirname, 'fixtures/graph.json'), 'utf8')) as CourseGraph;
     initializeReviewState(db);
-    const groups = new CommandGroups(db, graph);
+    const groups = new CommandGroups(db, graph, operationId => {
+      sources.fenceOperation('commands:commit', operationId);
+      agent.fence('commands:commit', operationId);
+      experiments.fenceOperation('commands:commit', operationId);
+    });
     const sources = new Sources(db, canonical, sourceUnit);
     const relationCatalog = JSON.parse(readFileSync(join(__dirname, 'fixtures/relation-catalog.json'), 'utf8'));
     const relations = new FormalRelations(db, graph, { retiredUnitIds: relationCatalog.retiredUnitIds,
@@ -141,9 +147,10 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
   try {
     if (payload?.operationId) {
       const course = session(payload.sessionId);
-      course.sources.fenceOperation(action, payload.operationId);
-      course.agent.fence(action, payload.operationId);
-      course.experiments.fenceOperation(action, payload.operationId);
+      const fencedAction = action === 'commands:resolveInput' ? 'commitEdit' : action;
+      course.sources.fenceOperation(fencedAction, payload.operationId);
+      course.agent.fence(fencedAction, payload.operationId);
+      course.experiments.fenceOperation(fencedAction, payload.operationId);
     }
     let value: unknown;
     if (action === 'open') value = open(payload.directory);
@@ -195,6 +202,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action === 'relations:read') { const course = session(payload.sessionId); const basis = course.relations.read(payload); value = { ...basis, graph: layoutGraph(course.db, basis.graph) }; }
     else if (action === 'relations:commit') value = session(payload.sessionId).relations.commit(payload);
     else if (action === 'relations:query') value = session(payload.sessionId).relations.query(payload.operationId);
+    else if (action === 'commands:resolveInput') { const c = session(payload.sessionId); value = resolveInput(c.db, payload, () => c.groups.observe()); }
     else if (action.startsWith('commands:')) value = session(payload.sessionId).groups.dispatch(action, payload);
     else if (action.startsWith('agent:')) value = session(payload.sessionId).agent.dispatch(action, payload);
     else if (action.startsWith('parsing:')) value = await session(payload.sessionId).parsing.dispatch(action, payload);

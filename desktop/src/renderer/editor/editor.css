@@ -1,6 +1,11 @@
 .editor-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px; margin: 22px 0; background: #fffdf8; border: 1px solid #b9c9d9; border-radius: 11px; font: 13px/1.5 system-ui, sans-serif; color: #345d88; }
 .editor-tools span { flex-basis: 100%; }
 .editor-tools button { color: #345d88; font: inherit; }
+.editor-integration { margin-block: 18px; padding: 12px; border: 1px solid #b9c9d9; border-radius: 8px; background: #fffdf8; color: #345d88; font: 14px/1.7 system-ui, sans-serif; overflow-wrap: anywhere; }
+.editor-integration p { margin-block: 0 10px; }
+.editor-integration dt { font-weight: 600; }
+.editor-integration dd { margin: 0 0 12px; white-space: pre-wrap; }
+.editor-integration button { margin: 0 8px 8px 0; }
 .continuous-prose { outline: none; caret-color: #6965db; overflow-wrap: anywhere; }
 .continuous-prose p[data-block-id] { min-height: 1.85em; white-space: pre-wrap; }
 .continuous-prose p[data-block-id]:focus { outline: none; }
