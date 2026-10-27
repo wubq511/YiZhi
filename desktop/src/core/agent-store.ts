@@ -12,7 +12,7 @@ const text = (s: unknown, max = 20_000): s is string => typeof s === 'string' &&
 export class AgentStore {
   constructor(private db: DatabaseSync, private sources: Sources, private unit: (id: string) => CourseUnit | undefined) {
     db.exec(`CREATE TABLE IF NOT EXISTS agent_conversations(id TEXT PRIMARY KEY, title TEXT NOT NULL, updated_at TEXT NOT NULL,
-        draft TEXT NOT NULL DEFAULT '', draft_session TEXT NOT NULL DEFAULT '', draft_seq INTEGER NOT NULL DEFAULT 0, thread_id TEXT);
+        draft TEXT NOT NULL DEFAULT '', draft_session TEXT NOT NULL DEFAULT '', draft_seq INTEGER NOT NULL DEFAULT 0, thread_id TEXT, draft_context TEXT NOT NULL DEFAULT '{}');
       CREATE TABLE IF NOT EXISTS agent_context(id INTEGER PRIMARY KEY CHECK(id=1), conversation_id TEXT REFERENCES agent_conversations(id));
       CREATE TABLE IF NOT EXISTS agent_operations(id TEXT PRIMARY KEY, digest TEXT NOT NULL, receipt TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS agent_tasks(id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL REFERENCES agent_conversations(id),
@@ -21,6 +21,7 @@ export class AgentStore {
       CREATE TABLE IF NOT EXISTS agent_deliveries(attempt_id TEXT NOT NULL, event_id TEXT NOT NULL, digest TEXT NOT NULL, PRIMARY KEY(attempt_id,event_id));
       CREATE TABLE IF NOT EXISTS agent_tool_recovery(id TEXT PRIMARY KEY, attempt_id TEXT NOT NULL REFERENCES cg_attempts(id),
         purpose TEXT NOT NULL, reference_id TEXT NOT NULL, name TEXT NOT NULL, input TEXT, output TEXT, digest TEXT NOT NULL, refs TEXT NOT NULL);`);
+    if (!db.prepare('PRAGMA table_info(agent_conversations)').all().some(row => row.name === 'draft_context')) db.exec("ALTER TABLE agent_conversations ADD COLUMN draft_context TEXT NOT NULL DEFAULT '{}'");
     // Process death is not an instruction to regenerate. Preserve actual received text, revoke the old attempt.
     transaction(db, () => {
       for (const row of db.prepare('SELECT payload FROM agent_tasks').all()) {
@@ -80,19 +81,22 @@ export class AgentStore {
     const row = this.conversation(id);
     return { id, title: String(row.title), updatedAt: String(row.updated_at),
       toolFacts: this.db.prepare('SELECT r.* FROM agent_tool_recovery r JOIN agent_tasks t ON t.id=r.reference_id WHERE t.conversation_id=? ORDER BY r.rowid').all(id).map(r => ({ taskId: String(r.reference_id), name: String(r.name), purpose: String(r.purpose), referenceId: String(r.reference_id), digest: String(r.digest), references: parse(r.refs), hasRecoveryPayload: r.input !== null || r.output !== null })),
-      draft: { text: String(row.draft), seq: row.draft_session === sessionId ? Number(row.draft_seq) : 0 },
+      draft: { text: String(row.draft), seq: row.draft_session === sessionId ? Number(row.draft_seq) : 0, citationIds: [], ...parse(row.draft_context) },
       tasks: this.db.prepare('SELECT payload FROM agent_tasks WHERE conversation_id=? ORDER BY rowid').all(id).map(r => parse(r.payload)),
       messages: this.db.prepare('SELECT m.payload FROM agent_messages m JOIN agent_tasks t ON t.id=m.task_id WHERE t.conversation_id=? ORDER BY m.rowid').all(id).map(r => parse(r.payload)) };
   }
   saveDraft(request: any) {
     if (!text(request.text) || !Number.isSafeInteger(request.seq) || request.seq < 1) throw new Error('输入草稿无效');
+    const context = { ...(request.target ? { target: request.target } : {}), citationIds: request.citationIds ?? [] };
+    if (!Array.isArray(context.citationIds) || context.citationIds.length > 8 || context.citationIds.some((id: unknown) => !valid(id) || !this.sources.citations().some(c => c.id === id)) ||
+      context.target && (!valid(context.target.unitId) || context.target.blockId !== undefined && !valid(context.target.blockId) || context.target.selectedText !== undefined && !text(context.target.selectedText, 10_000))) throw new Error('提问草稿目标或出处无效');
     return transaction(this.db, () => {
       const row = this.conversation(request.conversationId);
       if (row.draft_session === request.sessionId && request.seq <= Number(row.draft_seq)) {
-        if (request.seq === row.draft_seq && request.text === row.draft) return { seq: request.seq };
+        if (request.seq === row.draft_seq && request.text === row.draft && JSON.stringify(context) === row.draft_context) return { seq: request.seq };
         throw new Error('对话草稿序号已过期或内容不一致');
       }
-      this.db.prepare('UPDATE agent_conversations SET draft=?,draft_session=?,draft_seq=? WHERE id=?').run(request.text, request.sessionId, request.seq, request.conversationId);
+      this.db.prepare('UPDATE agent_conversations SET draft=?,draft_session=?,draft_seq=?,draft_context=? WHERE id=?').run(request.text, request.sessionId, request.seq, JSON.stringify(context), request.conversationId);
       this.changed(request.conversationId); return { seq: request.seq };
     });
   }
@@ -135,7 +139,7 @@ export class AgentStore {
       task.cursor = this.changed(request.conversationId, id);
       this.db.prepare('INSERT INTO agent_tasks VALUES(?,?,?,?)').run(id, request.conversationId, attemptId, JSON.stringify(task));
       this.message({ id: `${id}:user`, taskId: id, role: 'user', text: request.text, state: 'complete', itemId: null });
-      this.db.prepare('UPDATE agent_conversations SET title=?,updated_at=?,draft=\'\' WHERE id=?').run(request.text.trim().slice(0, 40), createdAt, request.conversationId);
+      this.db.prepare('UPDATE agent_conversations SET title=?,updated_at=?,draft=\'\',draft_context=\'{}\' WHERE id=?').run(request.text.trim().slice(0, 40), createdAt, request.conversationId);
       this.select(request.conversationId); return task;
     });
   }
@@ -150,7 +154,14 @@ export class AgentStore {
       request.generation !== this.generation() || attempt?.status !== 'running' || attempt.generation !== request.generation) throw new Error('任务尝试已停止或失效');
     return task;
   }
-  private message(message: AgentMessage) { this.db.prepare('INSERT OR REPLACE INTO agent_messages VALUES(?,?,?)').run(message.id, message.taskId, JSON.stringify(message)); }
+  readTarget(request: { taskId: string; attemptId: string; generation: number }) {
+    const task = this.active(request), current = this.unit(task.snapshot.target.unitId);
+    if (!current) throw new Error('提问对象的课程正文不可读');
+    const revision = this.db.prepare('SELECT revision FROM units WHERE id=?').get(current.id)?.revision ?? hash(current);
+    return { submittedTarget: task.snapshot.target, currentRevision: String(revision), currentFormalContent: current,
+      note: '当前正式内容与版本；提交时的对象、选文和版本在 submittedTarget 中固定。普通问答不修改画板。' };
+  }
+  private message(message: AgentMessage) { this.db.prepare('INSERT INTO agent_messages VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload').run(message.id, message.taskId, JSON.stringify(message)); }
   private finish(task: AgentTask, status: AgentTask['status'], error?: string) {
     task.status = status; task.error = error ?? null;
     for (const row of this.db.prepare('SELECT payload FROM agent_messages WHERE task_id=?').all(task.id)) {
@@ -203,6 +214,7 @@ export class AgentStore {
     if (action === 'agent:saveDraft') return this.saveDraft(p);
     if (action === 'agent:submit') return this.submit(p);
     if (action === 'agent:record') return this.record(p);
+    if (action === 'agent:readTarget') return this.readTarget(p);
     if (action === 'agent:active') return this.active(p);
     throw new Error('未知对话命令');
   }

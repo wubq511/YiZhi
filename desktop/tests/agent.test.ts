@@ -13,7 +13,7 @@ test('course conversations retain separate composer drafts and fixed submitted t
     const first = await core.agent.create({ sessionId, operationId: 'conversation-first' });
     await core.agent.saveDraft({ sessionId, conversationId: first.id, seq: 1, text: '为什么位置改变值？' });
     const second = await core.agent.create({ sessionId, operationId: 'conversation-second' });
-    await core.agent.saveDraft({ sessionId, conversationId: second.id, seq: 1, text: '稍后继续的问题' });
+    await core.agent.saveDraft({ sessionId, conversationId: second.id, seq: 1, text: '稍后继续的问题', target: { unitId: 'KU-001', blockId: opened.editableBlockId, selectedText: '位置记数法' } });
     const request = { sessionId, conversationId: first.id, operationId: 'question-first', generation: 1,
       text: '为什么位置改变值？', target: { unitId: 'KU-001', blockId: opened.editableBlockId, selectedText: '位置记数法' } };
     const task = await core.agent.submit(request);
@@ -30,6 +30,7 @@ test('course conversations retain separate composer drafts and fixed submitted t
     assert.equal(saved.messages[0].text, request.text);
     assert.equal(saved.tasks[0].status, 'unknown');
     assert.equal((await core.agent.get({ sessionId: reopened.sessionId, conversationId: second.id })).draft.text, '稍后继续的问题');
+    assert.equal((await core.agent.get({ sessionId: reopened.sessionId, conversationId: second.id })).draft.target?.selectedText, '位置记数法');
     assert.deepEqual((await core.read(reopened.sessionId)).unit, opened.unit);
   } finally { await core.close(); await rm(root, { recursive: true, force: true }); }
 });
@@ -128,4 +129,42 @@ test('missing executable disables only generation and reduced launch PATH still 
   assert.equal(absent.available, false); assert.match(absent.error!, /未找到/);
   const status = await detectExecutor({ cliPath: resolve('dist/tests/agent-executor-fixture.cjs'), env: { ...process.env, PATH: '/usr/bin:/bin' } });
   assert.equal(status.available, true, status.error);
+  const incapable = await detectExecutor({ cliPath: resolve('dist/tests/agent-executor-fixture.cjs'), env: { ...process.env, YIZHI_FIXTURE_MODE: 'incapable' } });
+  assert.equal(incapable.available, false); assert.match(incapable.error!, /协议能力/);
+});
+
+test('interleaved message items retain first-seen order and completion replaces only its own received partial', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-agent-items-')); const core = new CourseService(resolve('dist/worker.cjs'));
+  try {
+    const { sessionId } = await core.open(root), conversation = await core.agent.create({ sessionId, operationId: 'c' });
+    const task = await core.agent.submit({ sessionId, conversationId: conversation.id, operationId: 'q', generation: 1, text: 'read', target: { unitId: 'KU-001' } });
+    const event = { sessionId, taskId: task.id, attemptId: task.attemptId, generation: 1 };
+    await core.recordAgent({ ...event, eventId: '1', kind: 'delta', itemId: 'commentary', text: 'first' });
+    await core.recordAgent({ ...event, eventId: '2', kind: 'delta', itemId: 'answer', text: 'second' });
+    await core.recordAgent({ ...event, eventId: '3', kind: 'message', itemId: 'commentary', text: 'first complete' });
+    const view = await core.agent.get({ sessionId, conversationId: conversation.id });
+    assert.deepEqual(view.messages.map(m => m.text), ['read', 'first complete', 'second']);
+  } finally { await core.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('host shutdown drains accepted question registration and leaves no running ghost attempt', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-agent-quit-')); const core = new CourseService(resolve('dist/worker.cjs'));
+  const runtime = new AgentRuntime(core, { cliPath: resolve('dist/tests/agent-executor-fixture.cjs'), directory: join(root, 'runtime') });
+  try {
+    const { sessionId } = await core.open(join(root, 'course')); const c = await core.agent.create({ sessionId, operationId: 'c' });
+    await runtime.status();
+    // Delay only the public Core reply after its real Worker/SQLite registration.
+    const originalSubmit = core.agent.submit; let registered!: () => void, release!: () => void;
+    const durable = new Promise<void>(resolve => { registered = resolve; });
+    const acknowledgement = new Promise<void>(resolve => { release = resolve; });
+    core.agent.submit = async request => { const task = await originalSubmit(request); registered(); await acknowledgement; return task; };
+    const submitting = runtime.submit({ sessionId, conversationId: c.id, operationId: 'q', generation: 1, text: 'close while registering', target: { unitId: 'KU-001' } });
+    await durable; const closing = runtime.close();
+    const outcome = await Promise.race([closing.then(() => 'closed'), new Promise<string>(resolve => setTimeout(() => resolve('waiting'), 100))]);
+    release(); await Promise.allSettled([submitting, closing]);
+    assert.equal(outcome, 'waiting', 'host must drain a durably registered question whose acknowledgement is still pending');
+    const result = await core.agent.get({ sessionId, conversationId: c.id });
+    assert.ok(result.tasks.every(task => task.status !== 'running'));
+    assert.equal(await core.commands.history({ sessionId }).then(h => h.length), 0);
+  } finally { await runtime.close(); await core.close(); await rm(root, { recursive: true, force: true }); }
 });

@@ -7,7 +7,7 @@ const args = process.argv.slice(2), mode = process.env.YIZHI_FIXTURE_MODE;
 if (args.includes('--version')) { console.log('codex-cli 0.163.0-fixture'); process.exit(0); }
 if (args.includes('generate-json-schema')) {
   const dir = args[args.indexOf('--out') + 1]; mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, 'codex_app_server_protocol.schemas.json'), JSON.stringify(['thread/start', 'thread/resume', 'turn/start', 'model/list', 'config/read', 'item/tool/call', 'item/agentMessage/delta', 'turn/completed', 'DynamicToolSpec', 'function'])); process.exit(0);
+  writeFileSync(join(dir, 'codex_app_server_protocol.schemas.json'), JSON.stringify({ methods: ['thread/start', 'thread/resume', 'turn/start', 'model/list', 'config/read', 'item/tool/call', 'item/agentMessage/delta', 'turn/completed'], definitions: { v2: { DynamicToolSpec: { oneOf: mode === 'incapable' ? [] : [{ properties: { type: { enum: ['function'] } }, required: ['name', 'description', 'inputSchema', 'type'] }] } } } })); process.exit(0);
 }
 const lines = createInterface({ input: process.stdin });
 const send = (message: unknown) => process.stdout.write(JSON.stringify(message) + '\n');

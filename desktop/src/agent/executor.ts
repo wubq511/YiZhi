@@ -39,7 +39,8 @@ export async function detectExecutor(options: { cliPath?: string; env?: NodeJS.P
       temp = await mkdtemp(join(tmpdir(), 'yizhi-protocol-'));
       await run(path, ['app-server', 'generate-json-schema', '--experimental', '--out', temp], { env: childEnv, timeout: 15_000, maxBuffer: 1_000_000 });
       const schema = await readFile(join(temp, 'codex_app_server_protocol.schemas.json'), 'utf8');
-      if (requiredCapabilities.some(name => !schema.includes(JSON.stringify(name))) || !schema.includes('DynamicToolSpec') || !schema.includes('"function"'))
+      const dynamic = JSON.parse(schema).definitions?.v2?.DynamicToolSpec?.oneOf?.find((variant: any) => variant.properties?.type?.enum?.includes('function'));
+      if (requiredCapabilities.some(name => !schema.includes(JSON.stringify(name))) || !dynamic || !['name', 'description', 'inputSchema', 'type'].every(key => dynamic.required?.includes(key)))
         throw new Error('缺少只读问答所需的 thread/turn、动态工具或增量协议能力');
       return { available: true, path, version, models: [] };
     } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') lastError = `${path}: ${(error as Error).message}`; }
@@ -62,6 +63,7 @@ export class AgentRuntime {
   private running = new Map<string, Running>();
   private threads = new Map<string, string>();
   private closed = false;
+  private admissions = new Set<Promise<AgentTask>>();
   private toolReplies = new Map<string, { input: string; result: Promise<any> }>();
   private cwd?: string;
   private blockedMcp: Record<string, any> = {};
@@ -90,7 +92,12 @@ export class AgentRuntime {
     if (!Array.isArray(models.data) || !models.data.length) throw new Error('执行器没有返回可用模型目录');
     status.models = models.data.map((m: any) => ({ id: m.id, model: m.model, displayName: m.displayName, isDefault: m.isDefault, defaultReasoningEffort: m.defaultReasoningEffort }));
   }
-  async submit(request: SubmitQuestion): Promise<AgentTask> {
+  submit(request: SubmitQuestion): Promise<AgentTask> {
+    const pending = this.admit(request); this.admissions.add(pending);
+    void pending.then(() => this.admissions.delete(pending), () => this.admissions.delete(pending));
+    return pending;
+  }
+  private async admit(request: SubmitQuestion): Promise<AgentTask> {
     await this.start();
     if (this.closed) throw new Error('执行器正在退出');
     if (request.model && !this.statusValue!.models.some(m => m.model === request.model)) throw new Error('所选模型不在执行器实际目录中');
@@ -98,8 +105,9 @@ export class AgentRuntime {
     if (this.running.has(task.id) || task.status !== 'running') return task;
     const running: Running = { sessionId: request.sessionId, task, next: 0, chain: Promise.resolve() };
     this.running.set(task.id, running);
+    if (this.closed) { await this.record(running, { eventId: 'host-shutdown', kind: 'finish', status: 'interrupted', error: '应用退出时已排空此请求，未开始新的模型回答。' }); return running.task; }
     // Return only after a durable task exists; later protocol failure is a durable task result.
-    void this.begin(running).catch(error => this.enqueue(running, () => this.record(running, { kind: 'finish', status: 'failed', error: (error as Error).message })));
+    void this.begin(running).catch(error => this.enqueue(running, () => this.record(running, { kind: 'finish', status: /结果未知/.test((error as Error).message) ? 'unknown' : 'failed', error: (error as Error).message })));
     return task;
   }
   private async begin(running: Running) {
@@ -187,8 +195,7 @@ export class AgentRuntime {
       if (!spec || spec.type !== 'function' || Object.keys(args).some(k => !Object.hasOwn((spec.inputSchema as any).properties, k))) throw new Error('不支持的只读工具或参数');
       const sessionId = running.sessionId, snapshot = running.task.snapshot;
       if (p.tool === 'yizhi_read_target') {
-        const current = await this.core.readUnit(sessionId, snapshot.target.unitId);
-        output = { submittedTarget: snapshot.target, currentFormalContent: current, note: '当前正式内容；提交时选文和版本在 submittedTarget 中固定。普通问答不修改画板。' };
+        output = await this.core.readAgentTarget({ sessionId, taskId: running.task.id, attemptId: running.task.attemptId, generation: running.task.generation });
       } else if (p.tool === 'yizhi_list_sources') output = (await this.core.sources.list({ sessionId })).versions;
       else if (p.tool === 'yizhi_read_citation') {
         const attached = snapshot.citations.find(c => c.citation.id === args.citationId);
@@ -211,9 +218,15 @@ export class AgentRuntime {
   async close() {
     if (this.closed) return;
     this.closed = true;
-    await this.startup?.catch(() => {});
-    for (const running of [...this.running.values()]) await this.enqueue(running, () => this.record(running, { kind: 'finish', status: 'interrupted', error: '应用已明确退出，未完成回答已保留。' }));
-    await this.rpc?.close();
-    if (this.cwd) await rm(this.cwd, { recursive: true, force: true });
+    try {
+      await this.startup?.catch(() => {});
+      await Promise.allSettled([...this.admissions]);
+      for (const running of [...this.running.values()]) {
+        await running.chain;
+        if (running.task.status === 'running') await this.record(running, { kind: 'finish', status: 'interrupted', error: '应用已明确退出，未完成回答已保留。' });
+      }
+      await this.rpc?.close();
+      if (this.cwd) await rm(this.cwd, { recursive: true, force: true });
+    } catch (error) { this.closed = false; throw error; }
   }
 }

@@ -1,3 +1,4 @@
+import { DatabaseSync } from 'node:sqlite';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, chmod, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -19,7 +20,9 @@ test('Agent sidebar keeps drafts, native composer Undo, fixed source selection a
     await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     await expect.poll(() => page.evaluate(async () => { const b = (window as any).yizhi; const c = await b.open(); return (await b.readingState(c.sessionId))?.camera?.zoom; })).toBe(0.85);
     const original = await page.evaluate(async () => { const b = (window as any).yizhi; const c = await b.open(); return { body: c.unit, state: await b.readingState(c.sessionId) }; });
+    await page.getByRole('textbox', { name: '编辑首段正文' }).evaluate(element => { const range = document.createRange(); const node = element.firstChild!; const at = node.textContent!.indexOf('位置记数法'); range.setStart(node, at); range.setEnd(node, at + 5); const selection = window.getSelection()!; selection.removeAllRanges(); selection.addRange(range); document.dispatchEvent(new Event('mouseup')); });
     await openAgent(page);
+    await expect(page.locator('.agent-attachment')).toContainText('位置记数法');
     const composer = page.getByRole('textbox', { name: '学习对话草稿' });
     await expect(page.getByText('本机 Codex CLI · 已连接', { exact: true })).toBeVisible();
     await composer.fill('解释位权');
@@ -29,6 +32,11 @@ test('Agent sidebar keeps drafts, native composer Undo, fixed source selection a
     await expect(page.getByRole('status', { name: '回答状态' })).toHaveText('回答已完成');
     await expect(page.locator('.agent-message.assistant')).toHaveCount(1);
     await expect(page.locator('.agent-message.assistant')).toContainText('补充解释');
+    await page.getByRole('button', { name: '非十进制与十进制互转', exact: true }).click();
+    await expect.poll(() => page.evaluate(async () => { const b = (window as any).yizhi; const c = await b.open(); return (await b.readingState(c.sessionId))?.camera?.x; })).not.toBe(original.state.camera.x);
+    original.state = await page.evaluate(async () => { const b = (window as any).yizhi; const c = await b.open(); return b.readingState(c.sessionId); });
+    const submitted = await page.evaluate(async () => { const b = (window as any).yizhi; const c = await b.open(); const l = await b.agent.list({ sessionId: c.sessionId }); return (await b.agent.get({ sessionId: c.sessionId, conversationId: l.selectedId })).tasks[0].snapshot; });
+    expect(submitted.target.unitId).toBe('KU-001'); expect(submitted.target.selectedText).toBe('位置记数法');
     await composer.fill('保留第一段草稿');
     await page.getByRole('button', { name: '新对话', exact: true }).click();
     await composer.fill('第二段草稿');
@@ -65,13 +73,26 @@ test('Agent sidebar keeps drafts, native composer Undo, fixed source selection a
   } finally { await app?.close(); await rm(root, { recursive: true, force: true }); }
 });
 
-test('missing executor retains offline reading and durable conversations', async () => {
+test('missing executor retains offline reading; failed composer save blocks close and preserves the exact draft', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-agent-offline-'));
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile'), YIZHI_CODEX_PATH: join(root, 'absent') } });
   try {
     const page = await app.firstWindow(); await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click(); await openAgent(page);
     await expect(page.getByText(/生成暂不可用/)).toBeVisible(); await expect(page.getByRole('button', { name: '发送问题' })).toBeDisabled();
     await page.getByRole('textbox', { name: '学习对话草稿' }).fill('离线留下问题'); await expect(page.getByRole('status', { name: '对话草稿保存' })).toHaveText('草稿已保存');
+    const fault = new DatabaseSync(join(root, 'course/course.sqlite'));
+    try {
+      fault.exec("CREATE TRIGGER fail_composer BEFORE UPDATE OF draft ON agent_conversations BEGIN SELECT RAISE(ABORT,'composer disk fault'); END");
+      await page.getByRole('textbox', { name: '学习对话草稿' }).fill('未保存尾部必须保留');
+      await expect(page.getByRole('status', { name: '对话草稿保存' })).toHaveText('草稿未保存');
+      await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].close());
+      await expect(page.getByRole('alert')).toContainText('composer disk fault');
+      expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(1);
+      await expect(page.getByRole('textbox', { name: '学习对话草稿' })).toHaveValue('未保存尾部必须保留');
+      fault.exec('DROP TRIGGER fail_composer');
+      await page.getByRole('button', { name: '重试保存对话草稿', exact: true }).click();
+      await expect(page.getByRole('status', { name: '对话草稿保存' })).toHaveText('草稿已保存');
+    } finally { fault.exec('DROP TRIGGER IF EXISTS fail_composer'); fault.close(); }
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
@@ -121,6 +142,8 @@ test('actual installed executor answers a small cited question through the Elect
     await page.getByLabel('问答模型').selectOption('gpt-6-luna');
     await page.getByRole('textbox', { name: '学习对话草稿' }).fill('接着刚才的问题，只调用课程目标工具，用一句中文说明十进制 22 中左边的 2 表示什么。保持课程依据与补充解释分开。');
     await page.getByRole('button', { name: '发送问题', exact: true }).click();
+    await expect(page.getByRole('status', { name: '回答状态' }).last()).toHaveText('回答已完成', { timeout: 90_000 });
+    await expect(page.getByRole('status', { name: '回答状态' })).toHaveCount(2);
     await expect(page.getByRole('status', { name: '回答状态' }).last()).toHaveText('回答已完成', { timeout: 90_000 });
     const continued = await page.evaluate(async () => { const b = (window as any).yizhi; const c = await b.open(); const l = await b.agent.list({ sessionId: c.sessionId }); return b.agent.get({ sessionId: c.sessionId, conversationId: l.selectedId }); });
     expect(continued.tasks[1].threadId).toBe(saved.tasks[0].threadId);

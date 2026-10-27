@@ -2,6 +2,7 @@ import katex from 'katex';
 import type { ReactNode } from 'react';
 /** Small safe reading subset: React escapes prose; only KaTeX produces trusted HTML. */
 export function AgentProse({ text }: { text: string }) {
+  text = text.replace(/^#{1,6}\s+(.+)$/gm, '**$1**');
   const tokens = /\*\*([^*]+)\*\*|`([^`]+)`|\\\(([\s\S]*?)\\\)|\\\[([\s\S]*?)\\\]|\$\$([\s\S]*?)\$\$|\$([^$\n]+)\$/g;
   const parts: ReactNode[] = []; let start = 0, match: RegExpExecArray | null;
   while ((match = tokens.exec(text))) {

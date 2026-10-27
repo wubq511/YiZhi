@@ -17,6 +17,7 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
   const [attachments, setAttachments] = useState<SourceCitation[]>([]), [selection, setSelection] = useState<QuestionTarget>();
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [draftState, setDraftState] = useState('草稿已保存');
   const trigger = useRef<HTMLButtonElement>(null), panel = useRef<HTMLElement>(null), composer = useRef<HTMLTextAreaElement>(null);
+  const chosenTarget = useRef<QuestionTarget | undefined>(undefined), chosenCitations = useRef<SourceCitation[]>([]);
   const current = useRef<string | null>(null), draft = useRef(''), seq = useRef(0), composing = useRef(false);
   const writes = useRef(Promise.resolve()), failed = useRef(false), dirty = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined), deadline = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -32,20 +33,27 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
     clearTimeout(timer.current); clearTimeout(deadline.current); deadline.current = undefined;
     if (composing.current) { setError('请先完成中文候选输入，再离开对话。'); return false; }
     if (dirty.current && current.current && !failed.current) {
-      const id = current.current, text = draft.current, inputSeq = ++seq.current; dirty.current = false;
+      const id = current.current, text = draft.current, target = chosenTarget.current, citationIds = chosenCitations.current.map(c => c.id), inputSeq = ++seq.current; dirty.current = false;
       writes.current = writes.current.then(async () => {
-        try { await api.saveDraft({ sessionId, conversationId: id, seq: inputSeq, text }); if (id === current.current && !dirty.current) setDraftState('草稿已保存'); }
+        try { await api.saveDraft({ sessionId, conversationId: id, seq: inputSeq, text, target, citationIds }); if (id === current.current && !dirty.current) setDraftState('草稿已保存'); }
         catch (error) { failed.current = true; dirty.current = true; setDraftState('草稿未保存'); setError((error as Error).message); }
       });
     }
     await writes.current; return !failed.current && !composing.current;
   };
+  const markDirty = () => {
+    dirty.current = true; setDraftState('草稿待保存'); clearTimeout(timer.current);
+    timer.current = setTimeout(() => void flush(), 250);
+    if (!deadline.current) deadline.current = setTimeout(() => void flush(), 1000);
+  };
   const loadConversation = async (id: string) => {
     if (!await flush()) return;
     const next = await api.get({ sessionId, conversationId: id }); await api.select({ sessionId, conversationId: id });
+    const citations = next.draft.citationIds.length ? await window.yizhi.sources.citations({ sessionId }) : [];
+    chosenTarget.current = next.draft.target; chosenCitations.current = citations.filter(c => next.draft.citationIds.includes(c.id));
     current.current = id; draft.current = next.draft.text; seq.current = next.draft.seq; dirty.current = false; retrySubmit.current = null;
     if (composer.current) composer.current.value = next.draft.text;
-    setView(next); setAttachments([]); setSelection(undefined); setError(''); setDraftState('草稿已保存');
+    setView(next); setAttachments(chosenCitations.current); setSelection(chosenTarget.current); setError(''); setDraftState('草稿已保存');
   };
   const create = async () => { if (!await flush()) return; const next = await api.create({ sessionId, operationId: crypto.randomUUID() }); await loadConversation(next.id); await list(); };
   useEffect(() => {
@@ -67,22 +75,23 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
       const node = range.anchorNode?.parentElement, article = node?.closest<HTMLElement>('article[data-agent-unit]');
       if (!article) return;
       const block = node?.closest<HTMLElement>('[data-agent-block], [data-block-id]');
-      setSelection({ unitId: article.dataset.agentUnit!, ...((block?.dataset.agentBlock ?? block?.dataset.blockId) ? { blockId: block!.dataset.agentBlock ?? block!.dataset.blockId } : {}), selectedText: range.toString() });
+      const next = { unitId: article.dataset.agentUnit!, ...((block?.dataset.agentBlock ?? block?.dataset.blockId) ? { blockId: block!.dataset.agentBlock ?? block!.dataset.blockId } : {}), selectedText: range.toString() };
+      chosenTarget.current = next; setSelection(next); markDirty();
     };
     document.addEventListener('mouseup', capture); document.addEventListener('keyup', capture);
     return () => { document.removeEventListener('mouseup', capture); document.removeEventListener('keyup', capture); };
   }, []);
-  useImperativeHandle(ref, () => ({ flush, attachCitation(citation) { setAttachments(old => old.some(c => c.id === citation.id) ? old : [...old, citation].slice(-8)); setOpen(true); } }));
+  useImperativeHandle(ref, () => ({ flush, attachCitation(citation) { chosenCitations.current = chosenCitations.current.some(c => c.id === citation.id) ? chosenCitations.current : [...chosenCitations.current, citation].slice(-8); setAttachments(chosenCitations.current); markDirty(); setOpen(true); } }));
   const close = async () => { if (!await flush()) return; setOpen(false); requestAnimationFrame(() => trigger.current?.focus()); };
   const guard = async (action: () => Promise<void>) => { if (busy) return; setBusy(true); setError(''); try { await action(); } catch (error) { setError((error as Error).message); } finally { setBusy(false); } };
   const send = async () => {
     if (!await flush() || !current.current || composing.current) return;
     const request = retrySubmit.current ?? { sessionId, conversationId: current.current, operationId: crypto.randomUUID(), generation,
-      text: draft.current, target: selection ?? target, citationIds: attachments.map(c => c.id), ...(model ? { model } : {}) };
+      text: draft.current, target: selection ?? attachments.at(-1)?.target ?? target, citationIds: attachments.map(c => c.id), ...(model ? { model } : {}) };
     retrySubmit.current = request;
     await api.submit(request); retrySubmit.current = null;
     draft.current = ''; if (composer.current) composer.current.value = ''; dirty.current = false;
-    setAttachments([]); setSelection(undefined); await refresh();
+    chosenTarget.current = undefined; chosenCitations.current = []; setAttachments([]); setSelection(undefined); await refresh();
   };
   return <><button ref={trigger} className="agent-entry" aria-expanded={open} onClick={() => setOpen(true)}>Agent · 学习对话</button>
     {open && createPortal(<aside ref={panel} className={`agent-panel${sourceOpen && !narrow ? ' beside-source' : ''}`} role={narrow ? 'dialog' : 'complementary'} inert={narrow && sourceOpen} aria-modal={narrow || undefined} aria-label="Agent 学习对话" onKeyDown={event => {
@@ -109,16 +118,14 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
             <button onClick={() => openCitation(citation)}>{version.title} · PDF 第 {citation.pdfPageIndex + 1} 页 · 印刷页 {citation.printedPage?.label ?? '未核对'}</button>
           </section>)}</div>}
         </section>; })}
-        {view?.tasks.map(task => <div className="agent-task" role="status" aria-label="回答状态" key={task.id}>{taskLabel[task.status]}{task.error && <p>{task.error}</p>}</div>)}
+        {view?.tasks.map(task => <div className="agent-task" role="status" aria-label="回答状态" key={task.id}>{taskLabel[task.status]}{task.status === 'completed' && view.messages.some(m => m.taskId === task.id && m.state === 'partial') ? ' · 部分消息未确认' : ''}{task.error && <p>{task.error}</p>}</div>)}
       </div>
       <div className="agent-composer">
-        <p className="agent-target">提问目标：{selection ? `${selection.unitId} · 已选正文` : targetName}</p>
-        {selection && <div className="agent-attachment"><blockquote>{selection.selectedText}</blockquote><button onClick={() => setSelection(undefined)}>移除正文选文</button></div>}
-        {attachments.map(c => <div className="agent-attachment" key={c.id}>{c.quote ? <blockquote>{c.quote}</blockquote> : <p>原页／选区 · 无精确选文</p>}<span>PDF 第 {c.pdfPageIndex + 1} 页 · 固定版本</span><button onClick={() => setAttachments(old => old.filter(item => item.id !== c.id))}>移除出处</button></div>)}
+        <p className="agent-target">提问目标：{selection ? `${selection.unitId} · 已选正文` : attachments.at(-1)?.target ? `${attachments.at(-1)!.target!.unitId} · 来源关联单元` : targetName}</p>
+        {selection && <div className="agent-attachment"><blockquote>{selection.selectedText}</blockquote><button onClick={() => { chosenTarget.current = undefined; setSelection(undefined); markDirty(); }}>移除正文选文</button></div>}
+        {attachments.map(c => <div className="agent-attachment" key={c.id}>{c.quote ? <blockquote>{c.quote}</blockquote> : <p>原页／选区 · 无精确选文</p>}<span>PDF 第 {c.pdfPageIndex + 1} 页 · 固定版本</span><button onClick={() => { chosenCitations.current = chosenCitations.current.filter(item => item.id !== c.id); setAttachments(chosenCitations.current); markDirty(); }}>移除出处</button></div>)}
         <label htmlFor="agent-composer">只读提问</label><textarea id="agent-composer" ref={composer} aria-label="学习对话草稿" defaultValue={draft.current} disabled={busy} placeholder="哪里还没理解？" onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; if (dirty.current) void flush(); }} onInput={event => {
-          draft.current = event.currentTarget.value; dirty.current = true; setDraftState('草稿待保存');
-          clearTimeout(timer.current); timer.current = setTimeout(() => void flush(), 250);
-          if (!deadline.current) deadline.current = setTimeout(() => void flush(), 1000);
+          draft.current = event.currentTarget.value; markDirty();
         }} />
         <div className="agent-send"><label>模型 <select aria-label="问答模型" value={model} onChange={e => setModel(e.target.value)} disabled={!executor?.available || busy}>{executor?.models.map(m => <option key={m.model} value={m.model}>{m.displayName || m.model}</option>)}</select></label>
           <button className="primary" disabled={busy || !executor?.available || view?.tasks.some(t => t.status === 'running')} onClick={() => void guard(async () => { if (!current.current) await create(); await send(); })}>发送问题</button></div>

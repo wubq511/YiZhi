@@ -8,6 +8,7 @@ import type { CourseGraph, CourseUnit, ReadingState, OpenedCourse, SaveParagraph
 /** One instance belongs to the application host, shared by all its windows/courses. */
 export class CourseService {
   readonly agent = agentClient((action, payload) => this.request(action, payload));
+  readAgentTarget(request: { sessionId: string; taskId: string; attemptId: string; generation: number }): Promise<unknown> { return this.request('agent:readTarget', request); }
   recordAgent(event: AgentEvent): Promise<AgentTask> { return this.request('agent:record', event); }
   activeAgent(request: { sessionId: string; taskId: string; attemptId: string; generation: number }): Promise<AgentTask> { return this.request('agent:active', request); }
   readonly relations = relationClient((action, payload) => this.request(action, payload));

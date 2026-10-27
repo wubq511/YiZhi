@@ -22,14 +22,14 @@ export interface AgentMessage {
 }
 export interface ConversationView extends Conversation {
   toolFacts: Array<{ taskId: string; name: string; purpose: string; referenceId: string; digest: string; references: string[]; hasRecoveryPayload: boolean }>;
-  draft: { text: string; seq: number }; messages: AgentMessage[]; tasks: AgentTask[];
+  draft: { text: string; seq: number; target?: QuestionTarget; citationIds: string[] }; messages: AgentMessage[]; tasks: AgentTask[];
 }
 export interface AgentAPI {
   list(request: AgentSession): Promise<{ conversations: Conversation[]; selectedId: string | null; generation: number }>;
   create(request: AgentSession & { operationId: string }): Promise<Conversation>;
   get(request: AgentSession & { conversationId: string }): Promise<ConversationView>;
   select(request: AgentSession & { conversationId: string }): Promise<void>;
-  saveDraft(request: AgentSession & { conversationId: string; seq: number; text: string }): Promise<{ seq: number }>;
+  saveDraft(request: AgentSession & { conversationId: string; seq: number; text: string; target?: QuestionTarget; citationIds?: string[] }): Promise<{ seq: number }>;
   submit(request: SubmitQuestion): Promise<AgentTask>;
 }
 export interface ExecutorStatus {
