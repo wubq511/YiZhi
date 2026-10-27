@@ -56,3 +56,5 @@ T03 的 `CourseService.commands` 与 preload `commands` 共用 `src/command-api.
 画板样本与来源页见 `fixtures/t04-provenance.json`；单元复制与本地字体来源见 `fixtures/provenance.json`、`fixtures/font-provenance.json` 和 [第三方资源](THIRD-PARTY-NOTICES.md)。
 
 T14 顶栏“原文资料”支持不可变 PDF／图片版本、双页码、真实选文与区域引用和本地离线阅读；API、发布顺序与验收范围见 [本地不可变来源](docs/sources.md)。
+
+T29 在已导入的一个 PDF 版本上提供逐页解析、停止／明确继续、结构化产物查看与人工修正；保留原页和旧产物，不改写画板，不执行 OCR 或 Agent 生成。能力、API 与资源保护接口见 [可恢复来源解析](docs/parsing.md)。

@@ -1,9 +1,10 @@
-import { parentPort } from 'node:worker_threads';
+import { parentPort, workerData } from 'node:worker_threads';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, realpathSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { FormalRelations } from './formal-relations';
 import { CommandGroups } from './command-groups';
+import { Parsing } from './parsing';
 import { Sources } from './sources';
 import { randomUUID } from 'node:crypto';
 import type { CourseGraph, OpenedCourse, SaveParagraph, SaveReceipt, EditCommand } from '../shared';
@@ -17,6 +18,7 @@ interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; cou
   // T03 constructs its observer on this same connection; both student save entry points call it in-transaction.
   groups: CommandGroups;
   sources: Sources;
+  parsing: Parsing;
   relations: FormalRelations;
 }
 const courses = new Map<string, Course>();
@@ -88,7 +90,8 @@ function open(directory: string): OpenedCourse {
     const relationCatalog = JSON.parse(readFileSync(join(__dirname, 'fixtures/relation-catalog.json'), 'utf8'));
     const relations = new FormalRelations(db, graph, { retiredUnitIds: relationCatalog.retiredUnitIds,
       get sources() { return sources.relationCatalog(relationCatalog.sources); } });
-    const course: Course = { db, owner, sessionId: randomUUID(), graph, groups, relations, sources,
+    const parsing = new Parsing(db, canonical, sources, run => { queue = queue.then(run).catch(error => { console.error(error); }); }, workerData?.parseScheduling);
+    const course: Course = { db, owner, sessionId: randomUUID(), graph, groups, relations, sources, parsing,
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     const result = snapshot(course);
     courses.set(canonical, course);
@@ -148,9 +151,10 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action === 'relations:commit') value = session(payload.sessionId).relations.commit(payload);
     else if (action === 'relations:query') value = session(payload.sessionId).relations.query(payload.operationId);
     else if (action.startsWith('commands:')) value = session(payload.sessionId).groups.dispatch(action, payload);
+    else if (action.startsWith('parsing:')) value = await session(payload.sessionId).parsing.dispatch(action, payload);
     else if (action.startsWith('sources:')) value = await session(payload.sessionId).sources.dispatch(action, payload);
     else if (action === 'close') {
-      for (const course of courses.values()) { course.db.close(); course.owner.close(); }
+      for (const course of courses.values()) { await course.parsing.close(); course.db.close(); course.owner.close(); }
       courses.clear();
     } else throw new Error('未知课程命令');
     parentPort!.postMessage({ id, ok: true, value });

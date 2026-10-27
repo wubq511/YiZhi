@@ -1,0 +1,21 @@
+.parsing-section { border-block: 1px solid #e5e5eb; padding-block: 10px; flex-shrink: 0; }
+.parsing-section > p { margin-block: 8px; color: #5f6479; }
+.parse-actions, .parse-artifacts { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 10px; }
+.parsing-section label { display: flex; flex-direction: column; gap: 5px; margin-block: 10px; }
+.parsing-section textarea { font: inherit; color: #27343e; background: #fff; border: 1px solid #e5e5eb; border-radius: 6px; padding: 8px; box-sizing: border-box; width: 100%; min-height: 90px; resize: vertical; caret-color: #6965db; }
+.parsing-section textarea::placeholder { color: #687080; }
+.parse-page { margin-top: 18px; padding-top: 12px; border-top: 1px solid #e5e5eb; }
+.parse-page h3 { margin: 0 0 10px; font-size: 18px; }
+.parse-page h4 { font-size: 15px; margin: 18px 0 8px; }
+.parse-page ul { padding-left: 20px; }
+.parse-page li { margin-block: 5px; overflow-wrap: anywhere; }
+.parse-text { max-height: 260px; overflow: auto; padding-left: 28px; scrollbar-color: #b6b4d1 #f6f6f9; }
+.parse-text small, .parse-coordinate { color: #5f6479; font-variant-numeric: tabular-nums; }
+.parse-table { overflow: auto; margin-block: 12px; }
+.parse-table table { border-collapse: collapse; width: 100%; margin-top: 6px; }
+.parse-table :is(th,td) { text-align: start; padding: 8px 10px; border: 1px solid #e5e5eb; font-variant-numeric: tabular-nums; }
+.parse-table th { background: #f6f6f9; }
+.parse-formula { padding-block: 10px; }
+.parse-raster { display: block; width: 100%; height: auto; margin-block: 12px; }
+.parse-failure { color: #a13737; background: #fdf0f0; padding: 10px; overflow-wrap: anywhere; }
+.parsing-section [role="status"] { margin-block: 8px; }
