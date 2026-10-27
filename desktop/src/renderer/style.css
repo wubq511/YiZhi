@@ -70,7 +70,7 @@ pre { white-space: pre-wrap; font-size: 1rem; }
 .board-workspace { display: flex; }
 .board-workspace nav { flex: 0 0 224px; overflow-y: auto; }
 .directory-theme { display: block; width: 100%; text-align: left; margin: 3px 0; background: transparent; color: #27343e; line-height: 1.5; }
-.board { position: relative; flex: 1; min-width: 0; overflow: hidden; padding: 0; }
+.board { position: relative; flex: 1; min-width: 0; overflow: hidden; padding: 0; scroll-behavior: auto; }
 .board-tools { position: absolute; z-index: 5; top: 12px; left: 12px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; }
 .board-tools button, .board-tools select { background: #fff; border: 1px solid #e5e5eb; }
 .reading-layer { position: absolute; z-index: 3; left: 0; top: 0; transform-origin: 0 0; width: 650px; pointer-events: none; }

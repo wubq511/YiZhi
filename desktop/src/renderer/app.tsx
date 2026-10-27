@@ -295,6 +295,14 @@ function App() {
   useEffect(() => {
     const board = boardRef.current;
     if (!board) return;
+    const nativeScroll = () => {
+      const dx = board.scrollLeft, dy = board.scrollTop;
+      if (!dx && !dy) return;
+      // Browser caret/focus navigation can scroll overflow:hidden containers.
+      // Transfer that visible movement to the saved camera; keep overlay controls fixed.
+      board.scrollLeft = 0; board.scrollTop = 0;
+      camera.pan(-dx, -dy);
+    };
     const wheel = (event: WheelEvent) => {
       const target = event.target as HTMLElement;
       if (target.closest('.board-tools, .relations-panel, .source-dialog, .react-flow__minimap, .table-scroll, input, select, textarea, .mux, .builtin-formula-editor, math-field')) return;
@@ -310,7 +318,8 @@ function App() {
       } else camera.pan(-(event.shiftKey ? event.deltaY : event.deltaX), -(event.shiftKey ? 0 : event.deltaY));
     };
     board.addEventListener('wheel', wheel, { passive: false, capture: true });
-    return () => board.removeEventListener('wheel', wheel, true);
+    board.addEventListener('scroll', nativeScroll, { passive: true });
+    return () => { board.removeEventListener('wheel', wheel, true); board.removeEventListener('scroll', nativeScroll); };
   }, [flow, camera]);
   const nodes = useMemo(() => graph ? [
     ...graph.layout.groups.map(group => ({ id: group.themeId, position: { x: group.x, y: group.y }, data: { label: group.title }, width: group.width, height: group.height, style: { width: group.width, height: group.height, fontSize: 50, border: "1px solid #bbc9d5", background: "#fff", opacity: viewport.zoom < 0.35 ? 1 : 0.35 }, selectable: false, draggable: false })),

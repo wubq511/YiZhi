@@ -6,13 +6,14 @@ import { join, resolve } from 'node:path';
 import type { Locator, Page } from '@playwright/test';
 
 async function reveal(page: Page, target: Locator) {
+  await expect(page.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
   const board = (await page.locator('main.board').boundingBox())!;
   await page.mouse.move(board.x + 10, board.y + board.height / 2);
   for (let i = 0; i < 60; i++) {
     const box = (await target.boundingBox())!;
     const delta = box.y - board.y - board.height / 2;
     if (Math.abs(delta) < board.height / 3) return;
-    await page.mouse.wheel(0, Math.max(-500, Math.min(500, delta * 2)));
+    await page.mouse.wheel(0, Math.max(-500, Math.min(500, delta)));
     await page.waitForTimeout(30);
   }
   throw new Error('没有找到阅读位置');
@@ -39,6 +40,7 @@ test('manual width and drag remain after collapse and reopen without replacing t
     await expect.poll(() => page.evaluate(() => getSelection()?.toString())).toBe('局');
     const selection = await page.evaluate(() => getSelection()?.toString());
     const move = page.getByRole('button', { name: '移动位置记数法与权展开' });
+    await reveal(page, move);
     const bounds = (await move.boundingBox())!;
     await page.mouse.move(bounds.x + 30, bounds.y + 12); await page.mouse.down();
     await page.mouse.move(bounds.x + 110, bounds.y + 52, { steps: 6 });
@@ -96,7 +98,12 @@ test('actual producer follows only actual changes, student takeover cancels moti
     await page.getByRole('textbox', { name: '可控候选内容' }).fill('实际增长的正文。'.repeat(80));
     await page.getByRole('button', { name: '提交可控修改', exact: true }).click();
     await expect(page.getByRole('status', { name: '可控生产者状态' })).toContainText('正式修改已保存');
-    await expect.poll(async () => (await matrix()).y).not.toBe(initial.y);
+    const changed = page.locator('[data-block-id="RB-TH-01-03-expansion-terms"]').first();
+    await expect(changed).toHaveText('实际增长的正文。'.repeat(80));
+    // Actual changed content must be visible; movement depends on the starting camera.
+    const viewBounds = (await page.locator('main.board').boundingBox())!;
+    await expect.poll(async () => (await changed.boundingBox())!.y).toBeGreaterThanOrEqual(viewBounds.y);
+    await expect.poll(async () => (await changed.boundingBox())!.y).toBeLessThan(viewBounds.y + viewBounds.height - 32);
     expect((await matrix()).zoom).toBe(initial.zoom);
     // A real wheel event takes control while the authored follow can still have queued frames.
     const board = (await page.locator('main.board').boundingBox())!;
