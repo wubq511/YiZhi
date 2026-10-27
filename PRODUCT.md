@@ -12,7 +12,7 @@ web
 
 完整设计及分阶段验收见[下一版系统设计定稿](docs/architecture/系统设计定稿.md)。各项产品取舍与完整工程合同均已确认，作为下一版实施依据；不把设计状态等同于功能已经交付。
 
-目标平台为 macOS 与 Windows。当前初期只实施和打磨 macOS；Windows 是后续发布推广前必做的平台，现在纳入课程格式、依赖和平台边界设计，具体适配、打包与实机验收放到后续阶段。Robert 已说明没有必须通过浏览器或无法安装应用的使用场景，并在说明取舍后接受独立桌面方案；决定见[ADR-0001](docs/adr/0001-independent-desktop-delivery.md)。
+目标平台为 macOS 与 Windows。当前只实施和打磨 macOS；Windows 的适配、打包与实机验收，须等 Robert 明确提出“开始做 Windows”后再规划和拆票，不根据 macOS 完成程度自动启动。本轮只保留课程格式、依赖与平台边界的可移植设计。Robert 已说明没有必须通过浏览器或无法安装应用的使用场景，并在说明取舍后接受独立桌面方案；决定见[ADR-0001](docs/adr/0001-independent-desktop-delivery.md)。
 
 ## Users
 
