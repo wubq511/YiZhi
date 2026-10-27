@@ -1,4 +1,5 @@
 import { BuiltinExperiments } from './builtin-experiments';
+import { AgentStore } from './agent-store';
 import { parentPort, workerData } from 'node:worker_threads';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, realpathSync, readFileSync } from 'node:fs';
@@ -22,6 +23,7 @@ interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; cou
   experiments: BuiltinExperiments;
   parsing: Parsing;
   relations: FormalRelations;
+  agent: AgentStore;
 }
 const courses = new Map<string, Course>();
 function session(id: string): Course {
@@ -94,7 +96,8 @@ function open(directory: string): OpenedCourse {
       get sources() { return sources.relationCatalog(relationCatalog.sources); } });
     const experiments = new BuiltinExperiments(db, sourceUnit);
     const parsing = new Parsing(db, canonical, sources, run => { queue = queue.then(run).catch(error => { console.error(error); }); }, workerData?.parseScheduling);
-    const course: Course = { db, owner, sessionId: randomUUID(), graph, groups, relations, sources, experiments, parsing,
+    const agent = new AgentStore(db, sources, sourceUnit);
+    const course: Course = { db, owner, agent, sessionId: randomUUID(), graph, groups, relations, sources, experiments, parsing,
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     const result = snapshot(course);
     courses.set(canonical, course);
@@ -112,18 +115,31 @@ function save(command: SaveParagraph): SaveReceipt {
 }
 // Async validation/import shares the SAME ordered command boundary with saves, stop and close.
 let queue = Promise.resolve();
+const sourceReads = new Set<Promise<void>>();
+let draining = false;
 parentPort!.on('message', message => {
+  if (draining) { parentPort!.postMessage({ id: message.id, ok: false, error: '课程核心正在退出' }); return; }
+  if (message.action === 'close') draining = true;
   if (message.action === 'experiments:act') {
     const course = [...courses.values()].find(c => c.sessionId === message.payload?.sessionId);
     try { course?.experiments.stopIssuing(message.payload); } catch { /* Invalid input is rejected by the ordered dispatcher below. */ }
   }
-  queue = queue.then(() => dispatch(message));
+  if (message.action === 'sources:page') {
+    // Immutable source bytes may parse asynchronously while short core requests continue.
+    // Start after prior ordered writes; only close drains these read-only operations.
+    queue = queue.then(() => {
+      const pending = dispatch(message); sourceReads.add(pending);
+      void pending.finally(() => sourceReads.delete(pending));
+    });
+  } else queue = queue.then(() => dispatch(message));
 });
 async function dispatch({ id, action, payload }: { id: number; action: string; payload: any }) {
   try {
     if (payload?.operationId) {
-      session(payload.sessionId).sources.fenceOperation(action, payload.operationId);
-      session(payload.sessionId).experiments.fenceOperation(action, payload.operationId);
+      const course = session(payload.sessionId);
+      course.sources.fenceOperation(action, payload.operationId);
+      course.agent.fence(action, payload.operationId);
+      course.experiments.fenceOperation(action, payload.operationId);
     }
     let value: unknown;
     if (action === 'open') value = open(payload.directory);
@@ -173,9 +189,11 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action === 'relations:commit') value = session(payload.sessionId).relations.commit(payload);
     else if (action === 'relations:query') value = session(payload.sessionId).relations.query(payload.operationId);
     else if (action.startsWith('commands:')) value = session(payload.sessionId).groups.dispatch(action, payload);
+    else if (action.startsWith('agent:')) value = session(payload.sessionId).agent.dispatch(action, payload);
     else if (action.startsWith('parsing:')) value = await session(payload.sessionId).parsing.dispatch(action, payload);
     else if (action.startsWith('sources:')) value = await session(payload.sessionId).sources.dispatch(action, payload);
     else if (action === 'close') {
+      await Promise.all(sourceReads);
       for (const course of courses.values()) { course.experiments.dispose(); await course.parsing.close(); course.db.close(); course.owner.close(); }
       courses.clear();
     } else throw new Error('未知课程命令');

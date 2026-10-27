@@ -1,4 +1,5 @@
 import { experimentsClient } from '../experiments-api';
+import { agentClient } from '../agent-api';
 import { contextBridge, ipcRenderer } from 'electron';
 import type { DesktopBridge } from '../shared';
 import { parsingBridge } from '../parsing-api';
@@ -14,6 +15,7 @@ async function invoke(channel: string, argument?: unknown) {
 }
 const bridge: DesktopBridge = {
   experiments: experimentsClient(invoke),
+  agent: { ...agentClient(invoke), status: () => invoke('agent:status') },
   parsing: parsingBridge(invoke),
   sources: sourceBridge(invoke),
   commands: commandClient(invoke),

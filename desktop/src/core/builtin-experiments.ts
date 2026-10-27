@@ -36,9 +36,9 @@ export class BuiltinExperiments {
   fenceOperation(action: string, operationId: unknown) {
     if (typeof operationId !== 'string') return;
     if (action === 'experiments:act') {
-      if (['operations', 'cg_candidates', 'source_operations', 'source_imports', 'parse_operations'].some(table =>
+      if (['operations', 'cg_candidates', 'source_operations', 'source_imports', 'parse_operations', 'agent_operations'].some(table =>
         this.db.prepare(`SELECT 1 FROM ${table} WHERE id=?`).get(operationId))) throw new Error('操作身份已用于其他正式修改');
-    } else if (['save', 'commitEdit', 'commands:commit', 'relations:commit'].includes(action) || action.startsWith('sources:') || action.startsWith('parsing:')) {
+    } else if (['save', 'commitEdit', 'commands:commit', 'relations:commit'].includes(action) || action.startsWith('sources:') || action.startsWith('parsing:') || action.startsWith('agent:')) {
       if (this.db.prepare('SELECT 1 FROM builtin_experiment_operations WHERE id=?').get(operationId)) throw new Error('操作身份已用于实验修改');
     }
   }
