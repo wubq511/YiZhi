@@ -2,7 +2,7 @@
 
 面向课程复习的本地学习工作区：每门课程一张持续扩展的画板，完整知识正文、来源、个人笔记和 Agent 围绕稳定的内容身份共同工作。
 
-产品与下一版系统设计已定稿。当前仓库保留可运行的 Python／Web 基线及完整数字逻辑课程；Electron／TypeScript 新版尚未实施。现有 **20 个主题、84 个有效知识单元**及分类、层级、评级、关系、完整正文和个人状态已经迁入，后续开发直接使用这些内容，不重新生成一套课程。
+Electron／TypeScript 桌面实现位于 [desktop/](desktop/README.md)，Python／Web 基线保留为历史行为与旧格式迁移来源；两者的运行、验证和交付边界分别记录。现有 **20 个主题、84 个有效知识单元**及分类、层级、评级、关系、完整正文和个人状态保存在课程目录，开发和迁移直接沿用这些内容，不重新生成一套课程。
 
 ## 开发入口
 
@@ -11,7 +11,7 @@
 - [架构决策总览](docs/architecture/架构决策总览.md)与 [ADR](docs/adr/)：选择及依据。
 - [文档索引](docs/README.md)：按开发、知识核对、研究和验收任务查找。
 
-下一阶段从总稿的阶段 I 开始：Electron 宿主、一个课程核心 Worker、SQLite 与一个真实单元的保存恢复闭环。后续阶段仍以完整课程作为内容与迁移基线。
+桌面开发、运行与验证从 [桌面应用说明](desktop/README.md) 进入；实现通过 Electron 宿主与一个共享课程核心 Worker 读写每课 SQLite 和不可变资源。完整课程的[内容转换入口](desktop/docs/content-conversion.md)使用停止写入的一致副本，明确区分内容候选、个人记录迁移和最终权威切换；不要用样例课程覆盖原课程。
 
 ## 启动现有基线
 
@@ -34,7 +34,8 @@ python3 legacy/review-board/start.py
 | `docs/research/` | 专题调研、技术比较与来源证据 |
 | `docs/development/` | 旧版行为与验收、视觉用例、技能验证、迁移记录 |
 | `experiments/` | 可运行原型、独立实验、原始结果和随附资源 |
-| `legacy/review-board/` | 已有 Python／Web 应用与测试 |
+| `desktop/` | Electron／TypeScript 桌面应用、运行说明、测试与课程格式工具 |
+| `legacy/review-board/` | 已有 Python／Web 应用与历史测试 |
 | `courses/digital-logic/` | 完整课程知识、派生阅读视图、原文、来源版本和个人状态 |
 | `tools/digital-logic/` | 知识查询、校验、生成器与教材检索工具 |
 | `.agents/skills/` | 课程查询、教材阅读与产品设计技能 |
