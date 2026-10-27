@@ -41,9 +41,16 @@ test('a real sandboxed browser Worker verifies learning results, saves complete 
   expect((await read()).definition).toEqual(saved.definition);
   await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(700,700));
   const directory=page.getByRole('navigation',{name:'课程目录'});if(await directory.isVisible())await directory.press('Escape');
+  await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');
   const narrowBoard=(await page.locator('main.board').boundingBox())!;
-  await page.mouse.move(narrowBoard.x+12,narrowBoard.y+narrowBoard.height/2);await page.mouse.wheel(220,400);await page.waitForTimeout(180);
   const narrowInput=lab().getByRole('checkbox',{name:'A',exact:true});await expect(narrowInput).toBeVisible();
+  const beforeInput=(await narrowInput.boundingBox())!;
+  // Restored native focus movement is part of the saved camera. Pan from the
+  // actual control position, with gain 1, instead of assuming an old viewport.
+  await page.mouse.move(narrowBoard.x+12,narrowBoard.y+narrowBoard.height/2);
+  await page.mouse.wheel(beforeInput.x+beforeInput.width/2-narrowBoard.x-narrowBoard.width/2,
+   beforeInput.y+beforeInput.height/2-narrowBoard.y-narrowBoard.height/2);
+  await expect.poll(async()=>((await narrowInput.boundingBox())!.y+(await narrowInput.boundingBox())!.height/2)).toBeCloseTo(narrowBoard.y+narrowBoard.height/2,0);
   const inputBox=(await narrowInput.boundingBox())!;expect(inputBox.y).toBeGreaterThan(narrowBoard.y);expect(inputBox.y+inputBox.height).toBeLessThan(narrowBoard.y+narrowBoard.height);
   await page.screenshot({path:'/tmp/yizhi-implement-gFFkA7/t13-extension-narrow.png'});
  }finally{await app.close();await rm(root,{recursive:true,force:true});}
