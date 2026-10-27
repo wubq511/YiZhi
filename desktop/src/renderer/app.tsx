@@ -124,6 +124,7 @@ function App() {
   const channel = useRef<ParagraphSaveChannel | undefined>(undefined);
   const editor = useRef<HTMLDivElement>(null);
   const editedText = useRef<string | undefined>(undefined);
+  const appliedRevision = useRef(0);
   const [reading, setReading] = useState<ReadingState | null>(null);
   const readingRef = useRef<ReadingState | null>(null);
   const writes = useRef<Promise<void>>(Promise.resolve());
@@ -135,10 +136,15 @@ function App() {
   const persist = (next: ReadingState) => {
     readingRef.current = next; setReading(next);
     if (course) {
+      if (readingFailed.current) return;
       const sequence = ++readingSequence.current; setReadingSave('pending');
-      writes.current = writes.current.then(() => window.yizhi.setReadingState(course.sessionId, next)).then(() => {
-        if (sequence === readingSequence.current) { readingFailed.current = false; setReadingSave('saved'); }
-      }, () => { if (sequence === readingSequence.current) { readingFailed.current = true; setReadingSave('error'); } });
+      writes.current = writes.current.then(async () => {
+        if (readingFailed.current) return;
+        try {
+          await window.yizhi.setReadingState(course.sessionId, next);
+          if (sequence === readingSequence.current) setReadingSave('saved');
+        } catch { readingFailed.current = true; setReadingSave('error'); }
+      });
     }
   };
   const updateReading = (key: string, value: boolean) => {
@@ -178,13 +184,22 @@ function App() {
     return saved;
   }), []);
   useEffect(() => {
-    if (course && editor.current && document.activeElement !== editor.current) editor.current.textContent = channel.current?.text(course.editableBlockId) ?? String(course.unit.reading.blocks.find(block => block.id === course.editableBlockId)?.payload.text ?? '');
+    if (course && editor.current && document.activeElement !== editor.current) {
+      const pending = channel.current?.text(course.editableBlockId);
+      if (!editor.current.dataset.initialized || course.revision > appliedRevision.current) {
+        const text = pending ?? (course.revision > appliedRevision.current ? String(course.unit.reading.blocks.find(block => block.id === course.editableBlockId)?.payload.text ?? '') : editedText.current) ?? '';
+        editor.current.textContent = text; editedText.current = text; editor.current.dataset.initialized = 'yes'; appliedRevision.current = course.revision;
+      }
+    }
     const second = course?.unit.reading.blocks.find(block => block.id === secondId.current);
-    if (second && secondEditor.current && document.activeElement !== secondEditor.current) secondEditor.current.textContent = channel.current?.text(second.id) ?? String(second.payload.text);
+    if (second && secondEditor.current && document.activeElement !== secondEditor.current && !secondEditor.current.dataset.initialized) {
+      secondEditor.current.textContent = channel.current?.text(second.id) ?? String(second.payload.text); secondEditor.current.dataset.initialized = 'yes';
+    }
     if (course) setMounted(previous => previous.map(unit => unit.id === course.unit.id ? course.unit : unit));
   }, [course, selected]);
   const go = async (id: string, nextState?: ReadingState) => {
     if (!course || !graph) return;
+    if (composing.current) { setReadError('请先完成中文候选输入，再切换阅读位置。'); return; }
     const position = graph.layout.nodes.find(node => node.unitId === id);
     if (!position) return;
     setReadError(undefined);
@@ -263,7 +278,7 @@ function App() {
         if (editor.current) editor.current.textContent = editedText.current;
         setMounted(previous => previous.map(item => item.id === current.unit.id ? current.unit : item));
       }} settled={() => { producerRunning.current = false; setProducerBusy(false); }} />}
-      <div className="save-area" inert={narrow && producerOpen}><span role="status" aria-label="阅读状态">{readingSave === "error" ? "阅读位置未保存" : readingSave === "pending" ? "正在保存阅读位置" : "阅读位置已保存"}</span>{readingSave === "error" && <button onClick={() => { if (readingRef.current) persist(readingRef.current); }}>重试保存阅读位置</button>}<span role="status" aria-label="保存状态" aria-live="polite" className={state.status}>{course ? status : '正在打开课程…'}</span>
+      <div className="save-area" inert={narrow && producerOpen}><span role="status" aria-label="阅读状态">{readingSave === "error" ? "阅读位置未保存" : readingSave === "pending" ? "正在保存阅读位置" : "阅读位置已保存"}</span>{readingSave === "error" && <button onClick={() => { if (readingRef.current) { readingFailed.current = false; persist(readingRef.current); } }}>重试保存阅读位置</button>}<span role="status" aria-label="保存状态" aria-live="polite" className={state.status}>{course ? status : '正在打开课程…'}</span>
 
         {state.status === 'error' && <button onClick={() => void channel.current?.flush()}>重试保存</button>}
       </div>

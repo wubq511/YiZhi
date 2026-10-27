@@ -250,6 +250,7 @@ test('narrow directory traps keyboard focus and restores it when closed', async 
     await window.setViewportSize({ width: 700, height: 600 });
     const nav = window.getByRole('navigation', { name: '课程目录' });
     await expect(nav).toBeVisible();
+    await window.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t04-narrow.png' });
     await expect(window.locator('main.board')).toHaveAttribute('inert', '');
     await nav.getByRole('button', { name: '关闭目录' }).focus();
     await window.keyboard.press('Shift+Tab');
@@ -482,4 +483,21 @@ test('two actual IPC editors save both paragraphs, split once and recover an unf
     await expect(window.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     await window.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t02-electron.png', fullPage: true });
   } finally { await app?.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('moving among sample units keeps only the active reading and the pinned editor mounted', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-bounded-reading-'));
+  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  try {
+    const window = await app.firstWindow();
+    const nav = window.getByRole('navigation', { name: '课程目录' });
+    await nav.getByRole('button', { name: '数制与数制转换', exact: true }).click();
+    for (const name of ['非十进制与十进制互转', '二进制、八进制与十六进制互转', '位、字节与存储容量单位']) {
+      await nav.getByRole('button', { name, exact: true }).click();
+      await expect(window.getByRole('heading', { name, exact: true })).toBeVisible();
+      expect(await window.locator('.reading-layer').count()).toBeLessThanOrEqual(2);
+    }
+    await nav.getByRole('button', { name: '位置记数法与权展开', exact: true }).click();
+    await expect(window.getByRole('textbox', { name: '编辑首段正文' })).toBeVisible();
+  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
