@@ -1,0 +1,15 @@
+.description-search { border-top:1px solid var(--border); margin-top:20px; padding-top:16px; }
+.description-search > summary { color:#345d88; cursor:pointer; }
+.description-help, .description-executor, .description-evidence { color:#626b79; font-size:13px; overflow-wrap:anywhere; }
+.description-input { display:grid; gap:6px; margin:16px 0 12px; }
+.description-input textarea { min-height:96px; max-height:30vh; resize:vertical; width:100%; padding:10px; border:1px solid var(--border); border-radius:9px; font:inherit; color:#27343e; background:#f8f8fa; caret-color:var(--purple); }
+.description-input textarea::placeholder { color:#687080; }
+.description-model { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+.description-model select { min-width:0; max-width:100%; font:inherit; padding:6px; }
+.description-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.description-results { margin-top:20px; }
+.description-evidence { margin-block:12px; }
+.description-evidence section { border-top:1px solid var(--border); padding-top:8px; }
+.description-evidence p { margin-block:6px; }
+
+.search-exact-match { background:#dcd9ff; color:#27343e; }

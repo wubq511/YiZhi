@@ -94,10 +94,11 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
   useEffect(() => { onOpenChange(open); }, [open]);
   useEffect(() => { if (open && narrow && !sourceOpen) composer.current?.focus(); }, [sourceOpen, narrow]);
   useEffect(() => {
-    const capture = () => {
+    const capture = (event: Event) => {
       const range = window.getSelection(); if (!range?.rangeCount || range.isCollapsed || !range.toString().trim()) return;
       const node = range.anchorNode?.parentElement, article = node?.closest<HTMLElement>('article[data-agent-unit]');
-      if (!article) return;
+      // A retained/programmatic reading selection is not a new question target when clicking elsewhere.
+      if (!article || !(event.target instanceof Element) || event.target.closest('article[data-agent-unit]') !== article) return;
       const block = node?.closest<HTMLElement>('[data-agent-block], [data-block-id]');
       const next = { unitId: article.dataset.agentUnit!, ...((block?.dataset.agentBlock ?? block?.dataset.blockId) ? { blockId: block!.dataset.agentBlock ?? block!.dataset.blockId } : {}), selectedText: range.toString() };
       chosenTarget.current = next; setSelection(next); markDirty();

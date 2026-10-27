@@ -49,7 +49,7 @@ export async function detectExecutor(options: { cliPath?: string; env?: NodeJS.P
   }
   return { available: false, error: lastError, models: [] };
 }
-async function executorEnv(path: string, env: NodeJS.ProcessEnv) {
+export async function executorEnv(path: string, env: NodeJS.ProcessEnv) {
   const resolved = await realpath(path);
   return { ...env, PATH: [...new Set([dirname(path), dirname(resolved), '/opt/homebrew/bin', '/usr/local/bin', ...(env.PATH ?? '').split(delimiter)])].join(delimiter) };
 }

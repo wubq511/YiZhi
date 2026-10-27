@@ -2,20 +2,53 @@ import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
-import type { Page, Locator } from '@playwright/test';
+import type { ElectronApplication, Page, Locator } from '@playwright/test';
+
+async function smallExperimentWindow(app: ElectronApplication) {
+  const page = await app.firstWindow();
+  await expect(page.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
+  const size = await app.evaluate(({ BrowserWindow }) => {
+    const window = BrowserWindow.getAllWindows()[0];
+    window.setContentSize(1024, 688); return window.getContentSize();
+  });
+  expect(size).toEqual([1024, 688]);
+  await expect.poll(() => page.evaluate(() => [innerWidth, innerHeight])).toEqual(size);
+  return page;
+}
 
 async function reveal(page: Page, target: Locator) {
   await expect(page.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
-  const board = (await page.locator('main.board').boundingBox())!;
+  let previous: { x: number; y: number; width: number; height: number } | undefined;
+  let stable = 0;
+  let last;
   for (let i = 0; i < 60; i++) {
-    const box = (await target.boundingBox())!; const delta = box.y - board.y - board.height / 2;
-    if (Math.abs(delta) < board.height / 3) return;
-    const article = await target.evaluate(el => { const r = el.closest('article')!.getBoundingClientRect(); return { x: r.x }; });
-    await page.mouse.move(Math.max(board.x + 8, Math.min(board.x + board.width - 8, article.x + 8)), board.y + board.height / 2);
-    await page.mouse.wheel(0, Math.max(-500, Math.min(500, delta))); await page.waitForTimeout(30);
+    const scene = await target.evaluate(el => {
+      const box = el.getBoundingClientRect(), board = document.querySelector('main.board')!;
+      const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+      return { box: box.toJSON() as { x: number; y: number; width: number; height: number; right: number; bottom: number }, board: board.getBoundingClientRect().toJSON() as { x: number; y: number; width: number; height: number; right: number; bottom: number },
+        clear: !!hit && (hit === el || el.contains(hit)), hit: hit?.outerHTML.slice(0, 280), scroll: [board.scrollLeft, board.scrollTop] };
+    });
+    last = scene;
+    const { box, board } = scene;
+    const dx = box.x + box.width / 2 - board.x - board.width / 2;
+    const dy = box.y + box.height / 2 - board.y - board.height / 2;
+    // A y-only sample can precede a restored scene measurement or leave the
+    // actual click point under another reading object or the fixed board tools.
+    const inside = box.x >= board.x + 8 && box.right <= board.right - 8 && box.y >= board.y + 8 && box.bottom <= board.bottom - 8;
+    if (inside && scene.clear && Math.abs(dx) < board.width / 6 && Math.abs(dy) < board.height / 6) {
+      stable = previous && (['x', 'y', 'width', 'height'] as const).every(key => Math.abs(box[key] - previous![key]) < .5) ? stable + 1 : 1;
+      if (stable >= 3) return;
+      await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => done())));
+    } else {
+      stable = 0;
+      await page.mouse.move(board.x + 8, board.y + board.height / 2);
+      await page.mouse.wheel(Math.max(-500, Math.min(500, dx)), Math.max(-500, Math.min(500, dy)));
+      await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
+    }
+    previous = box;
   }
-  await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t12-debug.png' });
-  throw new Error('实验未进入阅读视野: ' + JSON.stringify({ board, target: await target.boundingBox() }));
+  await page.screenshot({ path: test.info().outputPath('experiment-reveal-failure.png') });
+  throw new Error('实验控件未稳定进入无遮挡的画板视野: ' + JSON.stringify(last));
 }
 
 
@@ -24,7 +57,7 @@ test('actual built-in controls, diagram, offscreen stop and formula confirmation
   const launch = () => electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   let app = await launch();
   try {
-    let page = await app.firstWindow();
+    let page = await smallExperimentWindow(app);
     await page.getByRole('button', { name: '复用器与分配器', exact: true }).click();
     await page.getByRole('button', { name: 'MUX 器件、级联与扩展', exact: true }).first().click();
     let lab = page.getByRole('region', { name: '交互 · 4 选 1 的选择语义', exact: true });
@@ -55,7 +88,7 @@ test('actual built-in controls, diagram, offscreen stop and formula confirmation
     await reveal(page, lab.getByRole('button', { name: '完成公式编辑', exact: true, includeHidden: true }));
     await lab.getByRole('button', { name: '完成公式编辑', exact: true }).click();
     await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t12-mux.png' });
-    await app.close(); app = await launch(); page = await app.firstWindow();
+    await app.close(); app = await launch(); page = await smallExperimentWindow(app);
     lab = page.getByRole('region', { name: '交互 · 4 选 1 的选择语义', exact: true }); await reveal(page, lab.getByRole('checkbox', { name: 'I0', exact: true, includeHidden: true }));
     const reopened = await read(); expect(reopened.definition).toEqual(confirmed.definition); expect(reopened.state).toEqual(confirmed.state);
     await reveal(page, lab.getByRole('button', { name: '编辑实验公式', exact: true, includeHidden: true }));
@@ -88,9 +121,7 @@ test('actual IPC pause failure shows incomplete and confirmed recovery can run a
   const appProcess = app.process();
   let fault: InstanceType<typeof DatabaseSync> | undefined;
   try {
-    const page = await app.firstWindow();
-    await expect(page.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
-    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1024, 768));
+    const page = await smallExperimentWindow(app);
     await page.getByRole('button', { name: '复用器与分配器', exact: true }).click();
     const unit = page.getByRole('navigation', { name: '课程目录' }).getByRole('button', { name: 'MUX 器件、级联与扩展', exact: true }); await unit.click();
     const lab = page.getByRole('region', { name: '交互 · 4 选 1 的选择语义', exact: true });

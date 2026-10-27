@@ -124,9 +124,9 @@ export function ExchangePanel({
             <p>
               开放格式 <strong>yizhi-exchange-1</strong> · 不是完整课程备份
             </p>
-            <p>包含：所选单元的完整正文与结构身份、范围内正式关系、固定来源版本及所需 PDF／图片。个人批注由你选择。</p>
+            <p>包含：所选单元的完整正文与结构身份、范围内正式关系、固定来源版本及所需 PDF／图片。文字与公式批注由你选择。</p>
             <p className="exchange-secondary">
-              不包含：范围外单元及跨范围关系、复习状态、布局与阅读位置、草稿、对话、任务、修改历史、实验运行现场、扩展包、独立来源摘录与题库。
+              不包含：范围外单元及跨范围关系、复习状态、布局与阅读位置、个人图形标注、草稿、对话、任务、修改历史、实验运行现场、扩展包、独立来源摘录与题库。
             </p>
             <fieldset disabled={busy}>
               <legend>导出范围</legend>
@@ -149,7 +149,7 @@ export function ExchangePanel({
               {!available.length && <p>正在读取可交换的已保存单元…</p>}
               <label className="exchange-note-choice">
                 <input type="checkbox" checked={annotations} onChange={(e) => setAnnotations(e.target.checked)} />
-                包含所选单元的个人批注
+                包含所选单元的文字与公式批注
               </label>
               <button
                 disabled={!selected.length}
@@ -158,7 +158,7 @@ export function ExchangePanel({
                     const r = await api.chooseExport({ sessionId, unitIds: selected, annotations });
                     if (r)
                       setMessage(
-                        `已导出 ${r.counts.units} 个单元、${r.counts.resources} 项资源${r.annotations ? '及个人批注' : ''}。`,
+                        `已导出 ${r.counts.units} 个单元、${r.counts.resources} 项资源${r.annotations ? '及文字与公式批注' : ''}。`,
                       );
                   })
                 }
@@ -191,7 +191,7 @@ export function ExchangePanel({
                     个固定来源版本 · {preview.counts.resources} 项资源
                   </p>
                   <p>
-                    {preview.annotations ? `包含 ${preview.counts.notes} 条个人批注` : '不包含个人批注'} · 格式{' '}
+                    {preview.annotations ? `包含 ${preview.counts.notes} 条文字或公式批注` : '不包含文字或公式批注'} · 格式{' '}
                     {preview.formatVersion}
                   </p>
                   <button disabled={busy} onClick={confirm}>

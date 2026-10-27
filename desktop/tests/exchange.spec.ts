@@ -24,7 +24,7 @@ test('explicit exchange scope, failed real registration, retry and independent o
     const panel = page.getByRole('region', { name: '内容交换包' });
     await expect(panel).toContainText('yizhi-exchange-1');
     await expect(panel).toContainText('不是完整课程备份');
-    await panel.getByLabel('包含所选单元的个人批注').check();
+    await panel.getByLabel('包含所选单元的文字与公式批注').check();
     await app.evaluate(
       ({ dialog }, filePath) => {
         dialog.showSaveDialog = async () => ({ canceled: false, filePath });

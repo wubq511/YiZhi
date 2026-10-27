@@ -1,9 +1,12 @@
+import { DescriptionSearch, useDescriptionSearch } from './description-search';
+import { SearchHitCard } from './search-hit';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { searchScopes, type SearchHit, type SearchResults, type SearchScope, type SearchStatus } from '../search-api';
 import './search-panel.css';
 const labels: Record<SearchScope, string> = { knowledge: '知识', notes: '个人笔记', messages: '学习对话', sources: '来源原文' };
 export function SearchPanel({ sessionId, narrow, beforeOpen, onOpenChange, locate }: { sessionId: string; narrow: boolean; beforeOpen(): void; onOpenChange(open: boolean): void; locate(hit: SearchHit): Promise<void> }) {
+  const described = useDescriptionSearch(sessionId);
   const [open, setOpen] = useState(false), [query, setQuery] = useState(''), [scopes, setScopes] = useState(searchScopes);
   const [results, setResults] = useState<SearchResults>(), [status, setStatus] = useState<SearchStatus>();
   const [error, setError] = useState(''), [loading, setLoading] = useState(false), [indexing, setIndexing] = useState(false), [revision, setRevision] = useState(0);
@@ -43,10 +46,14 @@ export function SearchPanel({ sessionId, narrow, beforeOpen, onOpenChange, locat
     }, changed ? 150 : 0);
     return () => clearTimeout(timer);
   }, [query, scopes, open, revision]);
+  const openHit = (hit: SearchHit) => { void (async () => {
+    try { const current = await window.yizhi.search.locate({ sessionId, hit }); await locate(current); setOpen(false); onOpenChange(false); }
+    catch (e) { setError((e as Error).message); void window.yizhi.search.status({ sessionId }).then(setStatus).catch(() => {}); }
+  })(); };
   return <><button ref={trigger} aria-expanded={open} onPointerDown={() => { if (!open) { beforeOpen(); prepared.current = true; } }} onKeyDown={event => { if (!open && ['Enter', ' '].includes(event.key)) { beforeOpen(); prepared.current = true; } }} onClick={() => { if (!open && !prepared.current) beforeOpen(); prepared.current = false; show(true); }}>搜索课程</button>{open && createPortal(<aside ref={panel} className="search-panel" role={narrow ? 'dialog' : 'complementary'} aria-modal={narrow || undefined} aria-label="搜索课程" onKeyDown={event => {
     if (event.key === 'Escape') { event.preventDefault(); show(false); }
     if (event.key === 'Tab' && narrow) {
-      const items = [...panel.current!.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), summary')].filter(el => el.getClientRects().length);
+      const items = [...panel.current!.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), summary')].filter(el => el.getClientRects().length);
       if (event.shiftKey && document.activeElement === items[0]) { event.preventDefault(); items.at(-1)?.focus(); }
       else if (!event.shiftKey && document.activeElement === items.at(-1)) { event.preventDefault(); items[0]?.focus(); }
     }
@@ -54,6 +61,7 @@ export function SearchPanel({ sessionId, narrow, beforeOpen, onOpenChange, locat
     <div className="search-heading"><h2>搜索课程</h2><button onClick={() => show(false)}>收起搜索</button></div>
     <label className="search-input">查找已有内容<input ref={input} type="search" aria-label="查找已有内容" value={query} onChange={e => setQuery(e.target.value)} placeholder="关键词、别名或公式符号" maxLength={512} /></label>
     <fieldset className="search-scopes"><legend>搜索范围</legend>{searchScopes.map(scope => <label key={scope}><input type="checkbox" checked={scopes.includes(scope)} onChange={e => setScopes(current => e.target.checked ? [...current, scope] : current.filter(s => s !== scope))} />{labels[scope]}</label>)}</fieldset>
+    <DescriptionSearch state={described} scopes={scopes} locate={openHit} />
     {error && <p role="alert" className="search-error">{error}</p>}
     <div className="search-index" role="status" aria-label="搜索索引状态">{status && <span>{status.pending ? `${status.pending} 个对象尚未完成索引；当前变化正用有界直查补齐。` : '当前可读内容已索引。'}{indexing && ' 正在分批索引…'}</span>}
       <button disabled={indexing} onClick={() => void rebuild(true, true)}>重建索引</button>
@@ -71,10 +79,7 @@ export function SearchPanel({ sessionId, narrow, beforeOpen, onOpenChange, locat
       {!query.trim() && <p>查找已保存的知识、笔记、学习对话和来源原文。断网也可使用。</p>}
       {loading && <p role="status">正在查找…</p>}
       {results && <><p role="status">{results.hits.length ? `找到 ${results.hits.length} 处已有内容` : results.incomplete ? '已检查部分未命中；尚有未索引内容，索引后再查。' : '已检查范围无命中。'}{results.truncated && ' 结果较多，请补充关键词或缩小范围。'}{results.incomplete && results.hits.length > 0 && ' 仍有未索引内容。'}</p>
-        {results.hits.map((hit, i) => <article className="search-result" key={`${hit.scope}:${hit.entityId}:${hit.field}:${i}`}><p className="search-result-kind">{labels[hit.scope]}{hit.pdfPageIndex !== undefined && ` · PDF 第 ${hit.pdfPageIndex + 1} 页`}</p><h3>{hit.title}</h3><p className="search-excerpt">{hit.excerpt}</p>
-          <details><summary>身份与版本</summary><p>{hit.entityId}{hit.blockId && ` · ${hit.blockId}`} · {hit.field}</p><p>版本 {hit.version}</p>{hit.projectionId && <p>文本投影 {hit.projectionId} · {hit.convention}</p>}</details>
-          <button onClick={() => { void (async () => { try { const current = await window.yizhi.search.locate({ sessionId, hit }); await locate(current); setOpen(false); onOpenChange(false); } catch (e) { setError((e as Error).message); void window.yizhi.search.status({ sessionId }).then(setStatus).catch(() => {}); } })(); }}>定位命中</button>
-        </article>)}
+        {results.hits.map((hit, i) => <SearchHitCard key={`${hit.scope}:${hit.entityId}:${hit.field}:${i}`} hit={hit} locate={openHit} />)}
       </>}
     </section>
   </aside>, document.body)}</>;
