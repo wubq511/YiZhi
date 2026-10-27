@@ -1,3 +1,4 @@
+import { experimentsClient } from '../experiments-api';
 import { relationClient } from '../relation-api';
 import { Worker } from 'node:worker_threads';
 import { commandClient } from '../command-api';
@@ -6,6 +7,7 @@ import type { CourseGraph, CourseUnit, ReadingState, OpenedCourse, SaveParagraph
 
 /** One instance belongs to the application host, shared by all its windows/courses. */
 export class CourseService {
+  readonly experiments = experimentsClient((action, payload) => this.request(action, payload));
   readonly relations = relationClient((action, payload) => this.request(action, payload));
   readonly commands = commandClient((action, payload) => this.request(action, payload));
   readonly sources = sourcesClient((action, payload) => this.request(action, payload));

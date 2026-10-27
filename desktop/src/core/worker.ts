@@ -1,3 +1,4 @@
+import { BuiltinExperiments } from './builtin-experiments';
 import { parentPort } from 'node:worker_threads';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, realpathSync, readFileSync } from 'node:fs';
@@ -17,6 +18,7 @@ interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; cou
   // T03 constructs its observer on this same connection; both student save entry points call it in-transaction.
   groups: CommandGroups;
   sources: Sources;
+  experiments: BuiltinExperiments;
   relations: FormalRelations;
 }
 const courses = new Map<string, Course>();
@@ -78,7 +80,7 @@ function open(directory: string): OpenedCourse {
     const sourceUnit = (id: string) => {
       const row = db!.prepare('SELECT payload FROM units WHERE id=?').get(id);
       if (row) return JSON.parse(String(row.payload));
-      if (['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-055', 'KU-057'].includes(id))
+      if (['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-035', 'KU-055', 'KU-057', 'KU-062'].includes(id))
         return JSON.parse(readFileSync(join(__dirname, `fixtures/unit-${id.slice(3)}.json`), 'utf8'));
     };
     const graph = JSON.parse(readFileSync(join(__dirname, 'fixtures/graph.json'), 'utf8')) as CourseGraph;
@@ -88,7 +90,8 @@ function open(directory: string): OpenedCourse {
     const relationCatalog = JSON.parse(readFileSync(join(__dirname, 'fixtures/relation-catalog.json'), 'utf8'));
     const relations = new FormalRelations(db, graph, { retiredUnitIds: relationCatalog.retiredUnitIds,
       get sources() { return sources.relationCatalog(relationCatalog.sources); } });
-    const course: Course = { db, owner, sessionId: randomUUID(), graph, groups, relations, sources,
+    const experiments = new BuiltinExperiments(db, sourceUnit);
+    const course: Course = { db, owner, sessionId: randomUUID(), graph, groups, relations, sources, experiments,
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     const result = snapshot(course);
     courses.set(canonical, course);
@@ -106,10 +109,19 @@ function save(command: SaveParagraph): SaveReceipt {
 }
 // Async validation/import shares the SAME ordered command boundary with saves, stop and close.
 let queue = Promise.resolve();
-parentPort!.on('message', message => { queue = queue.then(() => dispatch(message)); });
+parentPort!.on('message', message => {
+  if (message.action === 'experiments:act') {
+    const course = [...courses.values()].find(c => c.sessionId === message.payload?.sessionId);
+    course?.experiments.stopIssuing(message.payload);
+  }
+  queue = queue.then(() => dispatch(message));
+});
 async function dispatch({ id, action, payload }: { id: number; action: string; payload: any }) {
   try {
-    if (payload?.operationId) session(payload.sessionId).sources.fenceOperation(action, payload.operationId);
+    if (payload?.operationId) {
+      session(payload.sessionId).sources.fenceOperation(action, payload.operationId);
+      session(payload.sessionId).experiments.fenceOperation(action, payload.operationId);
+    }
     let value: unknown;
     if (action === 'open') value = open(payload.directory);
     else if (action === 'read') value = snapshot(session(payload.sessionId));
@@ -129,9 +141,19 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     } else if (action === 'readUnit') {
       const course = session(payload.sessionId);
       if (payload.unitId === 'KU-001') value = snapshot(course).unit;
-      else if (['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-055', 'KU-057'].includes(payload.unitId))
+      else if (['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-035', 'KU-055', 'KU-057', 'KU-062'].includes(payload.unitId))
         value = JSON.parse(readFileSync(join(__dirname, `fixtures/unit-${payload.unitId.slice(3)}.json`), 'utf8'));
       else throw new Error('该单元正文尚未加入课程副本');
+    }
+    else if (action.startsWith('experiments:')) {
+      const experiments = session(payload.sessionId).experiments;
+      const method = action.slice(12);
+      if (method === 'open') value = experiments.open(payload);
+      else if (method === 'read') value = experiments.read(payload);
+      else if (method === 'snapshot') value = experiments.snapshot(payload);
+      else if (method === 'act') value = experiments.act(payload);
+      else if (method === 'pauseAll') value = experiments.pauseAll();
+      else throw new Error('未知实验接口');
     }
     else if (action === 'saveDraft') value = saveDraft(session(payload.sessionId).db, payload);
     else if (action === 'commitEdit') value = commit(session(payload.sessionId), payload);
@@ -150,7 +172,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action.startsWith('commands:')) value = session(payload.sessionId).groups.dispatch(action, payload);
     else if (action.startsWith('sources:')) value = await session(payload.sessionId).sources.dispatch(action, payload);
     else if (action === 'close') {
-      for (const course of courses.values()) { course.db.close(); course.owner.close(); }
+      for (const course of courses.values()) { course.experiments.dispose(); course.db.close(); course.owner.close(); }
       courses.clear();
     } else throw new Error('未知课程命令');
     parentPort!.postMessage({ id, ok: true, value });

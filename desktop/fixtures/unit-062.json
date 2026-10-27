@@ -1,0 +1,727 @@
+{
+  "aliases": [
+    "Decoder",
+    "2-4 译码器",
+    "3-8 译码器",
+    "地址译码"
+  ],
+  "id": "KU-062",
+  "internals": [
+    {
+      "kind": "formula",
+      "text": "无使能高有效 2:4 译码器：Y0=A1′A0′，Y1=A1′A0，Y2=A1A0′，Y3=A1A0"
+    },
+    {
+      "kind": "variant",
+      "text": "带使能版本可表现为低有效输出、低电平使能；E=1 时输出全 1，E=0 时选中通道为 0"
+    },
+    {
+      "kind": "example",
+      "text": "2:4 译码器用于 4 个 1KB RAM 的片选地址译码"
+    }
+  ],
+  "kind": "concept",
+  "name": "译码器功能与 2:4/3:8 译码器",
+  "outcome": "能说明译码器把 n 位二进制码展开为 2^n 个输出，并写出 2:4、3:8 译码器的输出表达式。",
+  "questionTypes": [
+    "逻辑设计"
+  ],
+  "rating": {
+    "evidence": {
+      "exerciseExamples": [],
+      "homeworkDirect": [
+        {
+          "basis": "stem",
+          "label": "第 4 题",
+          "questionId": "Q-093"
+        }
+      ],
+      "referenceItems": [],
+      "support": []
+    },
+    "rationale": "课后作业直接考查：第 4 题。",
+    "stars": 4,
+    "supportAdjustment": null
+  },
+  "reading": {
+    "blocks": [
+      {
+        "id": "RB-TH-14-062-001-intro",
+        "kind": "paragraph",
+        "payload": {
+          "text": "译码器（Decoder）把具有特定含义的二进制码转换成对应的输出信号：完整二进制译码器有 n 位输入码、2^n 路输出，某一时刻（在使能有效时）恰有一路输出被选中。BCD 和显示译码器不遵循“2^n 路、只选一路”的完整二进制译码形式。常见规格有 2 线-4 线、3-8、4-16，以及 4-10（BCD 译码器）。课件把译码器分成两大类：通用译码器（地址译码、片选）和数字显示译码器（驱动数码管，见 KU-066）。当码表一致、原输入为单有效信号时，普通编码与二进制译码可互逆；优先编码丢失的其他输入不能还原。理解译码器要同时抓住三件事：输出与输入码的对应关系（最小项）、输出的极性（高有效还是低有效）、以及使能端的电平与数量——这三点决定了它能不能直接当作片选或函数实现的基础。"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "P28 译码器定义、规格列举与两大分类；2:4 符号",
+            "pdfPages": [
+              28
+            ],
+            "sourceId": "SRC-C05",
+            "versionId": "VER-SRC-C05-ad2a56210ce2",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-14-062-002-2to4",
+        "kind": "paragraph",
+        "payload": {
+          "text": "最简单的 2:4 译码器没有使能端，输出高有效（课件 P31）：A1A0=00 时 Y0=1、其余为 0；01 时 Y1=1；10 时 Y2=1；11 时 Y3=1。四个输出表达式恰好是 A1、A0 的四个最小项：Y0=Ā1Ā0，Y1=Ā1A0，Y2=A1Ā0，Y3=A1A0——课件强调“译码器中包含所有的乘积项”。用与门阵列实现时，每个与门各接一组原码/反码；用卡诺图的眼光看，输出向量就是最小项向量 m0m1m2m3 的一次“独热”输出。"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "P31 2:4 译码器符号、真值表、与门电路与四个最小项表达式",
+            "pdfPages": [
+              31
+            ],
+            "sourceId": "SRC-C05",
+            "versionId": "VER-SRC-C05-ad2a56210ce2",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-14-062-003-enable",
+        "kind": "paragraph",
+        "payload": {
+          "text": "加上使能端并把输出改为低有效之后，2:4 译码器就变成“能开关的片选发生器”（课件 P32）。真值表只有五行：E=1 时不论 A1A0 是什么，四路输出全为 1（无一被选中）；E=0 时输出为低有效的最小项——A1A0=00 → D0=0 其余 1，依此类推。门级实现是四个与非门：每个与非门的输入是 ¬E、以及对应最小项所需的原码/反码，即 Dk=¬(¬E·mk)。注意这一页的约定：使能端 E 是低有效（E=1 禁止、E=0 工作），输出是低有效（被选中为 0）。与 74LS138 的“使能端多为低有效、E3 高有效”并不矛盾——读具体器件时逐个端子确认极性，不要把某一页的约定套到另一页。"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "P32 带使能 2:4 真值表（E=1 全 1，E=0 低有效最小项）与与非门电路",
+            "pdfPages": [
+              32
+            ],
+            "sourceId": "SRC-C05",
+            "versionId": "VER-SRC-C05-ad2a56210ce2",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-14-062-014-enable-table",
+        "kind": "table",
+        "payload": {
+          "columns": [
+            "E",
+            "A1",
+            "A0",
+            "D0",
+            "D1",
+            "D2",
+            "D3"
+          ],
+          "rows": [
+            [
+              "1",
+              "X",
+              "X",
+              "1",
+              "1",
+              "1",
+              "1"
+            ],
+            [
+              "0",
+              "0",
+              "0",
+              "0",
+              "1",
+              "1",
+              "1"
+            ],
+            [
+              "0",
+              "0",
+              "1",
+              "1",
+              "0",
+              "1",
+              "1"
+            ],
+            [
+              "0",
+              "1",
+              "0",
+              "1",
+              "1",
+              "0",
+              "1"
+            ],
+            [
+              "0",
+              "1",
+              "1",
+              "1",
+              "1",
+              "1",
+              "0"
+            ]
+          ],
+          "title": "P32 完整压缩功能表（D0→D3 顺序）"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "P32 带使能 2:4 真值表（E=1 全 1，E=0 低有效最小项）与与非门电路",
+            "pdfPages": [
+              32
+            ],
+            "sourceId": "SRC-C05",
+            "versionId": "VER-SRC-C05-ad2a56210ce2",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-14-062-004-3to8",
+        "kind": "paragraph",
+        "payload": {
+          "text": "3:8 译码器把三位二进制数展开成八路（课件 P36）：输入 x、y、z 的权分别是 2²、2¹、2⁰，输出 D0～D7 代表十进制系统中的 8 个数字。高有效版本的真值表是一条对角线：xyz=000 → D0=1，xyz=001 → D1=1，……，111 → D7=1，其余输出为 0；右侧电路用八个与门分别实现 xyz 的八个最小项，D0=x′y′z′，D1=x′y′z，D2=x′yz′，D3=x′yz，D4=xy′z′，D5=xy′z，D6=xyz′，D7=xyz。工程型号 74LS138/74HC138 在此基础上加了三根使能线与低有效输出，专为地址译码设计（主位置在 KU-063）。"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "P36 3-8 译码器符号、真值表对角线与八个最小项与门",
+            "pdfPages": [
+              36
+            ],
+            "sourceId": "SRC-C05",
+            "versionId": "VER-SRC-C05-ad2a56210ce2",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-14-062-005-addr",
+        "kind": "paragraph",
+        "payload": {
+          "text": "译码器最经典的用途是地址译码：把高位地址翻译成若干片存储器/外设的片选。课件 P30 的例子用 2-4 译码器为四片 1KB RAM 分配地址：地址线 A11、A10 接译码器输入，/MRQ 参与使能，译码器四路低有效输出分别接四片 RAM 的 CS；每片 RAM 内部再用 A9～A0 选中 1KB 空间里的单元。于是 A11A10=00 的地址段对应第 1 片（完整 12 位地址 0000_0000_0000～0011_1111_1111，即 0x000～0x3FF），01、10、11 段依次对应 0x400～0x7FF、0x800～0xBFF、0xC00～0xFFF；每片内部 A9…A0 均从 0 到 1023。这个模式可以平移到更大的译码器：3-8 译码器分 8 片、4-16 分 16 片，规律始终是“高位进译码器、低位进片内”。"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "P30 2-4 译码器地址译码应用：A11A10 选片、A9-A0 片内地址、四片 1KB RAM",
+            "pdfPages": [
+              30
+            ],
+            "sourceId": "SRC-C05",
+            "versionId": "VER-SRC-C05-ad2a56210ce2",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-14-062-006-fig",
+        "kind": "figure",
+        "payload": {
+          "alt": "2:4 译码器把两位地址展开成四路片选，低位地址留给每片存储器内部寻址",
+          "config": {
+            "caption": "右侧框汇总四片RAM：CS0…CS3分别连接四片的CS端；低位A9…A0并接四片的地址口。两组线含义不同，不能把低位地址接到CS线上。",
+            "edges": [
+              {
+                "from": "hi",
+                "to": "dec"
+              },
+              {
+                "from": "dec",
+                "to": "cs"
+              },
+              {
+                "from": "cs",
+                "to": "ram"
+              },
+              {
+                "from": "lo",
+                "to": "ram"
+              }
+            ],
+            "nodes": [
+              {
+                "id": "hi",
+                "label": "A11 A10",
+                "x": 80,
+                "y": 55
+              },
+              {
+                "id": "dec",
+                "label": "2:4 · /MRQ",
+                "x": 240,
+                "y": 55
+              },
+              {
+                "id": "cs",
+                "label": "CS0…CS3",
+                "x": 400,
+                "y": 55
+              },
+              {
+                "id": "lo",
+                "label": "A9…A0 地址",
+                "x": 240,
+                "y": 185
+              },
+              {
+                "id": "ram",
+                "label": "四片 RAM",
+                "x": 560,
+                "y": 120
+              }
+            ]
+          }
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "P30 接线图：A11A10 进译码器，A9-A0 进各片 RAM",
+            "pdfPages": [
+              30
+            ],
+            "sourceId": "SRC-C05",
+            "versionId": "VER-SRC-C05-ad2a56210ce2",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-14-062-007-interactive",
+        "kind": "interactive",
+        "payload": {
+          "component": "decoder",
+          "config": {
+            "activeLowOutputs": true,
+            "addressBits": [
+              "A2",
+              "A1",
+              "A0"
+            ],
+            "enable": {
+              "E1": 0,
+              "E2": 0,
+              "E3": 1
+            },
+            "label": "3:8 译码器（低有效输出）",
+            "outputs": 8
+          },
+          "inputs": {
+            "A0": 1,
+            "A1": 1,
+            "A2": 0,
+            "E1": 0,
+            "E2": 0,
+            "E3": 1
+          },
+          "title": "交互 · 74LS138 式低有效输出"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "3:8 与 74LS138 的低有效输出语义；交互按 provider 的 decoder schema 配置",
+            "pdfPages": [
+              36,
+              38
+            ],
+            "sourceId": "SRC-C05",
+            "versionId": "VER-SRC-C05-ad2a56210ce2",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-14-062-009-example-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "逐条核对控制路径：E1 接 A19（低有效），E2 接 A18（低有效），E3（高有效）由 A17、A16 经或门再取反接入。",
+                "使能条件：A19=0 且 A18=0 且 ¬(A17+A16)=1 → A19=A18=A17=A16=0，记 E=¬A19·¬A18·¬A17·¬A16。",
+                "逐条核对选择路径：A2、A1、A0 依次接 A15、A14、A13；A12～A0 直接进各外设片内。",
+                "外设 0、5、7 分别对应 Y0、Y5、Y7，低有效片选。",
+                "CS0=¬(E·¬A15·¬A14·¬A13)，CS5=¬(E·A15·¬A14·A13)，CS7=¬(E·A15·A14·A13)；括号内为 1 时对应 CS 线为 0。"
+              ]
+            },
+            "role": "core",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-14-062-008-example",
+        "kind": "example",
+        "payload": {
+          "answerNature": "derived-solution",
+          "questionId": "Q-093",
+          "title": "例题 · 正式题 Q-093：74138 地址译码"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "原作业第 4 题完整题干与 74138 接线图（使能与选择端逐条放大核对）",
+            "pdfPages": [
+              4
+            ],
+            "sourceId": "SRC-HW05",
+            "versionId": "VER-SRC-HW05-330710a40ab2",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-TH-14-062-011-practice-ans",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "① A1A0=10 → Y2=1，Y0=Y1=Y3=0。",
+                "② E=0、A1A0=11 → D3=0，D0=D1=D2=1。",
+                "③ xyz=101 → D5=1；D5=xy′z（x=1、y=0、z=1 的最小项）。"
+              ]
+            },
+            "role": "core",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-TH-14-062-010-practice",
+        "kind": "exercise",
+        "payload": {
+          "answerNature": "self-test",
+          "hint": "① 看 A1A0 对应哪个最小项；② 记住 E=0 才工作、选中输出为 0；③ 权 2²2¹2⁰。",
+          "problem": "① 高有效 2:4 译码器，A1A0=10，写出四路输出。② 带使能低有效 2:4（P32 约定：E=0 工作、输出低有效），E=0、A1A0=11，写出 D0～D3。③ 3:8 高有效译码器，xyz=101，哪一路为 1？写出该路最小项表达式。",
+          "title": "练习 · 极性与最小项自测"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "题型同三页真值表；结果经 audit-KU-062.py 独立枚举复核",
+            "pdfPages": [
+              31,
+              32,
+              36
+            ],
+            "sourceId": "SRC-C05",
+            "versionId": "VER-SRC-C05-ad2a56210ce2",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-TH-14-062-012-kr",
+        "kind": "knowledge-reference",
+        "payload": {
+          "intent": "编码器及单有效输入、有效标志、优先级的限制见 KU-060；不要把优先编码与译码当作无条件互逆。",
+          "targetUnitId": "KU-060"
+        },
+        "role": "supplement",
+        "sourceRefs": []
+      },
+      {
+        "id": "RB-TH-14-062-013-warning",
+        "kind": "callout",
+        "payload": {
+          "text": "不要对所有译码器统一套用 Yi=mi：高有效译码器确实如此；低有效译码器是 Yi=¬mi；带使能时还要乘上使能条件。做题时的顺序应当是——先看输出极性，再看使能极性与数量，最后才写表达式。P31（高有效无使能）、P32（E 低有效、输出低有效）、74LS138（E1/E2 低有效、E3 高有效、输出低有效）三种约定并存，正是这个道理。",
+          "tone": "amber"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "三种极性约定的原页",
+            "pdfPages": [
+              31,
+              32,
+              38
+            ],
+            "sourceId": "SRC-C05",
+            "versionId": "VER-SRC-C05-ad2a56210ce2",
+            "visualStatus": "verified"
+          }
+        ]
+      }
+    ],
+    "coverage": [
+      {
+        "coreBlockIds": [
+          "RB-TH-14-062-001-intro",
+          "RB-TH-14-062-002-2to4",
+          "RB-TH-14-062-003-enable",
+          "RB-TH-14-062-004-3to8",
+          "RB-TH-14-062-005-addr",
+          "RB-TH-14-062-006-fig",
+          "RB-TH-14-062-008-example",
+          "RB-TH-14-062-010-practice",
+          "RB-TH-14-062-013-warning"
+        ],
+        "goal": "能说明译码器把 n 位二进制码展开为 2^n 个输出，并写出 2:4、3:8 译码器的输出表达式（KU-062 outcome）。",
+        "materials": [
+          {
+            "blockIds": [
+              "RB-TH-14-062-006-fig"
+            ],
+            "kind": "figure",
+            "status": "verified"
+          },
+          {
+            "blockIds": [
+              "RB-TH-14-062-003-enable",
+              "RB-TH-14-062-005-addr"
+            ],
+            "kind": "method",
+            "status": "verified"
+          },
+          {
+            "blockIds": [
+              "RB-TH-14-062-008-example"
+            ],
+            "kind": "example",
+            "status": "verified"
+          },
+          {
+            "blockIds": [
+              "RB-TH-14-062-010-practice"
+            ],
+            "kind": "exercise",
+            "status": "verified"
+          },
+          {
+            "blockIds": [
+              "RB-TH-14-062-007-interactive"
+            ],
+            "kind": "interactive",
+            "status": "verified"
+          }
+        ],
+        "note": "原页核对和内存 schema/计算见 verify_independent.py；正式渲染/导入由主线完成。",
+        "readingStatus": "passed",
+        "sourceRefs": [
+          {
+            "note": "P28 定义分类；P30 地址译码；P31 高有效 2:4；P32 带使能低有效 2:4；P36 3:8",
+            "pdfPages": [
+              28,
+              30,
+              31,
+              32,
+              36
+            ],
+            "sourceId": "SRC-C05",
+            "versionId": "VER-SRC-C05-ad2a56210ce2",
+            "visualStatus": "verified"
+          },
+          {
+            "note": "第 4 题 74138 地址译码图（Q-093）",
+            "pdfPages": [
+              4
+            ],
+            "sourceId": "SRC-HW05",
+            "versionId": "VER-SRC-HW05-330710a40ab2",
+            "visualStatus": "verified"
+          }
+        ],
+        "visualStatus": "verified"
+      }
+    ],
+    "revision": 1,
+    "schemaVersion": "review-reading-1",
+    "status": "complete"
+  },
+  "sourceRefs": [
+    {
+      "note": "译码器功能与 2:4/3:8 译码器：译码器定义与分类；页内代码片段排除",
+      "pdfPages": [
+        28
+      ],
+      "sourceId": "SRC-C05",
+      "versionId": "VER-SRC-C05-ad2a56210ce2",
+      "visualStatus": "verified"
+    },
+    {
+      "note": "译码器功能与 2:4/3:8 译码器：2:4 译码器地址译码应用、结构与输出表达式",
+      "pdfPages": [
+        30,
+        31
+      ],
+      "sourceId": "SRC-C05",
+      "versionId": "VER-SRC-C05-ad2a56210ce2",
+      "visualStatus": "verified"
+    },
+    {
+      "note": "译码器功能与 2:4/3:8 译码器：带使能端 2:4 译码器真值表；代码部分排除",
+      "pdfPages": [
+        32
+      ],
+      "sourceId": "SRC-C05",
+      "versionId": "VER-SRC-C05-ad2a56210ce2",
+      "visualStatus": "verified"
+    },
+    {
+      "note": "译码器功能与 2:4/3:8 译码器：2:4 译码器门级描述；代码部分排除",
+      "pdfPages": [
+        34
+      ],
+      "sourceId": "SRC-C05",
+      "versionId": "VER-SRC-C05-ad2a56210ce2",
+      "visualStatus": "verified"
+    },
+    {
+      "note": "译码器功能与 2:4/3:8 译码器：3-8 译码器与二-十进制转换",
+      "pdfPages": [
+        36
+      ],
+      "sourceId": "SRC-C05",
+      "versionId": "VER-SRC-C05-ad2a56210ce2",
+      "visualStatus": "verified"
+    }
+  ],
+  "summary": "译码器输出对应输入码的最小项，但输出极性取决于具体器件和使能版本，不能对所有译码器统一套用 Yi=mi。",
+  "themeId": "TH-14",
+  "theme": {
+    "id": "TH-14",
+    "lessonId": "L05",
+    "name": "编码器与译码器",
+    "coreOutcome": "能区分普通/优先编码与通用/显示译码，使用 74 系列器件实现函数、扩展与地址译码。",
+    "sourceRefs": [
+      {
+        "sourceId": "SRC-C05",
+        "pdfPages": [
+          27,
+          28,
+          30,
+          31,
+          32,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42,
+          43,
+          44,
+          45,
+          47,
+          48,
+          52,
+          53,
+          54,
+          55,
+          56,
+          57
+        ],
+        "visualStatus": "verified",
+        "note": "主题范围页；具体单元拆分见 units",
+        "versionId": "VER-SRC-C05-ad2a56210ce2"
+      }
+    ],
+    "rating": {
+      "stars": 5,
+      "rationale": "主题核心的译码器实现有习题课解答例题，编码/译码器件也有汇总与作业证据。"
+    }
+  },
+  "questions": [
+    {
+      "id": "MAP-154",
+      "questionId": "Q-093",
+      "unitId": "KU-062",
+      "role": "direct",
+      "basis": "stem",
+      "note": "译码器输出对应地址最小项",
+      "question": {
+        "id": "Q-093",
+        "sourceId": "SRC-HW05",
+        "label": "第 4 题",
+        "kind": "homework",
+        "taskSummary": "20 位地址、8 位数据，8 个外设；地址高 7 位分别作 74138 的控制/选择信号，求外设 0、5、7 的片选 CS 表达式。",
+        "questionTypes": [
+          "逻辑分析"
+        ],
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-HW05",
+            "pdfPages": [
+              4
+            ],
+            "visualStatus": "verified",
+            "note": "原作业第 4 题 74138 地址译码图",
+            "versionId": "VER-SRC-HW05-330710a40ab2"
+          }
+        ],
+        "hasOfficialAnswer": false,
+        "stem": "在一个 20 位地址总线 A19～A0 和 8 位数据总线 D7～D0 的计算机系统中连接 8 个外围设备，用 74138 译码器构成译码电路。地址总线中的高 7 位分别作为译码器的控制信号和选择信号。按题图确定外设 0、外设 5、外设 7 的低有效片选信号 CS 的逻辑表达式。",
+        "solution": "据原图推导（原作业无官方答案）：E1=A19、E2=A18 均低有效，E3=¬(A17+A16) 接高有效端，所以使能条件 E=¬A19·¬A18·¬A17·¬A16。图中 A15/A14/A13 分别接 A2/A1/A0。外设 0、5、7 的地址依次为 000、101、111，因此 CS0=¬(E·¬A15·¬A14·¬A13)，CS5=¬(E·A15·¬A14·A13)，CS7=¬(E·A15·A14·A13)。括号内选中条件为 1 时，对应片选线实际电平为 0。",
+        "answerNature": "derived-solution"
+      },
+      "unit": {
+        "id": "KU-062",
+        "name": "译码器功能与 2:4/3:8 译码器",
+        "kind": "concept",
+        "themeId": "TH-14",
+        "themeName": "编码器与译码器",
+        "stars": 4,
+        "questionTypes": [
+          "逻辑设计"
+        ]
+      }
+    }
+  ],
+  "relations": [
+    {
+      "id": "REL-016",
+      "fromUnitId": "KU-062",
+      "toUnitId": "KU-064",
+      "type": "requires",
+      "directed": true,
+      "value": "必须先知道译码器各输出对应哪个输入码及其极性，才能选择输出端和正确的合并门。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C05",
+          "pdfPages": [
+            30,
+            31,
+            32,
+            34,
+            35,
+            37,
+            39,
+            42,
+            43
+          ],
+          "visualStatus": "verified",
+          "note": "译码器功能、极性与函数实现",
+          "versionId": "VER-SRC-C05-ad2a56210ce2"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-017",
+      "fromUnitId": "KU-062",
+      "toUnitId": "KU-065",
+      "type": "constructs",
+      "directed": true,
+      "value": "两片 3:8 译码器借高位地址控制使能形成 4:16，清楚呈现低位并接、高位分片的扩展结构。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C05",
+          "pdfPages": [
+            30,
+            31,
+            32,
+            36,
+            40,
+            41
+          ],
+          "visualStatus": "verified",
+          "note": "译码器级联扩展",
+          "versionId": "VER-SRC-C05-ad2a56210ce2"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    }
+  ]
+}
