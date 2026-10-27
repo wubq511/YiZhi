@@ -7,6 +7,7 @@ function Structure({node,page}:{node:ParseStructure;page:ParsedPage}) {
   const text=(n:ParseStructure):string=>n.id?page.text.filter(t=>t.markedContentId===n.id).map(t=>t.text).join(' '):n.children.map(text).join(' ');
   if(node.role==='Table') return <li className="parse-table"><strong>表格标签 · Table</strong><p>合并单元格与复杂排版以原页为准。</p><table><tbody>{node.children.filter(n=>n.role==='TR').map((row,i)=><tr key={i}>{row.children.map((cell,j)=>cell.role==='TH'?<th key={j}>{text(cell)}</th>:<td key={j}>{text(cell)}</td>)}</tr>)}</tbody></table></li>;
   if(node.role==='Formula') return <li className="parse-formula"><strong>公式 · Formula</strong><br/>{text(node)}</li>;
+  if(node.role==='Figure') return <li><strong>图片 · Figure</strong><p>{node.alt||'原页图像区域'}</p>{node.bounds&&<small>[{node.bounds.map(n=>n.toFixed(1)).join(', ')}]</small>}</li>;
   if(node.role==='content') return null;
   return <li><span>{node.role}</span>{node.children.every(c=>c.role==='content')?' · '+text(node):<ul>{node.children.map((n,i)=><Structure key={i} node={n} page={page}/>)}</ul>}</li>;
 }

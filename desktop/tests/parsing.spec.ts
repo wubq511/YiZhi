@@ -29,6 +29,7 @@ test('actual host parsing UI shows immutable artifacts, correction, original-pag
     await expect(page.locator('.parse-raster')).toHaveJSProperty('naturalWidth',360);
     await expect(page.getByLabel('结构化页面产物')).toContainText('Table');
     await expect(page.getByLabel('结构化页面产物')).toContainText('Formula');
+    await expect(page.getByLabel('结构化页面产物')).toContainText('Checker diagram');
     await expect(page.locator('.parse-table th').first()).toHaveText('Input');
     await expect(page.locator('.parse-table td').first()).toHaveText('0');
     await page.locator('.parse-table').evaluate(el=>el.scrollIntoView({block:'start'}));
