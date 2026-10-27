@@ -2,6 +2,7 @@ import { parentPort } from 'node:worker_threads';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, realpathSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { CommandGroups } from './command-groups';
 import { randomUUID } from 'node:crypto';
 import type { OpenedCourse, SaveParagraph, SaveReceipt, EditCommand } from '../shared';
 
@@ -10,7 +11,7 @@ import { initializeSaveStore, readDrafts, saveDraft, eventCursor, commitEdit, qu
 const EDITABLE = 'RB-TH-01-01-what-is-positional-notation';
 interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; courseId: string;
   // T03 constructs its observer on this same connection; both student save entry points call it in-transaction.
-  groups?: { observe(): unknown };
+  groups: CommandGroups;
 }
 const courses = new Map<string, Course>();
 function session(id: string): Course {
@@ -67,7 +68,7 @@ function open(directory: string): OpenedCourse {
       } catch (error) { db.exec('ROLLBACK'); throw error; }
     }
     initializeSaveStore(db);
-    const course: Course = { db, owner, sessionId: randomUUID(),
+    const course: Course = { db, owner, sessionId: randomUUID(), groups: new CommandGroups(db),
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     const result = snapshot(course);
     courses.set(canonical, course);
@@ -75,7 +76,7 @@ function open(directory: string): OpenedCourse {
   } catch (error) { db?.close(); owner.close(); throw error; }
 }
 function commit(course: Course, command: EditCommand) {
-  return commitEdit(course.db, command, () => course.groups?.observe());
+  return commitEdit(course.db, command, () => course.groups.observe());
 }
 function save(command: SaveParagraph): SaveReceipt {
   if (!command || command.blockId !== EDITABLE) throw new Error('无效的段落保存请求');
@@ -98,6 +99,7 @@ parentPort!.on('message', ({ id, action, payload }) => {
     }
     else if (action === 'history') value = history(session(payload.sessionId).db);
     else if (action === 'save') value = save(payload);
+    else if (action.startsWith('commands:')) value = session(payload.sessionId).groups.dispatch(action, payload);
     else if (action === 'close') {
       for (const course of courses.values()) { course.db.close(); course.owner.close(); }
       courses.clear();

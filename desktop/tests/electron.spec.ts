@@ -6,6 +6,50 @@ import { DatabaseSync } from 'node:sqlite';
 import type { ElectronApplication } from '@playwright/test';
 import { spawn } from 'node:child_process';
 
+test('controlled producer uses real IPC: stale premise is retained, reread integrates, stop keeps the receipt and rejects late writes', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-electron-t03-'));
+  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`],
+    env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  try {
+    const window = await app.firstWindow();
+    await expect(window.getByRole('heading', { name: '位置记数法与权展开', exact: true })).toBeVisible();
+    const entry = window.getByText('可控生产者 · 验证入口', { exact: true });
+    await expect(entry).toBeVisible({ timeout: 3000 });
+    await entry.click();
+    await window.getByRole('button', { name: '读取当前依据', exact: true }).click();
+    const candidate = window.getByRole('textbox', { name: '可控候选内容' });
+    await expect(candidate).not.toHaveValue('');
+    const oldCandidate = await candidate.inputValue();
+    const editor = window.getByRole('textbox', { name: '编辑首段正文' });
+    await editor.fill('学生已修改前提，需要重新读取整合。');
+    await expect(window.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
+    await window.getByRole('button', { name: '提交可控修改', exact: true }).click();
+    const status = window.getByRole('status', { name: '可控生产者状态' });
+    await expect(status).toContainText('依据已变化');
+    await expect(candidate).toHaveValue(oldCandidate);
+    await expect(editor).toHaveText('学生已修改前提，需要重新读取整合。');
+    await window.getByRole('button', { name: '重读并整合', exact: true }).click();
+    await expect(candidate).toHaveValue(/学生已修改前提，需要重新读取整合。/);
+    await window.getByRole('button', { name: '提交可控修改', exact: true }).click();
+    await expect(status).toContainText('正式修改已保存');
+    // The static reading projection changes, and the original student save channel keeps working afterward.
+    await expect(window.getByText(/【可控示例】读取的前提：学生已修改前提/).first()).toBeVisible();
+    await editor.fill('可控修改提交后，学生仍可继续自动保存。');
+    await expect(window.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
+    await window.getByRole('button', { name: '停止本次尝试', exact: true }).click();
+    await expect(status).toContainText('已停止');
+    await window.getByRole('button', { name: '核对最近提交', exact: true }).click();
+    await expect(status).toContainText('原回执已核对');
+    await candidate.fill('停止后到达的新候选');
+    await window.getByRole('button', { name: '提交可控修改', exact: true }).click();
+    await expect(status).toContainText('尝试已停止');
+    await expect(candidate).toHaveValue('停止后到达的新候选');
+    await window.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t03-desktop.png', fullPage: true });
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(660, 600));
+    await window.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t03-narrow.png', fullPage: true });
+  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+});
+
 test('real Electron IPC saves, retains failed input, retries, drains quit, reopens; second app rejoins', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-electron-t01-'));
   let app: ElectronApplication | undefined;

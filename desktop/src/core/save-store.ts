@@ -5,6 +5,7 @@ import type { DraftInput, DraftReceipt, RecoverableDraft, EditCommand, EditRecei
 export function initializeSaveStore(db: DatabaseSync) {
   db.exec(`CREATE TABLE IF NOT EXISTS input_progress(
     session_id TEXT PRIMARY KEY, seq INTEGER NOT NULL, digest TEXT NOT NULL, receipt TEXT NOT NULL, confirmed_seq INTEGER NOT NULL DEFAULT 0);
+    CREATE TABLE IF NOT EXISTS draft_versions(object_id TEXT PRIMARY KEY, version INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS drafts(session_id TEXT PRIMARY KEY, input TEXT NOT NULL, receipt TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS save_events(cursor INTEGER PRIMARY KEY AUTOINCREMENT, event TEXT NOT NULL);`);
 }
@@ -68,15 +69,19 @@ export function saveDraft(db: DatabaseSync, input: DraftInput): DraftReceipt {
     }
     const receipt = { sessionId: input.sessionId, inputSeq: input.inputSeq,
       cursor: appendEvent(db, { type: 'draft.saved', sessionId: input.sessionId, inputSeq: input.inputSeq }) };
+    const superseded = readDrafts(db).find(d => d.input.sessionId === input.sessionId);
+    if (superseded) touchDraft(db, superseded.input);
     if (input.replacesDraft) {
       const old = readDrafts(db).find(d => d.input.sessionId === input.replacesDraft!.sessionId);
       if (!old || old.input.inputSeq !== input.replacesDraft.inputSeq || old.input.sessionId === input.sessionId)
         throw new Error('恢复草稿已变化，请重新读取');
+      touchDraft(db, old.input);
       db.prepare('DELETE FROM drafts WHERE session_id=?').run(old.input.sessionId);
     }
     db.prepare(`INSERT INTO input_progress VALUES (?, ?, ?, ?, ?) ON CONFLICT(session_id)
       DO UPDATE SET seq=excluded.seq, digest=excluded.digest, receipt=excluded.receipt`)
       .run(input.sessionId, input.inputSeq, hash, JSON.stringify(receipt), Number(previous?.confirmed_seq ?? 0));
+    touchDraft(db, input);
     db.prepare('INSERT OR REPLACE INTO drafts VALUES (?, ?, ?)')
       .run(input.sessionId, JSON.stringify(input), JSON.stringify(receipt));
     return receipt;
@@ -183,6 +188,8 @@ export function commitEdit(db: DatabaseSync, command: EditCommand, afterWrite?: 
         .run(command.sessionId, command.inputSeq, digest(input), JSON.stringify({ sessionId: command.sessionId,
           inputSeq: command.inputSeq, cursor: receipt.cursor }), command.inputSeq);
     } else db.prepare('UPDATE input_progress SET confirmed_seq=? WHERE session_id=?').run(command.inputSeq, command.sessionId);
+    for (const draft of drafts) if (draft.input.sessionId === command.sessionId && draft.input.inputSeq <= command.inputSeq)
+      touchDraft(db, draft.input);
     db.prepare('DELETE FROM drafts WHERE session_id=? AND json_extract(input, \'$.inputSeq\') <= ?')
       .run(command.sessionId, command.inputSeq);
     return receipt;
@@ -200,4 +207,44 @@ export function readEvents(db: DatabaseSync, after: number, limit: number) {
     .all(after, limit).map(row => ({ ...JSON.parse(String(row.event)), cursor: Number(row.cursor) }));
   const cursor = events.at(-1)?.cursor ?? after;
   return { kind: 'events', events, cursor, hasMore: cursor < head };
+}
+
+/** Ordinary sibling text stays independent; splits additionally change their actual sibling list. */
+export function draftScopes(unit: CourseUnit, input: DraftInput) {
+  const parents = new Map<string, string>();
+  const walk = (blocks: ReadingBlock[], parentId: string) => {
+    for (const block of blocks) { parents.set(block.id, parentId); walk(block.children ?? [], block.id); }
+  };
+  walk(unit.reading.blocks, unit.id);
+  for (const split of input.splits ?? []) parents.set(split.newBlockId, parents.get(split.blockId) ?? unit.id);
+  const direct = draftTargets(input), ancestors = new Set<string>();
+  for (const id of direct) {
+    let parent = parents.get(id);
+    while (parent) {
+      ancestors.add(parent); ancestors.add(`structure:${parent}`);
+      parent = parents.get(parent);
+    }
+  }
+  for (const split of input.splits ?? []) direct.add(`structure:${parents.get(split.blockId) ?? unit.id}`);
+  return { direct, ancestors };
+}
+
+/** Monotonic metadata only, not another draft body/history. Consuming or replacing input also advances it. */
+function touchDraft(db: DatabaseSync, input: DraftInput) {
+  const unit = JSON.parse(String(db.prepare("SELECT payload FROM units WHERE id='KU-001'").get()!.payload));
+  const { direct, ancestors } = draftScopes(unit, input);
+  const keys = new Set([...direct, ...[...ancestors].filter(id => !id.startsWith('structure:')).map(id => `draft-under:${id}`)]);
+  for (const id of keys) db.prepare(`INSERT INTO draft_versions VALUES (?, 1) ON CONFLICT(object_id)
+    DO UPDATE SET version=version+1`).run(id);
+}
+export function draftVersion(db: DatabaseSync, id: string): number {
+  return Number(db.prepare('SELECT version FROM draft_versions WHERE object_id=?').get(id)?.version ?? 0);
+}
+export function draftReadVersions(db: DatabaseSync, objectIds: Iterable<string>): Record<string, number> {
+  const keys = new Set<string>();
+  for (const id of objectIds) {
+    keys.add(id);
+    keys.add(`draft-under:${id.startsWith('structure:') ? id.slice('structure:'.length) : id}`);
+  }
+  return Object.fromEntries([...keys].map(id => [id, draftVersion(db, id)]));
 }

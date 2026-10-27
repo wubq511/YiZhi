@@ -43,6 +43,7 @@ export interface SaveReceipt {
   blockId: string;
 }
 export interface DesktopBridge extends SaveBridge {
+  commands: import('./command-api').CommandAPI;
   open(): Promise<OpenedCourse>;
   save(command: SaveParagraph): Promise<SaveReceipt>;
   onCloseRequested(listener: () => Promise<boolean>): () => void;
