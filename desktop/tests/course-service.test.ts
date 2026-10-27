@@ -132,6 +132,26 @@ test('reading state survives reopening the course with disclosure and return pos
   } finally { await service.close(); await rm(root, { recursive: true, force: true }); }
 });
 
+test('B review states are exclusive, default pending, aggregate only at A, and survive reopening without changing ratings', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-review-state-'));
+  let service = new CourseService(resolve('dist/worker.cjs'));
+  try {
+    const opened = await service.open(root);
+    const before = await service.reviewStates(opened.sessionId);
+    assert.equal(before.units['KU-001'].status, 'pending');
+    assert.deepEqual(before.themes['TH-01'], { pending: 5, weak: 0, mastered: 0 });
+    await assert.rejects(service.setReviewStatus(opened.sessionId, 'TH-01', 'mastered'), /知识单元/);
+    const saved = await service.setReviewStatus(opened.sessionId, 'KU-001', 'mastered');
+    assert.equal(saved.units['KU-001'].status, 'mastered');
+    assert.deepEqual(saved.themes['TH-01'], { pending: 4, weak: 0, mastered: 1 });
+    assert.equal((await service.readUnit(opened.sessionId, 'KU-001')).rating.stars, 4);
+    await service.close(); service = new CourseService(resolve('dist/worker.cjs'));
+    const reopened = await service.open(root);
+    assert.equal((await service.reviewStates(reopened.sessionId)).units['KU-001'].status, 'mastered');
+    assert.equal((await service.readUnit(reopened.sessionId, 'KU-001')).rating.stars, 4);
+  } finally { await service.close(); await rm(root, { recursive: true, force: true }); }
+});
+
 test('the selected sample references resolve to copied main units', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-reference-chain-'));
   const service = new CourseService(resolve('dist/worker.cjs'));

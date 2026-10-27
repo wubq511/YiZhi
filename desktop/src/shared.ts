@@ -49,9 +49,20 @@ export interface DesktopBridge extends SaveBridge {
   readUnit(sessionId: string, unitId: string): Promise<CourseUnit>;
   readingState(sessionId: string): Promise<ReadingState | null>;
   setReadingState(sessionId: string, state: ReadingState): Promise<void>;
+  reviewStates(sessionId: string): Promise<ReviewSnapshot>;
+  setReviewStatus(sessionId: string, unitId: string, status: ReviewStatus): Promise<ReviewSnapshot>;
+  confirmReviewPrompt(sessionId: string, promptId: string, adjust: boolean): Promise<ReviewPromptResult>;
   save(command: SaveParagraph): Promise<SaveReceipt>;
   onCloseRequested(listener: () => Promise<boolean>): () => void;
 }
+export type ReviewStatus = 'pending' | 'weak' | 'mastered';
+export interface ReviewSnapshot {
+  units: Record<string, { status: ReviewStatus; version: number }>;
+  themes: Record<string, { pending: number; weak: number; mastered: number }>;
+  prompts: ReviewPrompt[];
+}
+export interface ReviewPrompt { id: string; unitId: string; contentRevision: number; stateVersion: number; semanticVersion: 1 }
+export type ReviewPromptResult = 'adjusted' | 'kept' | 'stale';
 export interface ReadingState {
   unitId: string;
   expanded: Record<string, boolean>;
