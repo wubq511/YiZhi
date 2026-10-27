@@ -481,6 +481,8 @@ test('two actual IPC editors save both paragraphs, split once and recover an unf
     window = await app.firstWindow();
     await expect(window.getByRole('textbox', { name: '编辑首段正文' })).toHaveText('未完成的输入 \\frac{');
     await expect(window.getByRole('status', { name: '保存状态' })).toHaveText('草稿已保留');
+    // Draft text mounts before the local restored projection is ready for real input.
+    await expect(window.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
     await window.getByRole('textbox', { name: '编辑首段正文' }).fill('修正后继续保存');
     await expect(window.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     await window.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t02-electron.png', fullPage: true });

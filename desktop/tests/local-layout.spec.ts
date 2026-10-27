@@ -123,7 +123,7 @@ test('actual producer follows only actual changes, student takeover cancels moti
     await expect(page.getByRole('button', { name: '查看修改结果', exact: true })).toBeVisible();
     expect(await matrix()).toEqual(beforeEnd);
     await app.close(); app = await launch(); page = await app.firstWindow();
-    await expect(page.getByRole('status', { name: '画板定位' })).toBeHidden();
+    await expect(page.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
     expect(await matrix()).toEqual(beforeEnd);
     await expect(page.getByRole('button', { name: '返回并继续跟随', exact: true })).toHaveCount(0);
     await expect(page.getByRole('status', { name: '修改跟随' })).toHaveText('可控修改已结束');
@@ -171,7 +171,7 @@ test('growth displaces the local chain while the current reading anchor and stud
     await expect(page.getByRole('status', { name: '修改跟随' })).toHaveCount(0);
     const finalY = (await heading.boundingBox())!.y;
     await app.close(); app = await launch(); page = await app.firstWindow();
-    await expect(page.getByRole('status', { name: '画板定位' })).toBeHidden();
+    await expect(page.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
     const restoredHeading = page.getByRole('heading', { name: '非十进制与十进制互转', exact: true });
     await expect.poll(async () => Math.abs((await restoredHeading.boundingBox())!.y - finalY)).toBeLessThan(3);
     await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t09-anchor.png' });
