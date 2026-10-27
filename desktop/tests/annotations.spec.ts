@@ -48,7 +48,7 @@ test('actual displayed Unicode selection creates one note; note Undo/autosave/re
     app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
     page = await app.firstWindow(); await page.getByRole('button', { name: '个人批注', exact: true }).click();
     await expect(page.getByRole('textbox', { name: '批注内容', exact: true })).toHaveValue('第一版理解');
-  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+  } finally { await app.close(); await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }); }
 });
 
 test('real MathLive nested selection uses a lazy reading field, proven independent edit, rewrite orphan, Undo and fresh copy identity', async () => {
@@ -84,7 +84,7 @@ test('real MathLive nested selection uses a lazy reading field, proven independe
     await page.getByRole('button', { name: '关闭批注', exact: true }).click();
     await formula.getByRole('button', { name: '编辑公式', exact: true }).click();
     field = formula.locator('math-field'); const stable = await field.elementHandle();
-    await field.evaluate((el: any) => { for (let a = 0; a < el.lastOffset; a++) for (let b = a + 1; b <= el.lastOffset; b++) if (el.getValue([a, b]) === 'x+x') { el.selection = { ranges: [[a, b]] }; return; } throw new Error('No nested numerator'); });
+    await field.evaluate((el: any) => { for (let a = 0; a < el.lastOffset; a++) for (let b = a + 1; b <= el.lastOffset; b++) if (el.getValue([a, a + 1]) && el.getValue([b - 1, b]) && el.getValue([a, b]) === 'x+x') { el.selection = { ranges: [[a, b]] }; return; } throw new Error('No nested numerator'); });
     await formula.getByRole('button', { name: '批注公式选段', exact: true }).click();
     await page.getByRole('textbox', { name: '批注内容', exact: true }).fill('分子整体的子表达式');
     await expect(page.getByRole('status', { name: '批注同步状态' })).toHaveText('已保存');
@@ -102,7 +102,7 @@ test('real MathLive nested selection uses a lazy reading field, proven independe
     const beforeRewrite = await field.evaluate((el: any) => el.getValue());
     // Real navigation ends MathLive's current typing group before the next structural edit.
     await field.press('ArrowLeft');
-    await field.evaluate((el: any) => { for (let a = 0; a < el.lastOffset; a++) for (let b = a + 1; b <= el.lastOffset; b++) if (el.getValue([a, b]) === 'x+x') { el.selection = { ranges: [[a, b]] }; el.executeCommand(['insert', '2x']); return; } throw new Error('No exact actual numerator range'); });
+    await field.evaluate((el: any) => { for (let a = 0; a < el.lastOffset; a++) for (let b = a + 1; b <= el.lastOffset; b++) if (el.getValue([a, a + 1]) && el.getValue([b - 1, b]) && el.getValue([a, b]) === 'x+x') { el.selection = { ranges: [[a, b]] }; el.executeCommand(['insert', '2x']); return; } throw new Error('No exact actual numerator range'); });
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     await expect.poll(async () => (await getNotes())[0].current.status).toBe('orphan');
     expect((await getNotes())[0].original).toEqual(original.original);
@@ -132,7 +132,7 @@ test('real MathLive nested selection uses a lazy reading field, proven independe
     await page.getByRole('button', { name: '个人批注', exact: true }).click();
     await expect(page.getByRole('textbox', { name: '批注内容', exact: true })).toHaveValue('分子里的第二个 x');
     expect((await getNotes())[0].id).toBe(original.id); expect((await getNotes())[0].original).toEqual(original.original);
-  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+  } finally { await app.close(); await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }); }
 });
 
 test('held displayed selection creates an old-version orphan and explicit reassociation keeps its immutable original context', async () => {
@@ -170,7 +170,7 @@ test('held displayed selection creates an old-version orphan and explicit reasso
     expect(await page.locator('.workspace').evaluate((el: HTMLElement) => el.inert)).toBe(true);
     await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t07-notes-narrow.png' });
     await page.getByRole('button', { name: '关闭批注', exact: true }).click();
-  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+  } finally { await app.close(); await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }); }
 });
 
 test('actual note autosave failure retains newer input and retries the original operation before confirming the latest text', async () => {
@@ -200,5 +200,5 @@ test('actual note autosave failure retains newer input and retries the original 
     const after = await page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return { c, notes: await b.annotations.list({ sessionId: c.sessionId }) }; });
     expect(after.notes).toHaveLength(1); expect(after.notes[0].text).toBe('失败之后仍然继续写下的新笔记');
     expect(after.notes[0].original).toEqual(before.notes[0].original); expect(after.c.unit).toEqual(before.c.unit);
-  } finally { try { fault?.exec('DROP TRIGGER IF EXISTS fail_note_ui'); } finally { fault?.close(); } await app.close(); await rm(root, { recursive: true, force: true }); }
+  } finally { try { fault?.exec('DROP TRIGGER IF EXISTS fail_note_ui'); } finally { fault?.close(); } await app.close(); await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }); }
 });
