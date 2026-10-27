@@ -357,7 +357,7 @@ test('offscreen reading controls are excluded from keyboard navigation until in 
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1024, 768));
     await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     const summary = window.getByText('练习 · 二进制小数与十六进制权展开自测');
-    const boundary = summary.locator('..').locator('..');
+    const boundary = summary.locator('xpath=ancestor::*[@data-reading-block][1]');
     await expect(boundary).toHaveAttribute('inert', '');
     await reveal(window, summary);
     await expect(boundary).not.toHaveAttribute('inert', '');
