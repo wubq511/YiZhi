@@ -139,7 +139,7 @@ test('actual producer follows only actual changes, student takeover cancels moti
       await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
       await page.getByText('可控生产者 · 验证入口', { exact: true }).click();
       await page.getByRole('button', { name: '读取当前依据', exact: true }).click();
-      await expect(page.getByRole('status', { name: '修改跟随' })).toHaveText('正在跟随可控修改');
+      await expect(page.getByRole('status', { name: '修改跟随' })).toHaveText('正在跟随修改');
       const matrix = () => page.locator('.react-flow__viewport').evaluate(el => { const m = new DOMMatrixReadOnly(getComputedStyle(el).transform); return { x: m.e, y: m.f, zoom: m.a }; });
       const initial = await matrix();
       await page.getByRole('textbox', { name: '可控候选内容' }).fill('实际增长的正文。'.repeat(80));
@@ -181,7 +181,7 @@ test('actual producer follows only actual changes, student takeover cancels moti
       await expect(page.getByRole('status', { name: '可控生产者状态' })).toContainText('正式修改已保存');
       await expect.poll(matrix).toEqual(taken);
       await page.getByRole('button', { name: '返回并继续跟随', exact: true }).click();
-      await expect(page.getByRole('status', { name: '修改跟随' })).toHaveText('正在跟随可控修改');
+      await expect(page.getByRole('status', { name: '修改跟随' })).toHaveText('正在跟随修改');
       await expect.poll(async () => (await matrix()).y).not.toBe(taken.y);
       await page.getByText('可控生产者 · 验证入口', { exact: true }).click();
       await page.getByRole('button', { name: '全图', exact: true }).click();
@@ -198,7 +198,7 @@ test('actual producer follows only actual changes, student takeover cancels moti
       await expect(page.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
       expect(await matrix()).toEqual(beforeEnd);
       await expect(page.getByRole('button', { name: '返回并继续跟随', exact: true })).toHaveCount(0);
-      await expect(page.getByRole('status', { name: '修改跟随' })).toHaveText('可控修改已结束');
+      await expect(page.getByRole('status', { name: '修改跟随' })).toHaveText('修改已结束');
       await expect(page.getByRole('button', { name: '查看修改结果', exact: true })).toBeVisible();
       observations.push({ phase: 'reopened', scene: await followScene(page) });
       const scenePath = test.info().outputPath('follow-wheel-scenes.json');
