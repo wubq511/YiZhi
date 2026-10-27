@@ -125,24 +125,55 @@ test('explicit exchange scope, failed real registration, retry and independent o
 });
 
 test('a declared unit imported into a native course uses its registered image and fixed source instead of sample assets', async () => {
-  const root=await mkdtemp(join(tmpdir(),'yizhi-exchange-native-ui-'));
-  const core=new CourseService(resolve('dist/worker.cjs'));let app:Awaited<ReturnType<typeof electron.launch>>|undefined;
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-exchange-native-ui-'));
+  const core = new CourseService(resolve('dist/worker.cjs'));
+  let app: Awaited<ReturnType<typeof electron.launch>> | undefined;
   try {
-    await exchangeFixture(join(root,'legacy'),'KU-NEW');
-    const {readFile,writeFile}=await import('node:fs/promises');const path=join(root,'legacy/data/map.json');const k=JSON.parse(await readFile(path,'utf8'));
-    k.units[1].themeId='TH-EXCHANGE';k.themes[1]={...k.themes[1],id:'TH-EXCHANGE',name:'新导入主题'};await writeFile(path,JSON.stringify(k));
-    await core.migration.convert({sourceDirectory:join(root,'legacy'),directory:join(root,'source')});const c=await core.open(join(root,'source'));
-    await core.exchange.exportPackage({sessionId:c.sessionId,directory:join(root,'package'),unitIds:['KU-NEW'],annotations:false});await core.close();
-    app=await electron.launch({args:[resolve('.'),`--course=${join(root,'native-target')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});
-    const page=await app.firstWindow();await resizeBoardWindow(app,page);
-    await page.getByRole('button',{name:'内容交换',exact:true}).click();
-    await app.evaluate(({dialog},path)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[path]});},join(root,'package'));
-    await page.getByRole('button',{name:'选择交换包并检查'}).click();await page.getByRole('button',{name:'导入已检查内容'}).click();
-    await expect(page.getByRole('region',{name:'内容交换包'}).getByRole('status')).toContainText('已导入');await page.getByRole('button',{name:'关闭内容交换'}).click();
-    await page.getByRole('button',{name:'新导入主题',exact:true}).first().click();
-    const image=page.locator('article[data-unit-id="KU-NEW"] img');await expect(image).toHaveAttribute('src',/^yizhi-resource:/);
-    await revealBoardControl(page,image);await expect.poll(()=>image.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(100);
-    const source=page.locator('article[data-unit-id="KU-NEW"]').getByRole('button',{name:'查看固定原页'});await revealBoardControl(page,source);await source.click();
+    await exchangeFixture(join(root, 'legacy'), 'KU-NEW');
+    const { readFile, writeFile } = await import('node:fs/promises');
+    const path = join(root, 'legacy/data/map.json');
+    const k = JSON.parse(await readFile(path, 'utf8'));
+    k.units[1].themeId = 'TH-EXCHANGE';
+    k.themes[1] = { ...k.themes[1], id: 'TH-EXCHANGE', name: '新导入主题' };
+    await writeFile(path, JSON.stringify(k));
+    await core.migration.convert({ sourceDirectory: join(root, 'legacy'), directory: join(root, 'source') });
+    const c = await core.open(join(root, 'source'));
+    await core.exchange.exportPackage({
+      sessionId: c.sessionId,
+      directory: join(root, 'package'),
+      unitIds: ['KU-NEW'],
+      annotations: false,
+    });
+    await core.close();
+    app = await electron.launch({
+      args: [resolve('.'), `--course=${join(root, 'native-target')}`],
+      env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') },
+    });
+    const page = await app.firstWindow();
+    await resizeBoardWindow(app, page);
+    await page.getByRole('button', { name: '内容交换', exact: true }).click();
+    await app.evaluate(
+      ({ dialog }, path) => {
+        dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] });
+      },
+      join(root, 'package'),
+    );
+    await page.getByRole('button', { name: '选择交换包并检查' }).click();
+    await page.getByRole('button', { name: '导入已检查内容' }).click();
+    await expect(page.getByRole('region', { name: '内容交换包' }).getByRole('status')).toContainText('已导入');
+    await page.getByRole('button', { name: '关闭内容交换' }).click();
+    await page.getByRole('button', { name: '新导入主题', exact: true }).first().click();
+    const image = page.locator('article[data-unit-id="KU-NEW"] img');
+    await expect(image).toHaveAttribute('src', /^yizhi-resource:/);
+    await revealBoardControl(page, image);
+    await expect.poll(() => image.evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth)).toBeGreaterThan(100);
+    const source = page.locator('article[data-unit-id="KU-NEW"]').getByRole('button', { name: '查看固定原页' });
+    await revealBoardControl(page, source);
+    await source.click();
     await expect(page.locator('.source-pdf .textLayer')).toContainText('Fixed legacy source');
-  }finally{await core.close();if(app)await app.close();await rm(root,{recursive:true,force:true});}
+  } finally {
+    await core.close();
+    if (app) await app.close();
+    await rm(root, { recursive: true, force: true });
+  }
 });

@@ -81,6 +81,13 @@ test('declared content and personal annotations round-trip through an open packa
     };
     const receipt = await core.exchange.importPackage(request);
     assert.equal(receipt.status, 'committed');
+    const found = await core.search.query({
+      sessionId: destination.sessionId,
+      query: '末单元完整正文',
+      scopes: ['knowledge'],
+    });
+    assert.ok(found.hits.some((h) => h.unitId === 'KU-086'));
+    assert.equal(found.status.unavailable, 0);
     assert.deepEqual(
       await core.readUnit(destination.sessionId, 'KU-086'),
       await core.readUnit(source.sessionId, 'KU-086'),
@@ -181,6 +188,7 @@ test('whole-range validation rejects missing/hash-mismatched resources, unsafe p
       (v: any) => (v.formatVersion = 'future-99'),
       (v: any) => (v.units[1].value.reading.schemaVersion = 'future-reading'),
       (v: any) => (v.units[1].value.reading.blocks[0].kind = 'unknown-block'),
+      (v: any) => (v.units[1].value.reading.blocks[1].children[0].payload.columns = null),
       (v: any) =>
         v.units[1].value.reading.blocks.push({
           id: 'bad-ref',

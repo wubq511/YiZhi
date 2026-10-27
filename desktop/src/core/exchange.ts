@@ -316,15 +316,18 @@ export class Exchange {
       if (old && (old.sha256 !== r.sha256 || old.byteLength !== r.byteLength || old.mediaType !== r.mediaType))
         throw new Error('图片身份冲突，保留既有不可变资源');
     }
-    const {sources: sourceCatalog, retiredUnitIds: retired} = this.relationCatalog();
+    const { sources: sourceCatalog, retiredUnitIds: retired } = this.relationCatalog();
     const availableSources = structuredClone(sourceCatalog);
     for (const incoming of catalog(p)) {
-      for (const version of incoming.versions) if (availableSources.some(s=>s.id!==incoming.id&&s.versions.some(v=>v.id===version.id))) throw new Error('固定来源版本身份冲突');
-      const source=availableSources.find(s=>s.id===incoming.id);
+      for (const version of incoming.versions)
+        if (availableSources.some((s) => s.id !== incoming.id && s.versions.some((v) => v.id === version.id)))
+          throw new Error('固定来源版本身份冲突');
+      const source = availableSources.find((s) => s.id === incoming.id);
       if (!source) availableSources.push(incoming);
-      else for(const v of incoming.versions) if(!source.versions.some(old=>old.id===v.id))source.versions.push(v);
+      else
+        for (const v of incoming.versions) if (!source.versions.some((old) => old.id === v.id)) source.versions.push(v);
     }
-    if(p.graph.nodes.some(n=>retired.includes(n.id)))throw new Error('退休单元身份冲突，不能复活既有退休身份');
+    if (p.graph.nodes.some((n) => retired.includes(n.id))) throw new Error('退休单元身份冲突，不能复活既有退休身份');
     validateRelationGraph(next, availableSources, retired);
     for (const r of p.resources) {
       const source = safePath(request.directory, r.path);
@@ -419,15 +422,23 @@ export class Exchange {
             height: 86,
           });
       const layoutGroups = structuredClone(this.seed.layout.groups);
-      for (const g of next.groups) if (!layoutGroups.some(p=>p.themeId===g.id)) {
-        const members=placements.filter(p=>next.nodes.some(n=>n.id===p.unitId&&n.themeId===g.id));
-        layoutGroups.push({themeId:g.id,title:g.name,x:64,y:Math.min(...members.map(p=>p.y))-100,width:750,height:Math.max(...members.map(p=>p.y+p.height))-Math.min(...members.map(p=>p.y))+200});
-      }
+      for (const g of next.groups)
+        if (!layoutGroups.some((p) => p.themeId === g.id)) {
+          const members = placements.filter((p) => next.nodes.some((n) => n.id === p.unitId && n.themeId === g.id));
+          layoutGroups.push({
+            themeId: g.id,
+            title: g.name,
+            x: 64,
+            y: Math.min(...members.map((p) => p.y)) - 100,
+            width: 750,
+            height: Math.max(...members.map((p) => p.y + p.height)) - Math.min(...members.map((p) => p.y)) + 200,
+          });
+        }
       const stored = {
         ...this.seed,
         nodes: next.nodes,
         groups: next.groups,
-        layout: { ...this.seed.layout, nodes: placements, groups:layoutGroups },
+        layout: { ...this.seed.layout, nodes: placements, groups: layoutGroups },
       };
       this.db
         .prepare("INSERT INTO metadata VALUES('course-graph',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value")

@@ -283,6 +283,25 @@ export function validate(p: Package) {
         ].includes(b.kind)
       )
         throw new Error('不支持的正文载荷或结构身份冲突');
+      const payload = b.payload;
+      if (
+        (['paragraph', 'callout'].includes(b.kind) && typeof payload.text !== 'string') ||
+        (b.kind === 'formula' && typeof payload.latex !== 'string') ||
+        (b.kind === 'steps' &&
+          (!Array.isArray(payload.items) || payload.items.some((v: unknown) => typeof v !== 'string'))) ||
+        (b.kind === 'table' &&
+          (!Array.isArray(payload.columns) ||
+            payload.columns.some((v: unknown) => typeof v !== 'string') ||
+            !Array.isArray(payload.rows) ||
+            payload.rows.some(
+              (row: unknown) =>
+                !Array.isArray(row) ||
+                row.some((v) => typeof v !== 'string' && (typeof v !== 'number' || !Number.isFinite(v))),
+            ))) ||
+        (['example', 'exercise'].includes(b.kind) &&
+          (typeof payload.title !== 'string' || (payload.problem !== undefined && typeof payload.problem !== 'string')))
+      )
+        throw new Error('不支持的正文载荷结构');
       if (b.kind === 'interactive') definitionFrom(b.payload);
       if (b.kind === 'figure' && b.payload.asset === undefined) {
         const config = b.payload.config;

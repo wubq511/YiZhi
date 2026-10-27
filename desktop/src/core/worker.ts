@@ -183,7 +183,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       if (action === 'exchange:available') value = exchange.available();
       else if (action === 'exchange:exportPackage') value = exchange.exportPackage(payload);
       else if (action === 'exchange:inspect') value = exchange.inspect(payload.directory);
-      else if (action === 'exchange:importPackage') { value = await exchange.importPackage(payload); exchange.refresh(); }
+      else if (action === 'exchange:importPackage') { const receipt = await exchange.importPackage(payload); exchange.refresh(); const course = session(payload.sessionId); course.search.includeImportedUnits(receipt.unitIds, course.graph.nodes.length); value = receipt; }
       else if (action === 'exchange:query') value = exchange.query(payload.operationId);
       else throw new Error('未知交换接口');
     }
