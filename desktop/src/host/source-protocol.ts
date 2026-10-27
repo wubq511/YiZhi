@@ -24,11 +24,14 @@ export function registerSourceProtocols(core: CourseService, rendererDirectory: 
   });
   protocol.handle('yizhi-resource', async request => {
     try {
-      const url = new URL(request.url), match = /^\/([a-f0-9-]{36})\/([a-f0-9-]{36})$/.exec(url.pathname);
-      if (!match || url.hostname !== 'course' || url.username || url.password || url.search || !['GET', 'HEAD'].includes(request.method))
+      const url = new URL(request.url), match = /^\/([a-f0-9-]{36})\/([a-f0-9-]{36})$/.exec(url.pathname),
+        artifact = /^\/([a-f0-9-]{36})\/([a-f0-9-]{36})\/([a-f0-9]{64})$/.exec(url.pathname);
+      if ((!match && !artifact) || url.hostname !== 'course' || url.username || url.password || url.search || !['GET', 'HEAD'].includes(request.method))
         return new Response('未登记的来源资源', { status: 404 });
-      const [, sessionId, versionId] = match;
-      const version = await core.sources.getVersion({ sessionId, versionId });
+      const [, sessionId, versionId] = (match ?? artifact)!;
+      const read = (begin: number, end: number) => artifact ? core.parsing.readResource({sessionId,artifactId:versionId,sha256:artifact[3],begin,end}) : core.sources.readResource({sessionId,versionId,begin,end});
+      const info = artifact ? await read(0,1) : undefined;
+      const version = info ? {byteLength:info.total,mediaType:info.mediaType} : await core.sources.getVersion({ sessionId, versionId });
       const header = request.headers.get('range');
       const range = header ? /^bytes=(\d+)-(\d*)$/.exec(header) : null;
       if (header && !range) return new Response('资源范围无效', { status: 416 });
@@ -36,7 +39,7 @@ export function registerSourceProtocols(core: CourseService, rendererDirectory: 
       if (!Number.isSafeInteger(begin) || !Number.isSafeInteger(end) || begin < 0 || begin >= end || end > version.byteLength)
         return new Response('资源范围无效', { status: 416, headers: { 'Content-Range': `bytes */${version.byteLength}` } });
       // Validate before headers, then read at most 1 MiB per pull. Never buffer the whole PDF in the host.
-      const first = await core.sources.readResource({ sessionId, versionId, begin, end: Math.min(end, begin + 65536) });
+      const first = await read(begin, Math.min(end, begin + 65536));
       const headers: Record<string, string> = { 'Content-Type': version.mediaType, 'Content-Length': String(end - begin),
         'Accept-Ranges': 'bytes', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': 'yizhi-app://app',
         'Access-Control-Expose-Headers': 'Accept-Ranges,Content-Length,Content-Range', 'X-Content-Type-Options': 'nosniff' };
@@ -45,7 +48,7 @@ export function registerSourceProtocols(core: CourseService, rendererDirectory: 
       const body = request.method === 'HEAD' ? null : new ReadableStream<Uint8Array>({
         async pull(controller) {
           try {
-            const bytes = offset === begin ? first.bytes : (await core.sources.readResource({ sessionId, versionId, begin: offset, end: Math.min(end, offset + 65536) })).bytes;
+            const bytes = offset === begin ? first.bytes : (await read(offset, Math.min(end, offset + 65536))).bytes;
             controller.enqueue(bytes); offset += bytes.length;
             if (offset >= end) controller.close();
           } catch (error) { controller.error(error); }

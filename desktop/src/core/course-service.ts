@@ -2,6 +2,7 @@ import { experimentsClient } from '../experiments-api';
 import { relationClient } from '../relation-api';
 import { Worker } from 'node:worker_threads';
 import { commandClient } from '../command-api';
+import { parsingClient, type ParseScheduling } from '../parsing-api';
 import { sourcesClient } from '../sources-api';
 import type { CourseGraph, CourseUnit, ReadingState, OpenedCourse, SaveParagraph, SaveReceipt, DraftInput, DraftReceipt, EditCommand, EditReceipt, EditHistory, EventPage, ReviewSnapshot, ReviewStatus, ReviewPromptResult } from '../shared';
 
@@ -10,6 +11,7 @@ export class CourseService {
   readonly experiments = experimentsClient((action, payload) => this.request(action, payload));
   readonly relations = relationClient((action, payload) => this.request(action, payload));
   readonly commands = commandClient((action, payload) => this.request(action, payload));
+  readonly parsing = parsingClient((action, payload) => this.request(action, payload));
   readonly sources = sourcesClient((action, payload) => this.request(action, payload));
   private readonly worker: Worker;
   private sequence = 0;
@@ -17,8 +19,8 @@ export class CourseService {
   private stopped = false;
   private closing?: Promise<void>;
   private failure?: Error;
-  constructor(workerPath: string) {
-    this.worker = new Worker(workerPath);
+  constructor(workerPath: string, options?: { parseScheduling?: ParseScheduling }) {
+    this.worker = new Worker(workerPath, { workerData: options });
     this.worker.on('message', message => {
       const waiter = this.pending.get(message.id);
       if (!waiter) return;
