@@ -69,7 +69,7 @@ export function ControlledProducer({ course, prepare, committed, settled, narrow
   }}>
     <summary>可控生产者 · 验证入口</summary>
     <div className="producer-panel">
-    <p>此入口用固定规则生成候选，验证课程保存、冲突与停止。尚未连接真实 Agent。</p>
+    <p>开发验证工具：用固定规则检查保存、冲突与停止。学习问答请使用顶栏“Agent · 学习对话”。</p>
     <div className="producer-actions"><button disabled={busy} onClick={() => void read()}>{basis ? '重读并整合' : '读取当前依据'}</button>
       <button disabled={busy || !attempt} onClick={() => void run(async () => {
         const stopped = await commands.stop({ sessionId: course.sessionId, attemptId: attempt!.attemptId });

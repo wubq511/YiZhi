@@ -79,7 +79,7 @@ export function ReadingSurface({ id, name, position, baseline, measure, gesture,
     if (finish) { drag.current = undefined; commit(kind === 'width' ? { ...baseline, width: next.width } : next); gesture(undefined); }
   };
   const cancel = () => { if (drag.current?.kind === 'width') setWidth(drag.current.placement.width); drag.current = undefined; gesture(undefined); };
-  return <article ref={element} className="nodrag nopan nowheel" style={{ width: readWidth }} data-unit-id={id}>
+  return <article ref={element} className="nodrag nopan nowheel" style={{ width: readWidth }} data-unit-id={id} data-agent-unit={id}>
     <div className="layout-controls" aria-label={`${name}布局`}>
       <button aria-label={`移动${name}`} onPointerDown={e => start(e, 'move')} onPointerMove={e => move(e)} onPointerUp={e => move(e, true)} onPointerCancel={cancel}
         onKeyDown={event => { const delta: Record<string, [number, number]> = { ArrowLeft: [-24, 0], ArrowRight: [24, 0], ArrowUp: [0, -24], ArrowDown: [0, 24] }; if (!delta[event.key]) return; event.preventDefault(); takeover(); commit({ ...position, width: readWidth, x: position.x + delta[event.key][0], y: position.y + delta[event.key][1] }); }}>移动单元</button>

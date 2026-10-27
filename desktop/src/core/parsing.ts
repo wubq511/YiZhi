@@ -56,7 +56,7 @@ export class Parsing {
     if (old) { if (old.digest !== hash) throw new Error('同一操作不能换用不同内容');
       if(!old.receipt && command.generation!==this.generation()) throw new Error('课程代际已变化');
       return { hash, old:old.receipt ? JSON.parse(String(old.receipt)) : undefined }; }
-    if (['operations','cg_candidates','source_operations','source_imports'].some(table=>this.db.prepare(`SELECT 1 FROM ${table} WHERE id=?`).get(command.operationId)))
+    if (['operations','cg_candidates','source_operations','source_imports', ...(this.db.prepare("SELECT 1 FROM sqlite_master WHERE name='agent_operations'").get() ? ['agent_operations'] : [])].some(table=>this.db.prepare(`SELECT 1 FROM ${table} WHERE id=?`).get(command.operationId)))
       throw new Error('操作身份已用于其他课程修改');
     if (command.generation !== this.generation()) throw new Error('课程代际已变化');
     this.db.prepare('INSERT INTO parse_operations VALUES (?,?,NULL)').run(command.operationId,hash);
