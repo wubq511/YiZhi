@@ -3,10 +3,11 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, realpathSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
+import { CommandGroups } from './command-groups';
 import type { CourseUnit, OpenedCourse, SaveParagraph, SaveReceipt } from '../shared';
 
 const EDITABLE = 'RB-TH-01-01-what-is-positional-notation';
-interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; courseId: string; latestInput: number }
+interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; courseId: string; latestInput: number; groups: CommandGroups }
 const courses = new Map<string, Course>();
 function session(id: string): Course {
   const course = [...courses.values()].find(course => course.sessionId === id);
@@ -61,7 +62,7 @@ function open(directory: string): OpenedCourse {
         db.exec('COMMIT');
       } catch (error) { db.exec('ROLLBACK'); throw error; }
     }
-    const course: Course = { db, owner, sessionId: randomUUID(), latestInput: 0,
+    const course: Course = { db, owner, sessionId: randomUUID(), latestInput: 0, groups: new CommandGroups(db),
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     const result = snapshot(course);
     courses.set(canonical, course);
@@ -97,6 +98,7 @@ function save(command: SaveParagraph): SaveReceipt {
       .run(JSON.stringify(unit), receipt.revision, unit.id);
     course.db.prepare('INSERT INTO operations VALUES (?, ?, ?, ?, ?, ?)')
       .run(command.operationId, digest, JSON.stringify(receipt), unit.id, before, command.text);
+    course.groups.observe();
     course.db.exec('COMMIT');
   } catch (error) { course.db.exec('ROLLBACK'); throw error; }
   course.latestInput = command.inputSeq;
@@ -126,6 +128,7 @@ parentPort!.on('message', ({ id, action, payload }) => {
       else throw new Error('该单元正文尚未加入课程副本');
     }
     else if (action === 'save') value = save(payload);
+    else if (action.startsWith('commands:')) value = session(payload.sessionId).groups.dispatch(action, payload);
     else if (action === 'close') {
       for (const course of courses.values()) { course.db.close(); course.owner.close(); }
       courses.clear();

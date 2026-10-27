@@ -8,6 +8,7 @@ import 'katex/dist/katex.min.css';
 import './style.css';
 import type { CourseGraph, CourseUnit, DesktopBridge, OpenedCourse, ReadingBlock, ReadingState } from '../shared';
 import { ParagraphSaveChannel, type SaveState } from './save-channel';
+import { ControlledProducer } from './controlled-producer';
 declare global { interface Window { yizhi: DesktopBridge } }
 
 function RoughFrame({ id }: { id: string }) {
@@ -98,6 +99,8 @@ function App() {
   const [loadError, setLoadError] = useState<string>();
   const [state, setState] = useState<SaveState>({ status: 'saved' });
   const [closing, setClosing] = useState(false);
+  const [producerBusy, setProducerBusy] = useState(false);
+  const producerRunning = useRef(false);
   const channel = useRef<ParagraphSaveChannel | undefined>(undefined);
   const editor = useRef<HTMLDivElement>(null);
   const editedText = useRef<string | undefined>(undefined);
@@ -128,6 +131,7 @@ function App() {
   };
   useEffect(() => { void load(); }, []);
   useEffect(() => window.yizhi.onCloseRequested(async () => {
+    if (producerRunning.current) return false;
     if (composing.current) {
       setState({ status: 'error', error: '请先完成中文候选输入，再关闭窗口。' });
       return false;
@@ -200,7 +204,20 @@ function App() {
   const status = { saved: '已保存', pending: '待保存', saving: '正在保存…', error: '未保存' }[state.status];
   return <>
     <header className="app-header" inert={narrow && (directory || relationsOpen)}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
-      <div className="save-area"><span role="status" aria-live="polite" className={state.status}>{course ? status : '正在打开课程…'}</span>
+      {course && <ControlledProducer course={course} prepare={async () => {
+        if (composing.current) throw new Error('请先完成中文候选输入，再运行可控修改。');
+        producerRunning.current = true; setProducerBusy(true);
+        if (!await channel.current?.flush()) throw new Error('学生输入尚未保存，请先重试保存。');
+      }} committed={async () => {
+        const current = await window.yizhi.open();
+        channel.current = new ParagraphSaveChannel(window.yizhi, current, setState);
+        setCourse(current);
+        editedText.current = String(current.unit.reading.blocks[0].payload.text);
+        if (editor.current) editor.current.textContent = editedText.current;
+        setMounted(previous => previous.map(item => item.id === current.unit.id ? current.unit : item));
+      }} settled={() => { producerRunning.current = false; setProducerBusy(false); }} />}
+      <div className="save-area"><span role="status" aria-label="保存状态" aria-live="polite" className={state.status}>{course ? status : '正在打开课程…'}</span>
+
         {state.status === 'error' && <button onClick={() => void channel.current?.flush()}>重试保存</button>}
       </div>
     </header>
@@ -217,8 +234,9 @@ function App() {
         {course && mounted.map(unit => { const position = graph?.layout.nodes.find(node => node.unitId === unit.id); if (!position) return null; return <div key={unit.id} className="reading-layer" style={{ transform: `translate(${viewport.x + position.x * viewport.zoom}px, ${viewport.y + position.y * viewport.zoom}px) scale(${viewport.zoom})`, visibility: viewport.zoom >= 0.55 && selected?.id === unit.id ? 'visible' : 'hidden' }}>
           <article id="unit" ref={element => { if (selected?.id === unit.id) articleRef.current = element; }} onScroll={event => { const current = readingRef.current; if (current && current.unitId === unit.id && Math.abs(current.scrollTop - event.currentTarget.scrollTop) > 2) persist({ ...current, scrollTop: event.currentTarget.scrollTop }); }} className="nodrag nopan nowheel"><RoughFrame id={unit.id} />
             <h1>{unit.name}</h1><p className="unit-meta">课程重要性 {unit.rating.stars} / 5 · {unit.id}</p><p className="outcome">{unit.outcome}</p>
-            {unit.id === 'KU-001' && <div className="editable-section"><label id="editor-label">首段正文 <span>可直接编辑，自动保存</span></label><div ref={editor} role="textbox" aria-label="编辑首段正文" aria-multiline="true" contentEditable={!closing} suppressContentEditableWarning className="paragraph-editor" onInput={event => { editedText.current = event.currentTarget.innerText; if (!composing.current) channel.current?.input(event.currentTarget.innerText); }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => { composing.current = false; editedText.current = event.currentTarget.innerText; channel.current?.input(event.currentTarget.innerText); }} /></div>}
+            {unit.id === 'KU-001' && <div className="editable-section"><label id="editor-label">首段正文 <span>可直接编辑，自动保存</span></label><div ref={editor} role="textbox" aria-label="编辑首段正文" aria-multiline="true" contentEditable={!closing && !producerBusy} suppressContentEditableWarning className="paragraph-editor" onInput={event => { editedText.current = event.currentTarget.innerText; if (!composing.current) channel.current?.input(event.currentTarget.innerText); }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => { composing.current = false; editedText.current = event.currentTarget.innerText; channel.current?.input(event.currentTarget.innerText); }} /></div>}
             {unit.reading.blocks.slice(unit.id === 'KU-001' ? 1 : 0).map(block => <Block key={block.id} block={block} reading={reading} updateReading={updateReading} onReference={(id, blockId) => { const current = readingRef.current!; void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} />)}
+
             <footer>来源：既有数字逻辑课程单元的独立副本。编辑保留原有知识身份。</footer>
           </article>
         </div>; })}</div>

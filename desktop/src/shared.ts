@@ -41,6 +41,7 @@ export interface SaveReceipt {
   blockId: string;
 }
 export interface DesktopBridge {
+  commands: import('./command-api').CommandAPI;
   open(): Promise<OpenedCourse>;
   graph(sessionId: string): Promise<CourseGraph>;
   readUnit(sessionId: string, unitId: string): Promise<CourseUnit>;

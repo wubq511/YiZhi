@@ -6,8 +6,8 @@ const entries = [
   ['src/core/worker.ts', 'dist/worker.cjs'],
   ['src/host/main.ts', 'dist/main.cjs'],
   ['src/host/preload.ts', 'dist/preload.cjs'],
-  ['tests/course-service.test.ts', 'dist/tests/course-service.test.cjs'],
-  ['tests/ownership-child.ts', 'dist/tests/ownership-child.cjs'],
+  ...(await readdir('tests')).filter(file => file.endsWith('.ts') && !file.endsWith('.spec.ts'))
+    .sort().map(file => [`tests/${file}`, `dist/tests/${file.replace(/\.ts$/, '.cjs')}`]),
 ];
 for (const [entry, outfile] of entries) {
   try {
