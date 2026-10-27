@@ -24,7 +24,13 @@ export function registerSourceProtocols(core: CourseService, rendererDirectory: 
   });
   protocol.handle('yizhi-resource', async request => {
     try {
-      const url = new URL(request.url), match = /^\/([a-f0-9-]{36})\/([a-f0-9-]{36})$/.exec(url.pathname),
+      const url = new URL(request.url);
+      const contentAsset = /^\/([a-f0-9-]{36})\/content\/(.+)$/.exec(url.pathname);
+      if (contentAsset && url.hostname === 'course' && !url.username && !url.password && !url.search && request.method === 'GET') {
+        const result = await core.migration.resource({ sessionId: contentAsset[1], asset: decodeURIComponent(contentAsset[2]) });
+        return new Response(new Uint8Array(result.bytes).buffer, { headers: { 'Content-Type': result.mediaType, 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': 'yizhi-app://app', 'X-Content-Type-Options': 'nosniff' } });
+      }
+      const match = /^\/([a-f0-9-]{36})\/([A-Za-z0-9_-]{1,200})$/.exec(url.pathname),
         artifact = /^\/([a-f0-9-]{36})\/([a-f0-9-]{36})\/([a-f0-9]{64})$/.exec(url.pathname);
       if ((!match && !artifact) || url.hostname !== 'course' || url.username || url.password || url.search || !['GET', 'HEAD'].includes(request.method))
         return new Response('未登记的来源资源', { status: 404 });

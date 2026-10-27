@@ -5,7 +5,7 @@ import { ParsingSection } from './parsing-section';
 import { SourcePdf, type SourceSelection } from './source-pdf';
 import './source-panel.css';
 
-export interface SourcePanelHandle { flush(): Promise<boolean>; openCitation(citation: SourceCitation): void }
+export interface SourcePanelHandle { flush(): Promise<boolean>; openCitation(citation: SourceCitation): void; openVersion(versionId: string, pdfPageIndex: number): void }
 export const SourcePanel = forwardRef<SourcePanelHandle, { sessionId: string; narrow: boolean; target?: CiteSource['target']; onOpenChange(open: boolean): void; onCitationsChange(citations: SourceCitation[]): void; onQuestion?(citation: SourceCitation): void }>(function SourcePanel({ sessionId, narrow, target, onOpenChange, onCitationsChange, onQuestion }, ref) {
   const api = window.yizhi.sources;
   const [open, setOpen] = useState(false), [list, setList] = useState<SourceList>({ generation: 1, versions: [], intents: [], readingSeq: 0 });
@@ -53,7 +53,7 @@ export const SourcePanel = forwardRef<SourcePanelHandle, { sessionId: string; na
     setContextStatus('pending'); clearTimeout(timer.current); timer.current = setTimeout(() => void saveLatest(), 200);
   };
   const flush = async () => { await saveLatest(); await writes.current; return !failed.current && !actionInFlight.current; };
-  useImperativeHandle(ref, () => ({ flush, openCitation }));
+  useImperativeHandle(ref, () => ({ flush, openCitation, openVersion: (id: string, index: number) => { choose(id,index); setOpen(true); } }));
   const run = async (action: () => Promise<void>) => {
     if (actionInFlight.current) return;
     retryAction.current = action; actionInFlight.current = true; setBusy(true); setError('');
