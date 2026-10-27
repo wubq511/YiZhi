@@ -6,7 +6,7 @@ import { SourcePdf, type SourceSelection } from './source-pdf';
 import './source-panel.css';
 
 export interface SourcePanelHandle { flush(): Promise<boolean>; openCitation(citation: SourceCitation): void }
-export const SourcePanel = forwardRef<SourcePanelHandle, { sessionId: string; narrow: boolean; target?: CiteSource['target']; onOpenChange(open: boolean): void; onCitationsChange(citations: SourceCitation[]): void }>(function SourcePanel({ sessionId, narrow, target, onOpenChange, onCitationsChange }, ref) {
+export const SourcePanel = forwardRef<SourcePanelHandle, { sessionId: string; narrow: boolean; target?: CiteSource['target']; onOpenChange(open: boolean): void; onCitationsChange(citations: SourceCitation[]): void; onQuestion?(citation: SourceCitation): void }>(function SourcePanel({ sessionId, narrow, target, onOpenChange, onCitationsChange, onQuestion }, ref) {
   const api = window.yizhi.sources;
   const [open, setOpen] = useState(false), [list, setList] = useState<SourceList>({ generation: 1, versions: [], intents: [], readingSeq: 0 });
   const [initialized, setInitialized] = useState(false);
@@ -149,12 +149,20 @@ export const SourcePanel = forwardRef<SourcePanelHandle, { sessionId: string; na
         const request = { sessionId, generation: list.generation, operationId: crypto.randomUUID(), versionId, pdfPageIndex: pageIndex, target: context.current?.target ?? target, ...selection };
         void run(async () => { await api.cite(request); const next = await api.citations({ sessionId }); setCitations(next); onCitationsChange(next); setMessage('原文与出处已保留，可从下方打开固定版本。'); });
       }}>{selection?.start !== undefined ? '保留选文与出处' : selection?.region ? '保留选区出处' : '保留本页出处'}</button>
+      {onQuestion && <button disabled={busy || !ready} onClick={() => {
+        const request = { sessionId, generation: list.generation, operationId: crypto.randomUUID(), versionId, pdfPageIndex: pageIndex, target: context.current?.target ?? target, ...selection };
+        void run(async () => {
+          const citation = await api.cite(request); const next = await api.citations({ sessionId }); setCitations(next); onCitationsChange(next);
+          if (narrow) { if (context.current) persist({ ...context.current, open: false }); setOpen(false); }
+          onQuestion(citation);
+        });
+      }}>带此选段向 Agent 提问</button>}
     </div>}
     <div className="source-context-status" role="status" aria-label="原文位置保存">{contextStatus === 'saved' ? '原文位置已保存' : contextStatus === 'pending' ? '正在保存原文位置' : '原文位置未保存'}{contextStatus === 'error' && <button onClick={() => { failed.current = false; setContextStatus('pending'); void saveLatest(); }}>重试保存原文位置</button>}</div>
     <details className="source-citations" open={!!citations.length}><summary>保留的原文与出处 · {citations.length}</summary>{citations.map(citation => <section key={citation.id}>
       {citation.quote ? <blockquote>{citation.quote}</blockquote> : <p>{citation.textStatus === 'no-text-layer' ? '无可靠文本层 · ' : ''}{citation.region ? '原页选区' : '整页出处'}</p>}
       <p>{list.versions.find(item => item.versionId === citation.versionId)?.title} · PDF 第 {citation.pdfPageIndex + 1} 页 · 印刷页 {citation.printedPage?.label ?? '未核对'}</p>
-      <button onClick={() => openCitation(citation)}>打开引用原页</button>
+      <button onClick={() => openCitation(citation)}>打开引用原页</button>{onQuestion && <button onClick={() => { if (narrow) setOpen(false); onQuestion(citation); }}>带此出处提问</button>}
     </section>)}</details>
     {version && <details className="source-identity"><summary>版本身份与原件摘要</summary><p>{version.originalName} · {version.importedAt}</p><p>版本 {version.versionId}</p><p>SHA-256 {version.sha256}</p><p>{version.byteLength} bytes · {version.mediaType}</p></details>}
   </aside>, document.body)}</>;

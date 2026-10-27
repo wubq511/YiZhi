@@ -1,3 +1,4 @@
+import { AgentPanel, type AgentPanelHandle } from './agent-panel';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { ReactFlow, ReactFlowProvider, MiniMap, useReactFlow, MarkerType, type Viewport } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -114,6 +115,8 @@ function App() {
   const [tool, setTool] = useState<"read" | "select" | "hand">("read");
   const [sourceOpen, setSourceOpen] = useState(false);
   const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [agentOpen, setAgentOpen] = useState(false);
+  const agentPanel = useRef<AgentPanelHandle>(null);
   const sourcesPanel = useRef<SourcePanelHandle>(null);
   const [sourceCitations, setSourceCitations] = useState<SourceCitation[]>([]);
   const sourceTrigger = useRef<HTMLButtonElement | null>(null);
@@ -192,6 +195,7 @@ function App() {
     await writes.current;
     if (readingFailed.current) { setClosing(false); return false; }
     if (sourcesPanel.current && !await sourcesPanel.current.flush()) { setClosing(false); return false; }
+    if (agentPanel.current && !await agentPanel.current.flush()) { setClosing(false); return false; }
     const saved = await channel.current.flush();
     if (!saved) setClosing(false);
     return saved;
@@ -278,8 +282,9 @@ function App() {
   };
   const status = { draft: '草稿已保留', saved: '已保存', pending: '待保存', saving: '正在保存…', error: '未保存' }[state.status];
   return <>
-    <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen || sourcesOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
-      {course && <SourcePanel ref={sourcesPanel} sessionId={course.sessionId} narrow={narrow} target={selected ? { unitId: selected.id } : undefined} onOpenChange={setSourcesOpen} onCitationsChange={setSourceCitations} />}
+    <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen || sourcesOpen || agentOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
+      {course && <SourcePanel ref={sourcesPanel} sessionId={course.sessionId} narrow={narrow} target={selected ? { unitId: selected.id } : undefined} onOpenChange={setSourcesOpen} onCitationsChange={setSourceCitations} onQuestion={citation => agentPanel.current?.attachCitation(citation)} />}
+      {course && <AgentPanel ref={agentPanel} sessionId={course.sessionId} narrow={narrow} target={{ unitId: selected?.id ?? course.unit.id }} targetName={selected?.name ?? course.unit.name} sourceOpen={sourcesOpen} onOpenChange={value => { setAgentOpen(value); if (value && narrow) setDirectory(false); }} openCitation={citation => sourcesPanel.current?.openCitation(citation)} />}
       {!cameraReady && !loadError && <span role="status" aria-label="画板定位">正在定位画板…</span>}
 
       {course && <ControlledProducer course={course} narrow={narrow} onOpenChange={setProducerOpen} prepare={async () => {
@@ -299,7 +304,7 @@ function App() {
       </div>
     </header>
     {state.error && <div className="save-error" role="alert">{state.error} 输入仍保留，请重试保存。</div>}
-    <div className="workspace board-workspace" inert={(!cameraReady && !loadError) || (narrow && sourcesOpen)} aria-busy={!cameraReady && !loadError}>
+    <div className="workspace board-workspace" inert={(!cameraReady && !loadError) || (narrow && (sourcesOpen || agentOpen))} aria-busy={!cameraReady && !loadError}>
       {directory && <nav ref={navRef} inert={sourceOpen || (narrow && (relationsOpen || producerOpen))} aria-label="课程目录" onKeyDown={event => trap(event, closeDirectory)}><h2>课程目录</h2>{narrow && <button onClick={closeDirectory}>关闭目录</button>}
         <label className="review-filter">复习状态筛选 <select aria-label="复习状态筛选" value={reviewFilter} onChange={event => setReviewFilter(event.target.value as typeof reviewFilter)}><option value="all">全部单元</option><option value="pending">待复习</option><option value="weak">薄弱</option><option value="mastered">已掌握</option></select></label>
         {graph?.groups.map(group => { const counts = review?.themes[group.id]; const matches = graph.nodes.filter(node => node.themeId === group.id && (reviewFilter === 'all' ? selected?.theme.id === group.id : review?.units[node.id]?.status === reviewFilter)); return <div key={group.id}><button aria-label={group.name} className="directory-theme" onClick={() => { const first = matches[0] ?? graph.nodes.find(node => node.themeId === group.id); if (first) { void go(first.id); if (narrow) closeDirectory(); } }}>{group.name}{counts ? <span aria-hidden="true"> · 待复习 {counts.pending} / 薄弱 {counts.weak} / 已掌握 {counts.mastered}</span> : ''}</button>{matches.map(node => <button aria-label={node.name} className="directory-unit" key={node.id} onClick={() => { void go(node.id); if (narrow) closeDirectory(); }}>{node.name}{review ? <span aria-hidden="true"> · {{ pending: '待复习', weak: '薄弱', mastered: '已掌握' }[review.units[node.id].status]}</span> : ''}</button>)}</div>; })}</nav>}
@@ -312,7 +317,7 @@ function App() {
         {loadError && <div className="load-error" role="alert"><h1>课程未打开</h1><p>{loadError}</p><button onClick={() => void load()}>重新打开课程</button></div>}
         {readError && <div className="read-error" role="status">{readError}</div>}
         {course && mounted.map(unit => { const position = graph?.layout.nodes.find(node => node.unitId === unit.id); if (!position) return null; return <div key={unit.id} className="reading-layer" style={{ transform: `translate(${viewport.x + position.x * viewport.zoom}px, ${viewport.y + position.y * viewport.zoom}px) scale(${viewport.zoom})`, visibility: viewport.zoom >= 0.55 && selected?.id === unit.id ? 'visible' : 'hidden' }}>
-          <article id="unit" ref={element => { if (selected?.id === unit.id) articleRef.current = element; }} onScroll={event => { const current = readingRef.current; if (current && current.unitId === unit.id && Math.abs(current.scrollTop - event.currentTarget.scrollTop) > 2) persist({ ...current, scrollTop: event.currentTarget.scrollTop }); }} className="nodrag nopan nowheel"><RoughFrame id={unit.id} />
+          <article id="unit" data-agent-unit={unit.id} ref={element => { if (selected?.id === unit.id) articleRef.current = element; }} onScroll={event => { const current = readingRef.current; if (current && current.unitId === unit.id && Math.abs(current.scrollTop - event.currentTarget.scrollTop) > 2) persist({ ...current, scrollTop: event.currentTarget.scrollTop }); }} className="nodrag nopan nowheel"><RoughFrame id={unit.id} />
             <h1>{unit.name}</h1><p className="unit-meta">课程重要性 {unit.rating.stars} / 5 · {unit.id}</p>{review && <ReviewControls unitId={unit.id} snapshot={review} change={status => void changeReview(unit.id, status)} confirm={(id, adjust) => void confirmReview(id, adjust)} />}<p className="outcome">{unit.outcome}</p>
             <SourceReferences citations={sourceCitations.filter(citation => citation.target?.unitId === unit.id)} onOpen={citation => sourcesPanel.current?.openCitation(citation)} />
             {unit.id === 'KU-001' && channel.current ? <ContinuousUnitEditor course={course} channel={channel.current} disabled={closing || producerBusy}
@@ -323,6 +328,7 @@ function App() {
               : unit.reading.blocks.map(block => <ReadingBoundary key={block.id}><Block block={block} reading={reading} updateReading={updateReading}
                 onSource={button => { sourceTrigger.current = button; setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;
                   void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} /></ReadingBoundary>)}
+
 
             <footer>来源：既有数字逻辑课程单元的独立副本。编辑保留原有知识身份。</footer>
           </article>

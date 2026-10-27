@@ -1,3 +1,5 @@
+import { AgentRuntime } from '../agent/executor';
+import { registerAgentIPC } from './agent-ipc';
 import { app, BrowserWindow, dialog, ipcMain, Menu, protocol } from 'electron';
 import { join, resolve } from 'node:path';
 import { mkdirSync, realpathSync } from 'node:fs';
@@ -18,6 +20,7 @@ if (process.env.YIZHI_DATA_HOME) {
 const initialCourse = process.argv.find(arg => arg.startsWith('--course='))?.slice(9);
 let courseDirectory: string;
 let core: CourseService;
+let agent: AgentRuntime;
 let window: BrowserWindow | undefined;
 let quitRequested = false;
 let exiting = false;
@@ -43,12 +46,15 @@ else {
   app.whenReady().then(async () => {
     courseDirectory = resolve(initialCourse ?? join(app.getPath('userData'), 'courses/digital-logic-t01'));
     core = new CourseService(join(__dirname, 'worker.cjs'));
+    agent = new AgentRuntime(core, { directory: join(app.getPath('userData'), 'agent-runtime'), cliPath: process.env.YIZHI_CODEX_PATH });
+    void agent.detect();
     const checkSender = (event: Electron.IpcMainInvokeEvent | Electron.IpcMainEvent) => {
       if (!window || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame)
         throw new Error('未知课程窗口');
     };
     registerSourceProtocols(core, join(__dirname, 'renderer'));
     registerSourceIPC(core, checkSender);
+    registerAgentIPC(core, agent, checkSender);
     for (const method of ['start','continue','stop','get','list','artifact','artifacts','correct','query'] as const) {
       ipcMain.handle(`parsing:${method}`, (event, request) => { checkSender(event); return core.parsing[method](request); });
     }
@@ -78,7 +84,7 @@ else {
       clearTimeout(closeTimer); pendingClose = undefined;
       if (!result.saved) { quitRequested = false; return; }
       if (quitRequested) {
-        try { await core.close(); exiting = true; app.quit(); }
+        try { await agent.close(); await core.close(); exiting = true; app.quit(); }
         catch (error) {
           quitRequested = false;
           void dialog.showErrorBox('退出未完成', (error as Error).message);
@@ -101,7 +107,7 @@ else {
     if (exiting) return;
     event.preventDefault(); quitRequested = true;
     if (window) requestClose();
-    else if (core) void core.close().then(() => { exiting = true; app.quit(); }).catch(error => {
+    else if (core) void agent.close().then(() => core.close()).then(() => { exiting = true; app.quit(); }).catch(error => {
       quitRequested = false; dialog.showErrorBox('退出未完成', String(error));
     });
   });
