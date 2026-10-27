@@ -121,6 +121,7 @@ function App() {
   const [minimap, setMinimap] = useState(true);
   const [tool, setTool] = useState<"read" | "select" | "hand">("read");
   const [searchOpen, setSearchOpen] = useState(false);
+  useEffect(() => { if (narrow && searchOpen) setDirectory(false); }, [narrow, searchOpen]);
   const searchOrigin = useRef<(() => Promise<void>) | undefined>(undefined);
   const [searchReturn, setSearchReturn] = useState<(() => Promise<void>)>();
   const [sourceOpen, setSourceOpen] = useState(false);
@@ -378,6 +379,7 @@ function App() {
     const details = [...document.querySelectorAll<HTMLDetailsElement>('details')].map(el => ({ el, open: el.open }));
     const sourceScene = sourcesPanel.current?.capture(), noteScene = notesPanel.current?.capture(), agentScene = agentPanel.current?.capture();
     const restore = async () => {
+      continuous.current?.clearSearch();
       if (sourceScene) await sourcesPanel.current?.restore(sourceScene);
       if (noteScene) await notesPanel.current?.restore(noteScene);
       if (agentScene) await agentPanel.current?.restore(agentScene);
@@ -396,6 +398,7 @@ function App() {
     if (!course) return;
     if (composing.current || !await channel.current?.flush() || (continuous.current && !await continuous.current.finish())) throw new Error('请先完成当前输入，再定位。');
     hit = await window.yizhi.search.locate({ sessionId: course.sessionId, hit });
+    continuous.current?.clearSearch();
     const restore = searchOrigin.current ?? captureSearchScene();
     if (hit.scope === 'notes') await notesPanel.current?.openSearch(hit);
     else if (hit.scope === 'messages') await agentPanel.current?.openSearch(hit);
@@ -414,7 +417,7 @@ function App() {
       await paintFrame();
       const shown = hit.field === 'latex' ? field.getAttribute('aria-label') ?? field.querySelector('[role="math"]')?.getAttribute('aria-label') : hit.field === 'alt' && field instanceof HTMLImageElement ? field.alt : field.textContent;
       if (shown !== hit.text) throw new Error('当前显示版本不同，请重新搜索');
-      highlightSearch(field, hit);
+      if (!(hit.unitId === course.unit.id && continuous.current?.revealSearch(hit))) highlightSearch(field, hit);
       const board = boardRef.current!.getBoundingClientRect(), rect = field.getBoundingClientRect();
       camera.pan(board.left + 40 - rect.left, board.top + 110 - rect.top);
     }

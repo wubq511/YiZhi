@@ -1,3 +1,4 @@
+import { DescriptionRuntime } from '../agent/description-search';
 import { searchMethods } from '../search-api';
 import { annotationMethods } from '../annotation-api';
 import {registerExtensionProtocol,extensionNavigation} from './extension-protocol';
@@ -24,6 +25,7 @@ const initialCourse = process.argv.find(arg => arg.startsWith('--course='))?.sli
 let courseDirectory: string;
 let core: CourseService;
 let agent: AgentRuntime;
+let description: DescriptionRuntime;
 let window: BrowserWindow | undefined;
 let quitRequested = false;
 let exiting = false;
@@ -56,6 +58,7 @@ else {
     courseDirectory = resolve(initialCourse ?? join(app.getPath('userData'), 'courses/digital-logic-t01'));
     core = new CourseService(join(__dirname, 'worker.cjs'));
     agent = new AgentRuntime(core, { directory: join(app.getPath('userData'), 'agent-runtime'), cliPath: process.env.YIZHI_CODEX_PATH });
+    description = new DescriptionRuntime(core, { directory: join(app.getPath('userData'), 'search-runtime'), cliPath: process.env.YIZHI_CODEX_PATH });
     void agent.detect();
     const checkSender = (event: Electron.IpcMainInvokeEvent | Electron.IpcMainEvent) => {
       if (!window || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame)
@@ -65,6 +68,8 @@ else {
     registerSourceProtocols(core, join(__dirname, 'renderer'));
     registerSourceIPC(core, checkSender);
     registerAgentIPC(core, agent, checkSender);
+    ipcMain.handle('description:status', event => { checkSender(event); return description.status(); });
+    for (const method of ['start', 'get', 'cancel'] as const) ipcMain.handle(`description:${method}`, (event, request) => { checkSender(event); return description[method](request); });
     for (const method of ['start','continue','stop','get','list','artifact','artifacts','correct','query'] as const) {
       ipcMain.handle(`parsing:${method}`, (event, request) => { checkSender(event); return core.parsing[method](request); });
     }
@@ -102,7 +107,7 @@ else {
       clearTimeout(closeTimer); pendingClose = undefined;
       if (!result.saved) { quitRequested = false; return; }
       if (quitRequested) {
-        try { await agent.close(); await core.close(); exiting = true; app.quit(); }
+        try { await description.close(); await agent.close(); await core.close(); exiting = true; app.quit(); }
         catch (error) {
           quitRequested = false;
           void dialog.showErrorBox('退出未完成', (error as Error).message);
@@ -125,7 +130,7 @@ else {
     if (exiting) return;
     event.preventDefault(); quitRequested = true;
     if (window) requestClose();
-    else if (core) void agent.close().then(() => core.close()).then(() => { exiting = true; app.quit(); }).catch(error => {
+    else if (core) void description.close().then(() => agent.close()).then(() => core.close()).then(() => { exiting = true; app.quit(); }).catch(error => {
       quitRequested = false; dialog.showErrorBox('退出未完成', String(error));
     });
   });
