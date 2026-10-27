@@ -34,3 +34,11 @@ jobs:
       - run: npm test
       - run: npm run test:electron
       - run: npm run test:smoke
+      - name: Upload failed desktop UI evidence
+        if: failure()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: desktop-ui-failure-${{ github.run_attempt }}
+          path: desktop/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
