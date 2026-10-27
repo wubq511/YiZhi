@@ -6,7 +6,8 @@ import './controlled-producer.css';
 const targetId = 'RB-TH-01-03-expansion-terms';
 
 /** Deliberately controlled producer. This is an acceptance surface, not an Agent runtime. */
-export function ControlledProducer({ course, prepare, committed, settled, narrow, onOpenChange }: {
+export function ControlledProducer({ course, prepare, committed, settled, narrow, onOpenChange, started, advanced, ended }: {
+  started(): Promise<void>; advanced(): void; ended(): void;
   course: OpenedCourse; prepare(): Promise<void>; committed(): Promise<void>; settled(): void; narrow: boolean; onOpenChange(open: boolean): void;
 }) {
   const [attempt, setAttempt] = useState<Attempt>();
@@ -27,9 +28,11 @@ export function ControlledProducer({ course, prepare, committed, settled, narrow
     finally { settled(); setBusy(false); }
   };
   const read = () => run(async () => {
+    const newRequest = !attempt || attempt.status !== 'running';
     const active = await commands.startAttempt({ sessionId: course.sessionId, taskId: 'controlled-producer-demo', resume: true });
     const fresh = await commands.read({ sessionId: course.sessionId, attemptId: active.attemptId,
       objectIds: [course.editableBlockId, targetId] });
+    if (newRequest) await started();
     const source = String(fresh.objects.find(object => object.id === course.editableBlockId)!.value.payload.text);
     const target = fresh.objects.find(object => object.id === targetId)!.value;
     // Re-read actually consumes current source and target; it never just relabels an old candidate.
@@ -46,8 +49,10 @@ export function ControlledProducer({ course, prepare, committed, settled, narrow
       ...(substantive ? { semanticImpact: { version: 1 as const, unitId: 'KU-001', conclusionOrMethodChanged: true } } : {}) };
     const result = await commands.commit(pending.current);
     if (result.status === 'committed') {
+      const freshCommit = receiptId.current !== result.operationId;
       receiptId.current = result.operationId;
       await committed();
+      if (freshCommit && result.changedObjectIds.length > 0) advanced();
       setStatus(`正式修改已保存，实际变化 ${result.changedObjectIds.length} 个对象。`);
     } else setStatus(result.reason!);
     setRetained(await commands.candidates({ sessionId: course.sessionId }));
@@ -68,7 +73,7 @@ export function ControlledProducer({ course, prepare, committed, settled, narrow
     <div className="producer-actions"><button disabled={busy} onClick={() => void read()}>{basis ? '重读并整合' : '读取当前依据'}</button>
       <button disabled={busy || !attempt} onClick={() => void run(async () => {
         const stopped = await commands.stop({ sessionId: course.sessionId, attemptId: attempt!.attemptId });
-        setAttempt(stopped); setStatus('本次尝试已停止；已经保存的修改保留。');
+        setAttempt(stopped); ended(); setStatus('本次尝试已停止；已经保存的修改保留。');
       })}>停止本次尝试</button></div>
     {basis && <>
       <details><summary>本次读取的前提</summary><p>{premise}</p></details>
@@ -76,6 +81,10 @@ export function ControlledProducer({ course, prepare, committed, settled, narrow
         onChange={event => { setCandidate(event.target.value); pending.current = undefined; }} /></label>
       <label><input type="checkbox" checked={substantive} disabled={busy} onChange={event => { setSubstantive(event.target.checked); pending.current = undefined; }} /> 本次会改变重要结论或方法（阶段 II 元数据演示）</label>
       <div className="producer-actions"><button disabled={busy || !candidate} onClick={() => void submit()}>提交可控修改</button>
+        <button disabled={busy || !receiptId.current || attempt?.status !== 'running'} onClick={() => void run(async () => {
+          const stopped = await commands.stop({ sessionId: course.sessionId, attemptId: attempt!.attemptId });
+          setAttempt(stopped); ended(); setStatus('可控修改已结束，已保存内容保留。');
+        })}>结束可控修改</button>
         <button disabled={busy || !receiptId.current} onClick={() => void run(async () => {
           const receipt = await commands.query({ sessionId: course.sessionId, operationId: receiptId.current! });
           setStatus(receipt?.status === 'committed' ? '已保存的原回执已核对。' : '尚未找到保存回执，请保留候选后重读。');

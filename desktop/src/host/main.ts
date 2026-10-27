@@ -52,6 +52,8 @@ else {
     ipcMain.handle('course:open', async event => { checkSender(event); return core.open(courseDirectory); });
     ipcMain.handle('course:graph', async (event, sessionId: string) => { checkSender(event); return core.graph(sessionId); });
     ipcMain.handle('course:read-unit', async (event, sessionId: string, unitId: string) => { checkSender(event); return core.readUnit(sessionId, unitId); });
+    ipcMain.handle('course:set-layout', async (event, sessionId: string, updates) => { checkSender(event); return core.setLayout(sessionId, updates); });
+    ipcMain.handle('course:project-layout', async (event, sessionId: string, sizes, fixed) => { checkSender(event); return core.projectLayout(sessionId, sizes, fixed); });
     ipcMain.handle('course:reading-state', async (event, sessionId: string) => { checkSender(event); return core.readingState(sessionId); });
     ipcMain.handle('course:set-reading-state', async (event, sessionId: string, state) => { checkSender(event); return core.setReadingState(sessionId, state); });
     ipcMain.handle('course:review-states', async (event, sessionId: string) => { checkSender(event); return core.reviewStates(sessionId); });

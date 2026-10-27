@@ -49,6 +49,8 @@ export interface DesktopBridge extends SaveBridge {
   open(): Promise<OpenedCourse>;
   graph(sessionId: string): Promise<CourseGraph>;
   readUnit(sessionId: string, unitId: string): Promise<CourseUnit>;
+  setLayout(sessionId: string, updates: import('./layout').LayoutPlacement[]): Promise<void>;
+  projectLayout(sessionId: string, sizes: import('./layout').LayoutSizes, fixed?: import('./layout').LayoutPlacement): Promise<import('./layout').LayoutNode[]>;
   readingState(sessionId: string): Promise<ReadingState | null>;
   setReadingState(sessionId: string, state: ReadingState): Promise<void>;
   reviewStates(sessionId: string): Promise<ReviewSnapshot>;

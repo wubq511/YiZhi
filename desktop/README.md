@@ -56,3 +56,5 @@ T03 的 `CourseService.commands` 与 preload `commands` 共用 `src/command-api.
 画板样本与来源页见 `fixtures/t04-provenance.json`；单元复制与本地字体来源见 `fixtures/provenance.json`、`fixtures/font-provenance.json` 和 [第三方资源](THIRD-PARTY-NOTICES.md)。
 
 T14 顶栏“原文资料”支持不可变 PDF／图片版本、双页码、真实选文与区域引用和本地离线阅读；API、发布顺序与验收范围见 [本地不可变来源](docs/sources.md)。
+
+T09 局部空间现场：`CourseService.setLayout` 经宿主/Worker 将明确移动与调宽写入独立 SQLite 基线；`graph` 与关系读取返回同一当前基线。阅读尺寸与碰撞链投影不落成手动布局，展开/正文增长/调宽只纳入实际碰撞对象，收起从最新基线重算。当前切片沿用至多两个已挂载样例正文，移动区域与键盘尺寸柄不会重建连续编辑器；相机补偿、滚轮和可控 producer 跟随共享当前视口，主动浏览取消全部跟随帧，明确返回才恢复。此入口只消费真实可控提交，不代表真实 Agent 接入；全课/500 单元与物理 IME、触控板仍属后续验收。

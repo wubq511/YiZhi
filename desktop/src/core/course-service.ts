@@ -45,6 +45,8 @@ export class CourseService {
   read(sessionId: string): Promise<OpenedCourse> { return this.request('read', { sessionId }); }
   graph(sessionId: string): Promise<CourseGraph> { return this.request('graph', { sessionId }); }
   readUnit(sessionId: string, unitId: string): Promise<CourseUnit> { return this.request('readUnit', { sessionId, unitId }); }
+  setLayout(sessionId: string, updates: import('../layout').LayoutPlacement[]): Promise<void> { return this.request('setLayout', { sessionId, updates }); }
+  projectLayout(sessionId: string, sizes: import('../layout').LayoutSizes, fixed?: import('../layout').LayoutPlacement): Promise<import('../layout').LayoutNode[]> { return this.request('projectLayout', { sessionId, sizes, fixed }); }
   readingState(sessionId: string): Promise<ReadingState | null> { return this.request('readingState', { sessionId }); }
   setReadingState(sessionId: string, state: ReadingState): Promise<void> { return this.request('setReadingState', { sessionId, state }); }
   reviewStates(sessionId: string): Promise<ReviewSnapshot> { return this.request('reviewStates', { sessionId }); }
