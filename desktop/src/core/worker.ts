@@ -4,6 +4,7 @@ import { mkdirSync, realpathSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { FormalRelations } from './formal-relations';
 import { CommandGroups } from './command-groups';
+import { Sources } from './sources';
 import { randomUUID } from 'node:crypto';
 import type { CourseGraph, OpenedCourse, SaveParagraph, SaveReceipt, EditCommand } from '../shared';
 
@@ -15,6 +16,7 @@ const EDITABLE = 'RB-TH-01-01-what-is-positional-notation';
 interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; courseId: string; graph: CourseGraph;
   // T03 constructs its observer on this same connection; both student save entry points call it in-transaction.
   groups: CommandGroups;
+  sources: Sources;
   relations: FormalRelations;
 }
 const courses = new Map<string, Course>();
@@ -73,12 +75,20 @@ function open(directory: string): OpenedCourse {
       } catch (error) { db.exec('ROLLBACK'); throw error; }
     }
     initializeSaveStore(db);
+    const sourceUnit = (id: string) => {
+      const row = db!.prepare('SELECT payload FROM units WHERE id=?').get(id);
+      if (row) return JSON.parse(String(row.payload));
+      if (['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-055', 'KU-057'].includes(id))
+        return JSON.parse(readFileSync(join(__dirname, `fixtures/unit-${id.slice(3)}.json`), 'utf8'));
+    };
     const graph = JSON.parse(readFileSync(join(__dirname, 'fixtures/graph.json'), 'utf8')) as CourseGraph;
     initializeReviewState(db);
     const groups = new CommandGroups(db, graph);
-    const relations = new FormalRelations(db, graph,
-      JSON.parse(readFileSync(join(__dirname, 'fixtures/relation-catalog.json'), 'utf8')));
-    const course: Course = { db, owner, sessionId: randomUUID(), graph, groups, relations,
+    const sources = new Sources(db, canonical, sourceUnit);
+    const relationCatalog = JSON.parse(readFileSync(join(__dirname, 'fixtures/relation-catalog.json'), 'utf8'));
+    const relations = new FormalRelations(db, graph, { retiredUnitIds: relationCatalog.retiredUnitIds,
+      get sources() { return sources.relationCatalog(relationCatalog.sources); } });
+    const course: Course = { db, owner, sessionId: randomUUID(), graph, groups, relations, sources,
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     const result = snapshot(course);
     courses.set(canonical, course);
@@ -94,8 +104,12 @@ function save(command: SaveParagraph): SaveReceipt {
     inputSeq: command.inputSeq, baseRevision: command.baseRevision, operationId: command.operationId,
     complete: true, changes: [{ blockId: command.blockId, text: command.text }] });
 }
-parentPort!.on('message', ({ id, action, payload }) => {
+// Async validation/import shares the SAME ordered command boundary with saves, stop and close.
+let queue = Promise.resolve();
+parentPort!.on('message', message => { queue = queue.then(() => dispatch(message)); });
+async function dispatch({ id, action, payload }: { id: number; action: string; payload: any }) {
   try {
+    if (payload?.operationId) session(payload.sessionId).sources.fenceOperation(action, payload.operationId);
     let value: unknown;
     if (action === 'open') value = open(payload.directory);
     else if (action === 'read') value = snapshot(session(payload.sessionId));
@@ -134,10 +148,11 @@ parentPort!.on('message', ({ id, action, payload }) => {
     else if (action === 'relations:commit') value = session(payload.sessionId).relations.commit(payload);
     else if (action === 'relations:query') value = session(payload.sessionId).relations.query(payload.operationId);
     else if (action.startsWith('commands:')) value = session(payload.sessionId).groups.dispatch(action, payload);
+    else if (action.startsWith('sources:')) value = await session(payload.sessionId).sources.dispatch(action, payload);
     else if (action === 'close') {
       for (const course of courses.values()) { course.db.close(); course.owner.close(); }
       courses.clear();
     } else throw new Error('未知课程命令');
     parentPort!.postMessage({ id, ok: true, value });
   } catch (error) { parentPort!.postMessage({ id, ok: false, error: (error as Error).message }); }
-});
+}

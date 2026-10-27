@@ -23,6 +23,8 @@
 | --- | --- | --- |
 | @xyflow/react | 12.12.0 | MIT |
 | roughjs | 4.6.6 | MIT |
+| pdfjs-dist | 6.4.299 | Apache-2.0；本地 worker、CMap、标准字体、ICC 与 WASM 随包复制各自许可 |
+| @napi-rs/canvas | 1.0.13 | MIT；核心只用于 PDF.js Node 支持及图片真实解码，随分发保留包内许可 |
 | @tiptap/core, @tiptap/pm, @tiptap/extension-document / paragraph / text | 3.32.0 | [MIT](licenses/Tiptap-MIT.txt) |
 | ProseMirror model / state / view / history | 1.25.12 / 1.4.4 / 1.42.8 / 1.5.1 | [MIT](licenses/ProseMirror-MIT.txt)，完整传递版本由 lockfile 固定 |
 | MathLive | 0.111.1 | [MIT](licenses/MathLive-MIT.txt)；本地 KaTeX 字体沿用 OFL-1.1 |

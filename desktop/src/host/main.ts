@@ -1,8 +1,13 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, protocol } from 'electron';
 import { join, resolve } from 'node:path';
 import { mkdirSync, realpathSync } from 'node:fs';
 import { CourseService } from '../core/course-service';
 import type { SaveParagraph } from '../shared';
+import { registerSourceProtocols } from './source-protocol';
+import { registerSourceIPC } from './source-ipc';
+
+protocol.registerSchemesAsPrivileged(['yizhi-app', 'yizhi-resource'].map(scheme => ({ scheme,
+  privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } })));
 
 app.setName('绎知');
 if (process.env.YIZHI_DATA_HOME) {
@@ -42,6 +47,8 @@ else {
       if (!window || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame)
         throw new Error('未知课程窗口');
     };
+    registerSourceProtocols(core, join(__dirname, 'renderer'));
+    registerSourceIPC(core, checkSender);
     ipcMain.handle('course:open', async event => { checkSender(event); return core.open(courseDirectory); });
     ipcMain.handle('course:graph', async (event, sessionId: string) => { checkSender(event); return core.graph(sessionId); });
     ipcMain.handle('course:read-unit', async (event, sessionId: string, unitId: string) => { checkSender(event); return core.readUnit(sessionId, unitId); });
@@ -114,5 +121,5 @@ async function showWindow() {
   window.webContents.on('will-navigate', event => event.preventDefault());
   window.on('close', event => { if (!exiting) { event.preventDefault(); requestClose(); } });
   window.on('closed', () => { window = undefined; pendingClose = undefined; clearTimeout(closeTimer); });
-  await window.loadFile(join(__dirname, 'renderer/index.html'));
+  await window.loadURL('yizhi-app://app/index.html');
 }

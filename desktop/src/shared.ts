@@ -43,6 +43,7 @@ export interface SaveReceipt {
   blockId: string;
 }
 export interface DesktopBridge extends SaveBridge {
+  sources: import('./sources-api').SourceBridge;
   commands: import('./command-api').CommandAPI;
   relations: import('./relation-api').RelationAPI;
   open(): Promise<OpenedCourse>;
@@ -111,7 +112,9 @@ export type SaveEventData =
   { type: 'draft.saved'; sessionId: string; inputSeq: number } |
   { type: 'content.committed'; receipt: EditReceipt } |
   { type: 'relations.committed'; operationId: string; revision: number; changedObjectIds: string[] } |
-  { type: 'group.committed'; operationId: string; revision: number; changedObjectIds: string[] };
+  { type: 'group.committed'; operationId: string; revision: number; changedObjectIds: string[] } |
+  { type: 'source.registered'; versionId: string; sourceId: string } |
+  { type: 'source.changed'; kind: string; operationId: string };
 export type SaveEvent = SaveEventData & { cursor: number };
 export type EventPage = { kind: 'events'; events: SaveEvent[]; cursor: number; hasMore: boolean } |
   { kind: 'reset'; reason: 'cursor-expired'; cursor: number; snapshot: OpenedCourse };
