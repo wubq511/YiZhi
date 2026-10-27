@@ -80,6 +80,7 @@ function App() {
   const flow = useReactFlow();
   const boardRef = useRef<HTMLElement>(null);
   const [nodesReady, setNodesReady] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
   const [graph, setGraph] = useState<CourseGraph>();
   const [selected, setSelected] = useState<CourseUnit>();
   const [mounted, setMounted] = useState<CourseUnit[]>([]);
@@ -90,7 +91,7 @@ function App() {
   const directoryButton = useRef<HTMLButtonElement>(null);
   const navRef = useRef<HTMLElement>(null);
   useEffect(() => { const media = matchMedia('(max-width: 760px)'); const update = () => setNarrow(media.matches); media.addEventListener('change', update); return () => media.removeEventListener('change', update); }, []);
-  useEffect(() => { if (narrow && directory) navRef.current?.querySelector<HTMLButtonElement>('button')?.focus(); }, [narrow, directory]);
+  useEffect(() => { if (cameraReady && narrow && directory) navRef.current?.querySelector<HTMLButtonElement>('button')?.focus(); }, [narrow, directory, cameraReady]);
   const closeDirectory = () => { setDirectory(false); requestAnimationFrame(() => directoryButton.current?.focus()); };
   const trap = (event: KeyboardEvent<HTMLElement>, close: () => void) => {
     if (!narrow) return;
@@ -157,6 +158,7 @@ function App() {
   const composing = useRef(false);
   const load = async () => {
     setLoadError(undefined);
+    setCameraReady(false);
     try {
       const opened = await window.yizhi.open();
       channel.current?.dispose();
@@ -211,7 +213,15 @@ function App() {
   useEffect(() => {
     if (!course || !graph || !nodesReady || restored.current) return;
     restored.current = true;
-    requestAnimationFrame(() => requestAnimationFrame(() => { if (reading) void go(reading.unitId, reading); else void flow.fitView({ duration: 0 }); }));
+    requestAnimationFrame(() => requestAnimationFrame(async () => {
+      try {
+        if (reading) await go(reading.unitId, reading);
+        else await flow.fitView({ duration: 0 });
+        // Expose navigation after the restored viewport reaches the DOM, so initial
+        // placement cannot overwrite an early student gesture or navigation.
+        requestAnimationFrame(() => setCameraReady(true));
+      } catch { setLoadError('画板定位未完成，请重新打开课程。'); }
+    }));
   }, [course, graph, reading, nodesReady]);
   useEffect(() => {
     if (selected && reading?.unitId === selected.id && articleRef.current) articleRef.current.scrollTop = reading.scrollTop;
@@ -265,6 +275,7 @@ function App() {
   const status = { draft: '草稿已保留', saved: '已保存', pending: '待保存', saving: '正在保存…', error: '未保存' }[state.status];
   return <>
     <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
+      {!cameraReady && !loadError && <span role="status" aria-label="画板定位">正在定位画板…</span>}
       {course && <ControlledProducer course={course} narrow={narrow} onOpenChange={setProducerOpen} prepare={async () => {
         if (composing.current) throw new Error('请先完成中文候选输入，再运行可控修改。');
         producerRunning.current = true; setProducerBusy(true);
@@ -284,7 +295,7 @@ function App() {
       </div>
     </header>
     {state.error && <div className="save-error" role="alert">{state.error} 输入仍保留，请重试保存。</div>}
-    <div className="workspace board-workspace">
+    <div className="workspace board-workspace" inert={!cameraReady && !loadError} aria-busy={!cameraReady && !loadError}>
       {directory && <nav ref={navRef} inert={sourceOpen || (narrow && (relationsOpen || producerOpen))} aria-label="课程目录" onKeyDown={event => trap(event, closeDirectory)}><h2>课程目录</h2>{narrow && <button onClick={closeDirectory}>关闭目录</button>}{graph?.groups.map(group => <div key={group.id}><button className="directory-theme" onClick={() => { const first = graph.nodes.find(node => node.themeId === group.id); if (first) { void go(first.id); if (narrow) closeDirectory(); } }}>{group.name}</button>{selected?.theme.id === group.id && graph.nodes.filter(node => node.themeId === group.id).map(node => <button className="directory-unit" key={node.id} onClick={() => { void go(node.id); if (narrow) closeDirectory(); }}>{node.name}</button>)}</div>)}</nav>}
       <main ref={boardRef} className="board" aria-label="知识画板" role="region" inert={narrow && (directory || producerOpen)}>
         <div className="board-background" inert={sourceOpen || (narrow && relationsOpen)}><ReactFlow nodes={nodes} edges={edges} onInit={() => setNodesReady(true)} minZoom={0.04} maxZoom={2} nodesDraggable={false} panOnScroll zoomOnScroll={false} zoomOnPinch panOnDrag={tool === "select" ? [1] : [0, 1]} selectionOnDrag={tool === "select"} panActivationKeyCode="Space" onMove={(_event, next) => setViewport(next)} onMoveEnd={(_event, next) => { const current = readingRef.current; if (current) persist({ ...current, camera: next }); }} onNodeClick={(_event, node) => { const first = graph?.nodes.find(item => item.id === node.id || item.themeId === node.id); if (first) void go(first.id); }}>
