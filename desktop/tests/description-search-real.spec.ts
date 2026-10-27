@@ -22,9 +22,10 @@ test('actual installed CLI rewrites one memory description into existing hits, p
     await page.getByRole('textbox', { name: '学习对话草稿' }).fill('真实描述检索验收：这个未发问题必须原样保留。');
     await expect(page.getByRole('status', { name: '对话草稿保存' })).toHaveText('草稿已保存');
     await page.getByRole('button', { name: '收起对话', exact: true }).click();
+    await page.evaluate(async () => { const c = await window.yizhi.open(); await window.yizhi.drawings.apply({ sessionId: c.sessionId, operationId: 'description-drawing-seed', id: 'description-untouched-drawing', expectedVersion: 0, value: { kind: 'rectangle', anchor: { space: 'board' }, geometry: { x: 20, y: 30, width: 40, height: 30 } } }); });
     const snapshot = () => page.evaluate(async () => {
       const c = await window.yizhi.open(), list = await window.yizhi.agent.list({ sessionId: c.sessionId });
-      return { unit: c.unit, graph: await window.yizhi.graph(c.sessionId), review: await window.yizhi.reviewStates(c.sessionId), conversations: await Promise.all(list.conversations.map(v => window.yizhi.agent.get({ sessionId: c.sessionId, conversationId: v.id }))) };
+      return { drawings: await window.yizhi.drawings.list({ sessionId: c.sessionId }), drawingHistory: await window.yizhi.drawings.history({ sessionId: c.sessionId }), placements: await window.yizhi.drawings.placements({ sessionId: c.sessionId }), unit: c.unit, graph: await window.yizhi.graph(c.sessionId), review: await window.yizhi.reviewStates(c.sessionId), conversations: await Promise.all(list.conversations.map(v => window.yizhi.agent.get({ sessionId: c.sessionId, conversationId: v.id }))) };
     });
     const before = await snapshot();
     const opened = await page.evaluate(() => window.yizhi.open()); evidence.runtime = opened.runtime; evidence.contentScope = opened.contentScope; evidence.courseUnits = before.graph.nodes.length;

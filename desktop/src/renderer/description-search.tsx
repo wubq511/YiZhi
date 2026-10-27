@@ -47,10 +47,10 @@ export function DescriptionSearch({ state, scopes, locate }: { state: ReturnType
     <p className="description-help">让 Agent 改写关键词并重排已有命中。点击查找时，会将这段描述与命中摘录交给所选模型。</p>
     {!online && <p role="status">当前离线。上方关键词、别名和符号查找继续可用。</p>}
     {checking && <p role="status">正在检查本机 CLI 与模型目录…</p>}
-    {executor && <p className="description-executor" role="status" aria-label="描述检索可用性">{executor.available ? `${executor.version} · 模型目录可用，远程检索尚需实际请求。` : `描述增强暂不可用：${executor.error} 基础检索继续可用。`}</p>}
+    {executor && <p className="description-executor" role="status" aria-label="描述检索可用性">{executor.available ? `${executor.version} · 本机 CLI 与模型目录已检查。` : `描述增强暂不可用：${executor.error} 基础检索继续可用。`}</p>}
     <label className="description-input">记忆线索<textarea aria-label="记忆线索" value={description} maxLength={4000} placeholder="例如：把输入的编号变成只有一条输出为 1 的电路" onChange={e => setDescription(e.target.value)} /></label>
     {executor?.available && <label className="description-model">检索模型<select aria-label="描述检索模型" value={model} disabled={pending} onChange={e => setModel(e.target.value)}>{executor.models.map(m => <option key={m.id} value={m.model}>{m.displayName}</option>)}</select></label>}
-    <div className="description-actions"><button disabled={!online || checking || pending || !description.trim() || !scopes.length || executor?.available === false} onClick={() => void state.start(scopes)}>用描述查找已有内容</button>{pending && <button onClick={() => void state.cancel()}>停止描述检索</button>}{!pending && <button disabled={!online || checking} onClick={() => void state.check()}>检查执行器</button>}</div>
+    <div className="description-actions"><button disabled={!online || checking || pending || !description.trim() || !scopes.length || executor?.available === false} onClick={() => void state.start(scopes)}>用描述查找已有内容</button>{run?.state === 'running' && <button onClick={() => void state.cancel()}>停止描述检索</button>}{!pending && <button disabled={!online || checking} onClick={() => void state.check()}>检查执行器</button>}</div>
     {error && <p role="alert" className="search-error">{error}</p>}
     {run && <section data-description-id={run.id} role="region" aria-label="描述检索结果" className="description-results" aria-busy={run.state === 'running'}>
       <p role="status" aria-label="描述检索状态">{completeLabel}</p>

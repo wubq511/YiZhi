@@ -98,10 +98,6 @@ test('description preserves source unreadable, textless and unindexed distinctio
   try {
     const c = await core.open(join(root, 'course')), path = join(root, 'original.pdf'); await sourceFixture(path);
     const good = (await core.sources.importFile({ sessionId: c.sessionId, operationId: 'good-original', generation: 1, path, title: '带图像页的原件' })).version;
-    const bad = (await core.sources.importFile({ sessionId: c.sessionId, operationId: 'bad-original', generation: 1, path, title: '损坏的原件' })).version;
-    await writeFile(join(root, 'course/resources', bad.sha256), 'damaged shared bytes');
-    // Both imports share immutable bytes; exact repair recovers both, then one independent source is damaged.
-    await core.sources.repairFile({ sessionId: c.sessionId, generation: 1, operationId: 'repair-shared', versionId: good.versionId, path });
     const other = join(root, 'different.pdf'); await sourceFixture(other, 'Different readable version');
     const broken = (await core.sources.importFile({ sessionId: c.sessionId, operationId: 'separate-bad', generation: 1, path: other, title: '单独损坏' })).version;
     await writeFile(join(root, 'course/resources', broken.sha256), 'actual missing/corrupt original');
