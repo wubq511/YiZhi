@@ -11,6 +11,8 @@ import type { CourseGraph, CourseUnit, DesktopBridge, OpenedCourse, ReadingBlock
 import { ParagraphSaveChannel, type SaveState } from './save-channel';
 import { RelationsPanel, useRelationEvents } from './relations-panel';
 import { ControlledProducer } from './controlled-producer';
+import { ContinuousUnitEditor } from './editor/continuous-editor';
+import type { ContinuousEditor } from './editor/controller';
 import { SourcePanel, SourceReferences, type SourcePanelHandle } from './source-panel';
 import type { SourceCitation } from '../sources-api';
 import { ReviewControls } from './review-controls';
@@ -137,9 +139,7 @@ function App() {
   const [producerOpen, setProducerOpen] = useState(false);
   const producerRunning = useRef(false);
   const channel = useRef<ParagraphSaveChannel | undefined>(undefined);
-  const editor = useRef<HTMLDivElement>(null);
-  const editedText = useRef<string | undefined>(undefined);
-  const appliedRevision = useRef(0);
+  const continuous = useRef<ContinuousEditor | null>(null);
   const [reading, setReading] = useState<ReadingState | null>(null);
   const [review, setReview] = useState<ReviewSnapshot>();
   const [reviewFilter, setReviewFilter] = useState<'all' | ReviewStatus>('all');
@@ -169,8 +169,6 @@ function App() {
     if (current && (current.expanded[key] ?? (key.endsWith(':hint') || key.endsWith(':answer') ? false : true)) !== value)
       persist({ ...current, expanded: { ...current.expanded, [key]: value } });
   };
-  const secondEditor = useRef<HTMLDivElement>(null);
-  const secondId = useRef<string | undefined>(undefined);
   const composing = useRef(false);
   const load = async () => {
     setLoadError(undefined);
@@ -178,7 +176,6 @@ function App() {
     try {
       const opened = await window.yizhi.open();
       channel.current?.dispose();
-      secondId.current = opened.unit.reading.blocks.filter(b => b.kind === 'paragraph')[1]?.id;
       channel.current = new ParagraphSaveChannel(window.yizhi, opened, setState, { onSnapshot: setCourse });
       setCourse(opened);
       const [loadedGraph, savedReading, reviewSnapshot] = await Promise.all([window.yizhi.graph(opened.sessionId), window.yizhi.readingState(opened.sessionId), window.yizhi.reviewStates(opened.sessionId)]);
@@ -204,17 +201,6 @@ function App() {
     return saved;
   }), []);
   useEffect(() => {
-    if (course && editor.current && document.activeElement !== editor.current) {
-      const pending = channel.current?.text(course.editableBlockId);
-      if (!editor.current.dataset.initialized || course.revision > appliedRevision.current) {
-        const text = pending ?? (course.revision > appliedRevision.current ? String(course.unit.reading.blocks.find(block => block.id === course.editableBlockId)?.payload.text ?? '') : editedText.current) ?? '';
-        editor.current.textContent = text; editedText.current = text; editor.current.dataset.initialized = 'yes'; appliedRevision.current = course.revision;
-      }
-    }
-    const second = course?.unit.reading.blocks.find(block => block.id === secondId.current);
-    if (second && secondEditor.current && document.activeElement !== secondEditor.current && !secondEditor.current.dataset.initialized) {
-      secondEditor.current.textContent = channel.current?.text(second.id) ?? String(second.payload.text); secondEditor.current.dataset.initialized = 'yes';
-    }
     if (course) setMounted(previous => previous.map(unit => unit.id === course.unit.id ? course.unit : unit));
   }, [course, selected]);
   const go = async (id: string, nextState?: ReadingState) => {
@@ -281,15 +267,6 @@ function App() {
     }
     return [...groups.entries()].map(([id, group]) => ({ id, source: group.source, target: group.target, label: `${group.type} · ${group.count} 条已有关系`, markerEnd: group.directed ? { type: MarkerType.ArrowClosed } : undefined, animated: false }));
   }, [graph, relationView, viewport.zoom]);
-  const splitFirst = async () => {
-    if (!channel.current || !course || composing.current) return;
-    if (!await channel.current.flush()) return;
-    const length = Array.from(editor.current?.innerText ?? '').length;
-    if (length < 2) return;
-    channel.current.edit({ changes: [], splits: [{ blockId: course.editableBlockId,
-      newBlockId: crypto.randomUUID(), offset: Math.floor(length / 2) }] });
-    if (await channel.current.flush()) setCourse(await window.yizhi.read(course.sessionId));
-  };
   const changeReview = async (unitId: string, status: ReviewStatus) => {
     if (!course) return;
     try { setReview(await window.yizhi.setReviewStatus(course.sessionId, unitId, status)); }
@@ -317,11 +294,8 @@ function App() {
       }} committed={async () => {
         const current = await window.yizhi.open();
         setReview(await window.yizhi.reviewStates(current.sessionId));
-        channel.current?.dispose();
-        channel.current = new ParagraphSaveChannel(window.yizhi, current, setState, { onSnapshot: setCourse });
+        await channel.current?.synchronize();
         setCourse(current);
-        editedText.current = String(current.unit.reading.blocks[0].payload.text);
-        if (editor.current) editor.current.textContent = editedText.current;
         setMounted(previous => previous.map(item => item.id === current.unit.id ? current.unit : item));
       }} settled={() => { producerRunning.current = false; setProducerBusy(false); }} />}
       <div className="save-area" inert={narrow && producerOpen}><span role="status" aria-label="阅读状态">{readingSave === "error" ? "阅读位置未保存" : readingSave === "pending" ? "正在保存阅读位置" : "阅读位置已保存"}</span>{readingSave === "error" && <button onClick={() => { if (readingRef.current) { readingFailed.current = false; persist(readingRef.current); } }}>重试保存阅读位置</button>}<span role="status" aria-label="保存状态" aria-live="polite" className={state.status}>{course ? status : '正在打开课程…'}</span>
@@ -346,9 +320,15 @@ function App() {
           <article id="unit" data-agent-unit={unit.id} ref={element => { if (selected?.id === unit.id) articleRef.current = element; }} onScroll={event => { const current = readingRef.current; if (current && current.unitId === unit.id && Math.abs(current.scrollTop - event.currentTarget.scrollTop) > 2) persist({ ...current, scrollTop: event.currentTarget.scrollTop }); }} className="nodrag nopan nowheel"><RoughFrame id={unit.id} />
             <h1>{unit.name}</h1><p className="unit-meta">课程重要性 {unit.rating.stars} / 5 · {unit.id}</p>{review && <ReviewControls unitId={unit.id} snapshot={review} change={status => void changeReview(unit.id, status)} confirm={(id, adjust) => void confirmReview(id, adjust)} />}<p className="outcome">{unit.outcome}</p>
             <SourceReferences citations={sourceCitations.filter(citation => citation.target?.unitId === unit.id)} onOpen={citation => sourcesPanel.current?.openCitation(citation)} />
+            {unit.id === 'KU-001' && channel.current ? <ContinuousUnitEditor course={course} channel={channel.current} disabled={closing || producerBusy}
+              composition={active => { composing.current = active; }} controller={instance => { continuous.current = instance; }}
+              renderBlock={block => <ReadingBoundary><Block block={block} reading={reading} updateReading={updateReading}
+                onSource={button => { sourceTrigger.current = button; setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;
+                  void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} /></ReadingBoundary>} />
+              : unit.reading.blocks.map(block => <ReadingBoundary key={block.id}><Block block={block} reading={reading} updateReading={updateReading}
+                onSource={button => { sourceTrigger.current = button; setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;
+                  void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} /></ReadingBoundary>)}
 
-            {unit.id === 'KU-001' && <ReadingBoundary><div className="editable-section"><label id="editor-label">首段正文 <span>可直接编辑，自动保存</span></label><div ref={editor} role="textbox" data-agent-block={course?.editableBlockId} aria-label="编辑首段正文" aria-multiline="true" contentEditable={!closing && !producerBusy} suppressContentEditableWarning className="paragraph-editor" onInput={event => { editedText.current = event.currentTarget.innerText; if (!composing.current) channel.current?.input(event.currentTarget.innerText); }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => { composing.current = false; editedText.current = event.currentTarget.innerText; channel.current?.input(event.currentTarget.innerText); }} /></div><button disabled={closing || producerBusy} onClick={() => void splitFirst()}>拆分首段为两段</button></ReadingBoundary>}
-            {unit.reading.blocks.slice(unit.id === 'KU-001' ? 1 : 0).map(block => <ReadingBoundary key={block.id}><div data-agent-block={block.id}>{unit.id === 'KU-001' && block.id === secondId.current ? <div className="editable-section"><label>第二段正文 <span>可直接编辑，自动保存</span></label><div ref={secondEditor} role="textbox" data-agent-block={block.id} aria-label="编辑第二段正文" aria-multiline="true" contentEditable={!closing && !producerBusy} suppressContentEditableWarning className="paragraph-editor" onInput={event => { if (!composing.current) channel.current?.edit({ changes: [{ blockId: block.id, text: event.currentTarget.innerText }] }); }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => { composing.current = false; channel.current?.edit({ changes: [{ blockId: block.id, text: event.currentTarget.innerText }] }); }} /></div> : <Block block={block} reading={reading} updateReading={updateReading} onSource={button => { sourceTrigger.current = button; setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!; void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} />}</div></ReadingBoundary>)}
 
             <footer>来源：既有数字逻辑课程单元的独立副本。编辑保留原有知识身份。</footer>
           </article>

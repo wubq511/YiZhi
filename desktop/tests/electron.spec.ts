@@ -461,6 +461,8 @@ test('two actual IPC editors save both paragraphs, split once and recover an unf
     await reveal(window, window.getByRole('button', { name: '拆分首段为两段', includeHidden: true }));
     await window.getByRole('button', { name: '拆分首段为两段' }).click();
     await expect(first).toHaveText('甲乙');
+    // The continuous editor responds immediately; formal structure is checked after its actual autosave receipt.
+    await expect(window.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     const committed = await window.evaluate(() => (window as any).yizhi.open());
     expect(committed.unit.reading.blocks.filter((b: any) => b.kind === 'paragraph').map((b: any) => b.payload.text))
       .toEqual(['甲乙', '丙丁', '多段输入不能只保存最后一段 📝']);

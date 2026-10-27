@@ -66,8 +66,8 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
       const range = window.getSelection(); if (!range?.rangeCount || range.isCollapsed || !range.toString().trim()) return;
       const node = range.anchorNode?.parentElement, article = node?.closest<HTMLElement>('article[data-agent-unit]');
       if (!article) return;
-      const block = node?.closest<HTMLElement>('[data-agent-block]');
-      setSelection({ unitId: article.dataset.agentUnit!, ...(block?.dataset.agentBlock ? { blockId: block.dataset.agentBlock } : {}), selectedText: range.toString() });
+      const block = node?.closest<HTMLElement>('[data-agent-block], [data-block-id]');
+      setSelection({ unitId: article.dataset.agentUnit!, ...((block?.dataset.agentBlock ?? block?.dataset.blockId) ? { blockId: block!.dataset.agentBlock ?? block!.dataset.blockId } : {}), selectedText: range.toString() });
     };
     document.addEventListener('mouseup', capture); document.addEventListener('keyup', capture);
     return () => { document.removeEventListener('mouseup', capture); document.removeEventListener('keyup', capture); };
