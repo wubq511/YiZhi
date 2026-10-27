@@ -9,6 +9,8 @@ import './style.css';
 import type { CourseGraph, CourseUnit, DesktopBridge, OpenedCourse, ReadingBlock, ReadingState } from '../shared';
 import { ParagraphSaveChannel, type SaveState } from './save-channel';
 import { ControlledProducer } from './controlled-producer';
+import { SourcePanel, SourceReferences, type SourcePanelHandle } from './source-panel';
+import type { SourceCitation } from '../sources-api';
 declare global { interface Window { yizhi: DesktopBridge } }
 
 function RoughFrame({ id }: { id: string }) {
@@ -104,6 +106,9 @@ function App() {
   const [minimap, setMinimap] = useState(true);
   const [tool, setTool] = useState<"read" | "select" | "hand">("read");
   const [sourceOpen, setSourceOpen] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const sourcesPanel = useRef<SourcePanelHandle>(null);
+  const [sourceCitations, setSourceCitations] = useState<SourceCitation[]>([]);
   const sourceTrigger = useRef<HTMLButtonElement | null>(null);
   const sourceDialog = useRef<HTMLElement | null>(null);
   const closeSource = () => { setSourceOpen(false); requestAnimationFrame(() => sourceTrigger.current?.focus()); };
@@ -179,6 +184,7 @@ function App() {
     setClosing(true);
     await writes.current;
     if (readingFailed.current) { setClosing(false); return false; }
+    if (sourcesPanel.current && !await sourcesPanel.current.flush()) { setClosing(false); return false; }
     const saved = await channel.current.flush();
     if (!saved) setClosing(false);
     return saved;
@@ -264,7 +270,8 @@ function App() {
   };
   const status = { draft: '草稿已保留', saved: '已保存', pending: '待保存', saving: '正在保存…', error: '未保存' }[state.status];
   return <>
-    <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
+    <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen || sourcesOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
+      {course && <SourcePanel ref={sourcesPanel} sessionId={course.sessionId} narrow={narrow} target={selected ? { unitId: selected.id } : undefined} onOpenChange={setSourcesOpen} onCitationsChange={setSourceCitations} />}
       {course && <ControlledProducer course={course} narrow={narrow} onOpenChange={setProducerOpen} prepare={async () => {
         if (composing.current) throw new Error('请先完成中文候选输入，再运行可控修改。');
         producerRunning.current = true; setProducerBusy(true);
@@ -284,7 +291,7 @@ function App() {
       </div>
     </header>
     {state.error && <div className="save-error" role="alert">{state.error} 输入仍保留，请重试保存。</div>}
-    <div className="workspace board-workspace">
+    <div className="workspace board-workspace" inert={narrow && sourcesOpen}>
       {directory && <nav ref={navRef} inert={sourceOpen || (narrow && (relationsOpen || producerOpen))} aria-label="课程目录" onKeyDown={event => trap(event, closeDirectory)}><h2>课程目录</h2>{narrow && <button onClick={closeDirectory}>关闭目录</button>}{graph?.groups.map(group => <div key={group.id}><button className="directory-theme" onClick={() => { const first = graph.nodes.find(node => node.themeId === group.id); if (first) { void go(first.id); if (narrow) closeDirectory(); } }}>{group.name}</button>{selected?.theme.id === group.id && graph.nodes.filter(node => node.themeId === group.id).map(node => <button className="directory-unit" key={node.id} onClick={() => { void go(node.id); if (narrow) closeDirectory(); }}>{node.name}</button>)}</div>)}</nav>}
       <main ref={boardRef} className="board" aria-label="知识画板" role="region" inert={narrow && (directory || producerOpen)}>
         <div className="board-background" inert={sourceOpen || (narrow && relationsOpen)}><ReactFlow nodes={nodes} edges={edges} onInit={() => setNodesReady(true)} minZoom={0.04} maxZoom={2} nodesDraggable={false} panOnScroll zoomOnScroll={false} zoomOnPinch panOnDrag={tool === "select" ? [1] : [0, 1]} selectionOnDrag={tool === "select"} panActivationKeyCode="Space" onMove={(_event, next) => setViewport(next)} onMoveEnd={(_event, next) => { const current = readingRef.current; if (current) persist({ ...current, camera: next }); }} onNodeClick={(_event, node) => { const first = graph?.nodes.find(item => item.id === node.id || item.themeId === node.id); if (first) void go(first.id); }}>
@@ -296,6 +303,7 @@ function App() {
         {course && mounted.map(unit => { const position = graph?.layout.nodes.find(node => node.unitId === unit.id); if (!position) return null; return <div key={unit.id} className="reading-layer" style={{ transform: `translate(${viewport.x + position.x * viewport.zoom}px, ${viewport.y + position.y * viewport.zoom}px) scale(${viewport.zoom})`, visibility: viewport.zoom >= 0.55 && selected?.id === unit.id ? 'visible' : 'hidden' }}>
           <article id="unit" ref={element => { if (selected?.id === unit.id) articleRef.current = element; }} onScroll={event => { const current = readingRef.current; if (current && current.unitId === unit.id && Math.abs(current.scrollTop - event.currentTarget.scrollTop) > 2) persist({ ...current, scrollTop: event.currentTarget.scrollTop }); }} className="nodrag nopan nowheel"><RoughFrame id={unit.id} />
             <h1>{unit.name}</h1><p className="unit-meta">课程重要性 {unit.rating.stars} / 5 · {unit.id}</p><p className="outcome">{unit.outcome}</p>
+            <SourceReferences citations={sourceCitations.filter(citation => citation.target?.unitId === unit.id)} onOpen={citation => sourcesPanel.current?.openCitation(citation)} />
             {unit.id === 'KU-001' && <ReadingBoundary><div className="editable-section"><label id="editor-label">首段正文 <span>可直接编辑，自动保存</span></label><div ref={editor} role="textbox" aria-label="编辑首段正文" aria-multiline="true" contentEditable={!closing && !producerBusy} suppressContentEditableWarning className="paragraph-editor" onInput={event => { editedText.current = event.currentTarget.innerText; if (!composing.current) channel.current?.input(event.currentTarget.innerText); }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => { composing.current = false; editedText.current = event.currentTarget.innerText; channel.current?.input(event.currentTarget.innerText); }} /></div><button disabled={closing || producerBusy} onClick={() => void splitFirst()}>拆分首段为两段</button></ReadingBoundary>}
             {unit.reading.blocks.slice(unit.id === 'KU-001' ? 1 : 0).map(block => <ReadingBoundary key={block.id}>{unit.id === 'KU-001' && block.id === secondId.current ? <div className="editable-section"><label>第二段正文 <span>可直接编辑，自动保存</span></label><div ref={secondEditor} role="textbox" aria-label="编辑第二段正文" aria-multiline="true" contentEditable={!closing && !producerBusy} suppressContentEditableWarning className="paragraph-editor" onInput={event => { if (!composing.current) channel.current?.edit({ changes: [{ blockId: block.id, text: event.currentTarget.innerText }] }); }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={event => { composing.current = false; channel.current?.edit({ changes: [{ blockId: block.id, text: event.currentTarget.innerText }] }); }} /></div> : <Block block={block} reading={reading} updateReading={updateReading} onSource={button => { sourceTrigger.current = button; setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!; void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} />}</ReadingBoundary>)}
 

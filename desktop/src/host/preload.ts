@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { DesktopBridge } from '../shared';
 import { commandClient } from '../command-api';
+import { sourceBridge } from '../sources-api';
 async function invoke(channel: string, argument?: unknown) {
   try { return await ipcRenderer.invoke(channel, argument); }
   catch (error) {
@@ -9,6 +10,7 @@ async function invoke(channel: string, argument?: unknown) {
   }
 }
 const bridge: DesktopBridge = {
+  sources: sourceBridge(invoke),
   commands: commandClient(invoke),
   open: () => invoke('course:open'),
   graph: sessionId => invoke('course:graph', sessionId),
