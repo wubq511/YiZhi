@@ -2,6 +2,7 @@ import { parentPort } from 'node:worker_threads';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, realpathSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { FormalRelations } from './formal-relations';
 import { CommandGroups } from './command-groups';
 import { randomUUID } from 'node:crypto';
 import type { CourseGraph, OpenedCourse, SaveParagraph, SaveReceipt, EditCommand } from '../shared';
@@ -14,6 +15,7 @@ const EDITABLE = 'RB-TH-01-01-what-is-positional-notation';
 interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; courseId: string; graph: CourseGraph;
   // T03 constructs its observer on this same connection; both student save entry points call it in-transaction.
   groups: CommandGroups;
+  relations: FormalRelations;
 }
 const courses = new Map<string, Course>();
 function session(id: string): Course {
@@ -73,7 +75,10 @@ function open(directory: string): OpenedCourse {
     initializeSaveStore(db);
     const graph = JSON.parse(readFileSync(join(__dirname, 'fixtures/graph.json'), 'utf8')) as CourseGraph;
     initializeReviewState(db);
-    const course: Course = { db, owner, sessionId: randomUUID(), graph, groups: new CommandGroups(db, graph),
+    const groups = new CommandGroups(db, graph);
+    const relations = new FormalRelations(db, graph,
+      JSON.parse(readFileSync(join(__dirname, 'fixtures/relation-catalog.json'), 'utf8')));
+    const course: Course = { db, owner, sessionId: randomUUID(), graph, groups, relations,
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     const result = snapshot(course);
     courses.set(canonical, course);
@@ -106,7 +111,7 @@ parentPort!.on('message', ({ id, action, payload }) => {
     else if (action === 'setReviewStatus') { const course = session(payload.sessionId); value = transaction(course.db, () => setReviewStatus(course.db, course.graph, payload.unitId, payload.status)); }
     else if (action === 'confirmReviewPrompt') { const course = session(payload.sessionId); value = transaction(course.db, () => confirmReviewPrompt(course.db, course.graph, payload.promptId, payload.adjust)); }
     else if (action === 'graph') {
-      value = session(payload.sessionId).graph;
+      value = session(payload.sessionId).relations.graph();
     } else if (action === 'readUnit') {
       const course = session(payload.sessionId);
       if (payload.unitId === 'KU-001') value = snapshot(course).unit;
@@ -124,6 +129,10 @@ parentPort!.on('message', ({ id, action, payload }) => {
     }
     else if (action === 'history') value = history(session(payload.sessionId).db);
     else if (action === 'save') value = save(payload);
+    else if (action === 'relations:prerequisites') value = session(payload.sessionId).relations.prerequisites(payload.unitId);
+    else if (action === 'relations:read') value = session(payload.sessionId).relations.read(payload);
+    else if (action === 'relations:commit') value = session(payload.sessionId).relations.commit(payload);
+    else if (action === 'relations:query') value = session(payload.sessionId).relations.query(payload.operationId);
     else if (action.startsWith('commands:')) value = session(payload.sessionId).groups.dispatch(action, payload);
     else if (action === 'close') {
       for (const course of courses.values()) { course.db.close(); course.owner.close(); }

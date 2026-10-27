@@ -59,6 +59,9 @@ else {
     for (const method of ['startAttempt', 'read', 'commit', 'stop', 'query', 'candidates', 'history'] as const) {
       ipcMain.handle(`commands:${method}`, (event, payload) => { checkSender(event); return core.commands[method](payload); });
     }
+    for (const method of ['read', 'commit', 'query', 'prerequisites'] as const) {
+      ipcMain.handle(`relations:${method}`, (event, payload) => { checkSender(event); return core.relations[method](payload); });
+    }
     ipcMain.on('window:close-result', async (event, result) => {
       checkSender(event);
       if (!result || result.requestId !== pendingClose || typeof result.saved !== 'boolean') return;

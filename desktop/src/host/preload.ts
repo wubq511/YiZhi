@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { DesktopBridge } from '../shared';
+import { relationClient } from '../relation-api';
 import { commandClient } from '../command-api';
 async function invoke(channel: string, argument?: unknown) {
   try { return await ipcRenderer.invoke(channel, argument); }
@@ -10,6 +11,7 @@ async function invoke(channel: string, argument?: unknown) {
 }
 const bridge: DesktopBridge = {
   commands: commandClient(invoke),
+  relations: relationClient(invoke),
   open: () => invoke('course:open'),
   graph: sessionId => invoke('course:graph', sessionId),
   readUnit: (sessionId, unitId) => ipcRenderer.invoke('course:read-unit', sessionId, unitId),
