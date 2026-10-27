@@ -1,0 +1,102 @@
+.exchange-panel {
+  position: fixed;
+  z-index: 80;
+  inset: 0 0 0 auto;
+  width: min(520px, 100vw);
+  box-sizing: border-box;
+  padding: 22px;
+  overflow-y: auto;
+  background: var(--paper, #fff);
+  color: var(--ink, #27343e);
+  box-shadow: -8px 0 30px #27343e1a;
+  font:
+    14px/1.6 -apple-system,
+    BlinkMacSystemFont,
+    'PingFang SC',
+    sans-serif;
+}
+.exchange-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.exchange-panel h2 {
+  margin: 0;
+  font-size: 22px;
+}
+.exchange-panel h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+.exchange-panel p {
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.exchange-secondary {
+  color: var(--muted);
+}
+.exchange-panel fieldset {
+  margin: 22px 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  min-width: 0;
+}
+.exchange-panel legend {
+  padding-inline: 6px;
+  font-weight: 600;
+}
+.exchange-unit-list {
+  max-height: 180px;
+  overflow-y: auto;
+}
+.exchange-panel label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 0;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.exchange-panel input {
+  accent-color: var(--purple);
+  flex: none;
+}
+.exchange-note-choice {
+  margin-block: 12px;
+}
+.exchange-import {
+  padding-top: 8px;
+}
+.exchange-preview {
+  margin-block: 16px;
+  padding-block: 8px;
+  border-block: 1px solid var(--border);
+}
+.exchange-panel button {
+  font: inherit;
+  font-size: 13px;
+  max-width: 100%;
+  white-space: normal;
+}
+.exchange-panel button:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+.exchange-error {
+  color: #a02b39;
+}
+.exchange-panel ::selection {
+  color: var(--ink);
+  background: var(--focus);
+}
+@media (max-width: 760px) {
+  .exchange-panel {
+    width: 100vw;
+    padding: 16px;
+  }
+  .exchange-unit-list {
+    max-height: 140px;
+  }
+}

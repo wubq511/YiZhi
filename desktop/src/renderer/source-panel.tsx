@@ -57,7 +57,7 @@ export const SourcePanel = forwardRef<SourcePanelHandle, { sessionId: string; na
     setContextStatus('pending'); clearTimeout(timer.current); timer.current = setTimeout(() => void saveLatest(), 200);
   };
   const flush = async () => { await saveLatest(); await writes.current; return !failed.current && !actionInFlight.current; };
-  useImperativeHandle(ref, () => ({ flush, openCitation, openVersion: (id: string, index: number) => { choose(id,index); setOpen(true); },
+  useImperativeHandle(ref, () => ({ flush, openCitation, openVersion: (id: string, index: number) => { setOpen(true); void run(async () => { await refresh(); choose(id,index); }); },
     capture: () => ({ open, context: context.current ? { ...context.current, scrollTop: scroller.current?.scrollTop ?? context.current.scrollTop, scrollLeft: scroller.current?.scrollLeft ?? context.current.scrollLeft } : null }),
     async restore(scene) {
       if (!await flush()) throw new Error('原文位置尚未保存');
@@ -118,7 +118,11 @@ export const SourcePanel = forwardRef<SourcePanelHandle, { sessionId: string; na
   const intent = [...list.intents].reverse().find(item => item.versionId === versionId);
   return <><button ref={trigger} disabled={!initialized} className="source-launcher" aria-expanded={open} onClick={() => {
     setReady(false); setOpen(true);
-    if (versionId) persist({ ...(context.current ?? { scrollTop: 0, scrollLeft: 0 }), open: true, versionId, pdfPageIndex: pageIndex, scale, target });
+    void run(async () => {
+      const next = await refresh();
+      if (versionId) persist({ ...(context.current ?? { scrollTop: 0, scrollLeft: 0 }), open: true, versionId, pdfPageIndex: pageIndex, scale, target });
+      else if (next.versions.length) choose(next.versions.at(-1)!.versionId);
+    });
   }}>原文资料</button>{open && createPortal(<aside ref={panel} className="source-panel" role={narrow ? 'dialog' : 'complementary'} aria-modal={narrow || undefined} aria-label="原文资料" onKeyDown={event => {
     if (event.key === 'Escape') { event.preventDefault(); void close(); }
     if (event.key === 'Tab' && narrow) {

@@ -48,7 +48,9 @@ export function legacyContent(db: DatabaseSync): LegacyContent {
   return JSON.parse(String(row.value));
 }
 export function candidateResource(db: DatabaseSync, directory: string, asset: string) {
-  const item = legacyContent(db).report.resources.find(item => item.asset === asset);
+  const exchanged = db.prepare("SELECT 1 FROM sqlite_master WHERE name='exchange_resources'").get() ? db.prepare('SELECT payload FROM exchange_resources WHERE asset=?').get(asset) : undefined;
+  const legacy = db.prepare("SELECT value FROM metadata WHERE key='legacy-content'").get();
+  const item = exchanged ? JSON.parse(String(exchanged.payload)) : legacy ? JSON.parse(String(legacy.value)).report.resources.find((item: any) => item.asset === asset) : undefined;
   if (!item || !item.mediaType.startsWith('image/')) throw new Error('未登记的课程图片');
   const path = coursePath(directory, item.path), actual = hashFile(path);
   if (actual.sha256 !== item.sha256 || actual.byteLength !== item.byteLength) throw new Error('课程图片损坏或缺失');

@@ -1,4 +1,5 @@
 import { drawingMethods } from '../drawing-api';
+import { registerExchangeIPC } from './exchange-ipc';
 import { searchMethods } from '../search-api';
 import { annotationMethods } from '../annotation-api';
 import {registerExtensionProtocol,extensionNavigation} from './extension-protocol';
@@ -65,6 +66,7 @@ else {
     registerExtensionProtocol(core);
     registerSourceProtocols(core, join(__dirname, 'renderer'));
     registerSourceIPC(core, checkSender);
+    registerExchangeIPC(core, checkSender);
     registerAgentIPC(core, agent, checkSender);
     for (const method of ['start','continue','stop','get','list','artifact','artifacts','correct','query'] as const) {
       ipcMain.handle(`parsing:${method}`, (event, request) => { checkSender(event); return core.parsing[method](request); });

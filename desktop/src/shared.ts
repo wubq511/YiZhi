@@ -17,6 +17,7 @@ export interface CourseUnit {
 }
 export interface OpenedCourse {
   contentScope?: 'content-candidate';
+  resourceAssets?: string[];
   courseId: string;
   sessionId: string;
   revision: number;
@@ -48,6 +49,7 @@ export interface SaveReceipt {
 }
 export interface DesktopBridge extends SaveBridge {
   drawings: import('./drawing-api').DrawingAPI;
+  exchange: import('./exchange-api').ExchangeBridge;
   search: import('./search-api').SearchAPI;
   annotations: import('./annotation-api').AnnotationAPI;
   extensions: Omit<import('./extensions-api').ExtensionsAPI, 'resource'>;
@@ -125,6 +127,7 @@ export interface EditHistory {
 }
 export type SaveEventData =
   { type: 'drawing.changed'; drawingId: string } |
+  { type: 'exchange.imported'; operationId: string; unitIds: string[] } |
   { type: 'annotation.changed'; noteId: string } |
   { type: 'agent.changed'; conversationId: string; taskId?: string } |
   { type: 'parse.changed'; taskId: string; attemptId: string; kind: string; artifactId?: string } |
