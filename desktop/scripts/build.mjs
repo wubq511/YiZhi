@@ -3,6 +3,7 @@ import { mkdir, copyFile, readdir, cp } from 'node:fs/promises';
 await mkdir('dist/tests', { recursive: true });
 const entries = [
   ['src/core/course-service.ts', 'dist/course-service.cjs'],
+  ['src/core/parsing-tool.ts', 'dist/parsing-tool.cjs'],
   ['src/core/worker.ts', 'dist/worker.cjs'],
   ['src/host/main.ts', 'dist/main.cjs'],
   ['src/host/preload.ts', 'dist/preload.cjs'],
