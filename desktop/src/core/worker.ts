@@ -106,6 +106,16 @@ parentPort!.on('message', ({ id, action, payload }) => {
     let value: unknown;
     if (action === 'open') value = open(payload.directory);
     else if (action === 'read') value = snapshot(session(payload.sessionId));
+    else if (action === 'graph') {
+      session(payload.sessionId);
+      value = JSON.parse(readFileSync(join(__dirname, 'fixtures/graph.json'), 'utf8'));
+    } else if (action === 'readUnit') {
+      const course = session(payload.sessionId);
+      if (payload.unitId === 'KU-001') value = snapshot(course).unit;
+      else if (payload.unitId === 'KU-002' || payload.unitId === 'KU-057')
+        value = JSON.parse(readFileSync(join(__dirname, `fixtures/unit-${payload.unitId.slice(3)}.json`), 'utf8'));
+      else throw new Error('该单元正文尚未加入课程副本');
+    }
     else if (action === 'save') value = save(payload);
     else if (action === 'close') {
       for (const course of courses.values()) { course.db.close(); course.owner.close(); }

@@ -101,3 +101,20 @@ test('reopening a canonical course resumes the confirmed input progress in the s
       blockId: resumed.editableBlockId, text: '继续编辑成功' });
   } finally { await service.close(); await rm(root, { recursive: true, force: true }); }
 });
+
+test('course navigation exposes the real lightweight graph and reads a selected unit on demand', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-t04-navigation-'));
+  const service = new CourseService(resolve('dist/worker.cjs'));
+  try {
+    const course = await service.open(root);
+    const graph = await service.graph(course.sessionId);
+    assert.equal(graph.nodes.length, 84);
+    assert.equal(graph.groups.length, 20);
+    assert.equal(graph.nodes.find(node => node.id === 'KU-002')?.name, '非十进制与十进制互转');
+    assert.equal('reading' in graph.nodes[0], false);
+    const unit = await service.readUnit(course.sessionId, 'KU-002');
+    assert.equal(unit.id, 'KU-002');
+    assert.ok(unit.reading.blocks.length > 3);
+    await assert.rejects(service.readUnit(course.sessionId, 'KU-999'));
+  } finally { await service.close(); await rm(root, { recursive: true, force: true }); }
+});

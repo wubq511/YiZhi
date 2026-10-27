@@ -9,6 +9,8 @@ async function invoke(channel: string, argument?: unknown) {
 }
 const bridge: DesktopBridge = {
   open: () => invoke('course:open'),
+  graph: sessionId => invoke('course:graph', sessionId),
+  readUnit: (sessionId, unitId) => ipcRenderer.invoke('course:read-unit', sessionId, unitId),
   save: command => invoke('course:save', command),
   onCloseRequested(listener) {
     const handler = async (_event: Electron.IpcRendererEvent, requestId: number) => {

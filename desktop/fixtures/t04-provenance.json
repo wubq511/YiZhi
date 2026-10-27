@@ -1,0 +1,15 @@
+{
+  "source": "courses/digital-logic/期中/数据/知识地图.json",
+  "queries": [
+    "python3 tools/digital-logic/知识地图.py graph --view all",
+    "python3 tools/digital-logic/知识地图.py get KU-002",
+    "python3 tools/digital-logic/知识地图.py get KU-057"
+  ],
+  "figureSource": "experiments/architecture-spike/source-pages/SRC-TI74153/VER-SRC-TI74153-72557fe3909b/1.png",
+  "sha256": {
+    "fixtures/graph.json": "d03c739dc88bdc0970cf03027b1f1311129ac5baad032a8d4cf7489168dfebff",
+    "fixtures/unit-002.json": "0c610280897127ae0d692e2f3e74072510b2148af2e1d41684f5fdb811fa337a",
+    "fixtures/unit-057.json": "3cfd110a45d93a94fda85dc5ddb038c11ee5bfc17ce925253924ad3ed497005b",
+    "src/renderer/assets/ti74153-1.png": "c53b1b6173fe1e938c08d6ff40f543a3e64d6e8a1855d011216188db3ff1b601"
+  }
+}

@@ -42,6 +42,14 @@ export interface SaveReceipt {
 }
 export interface DesktopBridge {
   open(): Promise<OpenedCourse>;
+  graph(sessionId: string): Promise<CourseGraph>;
+  readUnit(sessionId: string, unitId: string): Promise<CourseUnit>;
   save(command: SaveParagraph): Promise<SaveReceipt>;
   onCloseRequested(listener: () => Promise<boolean>): () => void;
+}
+export interface CourseGraph {
+  nodes: Array<{ id: string; name: string; kind: string; themeId: string; themeName: string; stars: number }>;
+  groups: Array<{ id: string; name: string }>;
+  edges: Array<{ id: string; fromUnitId: string; toUnitId: string; type: string; view: string; value: string; sourceRefs: unknown[] }>;
+  layout: { nodes: Array<{ unitId: string; x: number; y: number; width: number; height: number }>; groups: Array<any> };
 }
