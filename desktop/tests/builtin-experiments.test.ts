@@ -154,9 +154,12 @@ test('supported 2:1 uses its ordered single selector for all eight inputs; fixed
   try {
     const c = await service.open(root), sessionId = c.sessionId;
     const block = { id: 'two-to-one-test', kind: 'interactive', payload: { component: 'mux', config: { selectBits: ['S'], dataSignals: ['D0', 'D1'] }, inputs: { S: 0, D0: 0, D1: 1 } } };
-    const ids = c.unit.reading.blocks.map(b => b.id);
-    await service.commitEdit({ sessionId, inputSeq: 1, baseRevision: c.revision, operationId: 'finite-fixture', complete: true, changes: [],
-      patch: { updates: [], structure: { parentId: c.unit.id, before: ids, after: [...ids, block.id], inserted: [block] }, correspondence: [] } });
+    // Seed a standalone evaluator fixture before any experiment observes it.
+    // Ordinary editor commits deliberately cannot publish unchecked experiment definitions.
+    const { DatabaseSync } = await import('node:sqlite');
+    const seed = new DatabaseSync(join(root, 'course.sqlite'));
+    try { seed.prepare('UPDATE units SET payload=? WHERE id=?').run(JSON.stringify({...c.unit,reading:{...c.unit.reading,blocks:[...c.unit.reading.blocks,block]}}),c.unit.id); }
+    finally { seed.close(); }
     let m = await service.experiments.open({ sessionId, unitId: c.unit.id, blockId: block.id });
     const truth = '01010011';
     for (let row = 0; row < 8; row++) {

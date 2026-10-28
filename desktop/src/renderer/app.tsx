@@ -26,6 +26,7 @@ import { ParagraphSaveChannel, type SaveState } from './save-channel';
 import { RelationsPanel, useRelationEvents } from './relations-panel';
 import { ControlledProducer } from './controlled-producer';
 import { ContinuousUnitEditor } from './editor/continuous-editor';
+import { ActiveUnitEditor, type UnitInputHandle } from './editor/active-unit-editor';
 import type { ContinuousEditor } from './editor/controller';
 import { SourcePanel, SourceReferences, type SourcePanelHandle } from './source-panel';
 import type { SourceCitation } from '../sources-api';
@@ -162,6 +163,11 @@ function App() {
   const producerRunning = useRef(false);
   const channel = useRef<ParagraphSaveChannel | undefined>(undefined);
   const continuous = useRef<ContinuousEditor | null>(null);
+  const unitInputs = useRef(new Map<string, UnitInputHandle>());
+  const flushUnitInputs = async (endEditing = false) => {
+    for (const input of unitInputs.current.values()) if (!await input.flush(endEditing)) return false;
+    return true;
+  };
   const [reading, setReading] = useState<ReadingState | null>(null);
   const [review, setReview] = useState<ReviewSnapshot>();
   const [reviewFilter, setReviewFilter] = useState<'all' | ReviewStatus>('all');
@@ -290,6 +296,7 @@ function App() {
     if (!await flushBuiltinExperiments(window.yizhi, current.sessionId)) { setReadError('实验现场尚未确认，请返回实验重试保存或恢复最近确认现场。'); setClosing(false); return false; }
     if (agentPanel.current && !await agentPanel.current.flush()) { setClosing(false); return false; }
     const saved = await channel.current.flush();
+    if (!await flushUnitInputs(true)) { setClosing(false); return false; }
     if (saved && continuous.current && !await continuous.current.finish()) { setClosing(false); return false; }
     if (!saved) setClosing(false);
     return saved;
@@ -307,6 +314,7 @@ function App() {
     const position = placementsRef.current.find(node => node.unitId === id);
     if (!position) return;
     setReadError(undefined);
+    if (!await flushUnitInputs(true)) { setReadError('当前单元输入尚未保存，请先处理后再切换。'); return; }
     try { const unit = await window.yizhi.readUnit(course.sessionId, id); persist(nextState ?? { ...(readingRef.current ?? { expanded: {}, returnStack: [], scrollTop: 0 }), unitId: id, scrollTop: 0, pinnedUnitId: mounted.some(item => item.id === 'KU-001') || id === 'KU-001' ? 'KU-001' : undefined }); setSelected(unit); setDirectoryTheme(unit.theme.id); setMounted(previous => previous.some(item => item.id === id) ? previous.map(item => item.id === id ? unit : item) : [...previous.filter(item => item.id === 'KU-001'), unit]); }
 
     catch (error) { setSelected(undefined); setReadError((error as Error).message); }
@@ -473,30 +481,33 @@ function App() {
       }}/>}
       {course && <SearchPanel sessionId={course.sessionId} narrow={narrow} beforeOpen={() => { searchOrigin.current = captureSearchScene(); }} onOpenChange={value => { setSearchOpen(value); if (value && narrow) setDirectory(false); }} locate={locateSearch} />}
       {searchReturn && <button onClick={() => void searchReturn().catch(e => setReadError(e.message))}>返回搜索前位置</button>}
-      {course && <AnnotationPanel ref={notesPanel} sessionId={course.sessionId} narrow={narrow} prepare={async () => !!await channel.current?.flush()} onOpenChange={value => { setNotesOpen(value); if (value && narrow) setDirectory(false); }} locate={async note => {
-        if (selected?.id !== 'KU-001') await go('KU-001');
-        const editor = continuous.current;
-        if (!editor) throw new Error('请先定位批注所属单元。');
-        if (!await channel.current?.flush() || !await editor.finish()) throw new Error('请先完成当前输入，再定位批注。');
-        editor.reconcile(await window.yizhi.open());
+      {course && <AnnotationPanel ref={notesPanel} sessionId={course.sessionId} narrow={narrow} prepare={async () => !!await channel.current?.flush() && await flushUnitInputs()} onOpenChange={value => { setNotesOpen(value); if (value && narrow) setDirectory(false); }} locate={async note => {
+        if (!await channel.current?.flush() || !await flushUnitInputs(true)) throw new Error('请先完成当前输入，再定位批注。');
+        const unitId = note.current.unitId ?? note.original.unitId;
+        if (selected?.id !== unitId) await go(unitId);
+        const currentEditor = () => unitId === 'KU-001' ? continuous.current : unitInputs.current.get(unitId)?.editor();
+        for (let frame = 0; frame < 60 && !currentEditor(); frame++) await paintFrame();
+        const editor = currentEditor();
+        if (!editor || !await editor.finish()) throw new Error('请先定位批注所属单元并完成当前输入。');
+        editor.reconcile(await window.yizhi.read(course.sessionId, unitId));
         const latest = (await window.yizhi.annotations.list({ sessionId: course.sessionId })).find(item => item.id === note.id);
         if (latest) await editor.revealAnnotation(latest);
       }} />}
       {course && <ExchangePanel sessionId={course.sessionId} narrow={narrow} onOpenChange={value => { setExchangeOpen(value); if (value && narrow) setDirectory(false); }} prepare={async () => !!await channel.current?.flush() && (await notesPanel.current?.flush() ?? true)} imported={async () => { const [current, nextGraph, nextReview] = await Promise.all([window.yizhi.read(course.sessionId), window.yizhi.graph(course.sessionId), window.yizhi.reviewStates(course.sessionId)]); setCourse(current); setReview(nextReview); setGraph(nextGraph); }} />}
       {course && <SourcePanel ref={sourcesPanel} sessionId={course.sessionId} narrow={narrow} target={selected ? { unitId: selected.id } : undefined} onOpenChange={setSourcesOpen} onCitationsChange={setSourceCitations} onQuestion={citation => agentPanel.current?.attachCitation(citation)} />}
-      {course && <AgentPanel ref={agentPanel} sessionId={course.sessionId} narrow={narrow} target={{ unitId: selected?.id ?? course.unit.id }} targetName={selected?.name ?? course.unit.name} sourceOpen={sourcesOpen} prepareMutation={async()=>{ if(composing.current)throw new Error('请先完成中文候选输入。');if(!await channel.current?.flush())throw new Error('请先重试保存当前输入。'); }} onMutation={async(task,phase)=>{
+      {course && <AgentPanel ref={agentPanel} sessionId={course.sessionId} narrow={narrow} target={{ unitId: selected?.id ?? course.unit.id }} targetName={selected?.name ?? course.unit.name} sourceOpen={sourcesOpen} prepareMutation={async()=>{ if(composing.current)throw new Error('请先完成中文候选输入。');if(!await channel.current?.flush() || !await flushUnitInputs())throw new Error('请先重试保存当前输入。'); }} onMutation={async(task,phase)=>{
         workTarget.current=task.progress?.targetId ?? task.snapshot.target.blockId ?? task.snapshot.target.unitId;
         if(phase==='start') {
           camera.start(); persist({...(readingRef.current ?? {unitId:task.snapshot.target.unitId,expanded:{},returnStack:[],scrollTop:0}),modification:{targetId:workTarget.current,ended:false}});
         }
         if(phase==='start' || phase==='view' || task.progress?.stage==='committed') {
           const unit=await window.yizhi.readUnit(course.sessionId,task.snapshot.target.unitId);
-          if(unit.id==='KU-001'){await channel.current?.synchronize();setCourse(await window.yizhi.open());}
+          if(unit.id==='KU-001'){await channel.current?.synchronize();setCourse(await window.yizhi.open());}else await unitInputs.current.get(unit.id)?.synchronize();
           setMounted(previous=>previous.some(u=>u.id===unit.id)?previous.map(u=>u.id===unit.id?unit:u):[...previous,unit]);
           setSelected(previous=>previous?.id===unit.id?unit:previous);
           setGraph(await window.yizhi.graph(course.sessionId));setReview(await window.yizhi.reviewStates(course.sessionId));
         }
-        if(phase==='view'){const unit=await window.yizhi.readUnit(course.sessionId,task.snapshot.target.unitId);setSelected(unit);setDirectoryTheme(unit.theme.id);if(readingRef.current)persist({...readingRef.current,unitId:unit.id});requestAnimationFrame(()=>camera.resume());}
+        if(phase==='view'){if(!await flushUnitInputs(true))throw new Error('请先保存当前单元输入。');const unit=await window.yizhi.readUnit(course.sessionId,task.snapshot.target.unitId);setSelected(unit);setDirectoryTheme(unit.theme.id);if(readingRef.current)persist({...readingRef.current,unitId:unit.id});requestAnimationFrame(()=>camera.resume());}
         else if(phase==='finish'){camera.finish();if(readingRef.current)persist({...readingRef.current,modification:{targetId:workTarget.current,ended:true}});}
         else requestAnimationFrame(()=>camera.updated());
       }} onOpenChange={value => { setAgentOpen(value); if (value && narrow) setDirectory(false); }} openCitation={citation => sourcesPanel.current?.openCitation(citation)} />}
@@ -554,6 +565,15 @@ function App() {
               renderBlock={block => <ReadingBoundary><Block block={block} experiment={{ contentScope: course.contentScope, resourceAssets: course.resourceAssets, unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing, composition: active => { composing.current = active; } }} reading={reading} updateReading={updateReading}
                 onSource={button => { sourceTrigger.current = button; if ((course.contentScope || button.dataset.sourceRegistered) && button.dataset.sourceVersion) sourcesPanel.current?.openVersion(button.dataset.sourceVersion, Number(button.dataset.sourcePage ?? 1) - 1); else setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;
                   void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} /></ReadingBoundary>} />
+              : selected?.id === unit.id ? <ActiveUnitEditor sessionId={course.sessionId} unitId={unit.id} disabled={closing || !cameraReady}
+                register={(id, handle) => { if (handle) unitInputs.current.set(id, handle); else unitInputs.current.delete(id); }}
+                updated={snapshot => setMounted(previous => previous.map(item => item.id === snapshot.unit.id ? snapshot.unit : item))}
+                composition={active => { composing.current = active; }}
+                highlight={selection => { void drawingPanel.current?.highlight(selection); }}
+                annotate={selection => { void notesPanel.current?.create(selection); }}
+              renderBlock={block => <ReadingBoundary><Block block={block} experiment={{ contentScope: course.contentScope, resourceAssets: course.resourceAssets, unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing, composition: active => { composing.current = active; } }} reading={reading} updateReading={updateReading}
+                onSource={button => { sourceTrigger.current = button; if ((course.contentScope || button.dataset.sourceRegistered) && button.dataset.sourceVersion) sourcesPanel.current?.openVersion(button.dataset.sourceVersion, Number(button.dataset.sourcePage ?? 1) - 1); else setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;
+                  void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} /></ReadingBoundary>} />
               : unit.reading.blocks.map(block => <ReadingBoundary key={block.id} blockId={block.id}><Block block={block} experiment={{ contentScope: course.contentScope, resourceAssets: course.resourceAssets, unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing, composition: active => { composing.current = active; } }} reading={reading} updateReading={updateReading}
                 onSource={button => { sourceTrigger.current = button; if ((course.contentScope || button.dataset.sourceRegistered) && button.dataset.sourceVersion) sourcesPanel.current?.openVersion(button.dataset.sourceVersion, Number(button.dataset.sourcePage ?? 1) - 1); else setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;
                   void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} /></ReadingBoundary>)}
@@ -562,7 +582,7 @@ function App() {
             <footer>来源：既有数字逻辑课程单元的独立副本。编辑保留原有知识身份。</footer>
           </ReadingSurface>
         </div>; })}</div>
-        {course && <div inert={sourceOpen||(narrow&&relationsOpen)}><Drawings ref={drawingPanel} sessionId={course.sessionId} viewport={viewport} takeover={()=>camera.takeover()} pan={(dx,dy)=>camera.pan(dx,dy)} prepare={async()=>!!await channel.current?.flush()} paint={notes=>{void continuous.current?.paintDrawings(notes);}} contentKey={`${course.revision}:${mounted.map(u=>u.id).join(',')}`} waitLayout={async()=>{await layoutWrites.current;return !layoutPending.current.length;}} restorePlacement={enqueuePlacement}  /></div>}
+        {course && <div inert={sourceOpen||(narrow&&relationsOpen)}><Drawings ref={drawingPanel} sessionId={course.sessionId} viewport={viewport} takeover={()=>camera.takeover()} pan={(dx,dy)=>camera.pan(dx,dy)} prepare={async()=>!!await channel.current?.flush() && await flushUnitInputs()} paint={notes=>{void continuous.current?.paintDrawings(notes);for(const input of unitInputs.current.values())void input.editor()?.paintDrawings(notes);}} contentKey={`${course.revision}:${mounted.map(u=>u.id).join(',')}`} waitLayout={async()=>{await layoutWrites.current;return !layoutPending.current.length;}} restorePlacement={enqueuePlacement}  /></div>}
         {followState !== 'idle' && <div className="follow-control"><span role="status" aria-label="修改跟随">{followState === 'following' ? '正在跟随修改' : followState === 'paused' ? '已由你控制视野' : '修改已结束'}</span>{followState !== 'following' && <button onClick={() => { camera.resume(); }}>{followState === 'finished' ? '查看修改结果' : '返回并继续跟随'}</button>}</div>}
 
         {relationsOpen && graph && course && <RelationsPanel graph={graph} sessionId={course.sessionId} view={relationView} narrow={narrow} panelRef={relationPanel} onClose={closeRelations} onKeyDown={event => trap(event, closeRelations)} onGraph={setGraph} focusId={relationFocus} />}

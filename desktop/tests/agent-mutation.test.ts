@@ -70,7 +70,7 @@ test('formula, finite experiment, necessary reviewed relation and local manual b
   }finally{fault?.close();await core.close();await rm(root,{recursive:true,force:true});}
 });
 
-test('explicit Agent capability commits real identities, retains a stale second group as partial, and ordinary QA cannot acquire it',async()=>{
+test('explicit Agent capability commits real identities, keeps a stale second group waiting, and ordinary QA cannot acquire it',async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-agent-capability-'));let core=new CourseService(resolve('dist/worker.cjs'));
  try{
   const c=await core.open(root),sessionId=c.sessionId,conversation=await core.agent.create({sessionId,operationId:'conversation'});
@@ -88,7 +88,7 @@ test('explicit Agent capability commits real identities, retains a stale second 
   const second=await (core as any).applyAgentMutation({...identity(task),input:{...input,basisId:secondBasis.basisId,operationId:'group2'}});assert.equal(second.status,'retained');
   await core.recordAgent({...identity(task),eventId:'finish',kind:'finish',status:'completed'});
   let view=await core.agent.get({sessionId,conversationId:conversation.id});const done=view.tasks.at(-1)! as any;
-  assert.equal(done.status,'partial');assert.deepEqual(done.groups.map((g:any)=>g.status),['committed','retained']);
+  assert.equal(done.status,'waiting');assert.deepEqual(done.groups.map((g:any)=>g.status),['committed','retained']);
   assert.deepEqual((await core.read(sessionId)).unit.reading.blocks[0],example);
   await core.close();core=new CourseService(resolve('dist/worker.cjs'));const reopened=await core.open(root);
   view=await core.agent.get({sessionId:reopened.sessionId,conversationId:conversation.id});assert.equal(view.tasks.at(-1)!.status,'partial');

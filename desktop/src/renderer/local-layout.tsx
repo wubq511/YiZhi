@@ -81,7 +81,7 @@ export function ReadingSurface({ id, name, position, baseline, measure, gesture,
   const cancel = () => { if (drag.current?.kind === 'width') setWidth(drag.current.placement.width); drag.current = undefined; gesture(undefined); };
   useEffect(()=>{const key=(event:globalThis.KeyboardEvent)=>{if(event.key==='Escape'&&drag.current){event.preventDefault();cancel();}};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[]);
   useEffect(()=>{if(!drag.current)setWidth(baseline.width>=360?baseline.width:650);},[baseline.width]);
-  return <article ref={element} className="nodrag nopan nowheel" style={{ width: readWidth }} data-unit-id={id} data-agent-unit={id}>
+  return <article ref={element} className="nodrag nopan nowheel" style={{ width: readWidth }} data-unit-id={id} data-agent-unit={id} data-reading-active={active ? "true" : undefined}>
     <div className="layout-controls" aria-label={`${name}布局`}>
       <button aria-label={`移动${name}`} onPointerDown={e => start(e, 'move')} onPointerMove={e => move(e)} onPointerUp={e => move(e, true)} onPointerCancel={cancel} onLostPointerCapture={cancel}
         onKeyDown={event => { const delta: Record<string, [number, number]> = { ArrowLeft: [-24, 0], ArrowRight: [24, 0], ArrowUp: [0, -24], ArrowDown: [0, 24] }; if (!delta[event.key]) return; event.preventDefault(); takeover(); commit({ ...position, width: readWidth, x: position.x + delta[event.key][0], y: position.y + delta[event.key][1] }); }}>移动单元</button>

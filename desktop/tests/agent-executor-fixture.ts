@@ -1,23 +1,34 @@
 #!/usr/bin/env node
 /** Isolated protocol fixture for regression tests only; never an acceptance executor. */
 import { createInterface } from 'node:readline';
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, watch, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 const args = process.argv.slice(2), mode = process.env.YIZHI_FIXTURE_MODE;
 if (args.includes('--version')) { console.log('codex-cli 0.163.0-fixture'); process.exit(0); }
 if (args.includes('generate-json-schema')) {
   const dir = args[args.indexOf('--out') + 1]; mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, 'codex_app_server_protocol.schemas.json'), JSON.stringify({ methods: ['thread/start', 'thread/resume', 'thread/read', 'thread/turns/list', 'thread/items/list', 'turn/interrupt', 'turn/start', 'model/list', 'config/read', 'item/tool/call', 'item/agentMessage/delta', 'turn/completed'], definitions: { v2: { DynamicToolSpec: { oneOf: mode === 'incapable' ? [] : [{ properties: { type: { enum: ['function'] } }, required: ['name', 'description', 'inputSchema', 'type'] }] } } } })); process.exit(0);
+  writeFileSync(join(dir, 'codex_app_server_protocol.schemas.json'), JSON.stringify({ methods: ['thread/start', 'thread/resume', 'thread/read', 'thread/turns/list', 'thread/items/list', 'turn/interrupt', 'turn/steer', 'turn/start', 'model/list', 'config/read', 'item/tool/call', 'item/agentMessage/delta', 'turn/completed'], definitions: { v2: { DynamicToolSpec: { oneOf: mode === 'incapable' ? [] : [{ properties: { type: { enum: ['function'] } }, required: ['name', 'description', 'inputSchema', 'type'] }] } } } })); process.exit(0);
 }
 const lines = createInterface({ input: process.stdin });
 const send = (message: unknown) => process.stdout.write(JSON.stringify(message) + '\n');
 const notify = (method: string, params: any) => send({ method, params });
 let threadSeq = 0, turnSeq = 0, toolSeq = 100, snapshot: any, active: any;
+const steered = new Map<string, string[]>();
+const rejectedSteers = new Set<string>();
 const turns=new Map<string,any>();
 const toolResults = new Map<number, (value: any) => void>();
-function tool(tool: string, arguments_: unknown) {
+function waitForMutationRelease(path: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const watcher = watch(dirname(path), () => {
+      if (existsSync(path)) { watcher.close(); resolve(); }
+    });
+    watcher.on('error', error => { watcher.close(); reject(error); });
+    if (existsSync(path)) { watcher.close(); resolve(); }
+  });
+}
+function tool(tool: string, arguments_: unknown, identity = active) {
   const id = ++toolSeq;
-  return new Promise<any>(resolve => { toolResults.set(id, resolve); send({ id, method: 'item/tool/call', params: { ...active, callId: `call-${id}`, tool, arguments: arguments_ } }); });
+  return new Promise<any>(resolve => { toolResults.set(id, resolve); send({ id, method: 'item/tool/call', params: { ...identity, callId: `call-${id}`, tool, arguments: arguments_ } }); });
 }
 lines.on('line', line => { void receive(JSON.parse(line)); });
 async function receive(m: any) {
@@ -35,6 +46,13 @@ async function receive(m: any) {
     if(turn){turn.status='interrupted';setTimeout(()=>notify('turn/completed',{threadId:m.params.threadId,turn:{id:turn.id,status:'interrupted'}}),mode==='linger'?650:100);}
   }
   if (m.method === 'thread/resume') respond({ thread: { id: m.params.threadId } });
+  if (m.method === 'turn/steer') {
+    if (m.params.expectedTurnId !== active?.turnId) return send({ id: m.id, error: { code: -32602, message: 'Expected current turn' } });
+    const value = JSON.parse(m.params.input[0].text);
+    if (mode === 'steer-retry' && !rejectedSteers.has(value.deliveryId)) { rejectedSteers.add(value.deliveryId); return send({ id: m.id, error: { code: -32602, message: 'Controlled steer not accepted' } }); }
+    const messages = steered.get(active.turnId) ?? []; messages.push(value.message); steered.set(active.turnId, messages);
+    respond({ turnId: active.turnId });
+  }
   if (m.method === 'thread/start') {
     if (m.params.ephemeral !== true || m.params.sandbox !== 'read-only' || m.params.approvalPolicy !== 'never' || !m.params.dynamicTools.every((t: any) => t.type === 'function') || m.params.config['mcp_servers.fixture.enabled'] !== false)
       return send({ id: m.id, error: { code: -32602, message: 'Readonly isolation was not configured' } });
@@ -43,12 +61,21 @@ async function receive(m: any) {
   if (m.method === 'turn/start') {
     const identity = { threadId: m.params.threadId, turnId: `fixture-turn-${++turnSeq}` }; active = identity; turns.set(identity.turnId,{id:identity.turnId,threadId:identity.threadId,status:'inProgress',items:[],itemsView:'full'});
     if(mode==='late-turn'&&turnSeq===2){notify('item/agentMessage/delta',{threadId:identity.threadId,turnId:'fixture-turn-1',itemId:'old-tail',delta:'不得混入第二问'});notify('item/completed',{threadId:identity.threadId,turnId:'fixture-turn-1',item:{type:'agentMessage',id:'old-tail',text:'不得混入第二问'}});}
-    snapshot = JSON.parse(m.params.input[0].text).submittedRequest;
+    const submitted = JSON.parse(m.params.input[0].text); snapshot = submitted.submittedRequest;
     respond({ turn: { id: identity.turnId, status: 'inProgress' } });
     notify('turn/started', { threadId: identity.threadId, turn: { id: identity.turnId } });
     const read = await tool('yizhi_read_target', {});
     if (!read?.success) return send({ id: 999, method: 'unsupported/request', params: {} });
     if (snapshot.citations.length) await tool('yizhi_read_citation', { citationId: snapshot.citations[0].citation.id });
+    if (mode === 'coedit' && snapshot.intent !== 'question') {
+      const context = JSON.parse((await tool('yizhi_read_edit_context', {}, identity)).contentItems[0].text);
+      const paragraph = context.content.reading.blocks.find((b: any) => b.kind === 'paragraph');
+      await tool('yizhi_apply_group', { operationId: `coedit-${identity.turnId}`, basisId: context.basisId, conclusionOrMethodChanged: false,
+        replaces: context.pendingGroups?.map((g: any) => g.candidateId) ?? [], updates: [{ blockId: paragraph.id, text: paragraph.payload.text + ' Agent补充。' }] }, identity);
+      notify('item/completed', { ...identity, item: { type: 'agentMessage', id: 'answer', text: `读取实际最新正文后处理。学生同时修改：${context.concurrentChanges?.map((d: any) => d.change.objectIds.join('、')).join('；') || '无'}。先前上下文：${JSON.stringify(submitted.previousVisibleMessages)}。` } });
+      notify('turn/completed', { threadId: identity.threadId, turn: { id: identity.turnId, status: 'completed' } });
+      return;
+    }
     if (mode === 'tool-error') {
       const bad = await tool('yizhi_read_source_page', { versionId: '../../course.sqlite', pdfPageIndex: 0 });
       if (bad?.success) throw new Error('arbitrary file read was allowed');
@@ -62,7 +89,8 @@ async function receive(m: any) {
         await tool('yizhi_apply_group',input);
         // Keep a real protocol turn alive until the history action interrupts it.
         if(mode === 'history-stop')return;
-        await new Promise(r=>setTimeout(r,1400));
+        if (process.env.YIZHI_MUTATION_RELEASE) await waitForMutationRelease(process.env.YIZHI_MUTATION_RELEASE);
+        else await new Promise(r=>setTimeout(r,1400));
         await tool('yizhi_apply_group',{...input,operationId:'controlled-group2',basisId:other.basisId});
       } else {
         const denied=await tool('yizhi_read_edit_context',{});if(denied.success)throw new Error('QA acquired mutation');
@@ -73,15 +101,18 @@ async function receive(m: any) {
     notify('item/agentMessage/delta', { ...identity, itemId: 'answer', delta: partial });
     if (mode === 'disconnect') { setTimeout(() => process.exit(17), 80); return; }
     if (mode === 'malformed') { process.stdout.write('not-json\n'); return; }
-    setTimeout(() => {
+    const complete = () => {
+      const answer = ['steer','steer-retry'].includes(mode!) ? full + '\n收到工作中引导：' + (steered.get(identity.turnId) ?? []).join('；') : full;
       if(turns.get(identity.turnId)?.status!=='inProgress')return;
-      turns.get(identity.turnId).status=mode==='failed'?'failed':'completed';turns.get(identity.turnId).items=[{type:'agentMessage',id:'answer',text:full}];
+      turns.get(identity.turnId).status=mode==='failed'?'failed':'completed';turns.get(identity.turnId).items=[{type:'agentMessage',id:'answer',text:answer}];
       if(mode==='reconcile-completed')return;
-      notify('item/completed', { ...identity, item: { type: 'agentMessage', id: 'answer', text: full } });
+      notify('item/completed', { ...identity, item: { type: 'agentMessage', id: 'answer', text: answer } });
       notify('item/agentMessage/delta', { ...identity, itemId: 'answer', delta: 'LATE DUPLICATE' });
       notify('item/completed', { ...identity, item: { type: 'agentMessage', id: 'answer', text: full } });
       notify('turn/completed', { threadId: identity.threadId, turn: { id: identity.turnId, status: mode === 'failed' ? 'failed' : 'completed', error: mode === 'failed' ? { message: 'provider failed precisely', codexErrorInfo: 'other' } : null } });
       notify('item/agentMessage/delta', { ...identity, itemId: 'answer', delta: 'AFTER FINISH' });
-    }, mode === 'linger' ? 3000 : 800);
+    };
+    if (mode === 'mutation' && process.env.YIZHI_MUTATION_RELEASE) complete();
+    else setTimeout(complete, mode === 'steer-retry' ? 12000 : mode === 'linger' ? 3000 : 800);
   }
 }

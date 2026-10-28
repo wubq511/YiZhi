@@ -10,7 +10,7 @@ import type { SourceCitation } from '../sources-api';
 import './agent-panel.css';
 export interface AgentScene { open: boolean; conversationId: string | null; scrollTop: number }
 export interface AgentPanelHandle { capture(): AgentScene; restore(scene: AgentScene): Promise<void>; openSearch(hit: SearchHit): Promise<void>; flush(): Promise<boolean>; attachCitation(citation: SourceCitation): void }
-const taskLabel: Record<AgentTask['status'], string> = { running: '正在回答', queued: '排队等待前序任务', waiting: '等待当前编辑结束', stopping: '正在停止 · 已撤销后续提交资格', stopped: '已停止 · 已提交部分保留', completed: '回答已完成', failed: '回答失败', interrupted: '回答已中断', unknown: '执行结果未知', partial: '部分完成 · 已提交组保留', pending: '待处理 · 候选尚未正式保存' };
+const taskLabel: Record<AgentTask['status'], string> = { queued: '已排队 · 等待当前处理结束', waiting: '等待整合 · 任务尚未完成', stopping: '正在停止 · 已撤销后续提交资格', stopped: '已停止 · 已提交部分保留', running: '正在回答', completed: '回答已完成', failed: '回答失败', interrupted: '回答已中断', unknown: '执行结果未知', partial: '部分完成 · 已提交组保留', pending: '待处理 · 候选尚未正式保存' };
 
 export const AgentPanel = forwardRef<AgentPanelHandle, {
   sessionId: string; narrow: boolean; target: QuestionTarget; targetName: string; sourceOpen: boolean;
@@ -21,7 +21,8 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
   const [open, setOpen] = useState(false), [conversations, setConversations] = useState<Conversation[]>([]);
   const [view, setView] = useState<ConversationView>(), [executor, setExecutor] = useState<ExecutorStatus>();
   const [intent, setIntent] = useState<AgentIntent>('question');
-  const intentRef = useRef<AgentIntent>('question'), tracked = useRef(new Map<string,{conversationId:string;sequence:number}>());
+  const [messageMode, setMessageMode] = useState<'steer' | 'queue'>('steer');
+  const intentRef = useRef<AgentIntent>('question'), tracked = useRef(new Map<string,{conversationId:string;sequence:number;started:boolean}>());
   const callbacks = useRef({onMutation}); callbacks.current = {onMutation};
   const [model, setModel] = useState(''), [generation, setGeneration] = useState(1);
   const [attachments, setAttachments] = useState<SourceCitation[]>([]), [selection, setSelection] = useState<QuestionTarget>();
@@ -35,7 +36,7 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
   const list = async () => { const state = await api.list({ sessionId }); if (active.current) { setConversations(state.conversations); setGeneration(state.generation); } return state; };
   const refresh = async () => {
     const id = current.current;
-    if (id) { const latest = await api.get({ sessionId, conversationId: id }); if (current.current === id && active.current) setView(latest); }
+    if (id) { const latest = await api.get({ sessionId, conversationId: id }); if (current.current === id && active.current) { setView(latest); for (const task of latest.tasks) if (task.guidedFrom && task.snapshot.intent !== 'question' && ['running','queued','waiting'].includes(task.status) && !tracked.current.has(task.id)) tracked.current.set(task.id,{conversationId:id,sequence:0,started:false}); } }
     await list();
     const status = await api.status(); if (active.current) setExecutor(status);
   };
@@ -79,6 +80,7 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
       try { for (const [taskId, seen] of tracked.current) {
         const latest = await api.get({sessionId,conversationId:seen.conversationId}), task = latest.tasks.find(t=>t.id===taskId);
         if (!task || stopped) continue;
+        if (task.status === 'running' && !seen.started) { seen.started = true; await callbacks.current.onMutation(task,'start'); }
         if ((task.progress?.sequence ?? 0) > seen.sequence) { seen.sequence = task.progress!.sequence; await callbacks.current.onMutation(task,'progress'); }
         if (!['running','stopping','queued','waiting'].includes(task.status)) { tracked.current.delete(task.id); await callbacks.current.onMutation(task,'finish'); }
       } } catch(error) { if(!stopped) setError((error as Error).message); } finally {working=false;}
@@ -123,16 +125,17 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
   const send = async () => {
     if (!await flush() || !current.current || composing.current) return;
     const request = retrySubmit.current ?? { sessionId, conversationId: current.current, operationId: crypto.randomUUID(), generation,
-      intent: intentRef.current, text: draft.current, target: selection ?? attachments.at(-1)?.target ?? target, citationIds: attachments.map(c => c.id), ...(model ? { model } : {}) };
+      intent: intentRef.current, mode: messageMode, text: draft.current, target: selection ?? attachments.at(-1)?.target ?? target, citationIds: attachments.map(c => c.id), ...(model ? { model } : {}) };
     retrySubmit.current = request;
     if (request.intent && request.intent !== 'question') await prepareMutation();
     const submitted = await api.submit(request); retrySubmit.current = null;
-    if (submitted.snapshot.intent && submitted.snapshot.intent !== 'question' && submitted.status === 'running' && !tracked.current.has(submitted.id)) {
-      tracked.current.set(submitted.id,{conversationId:submitted.conversationId,sequence:0}); await onMutation(submitted,'start');
+    if (submitted.snapshot.intent && submitted.snapshot.intent !== 'question' && ['running','queued','waiting'].includes(submitted.status) && !tracked.current.has(submitted.id)) {
+      tracked.current.set(submitted.id,{conversationId:submitted.conversationId,sequence:0,started:submitted.status === 'running'}); if (submitted.status === 'running') await onMutation(submitted,'start');
     }
     draft.current = ''; if (composer.current) composer.current.value = ''; dirty.current = false;
     chosenTarget.current = undefined; chosenCitations.current = []; setAttachments([]); setSelection(undefined); await refresh();
   };
+  const working = view?.tasks.some(t => ['running','waiting','queued'].includes(t.status));
   return <><button ref={trigger} className="agent-entry" aria-expanded={open} onClick={() => setOpen(true)}>Agent · 学习对话</button>
     {open && createPortal(<aside ref={panel} className={`agent-panel${sourceOpen && !narrow ? ' beside-source' : ''}`} role={narrow ? 'dialog' : 'complementary'} inert={narrow && sourceOpen} aria-modal={narrow || undefined} aria-label="Agent 学习对话" onKeyDown={event => {
       // Let native textarea Undo edit only the composer. No board/editor command receives it.
@@ -149,23 +152,23 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
         {!view && <option value="">选择对话</option>}{conversations.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}</select></label><button disabled={busy} onClick={() => void guard(create)}>新对话</button></div>
       <div className="agent-messages" aria-label="对话消息">
         {!view?.messages.length && <p className="agent-empty">带上当前单元或原文选段提问。课程依据与补充解释会分别呈现，回答随课程保留。</p>}
-        {view?.messages.map(message => { const task = view.tasks.find(t => t.id === message.taskId)!; return <section key={message.id} className={`agent-message ${message.role}`} data-message-id={message.id}>
+        {view?.messages.map(message => { const task = view.tasks.find(t => t.id === message.taskId)!, snapshot = task.deliveries?.find(d => d.id === message.deliveryId)?.snapshot ?? task.snapshot; return <section key={message.id} className={`agent-message ${message.role}`} data-message-id={message.id}>
           <p className="agent-message-label">{message.role === 'user' ? '你' : message.state === 'streaming' ? '实际接收中 · 部分内容已保存' : message.state === 'partial' ? '未完成回答 · 已收到部分已保存' : 'Agent · 消息已保存'}</p>
-          {message.role === 'user' && <details className="agent-request"><summary>{task.snapshot.target.unitName} · 提交时目标</summary><p>{task.snapshot.target.unitId} · 正文版本 {task.snapshot.target.revision}</p>{task.snapshot.target.selectedText && <blockquote>{task.snapshot.target.selectedText}</blockquote>}</details>}
+          {message.role === 'user' && <details className="agent-request"><summary>{snapshot.target.unitName} · 提交时目标</summary><p>{snapshot.target.unitId} · 正文版本 {snapshot.target.revision}</p>{snapshot.target.selectedText && <blockquote>{snapshot.target.selectedText}</blockquote>}</details>}
           <AgentProse text={message.text} />
           {message.role === 'assistant' && view.messages.filter(m => m.taskId === message.taskId && m.role === 'assistant').at(-1)?.id === message.id && task.snapshot.citations.length > 0 && <div className="agent-evidence" aria-label="固定课程出处"><strong>课程原文出处</strong>{task.snapshot.citations.map(({ citation, version }) => <section key={citation.id}>
             {citation.quote ? <blockquote>{citation.quote}</blockquote> : <p>{citation.textStatus === 'no-text-layer' ? '无可靠文字层，仅携带原页／选区，未做 OCR' : '原页／选区出处'}</p>}
             <button onClick={() => openCitation(citation)}>{version.title} · PDF 第 {citation.pdfPageIndex + 1} 页 · 印刷页 {citation.printedPage?.label ?? '未核对'}</button>
           </section>)}</div>}
         </section>; })}
-        {view?.tasks.map(task => <div className="agent-task" key={task.id}><div role="status" aria-label="回答状态">{task.snapshot.intent && task.snapshot.intent !== 'question' && task.status === 'running' ? '正在修改 · 以正式回执为准' : task.snapshot.intent && task.snapshot.intent !== 'question' && task.status === 'completed' ? '修改已完成' : taskLabel[task.status]}{task.groups?.map(group => <section key={group.operationId}>{group.status === 'committed' ? `正式保存 · ${group.changedObjectIds.length} 个变化对象` : `草稿候选 · ${group.reason}`}<details><summary>保存回执</summary><p>{group.operationId}</p><p>{group.changedObjectIds.join('、')}</p></details></section>)}</div>{task.groups?.some(g=>g.status==='committed' && g.changedObjectIds.length>0) && <button onClick={() => void guard(()=>onMutation(task,'view'))}>查看实际修改</button>}{task.status === 'completed' && view.messages.some(m => m.taskId === task.id && m.state === 'partial') ? ' · 部分消息未确认' : ''}{task.recovery && <p>{task.recovery.detail}</p>}{task.error && <p>{task.error}</p>}
+        {view?.tasks.map(task => <div className="agent-task" key={task.id}><div role="status" aria-label="回答状态">{task.snapshot.intent && task.snapshot.intent !== 'question' && task.status === 'running' ? '正在修改 · 以正式回执为准' : task.snapshot.intent && task.snapshot.intent !== 'question' && task.status === 'completed' ? '修改已完成' : taskLabel[task.status]}{task.groups?.map(group => <section key={group.operationId}>{group.status === 'committed' ? `正式保存 · ${group.changedObjectIds.length} 个变化对象` : `草稿候选 · ${group.reason}`}<details><summary>保存回执</summary><p>{group.operationId}</p><p>{group.changedObjectIds.join('、')}</p></details></section>)}</div>{task.groups?.some(g=>g.status==='committed' && g.changedObjectIds.length>0) && <button onClick={() => void guard(()=>onMutation(task,'view'))}>查看实际修改</button>}{task.status === 'completed' && view.messages.some(m => m.taskId === task.id && m.state === 'partial') ? ' · 部分消息未确认' : ''}{task.guidedFrom && <p>新事项 · {task.snapshot.target.unitName}</p>}{task.waitingReason && <p>{task.waitingReason}</p>}{task.deliveries?.map(delivery => <div key={delivery.id} role="status" aria-label="消息送达状态"><p>{delivery.kind === 'student-change' ? '学生同时修改' : '工作中引导'} · {delivery.state === 'accepted' ? delivery.reviewedBasisId ? '已送达 · 已重新读取正文' : '已送达 · 后续读取与保存以实际结果为准' : delivery.state === 'failed' ? '引导未送达' : delivery.state === 'unknown' ? '送达结果未知 · 原记录已保留' : '等待送达'}{delivery.error ? `：${delivery.error}` : ''}{delivery.handledTaskId ? ' · 已安排独立事项，等待当前工作结束' : ''}</p>{delivery.state === 'failed' && ['running','waiting'].includes(task.status) && <button disabled={busy} onClick={() => void guard(async () => { await api.retryDelivery({ sessionId, taskId: task.id, deliveryId: delivery.id }); await refresh(); })}>重试原引导</button>}</div>)}{task.recovery && <p>{task.recovery.detail}</p>}{task.error && <p>{task.error}</p>}
           {(['running','queued','waiting'].includes(task.status)||task.status==='unknown'&&task.recovery?.state==='active') && <button disabled={busy} onClick={()=>void guard(async()=>{await api.stop({sessionId,taskId:task.id});await refresh();})}>停止任务</button>}
           {['stopping','stopped','unknown','interrupted','partial','pending','failed'].includes(task.status) && <button disabled={busy} onClick={()=>void guard(async()=>{await api.reconcile({sessionId,taskId:task.id});await refresh();})}>核对原任务结果</button>}
           {!task.continuedByTaskId && !view.tasks.some(t=>['running','stopping','queued','waiting'].includes(t.status)) && ['stopped','unknown','interrupted','partial','pending','failed'].includes(task.status) && <button disabled={busy||!executor?.available||task.recovery?.state==='active'} onClick={()=>void guard(async()=>{
             if(!await flush())return;
             if(task.snapshot.intent && task.snapshot.intent!=='question')await prepareMutation();
             const next=await api.continue({sessionId,taskId:task.id,operationId:crypto.randomUUID()});
-            if(next.snapshot.intent && next.snapshot.intent!=='question'){tracked.current.set(next.id,{conversationId:next.conversationId,sequence:0});await onMutation(next,'start');}
+            if(next.snapshot.intent && next.snapshot.intent!=='question'){tracked.current.set(next.id,{conversationId:next.conversationId,sequence:0,started:next.status==='running'});if(next.status==='running')await onMutation(next,'start');}
             await refresh();
           })}>继续剩余工作</button>}</div>)}
       </div>
@@ -176,8 +179,9 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
         <label>请求方式<select aria-label="Agent 请求方式" value={intent} disabled={busy} onChange={e=>{intentRef.current=e.target.value as AgentIntent;setIntent(intentRef.current);markDirty();}}><option value="question">只读提问</option><option value="modify">修改正文与整理</option><option value="add-to-board">加入画板</option></select></label><label htmlFor="agent-composer">{intent === 'question' ? '只读提问' : '明确修改请求'}</label><textarea id="agent-composer" ref={composer} aria-label="学习对话草稿" defaultValue={draft.current} disabled={busy} placeholder="哪里还没理解？" onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; if (dirty.current) void flush(); }} onInput={event => {
           draft.current = event.currentTarget.value; markDirty();
         }} />
+        {working && <label>工作中消息方式<select aria-label="工作中消息方式" value={messageMode} disabled={busy} onChange={e => setMessageMode(e.target.value as 'steer' | 'queue')}><option value="steer">引导当前工作</option><option value="queue">排队</option></select></label>}
         <div className="agent-send"><label>模型 <select aria-label="问答模型" value={model} onChange={e => setModel(e.target.value)} disabled={!executor?.available || busy}>{executor?.models.map(m => <option key={m.model} value={m.model}>{m.displayName || m.model}</option>)}</select></label>
-          <button className="primary" disabled={busy || !executor?.available || view?.tasks.some(t => ['running','stopping','queued','waiting'].includes(t.status))} onClick={() => void guard(async () => { if (!current.current) await create(); await send(); })}>{intent === 'question' ? '发送问题' : '发送修改请求'}</button></div>
+          <button className="primary" disabled={busy || !executor?.available} onClick={() => void guard(async () => { if (!current.current) await create(); await send(); })}>{working ? messageMode === 'queue' ? '排队发送' : '发送引导' : intent === 'question' ? '发送问题' : '发送修改请求'}</button></div>
         <p role="status" aria-label="对话草稿保存">{draftState}</p>
         {!executor ? <p role="status">正在检测本机执行器…</p> : !executor.available ? <p role="status">生成暂不可用：{executor.error} 已保存对话仍可阅读。</p> : <details className="executor-details"><summary>本机 Codex CLI · 已连接</summary><p>{executor.version}</p><p>{executor.path}</p></details>}
         {error && <div role="alert" className="agent-error"><p>{error}</p>{failed.current && <button onClick={() => { failed.current = false; void flush(); }}>重试保存对话草稿</button>}{retrySubmit.current && <button onClick={() => void guard(send)}>核对并重试原问题</button>}</div>}

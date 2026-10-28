@@ -85,7 +85,7 @@ else {
   ipcMain.handle('course:commitEdit', (event, command) => { checkSender(event); return core.commitEdit(command); });
     ipcMain.handle('course:queryOperation', (event, input) => { checkSender(event); return core.queryOperation(input.sessionId, input.operationId); });
     ipcMain.handle('course:readEvents', (event, input) => { checkSender(event); return core.readEvents(input.sessionId, input.after, input.limit); });
-    ipcMain.handle('course:read', (event, input) => { checkSender(event); return core.read(input.sessionId); });
+    ipcMain.handle('course:read', (event, input) => { checkSender(event); return core.read(input.sessionId, input.unitId); });
     for (const method of ['open', 'read', 'snapshot', 'act', 'pauseAll'] as const) {
       ipcMain.handle(`experiments:${method}`, (event, payload) => { checkSender(event); return core.experiments[method](payload); });
     }

@@ -29,7 +29,7 @@ const bridge: DesktopBridge = {
   annotations: annotationClient(invoke),
   extensions: (() => { const {resource, ...api}=extensionsClient(invoke); return api; })(),
   experiments: experimentsClient(invoke),
-  agent: { ...agentClient(invoke), status: () => invoke('agent:status'), reconcile: request => invoke('agent:reconcile',request) },
+  agent: { ...agentClient(invoke), status: () => invoke('agent:status'), reconcile: request => invoke('agent:reconcile',request), retryDelivery: request => invoke('agent:retryDelivery', request) },
   parsing: parsingBridge(invoke),
   sources: sourceBridge(invoke),
   commands: commandClient(invoke),
@@ -49,7 +49,7 @@ const bridge: DesktopBridge = {
   commitEdit: command => invoke('course:commitEdit', command),
   queryOperation: (sessionId, operationId) => invoke('course:queryOperation', { sessionId, operationId }),
   readEvents: (sessionId, after, limit = 64) => invoke('course:readEvents', { sessionId, after, limit }),
-  read: sessionId => invoke('course:read', { sessionId }),
+  read: (sessionId, unitId) => invoke('course:read', { sessionId, unitId }),
   onCloseCancelled(listener) {const handler=()=>listener();ipcRenderer.on('window:close-cancelled',handler);return ()=>ipcRenderer.removeListener('window:close-cancelled',handler);},
   onCloseRequested(listener) {
     const handler = async (_event: Electron.IpcRendererEvent, requestId: number) => {

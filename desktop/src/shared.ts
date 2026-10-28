@@ -40,6 +40,7 @@ export interface SaveParagraph {
   text: string;
 }
 export interface SaveReceipt {
+  unitId?: string;
   operationId: string;
   sessionId: string;
   inputSeq: number;
@@ -109,6 +110,8 @@ export interface TextChange { blockId: string; text: string }
 export interface ParagraphSplit { blockId: string; newBlockId: string; offset: number }
 export interface DraftInput {
   sessionId: string;
+  /** Input progress and draft ownership are scoped to this B, never the whole course. */
+  unitId?: string;
   inputSeq: number;
   baseRevision: number;
   changes: TextChange[];
@@ -118,9 +121,9 @@ export interface DraftInput {
   /** False for incomplete editor syntax: retained, never promoted as formal content. */
   complete: boolean;
   /** Explicit takeover after recovering an ended session's draft. */
-  replacesDraft?: { sessionId: string; inputSeq: number };
+  replacesDraft?: { sessionId: string; inputSeq: number; unitId?: string };
 }
-export interface DraftReceipt { sessionId: string; inputSeq: number; cursor: number }
+export interface DraftReceipt { sessionId: string; unitId?: string; inputSeq: number; cursor: number }
 export interface RecoverableDraft { input: DraftInput; receipt: DraftReceipt }
 export interface EditCommand extends DraftInput { operationId: string }
 export interface EditReceipt extends SaveReceipt { blockIds: string[]; cursor: number }
@@ -153,5 +156,5 @@ export interface SaveBridge {
   commitEdit(command: EditCommand): Promise<EditReceipt>;
   queryOperation(sessionId: string, operationId: string): Promise<SaveReceipt | null>;
   readEvents(sessionId: string, after: number, limit?: number): Promise<EventPage>;
-  read(sessionId: string): Promise<OpenedCourse>;
+  read(sessionId: string, unitId?: string): Promise<OpenedCourse>;
 }
