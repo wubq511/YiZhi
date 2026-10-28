@@ -13,6 +13,22 @@ import { CourseService } from '../src/core/course-service';
 import { prepareTargetResults } from './acceptance-targets-prepare';
 
 const digest = (bytes: Buffer | string) => createHash('sha256').update(bytes).digest('hex');
+function originalRecords(directory: string) {
+  const db = new DatabaseSync(join(directory, 'course.sqlite'), { readOnly: true });
+  const tables: Record<string, Record<string, string>> = {};
+  try {
+    for (const name of ['migration_origins', 'migration_pending', 'migration_receipts', 'migration_values', 'restore_timeline',
+      'annotation_heads', 'personal_notes', 'agent_conversations', 'agent_tasks', 'agent_messages', 'agent_unthreaded_messages', 'source_versions', 'source_citations', 'source_intents']) {
+      if (!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)) continue;
+      const keys = db.prepare(`PRAGMA table_info("${name}")`).all().filter(column => Number(column.pk)).sort((a, b) => Number(a.pk) - Number(b.pk)).map(column => String(column.name));
+      const rows = db.prepare(`SELECT ${keys.length ? '' : 'rowid AS t28RowId,'}* FROM "${name}"`).all();
+      tables[name] = Object.fromEntries(rows.map(row => [JSON.stringify(keys.length ? keys.map(key => row[key]) : row.t28RowId), digest(JSON.stringify(row))]));
+    }
+    const checkpoints = db.prepare("SELECT value FROM metadata WHERE key='legacy-checkpoint-facts'").get();
+    if (checkpoints) tables['metadata/legacy-checkpoint-facts'] = { value: digest(String(checkpoints.value)) };
+  } finally { db.close(); }
+  return tables;
+}
 
 test('T28 opt-in small development harness records real counters and timings without claiming final acceptance', async () => {
   test.skip(process.env.YIZHI_ACCEPTANCE_SMOKE !== '1', 'Explicit small-sample harness opt-in only.');
@@ -69,6 +85,9 @@ test('T28 final installed migrated 500-unit acceptance consumes the explicitly c
   await mkdir(join(root, 'Applications')); await cp(input.app, installed, { recursive: true, verbatimSymlinks: true });
   execFileSync('/usr/bin/codesign', ['--verify', '--deep', '--strict', installed]);
   await cp(input.growthCourse, course, { recursive: true }); await mkdir(join(root, 'empty'));
+  const originalPersonal = originalRecords(input.migratedCourse);
+  for (const required of ['migration_origins', 'migration_pending', 'migration_receipts', 'migration_values']) expect(originalPersonal[required]).toBeDefined();
+  await writeFile(join(root, 'original-record-hashes.json'), JSON.stringify(originalPersonal, null, 2) + '\n');
   const executablePath = join(installed, 'Contents/MacOS/YiZhi');
   if (growth.appended.length < 3) throw new Error('Need three distinct synthetic targets for saved-result display coverage');
   const resultPreparation = join(root, 'acceptance-targets-prepare.cjs'), targetResultsPath = join(root, 'controlled-result-fixture.json');
@@ -99,6 +118,17 @@ test('T28 final installed migrated 500-unit acceptance consumes the explicitly c
     const db = new DatabaseSync(join(course, 'course.sqlite'), { readOnly: true });
     try { for (const original of growth.originals) { const row = db.prepare('SELECT payload,revision FROM units WHERE id=?').get(original.id)!;
       expect(digest(String(row.payload))).toBe(original.sha256); expect(Number(row.revision)).toBe(original.revision); } } finally { db.close(); }
+    const afterPersonal = originalRecords(course), preservedCounts: Record<string, number> = {};
+    for (const [table, records] of Object.entries(originalPersonal)) {
+      for (const [key, hash] of Object.entries(records)) expect(afterPersonal[table]?.[key], `${table} original ${key}`).toBe(hash);
+      preservedCounts[table] = Object.keys(records).length;
+    }
+    let originalResources = 0;
+    for (const resource of JSON.parse(authorityBytes.toString()).proof.resources) if (resource.path.startsWith('resources/')) {
+      expect(digest(await readFile(join(course, resource.path)))).toBe(resource.sha256); originalResources++;
+    }
+    await writeFile(join(root, 'original-preservation.json'), JSON.stringify({ originalUnits: growth.originals.length,
+      originalPayloadRevisionIdPreserved: true, originalResources, preservedOriginalRecords: preservedCounts }, null, 2) + '\n');
     app = await launch(); const reopened = await app.firstWindow(); await expect(reopened.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
     const saved = await reopened.evaluate(async unitId => { const api = (window as any).yizhi, c = await api.open(); return api.read(c.sessionId, unitId); }, study.editableId);
     expect(JSON.stringify(saved.unit)).toContain(study.textMarker); expect(saved.drafts.some((draft: any) => draft.input.formulaDrafts?.length)).toBe(true);
