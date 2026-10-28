@@ -32,3 +32,24 @@ test('actual course settings validate days, report the real shrinking recovery w
   await expect(dialog).toContainText('最早保留提交');await page.screenshot({path:test.info().outputPath('retention-reopened.png')});
  }finally{await app.close();await rm(root,{recursive:true,force:true});}
 });
+
+test('actual history preview protects its original window until the student returns to the history list',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-retention-preview-ui-')),directory=join(root,'course'),clock=new SharedArrayBuffer(8);
+ Atomics.store(new BigInt64Array(clock),0,BigInt(Date.now()-40*86_400_000));
+ const core=new CourseService(resolve('dist/worker.cjs'),{retentionScheduling:{clock,manual:true}}),c=await core.open(directory);
+ await core.save({...c,operationId:'held-preview-old',inputSeq:1,baseRevision:1,blockId:A,text:'Held old UI preview'});
+ Atomics.store(new BigInt64Array(clock),0,BigInt(Date.now()));await core.save({...c,operationId:'held-preview-current',inputSeq:2,baseRevision:2,blockId:A,text:'Current UI body'});await core.close();
+ const app=await electron.launch({args:[resolve('.'),`--course=${directory}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile'),YIZHI_CODEX_PATH:join(root,'not-needed')}});
+ try{
+  const page=await app.firstWindow();await resizeBoardWindow(app,page);await page.getByRole('button',{name:'课程历史',exact:true}).click();
+  const dialog=page.getByRole('dialog',{name:'修改历史',exact:true});await expect(dialog.locator('.history-activity')).toHaveCount(2);
+  await dialog.locator('.history-activity').last().locator('summary').first().click();await dialog.getByRole('button',{name:'查看修改后版本',exact:true}).click();
+  await expect(dialog.getByRole('region',{name:'旧版只读预览'})).toContainText('Held old UI preview');
+  await page.evaluate(async()=>{const c=await window.yizhi.open();await window.yizhi.retention.set({...c,days:30});});
+  await expect.poll(()=>page.evaluate(async()=>window.yizhi.retention.get(await window.yizhi.open()))).toMatchObject({pendingGroups:1,blocked:expect.stringMatching(/预览|恢复/)});
+  await dialog.getByRole('button',{name:'返回历史列表',exact:true}).click();
+  await expect.poll(()=>page.evaluate(async()=>(await window.yizhi.retention.get(await window.yizhi.open())).pendingGroups)).toBe(0);
+  expect(await page.evaluate(async()=>{const c=await window.yizhi.open();try{await window.yizhi.formalHistory.detail({...c,operationId:'held-preview-old'});return false;}catch(e){return /过期/.test(String(e));}})).toBe(true);
+  await dialog.getByRole('button',{name:'返回原阅读位置',exact:true}).click();
+ }finally{await app.close();await rm(root,{recursive:true,force:true});}
+});

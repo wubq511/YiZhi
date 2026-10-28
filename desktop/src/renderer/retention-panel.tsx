@@ -13,7 +13,7 @@ export function RetentionPanel({sessionId,prepare}:{sessionId:string;prepare():P
  const work=async(run:()=>Promise<void>)=>{setBusy(true);setError('');try{await run();}catch(e){if(alive.current)setError((e as Error).message);}finally{if(alive.current)setBusy(false);}};
  const refresh=async()=>{const [s,p]=await Promise.all([window.yizhi.retention.get({sessionId}),window.yizhi.retention.space({sessionId})]);if(alive.current){setStatus(s);setSpace(p);}return s;};
  const show=()=>{setOpen(true);setResult('');void work(async()=>{await prepare();const s=await refresh();setDays(String(s.days));});};
- const close=()=>{if(busy)return;setOpen(false);trigger.current?.focus();};
+ const close=()=>{if(busy)return;setOpen(false);requestAnimationFrame(()=>trigger.current?.focus());};
  useEffect(()=>{
   if(!open)return;
   let cancelled=false;

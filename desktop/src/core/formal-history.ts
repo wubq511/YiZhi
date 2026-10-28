@@ -10,7 +10,7 @@ import { unitObjects } from './history-objects';
 import { equal } from '../editor-api';
 import type { DatabaseSync } from 'node:sqlite';
 import type { CourseUnit, ReadingBlock } from '../shared';
-import { createHash } from 'node:crypto';
+import { createHash,randomUUID } from 'node:crypto';
 import { transaction, appendEvent, eventCursor, readDrafts } from './save-store';
 import type { CommandGroups } from './command-groups';
 import type { AgentStore } from './agent-store';
@@ -20,7 +20,7 @@ const parse=(v:unknown)=>JSON.parse(String(v));
 export class FormalHistory {
   private pins=new Map<string,Set<string>>();
   pinned(operationId:string){return [...this.pins.values()].some(ids=>ids.has(operationId));}
-  release(token:string){this.pins.delete(token);}
+  release(pinId:string){this.pins.delete(pinId);}
   releaseGeneration(){this.pins.clear();}
   constructor(private db:DatabaseSync, private commands:CommandGroups, private agent:AgentStore, private graph:CourseGraph, private relations:FormalRelations, private experiments:BuiltinExperiments) {initializeHistoryIndex(db);}
   private hash(value:unknown) {return createHash('sha256').update(JSON.stringify(value)).digest('hex');}
@@ -99,7 +99,11 @@ export class FormalHistory {
     const publications:Array<()=>void>=[],actual=this.write(changes,unitIds,publications);
     return {changes:actual,publish:()=>{for(const p of publications)p();}};
   }
-  preview(p:any):HistoryPreview {const preview=this.buildPreview(p);this.pins.set(preview.token,new Set(preview.kind==='restore'?this.groups(true).filter(g=>g.order>=preview.groups[0].order).map(g=>g.operationId):preview.groups.map(g=>g.operationId)));return preview;}
+  preview(p:any):HistoryPreview {
+    const preview=this.buildPreview(p),retentionPin=randomUUID();
+    this.pins.set(retentionPin,new Set(preview.kind==='restore'?this.groups(true).filter(g=>g.order>=preview.groups[0].order).map(g=>g.operationId):preview.groups.map(g=>g.operationId)));
+    return {...preview,retentionPin};
+  }
   private buildPreview(p:any):HistoryPreview {
     let groups:HistoryGroup[],unit:CourseUnit|undefined,guardIds:string[]=[];
     const kind=p.selection?'undo':'restore';
@@ -161,7 +165,7 @@ export class FormalHistory {
     }
     const publications:Array<()=>void>=[];
     const committed=transaction(this.db,()=>{
-      const fresh=this.preview(p.preview), result:HistoryResult={operationId:p.operationId,status:'conflict',applied:[],conflicts:[],changedObjectIds:[],cursor:eventCursor(this.db)};
+      const fresh=this.buildPreview(p.preview), result:HistoryResult={operationId:p.operationId,status:'conflict',applied:[],conflicts:[],changedObjectIds:[],cursor:eventCursor(this.db)};
       if(fresh.token!==p.preview.token) result.conflicts.push({operationId:p.operationId,objectIds:fresh.affectedObjectIds,reason:'预览后相关内容或草稿已变化，请重新预览'});
       else {
         const logical=new Map<string,number>(), combined=new Map<string,HistoryChange>();
@@ -335,11 +339,11 @@ export class FormalHistory {
     const page=sorted.slice(0,limit);return {activities:page,...(sorted.length>limit?{next:page.at(-1)!.order}:{})};
   }
   dispatch(action:string,p:any):unknown {
-    if(action==='formalHistory:release')return this.release(p.token);
+    if(action==='formalHistory:release')return this.release(p.pinId);
     if(action==='formalHistory:list')return this.list(p);
     if(action==='formalHistory:detail')return this.detail(p.operationId);
     if(action==='formalHistory:preview')return this.preview(p);
-    if(action==='formalHistory:apply'){const result=this.apply(p);this.release(p.preview.token);return result;}
+    if(action==='formalHistory:apply'){const result=this.apply(p);this.release(p.preview.retentionPin);return result;}
     if(action==='formalHistory:query')return this.query(p.operationId);
     throw new Error('未知历史操作');
   }

@@ -12,7 +12,7 @@ export interface HistoryActivity {
 }
 export type HistorySelection = { kind: 'operations'; operationIds: string[] } | { kind: 'task'; taskId: string };
 export interface HistoryPreview {
-  token: string; kind: 'undo' | 'restore'; selection?: HistorySelection; unitId?: string; atOperationId?: string; side?: 'before' | 'after'; includeLayout?: boolean;
+  token: string; retentionPin?: string; kind: 'undo' | 'restore'; selection?: HistorySelection; unitId?: string; atOperationId?: string; side?: 'before' | 'after'; includeLayout?: boolean;
   unit?: CourseUnit; groups: HistoryGroup[]; affectedObjectIds: string[]; unitIds: string[];
   sourceVersions: string[]; runningTaskIds: string[]; drafts: number; explanations: string[];
 }
@@ -21,7 +21,7 @@ export interface HistoryResult {
   conflicts: Array<{operationId:string;objectIds:string[];reason:string}>; changedObjectIds: string[]; cursor: number;
 }
 export interface HistoryAPI {
-  release(request:{sessionId:string;token:string}):Promise<void>;
+  release(request:{sessionId:string;pinId:string}):Promise<void>;
   list(request:{sessionId:string;unitId?:string;limit?:number;before?:string}):Promise<{activities:HistoryActivity[];next?:string}>;
   detail(request:{sessionId:string;operationId:string}):Promise<HistoryGroup>;
   preview(request:{sessionId:string;selection:HistorySelection} | {sessionId:string;unitId:string;atOperationId:string;side:'before'|'after';includeLayout?:boolean}):Promise<HistoryPreview>;

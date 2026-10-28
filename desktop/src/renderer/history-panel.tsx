@@ -31,9 +31,9 @@ export const HistoryPanel=forwardRef<HistoryPanelHandle,Props>(function HistoryP
   const [busy,setBusy]=useState(false),[error,setError]=useState('');
   const dialog=useRef<HTMLDialogElement>(null),origin=useRef<(()=>Promise<void>)|undefined>(undefined),trigger=useRef<HTMLButtonElement>(null);
   const pending=useRef<{sessionId:string;operationId:string;preview:HistoryPreview}|undefined>(undefined);
-  const held=useRef<{sessionId:string;token:string}|undefined>(undefined);
+  const held=useRef<{sessionId:string;pinId:string}|undefined>(undefined);
   const release=()=>{const p=held.current;held.current=undefined;if(p)void window.yizhi.formalHistory.release(p).catch(()=>{});};
-  const replacePreview=(value?:HistoryPreview)=>{release();if(value)held.current={sessionId,token:value.token};setPreview(value);};
+  const replacePreview=(value?:HistoryPreview)=>{release();if(value?.retentionPin)held.current={sessionId,pinId:value.retentionPin};setPreview(value);};
   useEffect(()=>()=>{if(!pending.current)release();},[sessionId]);
   const load=async(unitId:string|undefined,before?:string)=>{
     const page=await window.yizhi.formalHistory.list({sessionId,unitId,limit:20,before});
@@ -88,7 +88,7 @@ export const HistoryPanel=forwardRef<HistoryPanelHandle,Props>(function HistoryP
         </details>)}
         {next&&<button disabled={busy} onClick={()=>void work(()=>load(scope,next))}>加载更早活动</button>}
       </section>
-      {preview&&<section className="history-preview" aria-label="旧版只读预览"><header><h3>{preview.kind==='restore'?'旧版只读预览':'撤回范围预览'}</h3><button disabled={busy||!!pending.current} onClick={()=>{setPreview(undefined);setResult(undefined);}}>返回历史列表</button></header>
+      {preview&&<section className="history-preview" aria-label="旧版只读预览"><header><h3>{preview.kind==='restore'?'旧版只读预览':'撤回范围预览'}</h3><button disabled={busy||!!pending.current} onClick={()=>{replacePreview(undefined);setResult(undefined);}}>返回历史列表</button></header>
         <p>{names(preview.unitIds)}</p>{preview.explanations.map(t=><p key={t}>{t}</p>)}
         {preview.runningTaskIds.length>0&&<p>此任务仍在运行。执行时先停止，再核对已完成修改；若集合有变化，需要重新预览。</p>}
         {preview.drafts>0&&<p>{preview.drafts} 份相关输入草稿已保留，不会转为正文。</p>}

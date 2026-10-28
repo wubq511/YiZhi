@@ -24,6 +24,32 @@ test('retention defaults to 140 positive integer days and follows the course thr
   assert.match((await core.retention.set({...reopened,days:365})).notice,/不能找回/);
  }finally{await core.close();await rm(root,{recursive:true,force:true});}
 });
+test('a rejected stale preview releases its original root without leaking the internal recheck as a new permanent pin',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-retention-preview-conflict-')),clock=new SharedArrayBuffer(8),t=Date.parse('2030-01-01T00:00:00Z');Atomics.store(new BigInt64Array(clock),0,BigInt(t));
+ const core=new CourseService(resolve('dist/worker.cjs'),{retentionScheduling:{clock,manual:true}});
+ try{
+  const c=await core.open(root);await core.save({...c,operationId:'preview-root-1',inputSeq:1,baseRevision:1,blockId:A,text:'First preview root'});
+  const preview=await core.formalHistory.preview({...c,selection:{kind:'operations',operationIds:['preview-root-1']}});
+  await core.save({...c,operationId:'preview-root-2',inputSeq:2,baseRevision:2,blockId:A,text:'Later independently edited body'});
+  assert.equal((await core.formalHistory.apply({...c,operationId:'reject-stale-preview',preview})).status,'conflict');
+  Atomics.store(new BigInt64Array(clock),0,BigInt(t+150*DAY));let r=await core.retention.run({...c,limit:16});for(let i=0;r.pending&&i<100;i++)r=await core.retention.run({...c,limit:16});
+  assert.equal((await core.retention.get(c)).pendingGroups,0);assert.equal(r.blocked,undefined);
+ }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+test('held old previews do not prevent later unreferenced groups or unrelated ended recovery payloads from expiring',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-retention-pinned-batches-')),clock=new SharedArrayBuffer(8),t=Date.parse('2030-01-01T00:00:00Z');Atomics.store(new BigInt64Array(clock),0,BigInt(t));
+ const core=new CourseService(resolve('dist/worker.cjs'),{retentionScheduling:{clock,manual:true}});let db:DatabaseSync|undefined;
+ try{
+  const c=await core.open(root);for(let i=1;i<=6;i++)await core.save({...c,operationId:`pinned-batch-${i}`,inputSeq:i,baseRevision:i,blockId:A,text:`Formal bounded group ${i}`});
+  const p=await core.formalHistory.preview({...c,selection:{kind:'operations',operationIds:['pinned-batch-1','pinned-batch-2','pinned-batch-3','pinned-batch-4']}});
+  const attempt=await core.commands.startAttempt({...c,taskId:'independent-ended-basis'}),basis=await core.commands.read({...c,attemptId:attempt.attemptId,objectIds:[A],context:true});await core.commands.stop({...c,attemptId:attempt.attemptId});
+  Atomics.store(new BigInt64Array(clock),0,BigInt(t+150*DAY));let r=await core.retention.run({...c,limit:2});for(let i=0;r.pending&&i<1000;i++)r=await core.retention.run({...c,limit:2});
+  assert.equal((await core.retention.get(c)).pendingGroups,4);assert.match(r.blocked??'',/预览|恢复/);
+  await assert.rejects(core.formalHistory.detail({...c,operationId:'pinned-batch-6'}),/过期/);
+  db=new DatabaseSync(join(root,'course.sqlite'));assert.equal(db.prepare('SELECT domain_basis FROM cg_bases WHERE id=?').get(basis.basisId)!.domain_basis,null);
+  await core.formalHistory.release({...c,pinId:p.retentionPin!});
+ }finally{db?.close();await core.close();await rm(root,{recursive:true,force:true});}
+});
 test('clock rollback expires by formal time while retained versions still reconstruct through necessary original window references',async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-retention-rollback-')),clock=new SharedArrayBuffer(8),t=Date.parse('2030-01-01T00:00:00Z');Atomics.store(new BigInt64Array(clock),0,BigInt(t+150*DAY));
  const core=new CourseService(resolve('dist/worker.cjs'),{retentionScheduling:{clock,manual:true}});let db:DatabaseSync|undefined;
@@ -34,7 +60,7 @@ test('clock rollback expires by formal time while retained versions still recons
   let r=await core.retention.run({...c,limit:2});for(let i=0;r.pending&&i<1000;i++)r=await core.retention.run({...c,limit:2});
   assert.equal((await core.retention.get(c)).pendingGroups,0);await assert.rejects(core.formalHistory.detail({...c,operationId:'backdated-formal-group'}),/过期/);
   const preview=await core.formalHistory.preview({...c,unitId:'KU-001',atOperationId:'window-before-clock-rollback',side:'after'});
-  assert.equal(preview.unit!.reading.blocks[0].payload.text,'Window body before clock rollback');await core.formalHistory.release({...c,token:preview.token});
+  assert.equal(preview.unit!.reading.blocks[0].payload.text,'Window body before clock rollback');await core.formalHistory.release({...c,pinId:preview.retentionPin!});
   assert.deepEqual(await core.queryOperation(c.sessionId,'backdated-formal-group'),old);
   Atomics.store(new BigInt64Array(clock),0,BigInt(t+310*DAY));r=await core.retention.run({...c,limit:2});for(let i=0;r.pending&&i<1000;i++)r=await core.retention.run({...c,limit:2});
   db=new DatabaseSync(join(root,'course.sqlite'));assert.equal(Number(db.prepare("SELECT count(*) n FROM operations WHERE after_text LIKE '%Backdated original bridge body%' OR before_text LIKE '%Backdated original bridge body%'").get()!.n),0);
@@ -260,10 +286,12 @@ test('an active recovery preview pins its complete aggregate; a real cleanup fau
   const receipt=await core.commands.commit({sessionId,operationId:'old-aggregate',attemptId:attempt.attemptId,basisId:basis.basisId,changes:[{objectId:A,value:{...block,payload:{...block.payload,text:'Aggregate old body'}}}],bundle:{layout:[{unitId:n.unitId,x:n.x+40,y:n.y,width:n.width}]}});
   assert.equal(receipt.status,'committed');await core.commands.stop({sessionId,attemptId:attempt.attemptId});
   const p=await core.formalHistory.preview({sessionId,selection:{kind:'operations',operationIds:['old-aggregate']}});
+  const same=await core.formalHistory.preview({sessionId,selection:{kind:'operations',operationIds:['old-aggregate']}});assert.equal(same.token,p.token);assert.notEqual(same.retentionPin,p.retentionPin);
+  await core.formalHistory.release({sessionId,pinId:same.retentionPin!});await core.formalHistory.release({sessionId,pinId:same.retentionPin!});
   Atomics.store(new BigInt64Array(clock),0,BigInt(t+150*DAY));
-  let r=await core.retention.run({sessionId,limit:1});for(let i=0;r.pending&&i<30;i++)r=await core.retention.run({sessionId,limit:1});
+  let r=await core.retention.run({sessionId,limit:1});for(let i=0;r.pending&&i<1000;i++)r=await core.retention.run({sessionId,limit:1});
   assert.match(r.blocked??'',/预览|恢复/);assert.equal((await core.formalHistory.detail({sessionId,operationId:'old-aggregate'})).changes.length,2);
-  await core.formalHistory.release({sessionId,token:p.token});
+  await core.formalHistory.release({sessionId,pinId:p.retentionPin!});
   const before=await core.read(sessionId),graph=await core.graph(sessionId);
   fault=new DatabaseSync(join(root,'course.sqlite'));fault.exec("CREATE TRIGGER fail_retention BEFORE INSERT ON history_expired BEGIN SELECT RAISE(ABORT,'retention actual SQLite fault'); END");
   await assert.rejects(core.retention.run({sessionId,limit:1}),/retention actual SQLite fault/);

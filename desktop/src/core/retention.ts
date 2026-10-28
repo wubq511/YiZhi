@@ -73,16 +73,18 @@ export class HistoryRetention {
    for(const row of prepare){if(!this.db.prepare('SELECT 1 FROM history_expired WHERE operation_id=?').get(row.operation_id!))for(const c of this.history.detail(String(row.operation_id)).changes)this.db.prepare('INSERT OR IGNORE INTO history_object_refs VALUES(?,?,?)').run(row.operation_id!,c.objectId,row.seq!);}
    this.db.prepare("INSERT OR REPLACE INTO metadata VALUES('history-retention-indexed',?)").run(String(prepare.at(-1)!.seq));
   });return {phase:'index',pending:true,removed:0};}
-  const status=this.get(),rows=this.db.prepare('SELECT * FROM history_index WHERE committed_at<? AND operation_id NOT IN(SELECT operation_id FROM history_expired) ORDER BY seq LIMIT ?').all(status.cutoff,limit);
+  const cursor=Number(this.db.prepare("SELECT value FROM metadata WHERE key='retention-history-cursor'").get()?.value??0);
+  const status=this.get(),rows=this.db.prepare('SELECT * FROM history_index WHERE seq>? AND committed_at<? AND operation_id NOT IN(SELECT operation_id FROM history_expired) ORDER BY seq LIMIT ?').all(cursor,status.cutoff,limit);
   const expired=rows.filter(row=>!this.history.pinned(String(row.operation_id))&&!this.recoveryPinned(row));
   const references=this.db.prepare('SELECT h.* FROM history_index h JOIN history_window_refs w USING(operation_id) WHERE NOT EXISTS(SELECT 1 FROM history_index p WHERE p.seq<h.seq AND p.operation_id NOT IN(SELECT operation_id FROM history_expired)) ORDER BY seq LIMIT ?').all(limit).filter(row=>!this.history.pinned(String(row.operation_id))&&!this.recoveryPinned(row));
   if(references.length){transaction(this.db,()=>{for(const row of references){this.crop(String(row.operation_id),String(row.source));this.db.prepare('DELETE FROM history_window_refs WHERE operation_id=?').run(row.operation_id!);}});return {phase:'window-references',pending:true,removed:references.length};}
-  if(rows.length&&!expired.length)return {phase:'blocked',pending:false,removed:0,blocked:'当前历史预览或恢复正在使用此组，先保留其完整依据'};
+  if(rows.length&&!expired.length){this.db.prepare("INSERT OR REPLACE INTO metadata VALUES('retention-history-cursor',?)").run(String(rows.at(-1)!.seq));return {phase:'history-pins',pending:true,removed:0,blocked:'当前历史预览或恢复正在使用此组，先保留其完整依据'};}
   if(!expired.length){
+   this.db.prepare("INSERT OR REPLACE INTO metadata VALUES('retention-history-cursor','0')").run();
    const now=new Date(this.now()).toISOString(),payloads=this.payloads.run(limit,status.cutoff,now);if(payloads.pending)return payloads;
    if(transaction(this.db,()=>cropLegacyContent(this.db,status.cutoff,now)))return {phase:'provenance',pending:true,removed:1};
    const cache=this.storage.staleCache(limit);if(cache.pending)return cache;
-   return this.resources.run(limit,status.cutoff);
+   const resources=this.resources.run(limit,status.cutoff);return status.pendingGroups?{...resources,phase:resources.pending?resources.phase:'blocked',blocked:'当前历史预览或恢复正在使用此组，先保留其完整依据'}:resources;
   }
   const groups=expired.map(row=>this.history.detail(String(row.operation_id)));
   for(const group of groups)for(const c of group.changes){
@@ -103,6 +105,7 @@ export class HistoryRetention {
     this.db.prepare('DELETE FROM restore_timeline WHERE reference=?').run(group.operationId);
    }
    this.db.prepare("INSERT OR REPLACE INTO metadata VALUES('history-retention-boundary',?)").run(status.cutoff);
+   this.db.prepare("INSERT OR REPLACE INTO metadata VALUES('retention-history-cursor',?)").run(String(rows.at(-1)!.seq));
    this.boundary(this.scheduling?.beforeCommit);
   });
   this.boundary(this.scheduling?.afterCommit);
