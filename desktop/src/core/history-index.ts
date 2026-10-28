@@ -7,6 +7,12 @@ export function initializeHistoryIndex(db:DatabaseSync) {
     explanation TEXT NOT NULL, unit_ids TEXT NOT NULL, object_ids TEXT NOT NULL);
     CREATE INDEX IF NOT EXISTS history_activity ON history_index(activity_id,seq DESC);
     CREATE INDEX IF NOT EXISTS history_task ON history_index(task_id,seq DESC);`);
+  db.exec(`CREATE TABLE IF NOT EXISTS history_expired(operation_id TEXT PRIMARY KEY,source TEXT NOT NULL,committed_at TEXT NOT NULL,task_id TEXT);
+    CREATE TABLE IF NOT EXISTS history_window_refs(operation_id TEXT PRIMARY KEY);
+    CREATE TABLE IF NOT EXISTS history_boundary(object_id TEXT PRIMARY KEY,value TEXT,version INTEGER NOT NULL,operation_id TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS history_object_refs(operation_id TEXT NOT NULL,object_id TEXT NOT NULL,seq INTEGER NOT NULL,PRIMARY KEY(operation_id,object_id));
+    CREATE INDEX IF NOT EXISTS history_object_order ON history_object_refs(object_id,seq);
+    CREATE INDEX IF NOT EXISTS history_time ON history_index(committed_at);`);
   const groupValues=(prefix:string)=>`SELECT ${prefix}.operation_id,'group',
     CASE WHEN json_extract(${prefix}.payload,'$.taskId') IS NOT NULL THEN 'task:'||json_extract(${prefix}.payload,'$.taskId') ELSE 'operation:'||${prefix}.operation_id END,
     json_extract(${prefix}.payload,'$.taskId'),coalesce(json_extract(${prefix}.payload,'$.actor'),'agent'),json_extract(${prefix}.payload,'$.committedAt'),

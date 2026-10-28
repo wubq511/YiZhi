@@ -8,7 +8,7 @@ export interface MigrationReport {
   resources: Array<{ asset: string; path: string; sha256: string; byteLength: number; mediaType: string }>;
   gaps: string[]; differences: string[];
 }
-export interface LegacyContent { manifest: Record<string, any>; knowledge: Record<string, any>; layout: Record<string, any>; report: MigrationReport }
+export interface LegacyContent { manifest: Record<string, any>; knowledge: Record<string, any>; layout: Record<string, any>; report: MigrationReport;retention?:{originalUnitBodies:'expired';expiredAt:string;registeredAt:string} }
 export function migrationClient(invoke: (action: string, payload: any) => Promise<any>) {
   return {
     snapshot: (request: MigrationTarget): Promise<{ directory: string; files: Record<string, string> }> => invoke('migration:snapshot', request),

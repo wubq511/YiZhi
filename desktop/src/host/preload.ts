@@ -1,4 +1,5 @@
 import { historyClient } from '../history-api';
+import { retentionClient } from '../retention-api';
 import { courseRestoreClient } from '../course-restore-api';
 import { descriptionClient } from '../description-api';
 import { drawingClient } from '../drawing-api';
@@ -22,6 +23,7 @@ async function invoke(channel: string, argument?: unknown) {
   }
 }
 const bridge: DesktopBridge = {
+  retention:(()=>{const {resourceLease:_,resourceLeases:__,...bridge}=retentionClient(invoke);return bridge;})(),
   courseRestore:courseRestoreClient(invoke),
   formalHistory: historyClient(invoke),
   description: descriptionClient(invoke),

@@ -1,3 +1,4 @@
+import { historyTimestamp } from './history-clock';
 import { layoutGraph, saveLayout } from './local-layout';
 import type { CourseGraph } from '../shared';
 import { createHash } from 'node:crypto';
@@ -60,7 +61,7 @@ export class Drawings {
       if(!current||!['x','y','width'].every(key=>current[key as keyof typeof current]===request.before[key])) throw new Error('布局已变化，请重新读取后继续');
       const beforeVersion=Number(this.db.prepare('SELECT version FROM layout_versions WHERE unit_id=?').get(request.before.unitId)?.version??0);
       saveLayout(this.db,this.graph,[request.after]);
-      const result={operationId:request.operationId,before:request.before,after:request.after,beforeVersion,afterVersion:Number(this.db.prepare('SELECT version FROM layout_versions WHERE unit_id=?').get(request.after.unitId)?.version??0),committedAt:new Date().toISOString(),actor:'student' as const};
+      const result={operationId:request.operationId,before:request.before,after:request.after,beforeVersion,afterVersion:Number(this.db.prepare('SELECT version FROM layout_versions WHERE unit_id=?').get(request.after.unitId)?.version??0),committedAt:historyTimestamp(),actor:'student' as const};
       this.db.prepare('INSERT INTO placement_history(value) VALUES(?)').run(json(result));
       appendEvent(this.db,{type:'drawing.changed',drawingId:`layout:${request.after.unitId}`});
       this.db.prepare('INSERT INTO drawing_operations VALUES(?,?,?)').run(request.operationId,digest,json(result));
@@ -93,7 +94,7 @@ export class Drawings {
       if (v !== null) this.validate(v,old);
       const saved: PersonalDrawing = this.visible({ id: command.id, version: (old?.version ?? 0) + 1, value: v, original: old?.original ?? v!, status: v ? 'attached' : 'deleted' });
       this.db.prepare('INSERT INTO personal_drawings VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value').run(saved.id, json(saved));
-      this.db.prepare('INSERT INTO drawing_history(value) VALUES(?)').run(json({ committedAt:new Date().toISOString(),actor:'student',operationId: command.operationId, id: saved.id, before: old?.value ?? null, after: v, version: saved.version }));
+      this.db.prepare('INSERT INTO drawing_history(value) VALUES(?)').run(json({ committedAt:historyTimestamp(),actor:'student',operationId: command.operationId, id: saved.id, before: old?.value ?? null, after: v, version: saved.version }));
       appendEvent(this.db, { type: 'drawing.changed', drawingId: saved.id });
       this.db.prepare('INSERT INTO drawing_operations VALUES(?,?,?)').run(command.operationId, digest, json(saved));
       return this.visible(saved);
