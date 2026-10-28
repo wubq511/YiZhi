@@ -24,8 +24,14 @@ export class FormalHistory {
     if(id.startsWith('experiment:')) {const [unitId,blockId]=id.slice(11).split('/');const value=this.experiments.formalDefinition(unitId,blockId);return {value,version:value.revision,kind:'experiment'};}
     if(id.startsWith('REL-')||/^G[A-Za-z0-9]/.test(id))return this.relations.historyObject(id);
     const row=this.db.prepare('SELECT * FROM cg_objects WHERE id=?').get(id);
-    return {value:row?parse(row.value):null,version:Number(row?.version??0),kind:String(row?.kind??'block')};
+    return {value:row?parse(row.value):null,version:Number(row?.version??0),kind:String(row?.kind??'unknown')};
   }
+  /** Later producer domains must provide a checked inverse, never fall through as body objects. */
+  private unsupported(changes:HistoryChange[]):string[] {
+    return changes.filter(c=>/^(unit|graph|theme):/.test(c.objectId)||
+      !['block','structure','reference','dependency','layout','experiment','formal-relation'].includes(this.object(c.objectId).kind)).map(c=>c.objectId);
+  }
+  private unsupportedReason(ids:string[]) {return `尚不支持这些结构对象的完整恢复，整个一致组保留：${ids.join('、')}`;}
   private selected(selection:HistorySelection) {
     if(selection.kind==='task')return this.groups().filter(g=>g.taskId===this.taskRoot(selection.taskId));
     if(!Array.isArray(selection.operationIds)||!selection.operationIds.length||selection.operationIds.length>1000)throw new Error('无效的撤回范围');
@@ -62,10 +68,14 @@ export class FormalHistory {
       const scope=new Set<string>([p.unitId]);
       const later=this.groups().filter(g=>g.order>anchor.order||(p.side==='before'&&g.operationId===anchor.operationId)).reverse();
       // Retake only this unit's content plus complete necessary domains in its original aggregates.
-      for(const g of later)if(g.unitIds.includes(p.unitId))for(const c of g.changes) {
-        if(!p.includeLayout&&c.objectId.startsWith('layout:'))continue;
-        desired.set(c.objectId,c.before);
-        for(const id of g.unitIds)scope.add(id);
+      for(const g of later)if(g.unitIds.includes(p.unitId)) {
+        const unsupported=this.unsupported(g.changes);
+        if(unsupported.length)throw new Error(this.unsupportedReason(unsupported));
+        for(const c of g.changes) {
+          if(!p.includeLayout&&c.objectId.startsWith('layout:'))continue;
+          desired.set(c.objectId,c.before);
+          for(const id of g.unitIds)scope.add(id);
+        }
       }
       unit=this.projectUnit(current,desired);guardIds=[...unitObjects(current).keys()];
       const changes:HistoryChange[]=[];
@@ -83,7 +93,8 @@ export class FormalHistory {
     for(const g of groups) {collect(g.changes);const row=this.db.prepare('SELECT result FROM cg_candidates WHERE id=?').get(g.operationId);if(row)collect(parse(row.result));}
     const identity=p.selection?{selection:p.selection}:{unitId:p.unitId,atOperationId:p.atOperationId,side:p.side,includeLayout:!!p.includeLayout};
     return {kind,...identity,unit,groups,affectedObjectIds,unitIds,sourceVersions:[...sourceVersions],runningTaskIds,drafts:drafts.length,
-      explanations:[kind==='undo'?'按原一致组逆序撤回；同处后续修改保留并说明。':'仅取回所选单元课程内容；当前笔记、掌握状态、对话和未完成草稿保留。'],
+      explanations:[kind==='undo'?'按原一致组逆序撤回；同处后续修改保留并说明。':'仅取回所选单元课程内容；当前笔记、掌握状态、对话和未完成草稿保留。',
+        ...groups.flatMap(g=>{const ids=this.unsupported(g.changes);return ids.length?[this.unsupportedReason(ids)]:[];})],
       token:this.hash([identity,groups.map(g=>[g.operationId,g.changes]),versions,drafts])};
   }
   query(id:string):HistoryResult|null {
@@ -108,6 +119,8 @@ export class FormalHistory {
       else {
         const logical=new Map<string,number>(), combined=new Map<string,HistoryChange>();
         for(const group of [...fresh.groups].reverse()) {
+          const unsupported=this.unsupported(group.changes);
+          if(unsupported.length) {result.conflicts.push({operationId:group.operationId,objectIds:unsupported,reason:this.unsupportedReason(unsupported)});continue;}
           const conflicts=group.changes.filter(c=>(logical.get(c.objectId)??this.object(c.objectId).version)!==c.afterVersion).map(c=>c.objectId);
           if(conflicts.length) {result.conflicts.push({operationId:group.operationId,objectIds:conflicts,reason:'同处修订已变化，整个一致组保留'});continue;}
           this.db.exec('SAVEPOINT history_group');
@@ -123,6 +136,10 @@ export class FormalHistory {
         }
         result.changedObjectIds=[...combined.keys()];result.status=result.applied.length?(result.conflicts.length?'partial':'committed'):'conflict';
         if(combined.size) {
+          for(const unitId of fresh.unitIds) {
+            const row=this.db.prepare('SELECT revision FROM units WHERE id=?').get(unitId);
+            if(row)this.agent.studentChanged({operationId:p.operationId,unitId,revision:Number(row.revision),objectIds:result.changedObjectIds});
+          }
           result.cursor=appendEvent(this.db,{type:'group.committed',operationId:p.operationId,revision:Math.max(...fresh.unitIds.map(id=>Number(this.db.prepare('SELECT revision FROM units WHERE id=?').get(id)?.revision??1))),changedObjectIds:result.changedObjectIds});
           this.db.prepare('INSERT INTO cg_candidates VALUES(?,?,?,?)').run(p.operationId,digest,'{}',JSON.stringify({...result,domain:'history'}));
           this.db.prepare('INSERT INTO cg_history VALUES(?,?)').run(p.operationId,JSON.stringify({operationId:p.operationId,actor:'student',unitIds:fresh.unitIds,explanation:fresh.kind==='undo'?'撤回所选修改':'恢复单元旧内容',generation:Number(this.db.prepare("SELECT value FROM metadata WHERE key='generation'").get()!.value),revision:Math.max(1,...fresh.unitIds.map(id=>Number(this.db.prepare('SELECT revision FROM units WHERE id=?').get(id)?.revision??1))),recovery:{kind:fresh.kind,sourceOperationIds:fresh.groups.map(g=>g.operationId),unitId:fresh.unitId,side:fresh.side,includeLayout:fresh.includeLayout},committedAt:new Date().toISOString(),changes:[...combined.values()]}));

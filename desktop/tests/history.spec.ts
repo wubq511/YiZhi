@@ -12,7 +12,7 @@ test('real history UI expands real differences, previews read-only and restores 
  await core.save({sessionId:initial.sessionId,operationId:'ui-old',inputSeq:1,baseRevision:initial.revision,blockId:A,text:'历史旧版讲解'});
  const a=await core.commands.startAttempt({sessionId:initial.sessionId,taskId:'ui-task'}),basis=await core.commands.read({sessionId:initial.sessionId,attemptId:a.attemptId,objectIds:[A]});
  const value=basis.objects.find(o=>o.id===A)!.value;
- await core.commands.commit({sessionId:initial.sessionId,attemptId:a.attemptId,operationId:'ui-new',basisId:basis.basisId,changes:[{objectId:A,value:{...value,payload:{...value.payload,text:'当前新版讲解'}}}]});
+ await core.commands.commit({sessionId:initial.sessionId,attemptId:a.attemptId,operationId:'ui-new',basisId:basis.basisId,changes:[{objectId:A,value:{...value,payload:{...value.payload,text:'当前新版讲解',explanation:'可核对的额外属性'}}}]});
  await core.close();
  const app=await electron.launch({args:[resolve('.'),`--course=${directory}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});
  try {
@@ -22,9 +22,15 @@ test('real history UI expands real differences, previews read-only and restores 
   const camera=await page.locator('.react-flow__viewport').getAttribute('style');
   await page.getByRole('button',{name:'课程历史',exact:true}).click();
   const dialog=page.getByRole('dialog',{name:'修改历史',exact:true});await expect(dialog).toBeVisible();
+  await dialog.getByLabel('历史范围').selectOption('KU-057');
+  await expect(dialog).toContainText('此范围还没有正式修改');
+  await dialog.getByLabel('历史范围').selectOption('');
+  await expect(dialog.locator('.history-activity')).toHaveCount(2);
   await dialog.locator('.history-activity').filter({hasText:'Agent 修改'}).locator('summary').first().click();
   await expect(dialog.getByText('当前新版讲解',{exact:true})).toBeVisible();
   await expect(dialog.getByText('历史旧版讲解',{exact:true})).toBeVisible();
+  await dialog.getByText('查看完整对象差异',{exact:true}).first().click();
+  await expect(dialog.getByText(/"explanation": "可核对的额外属性"/)).toBeVisible();
   await dialog.getByRole('button',{name:'查看修改前版本',exact:true}).first().click();
   await expect(dialog.getByRole('region',{name:'旧版只读预览'})).toContainText('历史旧版讲解');
   await expect(dialog.locator('[contenteditable=true]')).toHaveCount(0);
@@ -39,7 +45,7 @@ test('real history UI expands real differences, previews read-only and restores 
   await dialog.getByRole('button',{name:'撤回这次修改',exact:true}).first().click();
   await dialog.getByRole('button',{name:'确认撤回',exact:true}).click();
   await expect(dialog.getByRole('status',{name:'历史操作结果'})).toContainText('已撤回');
-  await page.screenshot({path:'/tmp/yizhi-implement-gFFkA7/t21-history-ui.png'});
+  await page.screenshot({path:test.info().outputPath('history-ui.png')});
   await dialog.getByRole('button',{name:'返回原阅读位置',exact:true}).click();
   await expect(page.getByRole('textbox',{name:'编辑首段正文'})).toHaveText('当前新版讲解');
  }finally{await app.close();await rm(root,{recursive:true,force:true});}
@@ -74,7 +80,7 @@ test('real incomplete formula remains a draft through failed history restore, ex
   await expect(dialog.getByRole('status',{name:'历史操作结果'})).toContainText('已恢复');
   expect(await page.evaluate(async()=>(await(window as any).yizhi.open()).drafts)).toEqual(before);
   await resizeBoardWindow(app,page,700,700);
-  await page.screenshot({path:'/tmp/yizhi-implement-gFFkA7/t21-history-narrow.png'});
+  await page.screenshot({path:test.info().outputPath('history-narrow.png')});
   expect(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
   await dialog.getByRole('button',{name:'返回原阅读位置',exact:true}).click();
   await app.close();app=await launch();page=await app.firstWindow();await resizeBoardWindow(app,page);
@@ -112,4 +118,39 @@ test('history stops an executing protocol task before withdrawing its complete b
   expect(after.conversation.messages.some((m:any)=>m.role==='user'&&m.text.includes('受控协议历史撤回回归'))).toBe(true);
   expect(after.history.activities.filter((a:any)=>a.explanation==='撤回所选修改')).toHaveLength(1);
  }finally{await app.close();await rm(root,{recursive:true,force:true});}
+});
+
+test('active B history preserves a failed input tail before preview and restores B without changing the first unit',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-history-b-ui-')),directory=join(root,'course');
+ const app=await electron.launch({args:[resolve('.'),`--course=${directory}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});
+ let fault:DatabaseSync|undefined;
+ try{
+  const page=await app.firstWindow();await resizeBoardWindow(app,page);
+  const original=await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return {first:c.unit,other:await b.readUnit(c.sessionId,'KU-057')};});
+  await page.getByRole('button',{name:'复用器与分配器',exact:true}).click();
+  await page.getByRole('button',{name:'MUX 器件、级联与扩展',exact:true}).first().click();
+  const reader=page.locator('[data-agent-unit="KU-057"]'),editor=reader.getByRole('textbox',{name:'连续编辑正文',exact:true});
+  const block=original.other.reading.blocks.find((b:any)=>b.kind==='paragraph');
+  const paragraph=editor.locator(`[data-block-id="${block.id}"]`);
+  await revealBoardControl(page,paragraph);await paragraph.click();await page.keyboard.press('Home');
+  fault=new DatabaseSync(join(directory,'course.sqlite'));
+  fault.exec("CREATE TRIGGER history_b_draft_fault BEFORE INSERT ON drafts BEGIN SELECT RAISE(ABORT,'active B input disk fault'); END");
+  await page.keyboard.insertText('历史保留当前单元尾部：');
+  await expect(reader.getByRole('status',{name:'当前单元保存状态'})).toHaveText('未保存');
+  await page.getByRole('button',{name:'课程历史',exact:true}).click();
+  const dialog=page.getByRole('dialog',{name:'修改历史',exact:true});
+  await expect(dialog.getByRole('alert')).toContainText('当前单元输入尚未保留');
+  fault.exec('DROP TRIGGER history_b_draft_fault');fault.close();fault=undefined;
+  await dialog.getByRole('button',{name:'返回原阅读位置',exact:true}).click();
+  await page.getByRole('button',{name:'课程历史',exact:true}).click();
+  await dialog.getByLabel('历史范围').selectOption('KU-057');
+  await dialog.locator('.history-activity').first().locator('summary').first().click();
+  await expect(dialog).toContainText('历史保留当前单元尾部：');
+  await dialog.getByRole('button',{name:'查看修改前版本',exact:true}).first().click();
+  await dialog.getByRole('button',{name:'恢复此版本',exact:true}).click();
+  await expect(dialog.getByRole('status',{name:'历史操作结果'})).toContainText('已恢复');
+  await dialog.getByRole('button',{name:'返回原阅读位置',exact:true}).click();
+  await expect(paragraph).toHaveText(block.payload.text);
+  expect((await page.evaluate(async()=>(window as any).yizhi.open())).unit).toEqual(original.first);
+ }finally{if(fault){fault.exec('DROP TRIGGER IF EXISTS history_b_draft_fault');fault.close();}await app.close();await rm(root,{recursive:true,force:true});}
 });

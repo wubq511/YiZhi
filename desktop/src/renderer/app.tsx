@@ -465,6 +465,7 @@ function App() {
         const progress=channel.current?.progress();
         if(!saved&&(!progress||progress.durableInputSeq<progress.inputSeq))throw new Error('当前输入尚未保留，请先重试保存。');
         if(continuous.current&&!await continuous.current.finish())throw new Error('当前输入尚未保留。');
+        if(!await flushUnitInputs(true))throw new Error('当前单元输入尚未保留，请先重试保存。');
       }} capture={()=>{
         const oldCamera=flow.getViewport(),focused=document.activeElement as HTMLElement|null;
         const selection=getSelection(),range=selection?.rangeCount?selection.getRangeAt(0).cloneRange():undefined;
@@ -475,6 +476,7 @@ function App() {
         };
       }} changed={async()=>{
         await channel.current?.synchronize();
+        for(const input of unitInputs.current.values())await input.synchronize();
         const current=await window.yizhi.read(course.sessionId);setCourse(current);
         const updated=await Promise.all(mounted.map(u=>window.yizhi.readUnit(course.sessionId,u.id)));setMounted(updated);
         setSelected(previous=>updated.find(u=>u.id===previous?.id)??previous);setGraph(await window.yizhi.graph(course.sessionId));

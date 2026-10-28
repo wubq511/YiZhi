@@ -221,3 +221,61 @@ test('a pre-T21 student record is normalized from its real version chain and rem
  await s.close();const reopened=new CourseService(resolve('dist/worker.cjs'));
  try {const c=await reopened.open(d);assert.deepEqual(await reopened.formalHistory.query({sessionId:c.sessionId,operationId:r.operationId}),r);assert.deepEqual(c.unit,o.unit);}finally{await reopened.close();}
 }));
+test('history recovery is a new student change delivered to other working tasks atomically',async()=>fixture(async(s,d)=>{
+ const o=await s.open(d),sessionId=o.sessionId;
+ await agentEdit(s,sessionId,'history-owner','history-original',A,'Before recovery notification');
+ const conversation=await s.agent.create({sessionId,operationId:'other-working-conversation'});
+ const task=await s.agent.submit({sessionId,operationId:'other-working-start',conversationId:conversation.id,generation:1,text:'Read current explanation',target:{unitId:'KU-001'},intent:'modify'});
+ const result=await s.formalHistory.apply({sessionId,operationId:'notified-recovery',preview:await s.formalHistory.preview({sessionId,selection:{kind:'operations',operationIds:['history-original']}})});
+ assert.equal(result.status,'committed');
+ const current=await s.agent.get({sessionId,conversationId:conversation.id});
+ assert.ok(current.tasks[0].deliveries?.some(d=>d.kind==='student-change'&&d.change?.operationId==='notified-recovery'),'the live task receives the formal recovery as a new student change');
+ assert.equal(current.tasks[0].id,task.id);assert.equal(current.tasks[0].status,'running');
+}));
+test('old-unit recovery restores the necessary formula experiment and relation together while preserving later layout',async()=>fixture(async(s,d)=>{
+ const {sessionId,citation}=await muxCopy(s,d);
+ const oldUnit=await s.readUnit(sessionId,'KU-057');oldUnit.reading.blocks[0].payload.latex='Z=¬S0·¬S1·I0+¬S0·S1·I1+S0·¬S1·I2+S0·S1·I3';
+ const setup=new DatabaseSync(join(d,'course.sqlite'));setup.prepare('UPDATE units SET payload=? WHERE id=?').run(JSON.stringify(oldUnit),'KU-057');setup.close();
+ const graph=await s.graph(sessionId);
+ assert.equal((await s.commands.commit(await correction(s,sessionId,citation.id,'restore-aggregate'))).status,'committed');
+ const correctedLayout=(await s.graph(sessionId)).layout;
+ const preview=await s.formalHistory.preview({sessionId,unitId:'KU-057',atOperationId:'restore-aggregate',side:'before'});
+ assert.equal(preview.affectedObjectIds.some(id=>id.startsWith('layout:')),false);
+ assert.ok(preview.affectedObjectIds.includes('REL-014'));assert.ok(preview.sourceVersions.includes(citation.versionId));
+ const restored=await s.formalHistory.apply({sessionId,operationId:'restore-old-aggregate',preview});
+ assert.equal(restored.status,'committed',JSON.stringify(restored));
+ assert.deepEqual(await s.readUnit(sessionId,'KU-057'),oldUnit);
+ assert.deepEqual((await s.graph(sessionId)).edges,graph.edges);
+ assert.deepEqual((await s.graph(sessionId)).layout,correctedLayout);
+}));
+test('unrecognized structural history stays whole and cannot be silently discarded by old-unit recovery',async()=>fixture(async(s,d)=>{
+ const o=await s.open(d),sessionId=o.sessionId;
+ await agentEdit(s,sessionId,'future-structure-task','future-structure-group',A,'Published with a future structural domain');
+ // Model a later producer's real stored group format without importing its unfinished implementation.
+ const producer=new DatabaseSync(join(d,'course.sqlite'));
+ const row=producer.prepare('SELECT payload FROM cg_history WHERE operation_id=?').get('future-structure-group')!;
+ const group=JSON.parse(String(row.payload));
+ for(const objectId of ['unit:KU-001','graph:KU-001','theme:TH-01']){
+  group.changes.push({objectId,before:{name:'Before'},after:{name:'After'},beforeVersion:1,afterVersion:2});
+  producer.prepare('INSERT INTO cg_objects VALUES(?,?,?,?)').run(objectId,objectId.split(':')[0],JSON.stringify({name:'After'}),2);
+ }
+ producer.prepare('UPDATE cg_history SET payload=? WHERE operation_id=?').run(JSON.stringify(group),'future-structure-group');producer.close();
+ const preview=await s.formalHistory.preview({sessionId,selection:{kind:'operations',operationIds:['future-structure-group']}});
+ const result=await s.formalHistory.apply({sessionId,operationId:'do-not-split-future',preview});
+ assert.equal(result.status,'conflict');assert.match(result.conflicts[0].reason,/尚不支持.*结构/);
+ assert.equal((await s.read(sessionId)).unit.reading.blocks[0].payload.text,'Published with a future structural domain');
+ await assert.rejects(s.formalHistory.preview({sessionId,unitId:'KU-001',atOperationId:'future-structure-group',side:'before'}),/尚不支持.*结构/);
+}));
+test('a historically restored relation is live and editable again without permitting arbitrary retired identity reuse',async()=>fixture(async(s,d)=>{
+ const {sessionId}=await s.open(d),basis=await s.relations.read({sessionId}),edge=basis.graph.edges.find(e=>e.id==='REL-001')!;
+ await s.relations.commit({sessionId,generation:1,basisId:basis.basisId,operationId:'remove-relation',changes:[{id:edge.id,value:null}]});
+ const restored=await s.formalHistory.apply({sessionId,operationId:'restore-relation',preview:await s.formalHistory.preview({sessionId,selection:{kind:'operations',operationIds:['remove-relation']}})});
+ assert.equal(restored.status,'committed');
+ const live=await s.relations.read({sessionId});
+ const edited=await s.relations.commit({sessionId,generation:1,basisId:live.basisId,operationId:'edit-restored-relation',changes:[{id:edge.id,value:{...edge,value:'Historically restored and now updated'}}]});
+ assert.equal(edited.status,'committed');
+ const newer=await s.relations.read({sessionId});
+ await s.relations.commit({sessionId,generation:1,basisId:newer.basisId,operationId:'remove-again',changes:[{id:edge.id,value:null}]});
+ const retired=await s.relations.read({sessionId});
+ await assert.rejects(s.relations.commit({sessionId,generation:1,basisId:retired.basisId,operationId:'illegal-reuse',changes:[{id:edge.id,value:{...edge,value:'Unrelated replacement'}}]}),/退休/);
+}));

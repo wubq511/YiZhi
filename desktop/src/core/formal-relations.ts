@@ -43,8 +43,13 @@ export class FormalRelations {
     const revision=this.revision()+1;
     const result=changes.map(c=>{
       const before=this.historyObject(c.objectId),table=c.objectId.startsWith('REL-')?'formal_relations':'formal_requirement_groups';
-      if(c.after)this.db.prepare(`INSERT INTO ${table} VALUES(?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload`).run(c.objectId,json(c.after));
-      else this.db.prepare(`DELETE FROM ${table} WHERE id=?`).run(c.objectId);
+      if(c.after) {
+        this.db.prepare(`INSERT INTO ${table} VALUES(?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload`).run(c.objectId,json(c.after));
+        this.db.prepare('DELETE FROM formal_relation_retired WHERE id=?').run(c.objectId);
+      } else {
+        this.db.prepare(`DELETE FROM ${table} WHERE id=?`).run(c.objectId);
+        this.db.prepare('INSERT OR IGNORE INTO formal_relation_retired VALUES(?)').run(c.objectId);
+      }
       this.db.prepare('INSERT OR REPLACE INTO formal_object_versions VALUES(?,?)').run(c.objectId,revision);
       return {...c,before:before.value,beforeVersion:before.version,afterVersion:revision};
     });

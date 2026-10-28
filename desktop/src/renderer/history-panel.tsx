@@ -31,7 +31,7 @@ export const HistoryPanel=forwardRef<HistoryPanelHandle,Props>(function HistoryP
   const [busy,setBusy]=useState(false),[error,setError]=useState('');
   const dialog=useRef<HTMLDialogElement>(null),origin=useRef<(()=>Promise<void>)|undefined>(undefined),trigger=useRef<HTMLButtonElement>(null);
   const pending=useRef<{sessionId:string;operationId:string;preview:HistoryPreview}|undefined>(undefined);
-  const load=async(unitId=scope,before?:string)=>{
+  const load=async(unitId:string|undefined,before?:string)=>{
     const page=await window.yizhi.formalHistory.list({sessionId,unitId,limit:20,before});
     setActivities(old=>before?[...old,...page.activities]:page.activities);setNext(page.next);
   };
@@ -51,14 +51,14 @@ export const HistoryPanel=forwardRef<HistoryPanelHandle,Props>(function HistoryP
     const request=pending.current;
     const receipt=await window.yizhi.formalHistory.query({sessionId,operationId:request.operationId})??await window.yizhi.formalHistory.apply(request);
     setResult(receipt);pending.current=undefined;
-    await changed(receipt);await load();
+    await changed(receipt);await load(scope);
   });
   const names=(ids:string[])=>ids.map(id=>units.find(u=>u.id===id)?.name??id).join('、');
   return <><button ref={trigger} onClick={()=>show()} aria-haspopup="dialog">课程历史</button>{open&&createPortal(<dialog className="history-panel" aria-label="修改历史" ref={node=>{dialog.current=node;if(node&&!node.open)node.showModal();}} onCancel={e=>{e.preventDefault();close();}} onKeyDown={e=>{
     e.stopPropagation();if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z')e.preventDefault();
   }}>
     <header className="history-heading"><h2>修改历史</h2><button disabled={busy} onClick={close}>返回原阅读位置</button></header>
-    <div className="history-controls"><label>查看范围 <select aria-label="历史范围" value={scope??''} disabled={busy||!!pending.current} onChange={e=>{const id=e.target.value||undefined;setScope(id);setPreview(undefined);setResult(undefined);void work(()=>load(id));}}><option value="">全课活动</option>{units.map(u=><option key={u.id} value={u.id}>{u.name}</option>)}</select></label><button disabled={busy} onClick={()=>void work(()=>load())}>刷新历史</button></div>
+    <div className="history-controls"><label>查看范围 <select aria-label="历史范围" value={scope??''} disabled={busy||!!pending.current} onChange={e=>{const id=e.target.value||undefined;setScope(id);setPreview(undefined);setResult(undefined);void work(()=>load(id));}}><option value="">全课活动</option>{units.map(u=><option key={u.id} value={u.id}>{u.name}</option>)}</select></label><button disabled={busy} onClick={()=>void work(()=>load(scope))}>刷新历史</button></div>
     {error&&<div className="history-error" role="alert"><p>{error}</p>{pending.current&&<button disabled={busy} onClick={apply}>核对并重试原操作</button>}</div>}
     {busy&&<p role="status">正在核对历史与当前内容…</p>}
     {result&&<section className="history-result" role="status" aria-label="历史操作结果"><p>{result.status==='committed'?(preview?.kind==='restore'?'已恢复所选版本；恢复前内容仍在历史中。':'已撤回所选修改。'):result.status==='partial'?`已撤回 ${result.applied.length} 组；${result.conflicts.length} 组因冲突保留。`:'当前内容已保留，未执行撤回或恢复。'}</p>{result.conflicts.map(c=><p key={c.operationId}>{c.reason} · {c.objectIds.join('、')}</p>)}</section>}
@@ -72,7 +72,13 @@ export const HistoryPanel=forwardRef<HistoryPanelHandle,Props>(function HistoryP
             <h3>{g.explanation} · {new Date(g.committedAt).toLocaleTimeString('zh-CN',{hour12:false})}</h3>
             <p className="history-scope">影响：{names(g.unitIds)}</p>
             <div className="history-actions"><button disabled={busy||!!pending.current} onClick={()=>undo({kind:'operations',operationIds:[g.operationId]})}>撤回这次修改</button>{g.unitIds.filter(id=>units.some(u=>u.id===id)).slice(0,1).map(id=><span key={id}><button disabled={busy||!!pending.current} onClick={()=>oldVersion(g,scope&&g.unitIds.includes(scope)?scope:id,'before')}>查看修改前版本</button><button disabled={busy||!!pending.current} onClick={()=>oldVersion(g,scope&&g.unitIds.includes(scope)?scope:id,'after')}>查看修改后版本</button></span>)}</div>
-            {g.changes.map(c=><section className="history-difference" key={c.objectId} aria-label={`差异 ${c.objectId}`}><h4>{c.objectId}</h4><div><section><h5>修改前</h5><pre>{valueText(c.before)}</pre></section><section><h5>修改后</h5><pre>{valueText(c.after)}</pre></section></div></section>)}
+            {g.changes.map(c=><section className="history-difference" key={c.objectId} aria-label={`差异 ${c.objectId}`}>
+              <h4>{c.objectId}</h4><div><section><h5>修改前</h5><pre>{valueText(c.before)}</pre></section><section><h5>修改后</h5><pre>{valueText(c.after)}</pre></section></div>
+              {(c.before?.payload||c.after?.payload)&&<details><summary>查看完整对象差异</summary>
+                <h5>修改前 · 全部属性</h5><pre>{JSON.stringify(c.before,null,2)}</pre>
+                <h5>修改后 · 全部属性</h5><pre>{JSON.stringify(c.after,null,2)}</pre>
+              </details>}
+            </section>)}
           </section>)}
           {details[a.id]&&details[a.id].length<a.operationIds.length&&<button disabled={busy} onClick={()=>void work(()=>inspect(a,details[a.id].length+10))}>展开更早提交</button>}
         </details>)}
