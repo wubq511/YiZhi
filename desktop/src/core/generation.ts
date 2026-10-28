@@ -166,6 +166,7 @@ export class Generation {
       if(input.stage==='lesson'&&basis.targetRev!==(row?Number(row.revision):null))throw new Error('目标正式修订已变化，请重读并局部整合');
       if(input.stage==='practice'&&basis.structureHash!==(row?hash(parse(row.payload).reading.blocks.map((b:ReadingBlock)=>b.id)):null))throw new Error('目标结构已变化，追加材料需重读');
       if(basis.draftHash!==hash(this.targetDrafts(spec.unitId))||this.targetDrafts(spec.unitId).length)throw new Error('学生最新草稿尚待整合，不能覆盖或越过');
+      if(this.groups.protectedWrites([`structure:${spec.unitId}`]))throw new Error('学生仍在编辑该主题，最新输入尚待确认；候选保留');
       return '同一代际、不可变原件/产物、实际目标与学生编辑基线';
     });
     check('course',()=>{

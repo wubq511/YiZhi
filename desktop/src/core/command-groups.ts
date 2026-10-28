@@ -57,7 +57,8 @@ export class CommandGroups {
     }
     this.protections.set(input.editorId, structuredClone(input));
   }
-  private protectedWrites(ids: string[]) {
+  /** Shared Core publication fence; the renderer cannot call this query. */
+  protectedWrites(ids: string[]) {
     for (const row of this.db.prepare('SELECT payload FROM units').all()) {
     const unit: CourseUnit = parse(row.payload);
     for (const protection of this.protections.values()) {

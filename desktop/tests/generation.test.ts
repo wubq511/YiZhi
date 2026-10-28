@@ -284,6 +284,25 @@ test('latest student draft stops a dependent practice group and preserves the pu
   }finally{await core.close();await rm(root,{recursive:true,force:true});}
 });
 
+test('active target editor fences a generation group before its input tail becomes a durable draft',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'yizhi-generation-editor-'));
+  const core=new CourseService(resolve('dist/worker.cjs'));
+  try{
+    const {sessionId,task}=await prepared(core,root),identity={sessionId,taskId:task.id,attemptId:task.attemptId,generation:task.generation};
+    const initial=await core.readAgentGeneration(identity);
+    assert.equal((await core.publishAgentGeneration({...identity,input:lesson(initial,'lesson-before-editor')})).status,'committed');
+    const basis=await core.readAgentGeneration(identity),unit=await core.readUnit(sessionId,basis.spec.unitId);
+    const editor={sessionId,unitId:unit.id,editorId:'active-generated-editor',inputSeq:0,blockIds:[unit.reading.blocks[0].id]};
+    await core.commands.protect({...editor,sequence:1,mode:'editing'});
+    const blocked=await core.publishAgentGeneration({...identity,input:practice(basis,'practice-during-input-tail')});
+    assert.equal(blocked.status,'retained');assert.match(blocked.reason!,/编辑/);
+    assert.deepEqual(await core.readUnit(sessionId,unit.id),unit);
+    await core.commands.protect({...editor,sequence:2,mode:'selection'});
+    const latest=await core.readAgentGeneration(identity);
+    assert.equal((await core.publishAgentGeneration({...identity,input:practice(latest,'practice-after-editor')})).status,'committed');
+  }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+
 test('new bytes of the same source invalidate only future dependent publication and retain old references',async()=>{
   const root=await mkdtemp(join(tmpdir(),'yizhi-generation-source-update-'));
   const core=new CourseService(resolve('dist/worker.cjs'));
