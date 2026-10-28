@@ -4,6 +4,6 @@ export const READ_ONLY_CONFIG: Record<string, boolean | number | string> = {
   'features.apps': false, 'features.plugins': false, 'features.multi_agent': false,
   'features.hooks': false, 'features.goals': false, 'features.memories': false,
   'features.request_permissions_tool': false, 'skills.bundled.enabled': false,
-  'tools.view_image': false, web_search: 'disabled', project_doc_max_bytes: 0,
+  'features.view_image': false, web_search: 'disabled', project_doc_max_bytes: 0,
 };
 export const readOnlyCLIArgs = Object.entries(READ_ONLY_CONFIG).flatMap(([key, value]) => ['-c', `${key}=${JSON.stringify(value)}`]);
