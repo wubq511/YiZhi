@@ -15,7 +15,12 @@ test('T28 combined installed selection and pinch preserve the same course input 
   const bytes = await readFile(join(input.app, 'Contents/Resources/app/package-manifest.json')), manifest = JSON.parse(bytes.toString());
   const hash = (value: Buffer) => createHash('sha256').update(value).digest('hex');
   expect(manifest.source).toEqual({ commit: input.sourceSHA, dirty: false });
-  expect(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()).toBe(input.sourceSHA);
+  expect(hash(bytes)).toBe(input.appManifestSha256);
+  const verificationSHA = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  // Test-only followups can verify the same signed runtime without inventing a new package source identity.
+  execFileSync('git', ['merge-base', '--is-ancestor', input.sourceSHA, verificationSHA]);
+  const verificationOnlyPaths = execFileSync('git', ['diff', '--name-only', input.sourceSHA, verificationSHA], { encoding: 'utf8' }).trim().split('\n').filter(Boolean);
+  expect(verificationOnlyPaths.filter(path => !/^desktop\/tests\//.test(path))).toEqual([]);
   expect(execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim()).toBe('');
   for (const entry of manifest.runtimeFiles) expect(hash(await readFile(join(input.app, 'Contents/Resources/app', entry.path)))).toBe(entry.sha256);
   execFileSync('/usr/bin/codesign', ['--verify', '--deep', '--strict', input.app]);
@@ -28,6 +33,7 @@ test('T28 combined installed selection and pinch preserve the same course input 
     page = await app.firstWindow(); await page.context().setOffline(true); await resizeBoardWindow(app, page);
     const runtime = await app.evaluate(({ app }) => ({ packaged: app.isPackaged, appPath: app.getAppPath(), executable: process.execPath, versions: process.versions }));
     expect(runtime.packaged).toBe(true); expect(runtime.appPath).toBe(join(input.app, 'Contents/Resources/app'));
+    expect(runtime.executable).toBe(join(input.app, 'Contents/MacOS/YiZhi'));
     const course = await page.evaluate(() => (window as any).yizhi.open());
     const graph = await page.evaluate(id => (window as any).yizhi.graph(id), course.sessionId); expect(graph.nodes).toHaveLength(500);
     const otherId = graph.nodes.find((node: any) => node.id.startsWith('KU-LOAD-') && node.id !== input.editableUnitId).id;
@@ -44,18 +50,26 @@ test('T28 combined installed selection and pinch preserve the same course input 
       await page.evaluate(() => document.fonts.ready);
       const paragraph = page.locator(`article[data-unit-id="${input.editableUnitId}"] .tiptap p[data-block-id]`).first();
       await revealBoardControl(page, paragraph); await paragraph.evaluate(p => { (window as any).__nativeSelectionEditor = p.closest('.tiptap'); });
+      expect(await paragraph.getAttribute('tabindex')).toBeNull();
       const points = await nativeTextPoints(paragraph);
       await page.mouse.click(points.first.x, points.first.y, { clickCount: 1 });
       await expect.poll(() => nativeSelection(page!, paragraph)).toMatchObject({ anchorInText: true, anchor: points.first.offset, focus: points.first.offset,
         collapsed: true, sameEditor: true, pm: { from: points.first.offset + 1, to: points.first.offset + 1 } });
+      // Separate independent native gestures spatially: rapid same-origin downs legitimately form a triple click.
+      await page.mouse.click(points.last.x, points.last.y, { clickCount: 1 });
+      await expect.poll(() => nativeSelection(page!, paragraph)).toMatchObject({ anchor: points.last.offset, focus: points.last.offset, collapsed: true });
       await nativeDragText(page, points.first, points.last, 8);
       await expect.poll(() => nativeSelection(page!, paragraph)).toMatchObject({ anchor: points.first.offset, focus: points.last.offset, text: points.expected });
       await page.mouse.up();
       await expect.poll(() => nativeSelection(page!, paragraph)).toMatchObject({ anchor: points.first.offset, focus: points.last.offset, text: points.expected, sameEditor: true });
       if (!points.wrapped) throw new Error('Installed source needs a soft-wrapped native range');
+      await page.mouse.click(points.last.x, points.last.y, { clickCount: 1 });
+      await expect.poll(() => nativeSelection(page!, paragraph)).toMatchObject({ anchor: points.last.offset, focus: points.last.offset, collapsed: true });
       await nativeDragText(page, points.first, points.wrapped, 12);
       await expect.poll(() => nativeSelection(page!, paragraph)).toMatchObject({ anchor: points.first.offset, focus: points.wrapped!.offset, text: points.wrappedExpected });
-      await page.mouse.up(); observations.push({ zoom, points, actual: await nativeSelection(page, paragraph) });
+      await page.mouse.up();
+      await expect.poll(() => nativeSelection(page!, paragraph)).toMatchObject({ anchor: points.first.offset, focus: points.wrapped!.offset, text: points.wrappedExpected, sameEditor: true });
+      observations.push({ zoom, points, actual: await nativeSelection(page, paragraph) });
     }
     await navigateUnit(page, graph, otherId); await navigateUnit(page, graph, input.editableUnitId);
     const viewport = page.locator('.react-flow__viewport'), camera = await readCameraTransform(viewport); expect(camera.zoom).toBe(.85);
@@ -87,7 +101,7 @@ test('T28 combined installed selection and pinch preserve the same course input 
     expect(after.unit).toEqual(before.unit); expect(after.drafts).toEqual(before.drafts);
     const reopened = await readCameraTransform(page.locator('.react-flow__viewport')); expect(reopened.zoom).toBe(.85);
     await writeFile(join(input.evidenceDirectory, 'affected-installed.json'), JSON.stringify({ status: 'passed', scope: 'native-coordinate selection plus pinch frame publication/reopen only',
-      input, manifestSha256: hash(bytes), runtime, graphUnits: graph.nodes.length, observations, pinch: { camera, between, pinched, pointer }, reopened,
+      input, verificationSHA, verificationOnlyPaths, manifestSha256: hash(bytes), runtime, graphUnits: graph.nodes.length, observations, pinch: { camera, between, pinched, pointer }, reopened,
       bodyAndDraftUnchanged: true, physicalStatus: 'pending Robert selection/pinch directness and remaining IME/panels' }, null, 2) + '\n');
   } finally {
     if (page && !page.isClosed()) { await page.mouse.up().catch(() => {}); await page.evaluate(() => (window as any).__installedPinchFrames?.restore()).catch(() => {}); }
