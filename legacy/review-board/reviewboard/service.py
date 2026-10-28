@@ -192,7 +192,8 @@ class CourseService:
                 type(camera.get(k)) not in (int, float) or not math.isfinite(camera[k])
                 for k in ("x", "y", "scale")
             ) or not .005 <= camera["scale"] <= 10:
-                raise StoreError("invalid_content", "阅读视口无效")
+                raise StoreError("invalid_content", "阅读视口无效",
+                                 {"namespace": "reading", "key": key, "field": "camera"})
         if not isinstance(value.get("mode", "overview"), str) or value.get("mode", "overview") not in {"overview", "units", "detail"}:
             raise StoreError("invalid_content", "未知显示深度")
 
@@ -336,7 +337,15 @@ class CourseService:
                     if namespace not in {"notes", "annotations", "layout", "editingDrafts"}:
                         raise StoreError("capability_unavailable", "此类删除尚未接入")
                 else:
-                    self._validators[namespace](key, change.get("value"))
+                    try:
+                        self._validators[namespace](key, change.get("value"))
+                    except StoreError as exc:
+                        if exc.code == "invalid_content" and exc.details == {
+                            "namespace": "reading", "key": "default", "field": "camera"
+                        }:
+                            exc.details.update(operationId=command.get("operationId"),
+                                               rejectedBeforeCommit=True)
+                        raise
             return self.store.apply(command)
 
     def close(self):

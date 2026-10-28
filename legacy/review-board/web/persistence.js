@@ -122,7 +122,7 @@
         const response = await fetch('/api/v1/commands', { method: 'POST',
           headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(command), keepalive });
         const result = await response.json();
-        if (!response.ok) throw Object.assign(new Error(result.error?.message), result.error);
+        if (!response.ok) throw Object.assign(new Error(result.error?.message), result.error, { httpStatus: response.status });
         if (result.saved !== true) throw new Error('保存尚未确认');
         for (const change of result.changes) {
           const current = this.read(change.namespace, change.key);
@@ -140,7 +140,7 @@
         return true;
       } catch (error) {
         this.problem = { code: error.code || 'connection_failed',
-          message: error.message || '暂时无法保存', details: error.details || {} };
+          message: error.message || '暂时无法保存', details: error.details || {}, httpStatus: error.httpStatus };
         this.cache();
         return false;
       } finally {
@@ -149,10 +149,41 @@
         if (!this.problem && this.hasPending()) queueMicrotask(() => this.flush());
       }
     }
+    requeueRejectedViewport() {
+      const command = this.inflight, problem = this.problem, details = problem?.details;
+      if (this.busy || problem?.httpStatus !== 400 || problem.code !== 'invalid_content' ||
+          details?.namespace !== 'reading' || details.key !== 'default' || details.field !== 'camera' ||
+          !command || details.operationId !== command.operationId || details.rejectedBeforeCommit !== true) return false;
+      const valid = camera => camera && ['x', 'y', 'scale'].every(k =>
+        typeof camera[k] === 'number' && Number.isFinite(camera[k])) && camera.scale >= .005 && camera.scale <= 10;
+      const old = command.changes.find(c => c.namespace === 'reading' && c.key === 'default');
+      const current = this.pending.get(this.key('reading', 'default'));
+      if (!old || valid(old.value?.camera) || !valid(current?.value?.camera)) return false;
+      if (command.generation !== this.generation) {
+        this.problem = { code: 'revision_conflict', message: '课程代际已变化，请先核对未保存草稿。' };
+        this.notify();
+        return false;
+      }
+      // This typed HTTP rejection precedes the whole authoritative transaction.
+      // Preserve every unsaved change and its CAS base; a new command gets a new ID.
+      for (const change of command.changes) {
+        const id = this.key(change.namespace, change.key);
+        if (!this.pending.has(id)) this.pending.set(id, {
+          ...copy(change), baseRevision: command.expectedRevisions[id] });
+      }
+      this.inflight = null;
+      this.problem = null;
+      this.cache();
+      return true;
+    }
     async retry() {
       if (this.problem?.code === 'revision_conflict') { this.notify(); return false; }
+      this.requeueRejectedViewport();
+      if (this.problem?.code === 'revision_conflict') { this.notify(); return false; }
       this.problem = null;
-      return this.flush(); // Keep the same operation ID after a lost acknowledgement.
+      const saved = await this.flush(); // Unknown/lost acknowledgements retain the exact ID and payload.
+      if (!saved && this.requeueRejectedViewport()) return this.flush();
+      return saved;
     }
     async resolveConflict(keepMine) {
       if (this.busy) return;

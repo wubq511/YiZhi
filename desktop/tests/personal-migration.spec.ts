@@ -5,30 +5,65 @@ import {tmpdir} from 'node:os';
 import {spawn,spawnSync} from 'node:child_process';
 import {once} from 'node:events';
 import {legacyFixture} from './migration-fixture';
+import type {Page} from '@playwright/test';
 
-test('legacy last input is confirmed before shutdown, then checked publication opens the portable course and its original records offline',async()=>{
+async function captureMigrationFailure(old:Page|undefined,host:ReturnType<typeof spawn>|undefined,traffic:unknown[],errors:string,error:unknown){
+ if(!old)return;
+ try{
+  const scene=await old.evaluate(()=>{
+   const board=(window as any).ReviewBoard,p=board?.persistence,state=board?.getState();
+   const reading=(value:any)=>({camera:value?.camera,viewport:value?.viewport,selected:value?.selected,layoutVersion:value?.layoutVersion});
+   return {camera:state?.camera,cameraNumbers:state?.camera&&Object.fromEntries(Object.entries(state.camera).map(([k,v])=>[k,{type:typeof v,finite:Number.isFinite(v),value:String(v)}])),viewport:state?.viewport,
+    world:document.getElementById('world')?.getAttribute('style'),draft:(document.getElementById('agent-draft') as HTMLTextAreaElement)?.value,
+    migration:[...document.querySelectorAll('[aria-label="迁移准备状态"]')].map(el=>({role:el.getAttribute('role'),text:el.textContent})),
+    persistence:p&&{busy:p.busy,problem:p.problem,sequence:p.sequence,inflightReading:p.inflight?.changes?.filter((c:any)=>c.namespace==='reading').map((c:any)=>reading(c.value)),pendingReading:[...p.pending.values()].filter((c:any)=>c.namespace==='reading').map((c:any)=>reading(c.value))}};
+  });
+  const path=test.info().outputPath('migration-stop-failure.json');
+  await writeFile(path,JSON.stringify({error:String(error),host:{exitCode:host?.exitCode,signalCode:host?.signalCode,stderr:errors.slice(-4000)},traffic,scene},null,2));
+  await test.info().attach('migration-stop-failure',{path,contentType:'application/json'});
+  await old.screenshot({path:test.info().outputPath('migration-stop-failure.png')});
+ }catch(captureError){console.error('Migration stop evidence capture:',captureError);}
+}
+
+for(const delayedFrame of [false,true])test('legacy last input is confirmed before shutdown, then checked publication opens the portable course and its original records offline'+(delayedFrame?' with an earlier animation frame timestamp':''),async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-personal-ui-')),source=join(root,'source'),target=join(root,'target');let app:Awaited<ReturnType<typeof electron.launch>>|undefined,host:ReturnType<typeof spawn>|undefined;
+ let old:Page|undefined,errors='';const traffic:unknown[]=[];
  try{
   const fixture=await legacyFixture(source);for(const theme of fixture.knowledge.themes)Object.assign(theme,{lessonId:'L01',coreOutcome:'SYNTHETIC UI migration fixture'});await writeFile(join(source,fixture.manifest.knowledge),JSON.stringify(fixture.knowledge));const made=spawnSync('python3',['-B',resolve('tests/personal-migration-fixture.py'),source,'tasks'],{encoding:'utf8'});expect(made.status,made.stderr).toBe(0);const seed=spawnSync('python3',['-B','-c',`import sys,json\nfrom pathlib import Path\nsys.path.insert(0,sys.argv[1])\nfrom reviewboard.storage import CourseStore\np=Path(sys.argv[2]);m=json.loads((p/'课程.json').read_text());s=CourseStore(p/m['state'],m['courseId']);s.apply({'operationId':'SYNTHETIC-UI-READING','actor':'student','kind':'personal.edit','generation':1,'expectedRevisions':{'reading:default':0},'changes':[{'namespace':'reading','key':'default','value':{'selected':'KU-001','expanded':[],'camera':{'x':0,'y':0,'scale':1},'unitScroll':{}}}]});s.close()`,resolve('../legacy/review-board'),source],{encoding:'utf8'});expect(seed.status,seed.stderr).toBe(0);
-  host=spawn('python3',['-B',resolve('../legacy/review-board/start.py'),'--course',source,'--port','0','--no-browser'],{stdio:['ignore','pipe','pipe']});let errors='';host.stderr!.on('data',b=>errors+=b);
+  const originalPaths=[fixture.manifest.knowledge,fixture.manifest.layout,'原始 资料.pdf'],originals=await Promise.all(originalPaths.map(path=>readFile(join(source,path))));
+  host=spawn('python3',['-B',resolve('../legacy/review-board/start.py'),'--course',source,'--port','0','--no-browser'],{stdio:['ignore','pipe','pipe']});host.stderr!.on('data',b=>errors=(errors+b).slice(-12000));
   const url=await new Promise<string>((yes,no)=>{let out='';const t=setTimeout(()=>no(Error(errors||'old host timeout')),8000);host!.stdout!.on('data',b=>{out+=b;const m=/http:\/\/127\.0\.0\.1:\d+\//.exec(out);if(m){clearTimeout(t);yes(m[0]);}});host!.once('exit',()=>{clearTimeout(t);no(Error(errors));});});
   app=await electron.launch({args:[resolve('.'),`--course=${source}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile'),YIZHI_CODEX_PATH:join(root,'no-executor')}});const page=await app.firstWindow();
-  const oldWindow=app.waitForEvent('window');await app.evaluate(({BrowserWindow},url)=>{void new BrowserWindow({width:1100,height:850,webPreferences:{nodeIntegration:false,contextIsolation:true}}).loadURL(url);},url);const old=await oldWindow;
+  if(delayedFrame)await app.context().addInitScript(()=>{
+   if(location.protocol!=='http:')return;
+   // Pin the frame-clock boundary and save through the public board API while
+   // restoring the viewport. No camera values or server acknowledgements are mocked.
+   const native=requestAnimationFrame;let saves=0;
+   window.requestAnimationFrame=callback=>{const scheduled=performance.now();return native(time=>{callback(Math.min(time,scheduled-40));const board=(window as any).ReviewBoard;if(board&&saves++<16)void board.flush();});};
+  });
+  const oldWindow=app.waitForEvent('window');await app.evaluate(({BrowserWindow},url)=>{void new BrowserWindow({width:1100,height:850,webPreferences:{nodeIntegration:false,contextIsolation:true}}).loadURL(url);},url);old=await oldWindow;
+  old.on('request',request=>{if(!request.url().endsWith('/api/v1/commands'))return;const command=request.postDataJSON();traffic.push({phase:'command',operationId:command.operationId,changes:command.changes?.map((c:any)=>({namespace:c.namespace,key:c.key,...(c.namespace==='reading'?{camera:c.value?.camera,viewport:c.value?.viewport}: {})}))});if(traffic.length>16)traffic.shift();});
+  old.on('response',response=>{if(!response.url().endsWith('/api/v1/commands')||response.ok())return;void response.json().then(error=>{traffic.push({phase:'rejected',status:response.status(),error});if(traffic.length>16)traffic.shift();}).catch(()=>{});});
   await expect(old.getByRole('button',{name:'保存并停止旧课程',exact:true})).toBeVisible();
   await old.getByRole('button',{name:'学习助手',exact:true}).click();await old.locator('#agent-draft').fill('SYNTHETIC last UI input before cutover');
   // Failed acknowledgement retains the actual field and never stops the host.
-  await old.route('**/api/v1/commands',route=>route.abort());await old.getByRole('button',{name:'保存并停止旧课程',exact:true}).click();await expect(old.getByRole('alert',{name:'迁移准备状态'})).toContainText('尚未');expect(host.exitCode).toBeNull();await expect(old.locator('#agent-draft')).toHaveValue('SYNTHETIC last UI input before cutover');await old.unroute('**/api/v1/commands');
-  const exited=once(host,'exit');await old.getByRole('button',{name:'保存并停止旧课程',exact:true}).click();await expect(old.getByRole('status',{name:'迁移准备状态'})).toContainText('已停止');await exited;await app.evaluate(({BrowserWindow})=>{for(const w of BrowserWindow.getAllWindows())if(w.webContents.getURL().startsWith('http://127.0.0.1:'))w.destroy();});
+  await old.route('**/api/v1/commands',route=>route.abort());await old.getByRole('button',{name:'保存并停止旧课程',exact:true}).click();await expect(old.getByRole('alert',{name:'迁移准备状态'})).toContainText('尚未');expect(host.exitCode).toBeNull();await expect(readFile(join(source,'.review-board/migration-barrier.json'))).rejects.toMatchObject({code:'ENOENT'});await expect(old.locator('#agent-draft')).toHaveValue('SYNTHETIC last UI input before cutover');await old.unroute('**/api/v1/commands');
+  const exited=once(host,'exit');await old.getByRole('button',{name:'保存并停止旧课程',exact:true}).click();await expect(old.getByRole('status',{name:'迁移准备状态'})).toContainText('已停止');await exited;
+  expect(host.exitCode).toBe(0);const barrier=JSON.parse(await readFile(join(source,'.review-board/migration-barrier.json'),'utf8'));expect(barrier.saved).toBe(true);expect(barrier.phase).toBe('quiesced');
+  await writeFile(test.info().outputPath('migration-stop-confirmed.json'),JSON.stringify({traffic,barrier},null,2));
+  await app.evaluate(({BrowserWindow})=>{for(const w of BrowserWindow.getAllWindows())if(w.webContents.getURL().startsWith('http://127.0.0.1:'))w.destroy();});
   await page.getByRole('button',{name:'迁移旧课程',exact:true}).click();await page.getByLabel('旧课程文件夹',{exact:true}).fill(source);await page.getByLabel('新课程文件夹',{exact:true}).fill(target+'-abandoned');await page.getByRole('button',{name:'核对并准备迁移',exact:true}).click();await expect(page.getByRole('button',{name:'发布并打开新课程',exact:true})).toBeEnabled();await expect(page.getByRole('region',{name:'迁移核对'})).toContainText('缺少可核对的精确选区');
   await page.getByRole('button',{name:'放弃未发布准备',exact:true}).click();await expect(page.getByRole('region',{name:'迁移核对'})).toContainText('未发布准备已放弃');await page.getByLabel('新课程文件夹',{exact:true}).fill(target);await page.getByRole('button',{name:'核对并准备迁移',exact:true}).click();await expect(page.getByRole('button',{name:'发布并打开新课程',exact:true})).toBeEnabled();
   const newWindow=app.waitForEvent('window');await page.getByRole('button',{name:'发布并打开新课程',exact:true}).click();const migrated=await newWindow;await expect(migrated.locator('.workspace')).toHaveAttribute('aria-busy','false');
   await migrated.getByRole('button',{name:'Agent · 学习对话',exact:true}).click();await expect(migrated.getByLabel('对话消息',{exact:true})).toContainText('SYNTHETIC original message without a task');await migrated.getByRole('button',{name:'收起对话',exact:true}).click();await migrated.getByRole('button',{name:'迁移记录',exact:true}).click();await expect(migrated.getByRole('region',{name:'迁移记录'})).toContainText('NOTE-T25-OBJECT');await expect(migrated.getByRole('region',{name:'迁移记录'})).toContainText('旧版');
   await migrated.screenshot({path:test.info().outputPath('migration-records.png')});await (await app.browserWindow(migrated)).evaluate(window=>window.setSize(700,700));await expect.poll(()=>migrated.evaluate(()=>innerWidth)).toBeLessThanOrEqual(700);await migrated.screenshot({path:test.info().outputPath('migration-records-narrow.png')});
   const tasks=await migrated.evaluate(async()=>{const c=await window.yizhi.open(),chats=await window.yizhi.agent.list(c),view=await window.yizhi.agent.get({...c,conversationId:chats.conversations[0].id});return{draft:view.draft,tasks:view.tasks};});expect(tasks.draft.text).toBe('SYNTHETIC last UI input before cutover');expect(tasks.tasks).toHaveLength(1);
+  expect(await Promise.all(originalPaths.map(path=>readFile(join(source,path))))).toEqual(originals);
   const proc=app.process();await app.close();proc.kill('SIGKILL');app=undefined;const portable=join(root,'新设备','课程 中文');await cp(target,portable,{recursive:true});await rename(source,source+'-hidden');await rename(target,target+'-hidden');
   app=await electron.launch({args:[resolve('.'),`--course=${portable}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'new-profile'),YIZHI_CODEX_PATH:join(root,'absent-executor')}});const reopened=await app.firstWindow();await reopened.context().setOffline(true);await expect(reopened.locator('.workspace')).toHaveAttribute('aria-busy','false');
-  const portableFacts=await reopened.evaluate(async()=>{const c=await window.yizhi.open(),chats=await window.yizhi.agent.list(c);return {status:await window.yizhi.migration.status({directory:await window.yizhi.migration.currentDirectory()}),view:await window.yizhi.agent.get({...c,conversationId:chats.conversations[0].id})};});expect(portableFacts.status.directory).toBe(await realpath(portable));expect(portableFacts.view.tasks).toHaveLength(1);expect(portableFacts.view.draft.text).toBe(tasks.draft.text);
- }finally{if(host?.exitCode===null&&host.signalCode===null){host.kill('SIGTERM');await once(host,'exit');}if(app){const proc=app.process();const timer=setTimeout(()=>proc.kill('SIGKILL'),4000);await app.close().catch(()=>{});clearTimeout(timer);proc.kill('SIGKILL');}await rm(root,{recursive:true,force:true});}
+  const portableFacts=await reopened.evaluate(async()=>{const c=await window.yizhi.open(),chats=await window.yizhi.agent.list(c);return {status:await window.yizhi.migration.status({directory:await window.yizhi.migration.currentDirectory()}),view:await window.yizhi.agent.get({...c,conversationId:chats.conversations[0].id}),sources:await window.yizhi.sources.list(c)};});expect(portableFacts.status.directory).toBe(await realpath(portable));expect(portableFacts.view.tasks).toHaveLength(1);expect(portableFacts.view.draft.text).toBe(tasks.draft.text);expect(portableFacts.sources.versions.some(v=>v.sha256===fixture.knowledge.sources[0].versions[0].sha256)).toBe(true);
+ }catch(error){await captureMigrationFailure(old,host,traffic,errors,error);throw error;}
+ finally{if(host?.exitCode===null&&host.signalCode===null){host.kill('SIGTERM');await once(host,'exit');}if(app){const proc=app.process();const timer=setTimeout(()=>proc.kill('SIGKILL'),4000);await app.close().catch(()=>{});clearTimeout(timer);proc.kill('SIGKILL');}await rm(root,{recursive:true,force:true});}
 });
 
 test('installed compatible app opens the complete published personal course at a new path and profile offline with original routes absent',async()=>{

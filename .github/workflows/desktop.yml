@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - desktop/**
+      - legacy/review-board/**
       - .github/workflows/desktop.yml
   push:
     branches: [main]
     paths:
       - desktop/**
+      - legacy/review-board/**
       - .github/workflows/desktop.yml
 
 concurrency:
@@ -45,6 +47,9 @@ jobs:
         if: matrix.core == 'node'
       - run: npm run test:ui:coverage
         if: matrix.core == 'node'
+      - name: Legacy save retry and live HTTP recovery
+        if: matrix.core == 'node'
+        run: node --test --test-concurrency=1 ../legacy/review-board/tests/persistence-client.test.cjs ../legacy/review-board/tests/integration-client.test.cjs
       - run: npm run build
         id: build
       - run: npm run typecheck
