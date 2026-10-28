@@ -1,5 +1,6 @@
 import { test, expect, _electron as electron } from '@playwright/test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import type { Page } from '@playwright/test';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { resizeBoardWindow, revealBoardControl } from './board-test-helpers';
@@ -113,18 +114,39 @@ test('source result opens the fixed original page without creating an annotation
 test('a changed or unreadable result is rejected, and exact original repair restores searchable source pages', async () => {
   const { sourceFixture } = await import('./source-fixture');
   const { CourseService } = await import('../src/core/course-service');
-  const { writeFile } = await import('node:fs/promises');
   const root = await mkdtemp(join(tmpdir(), 'yizhi-search-repair-ui-')), path = join(root, 'original.pdf');
   await sourceFixture(path, 'Literal damaged original evidence');
   const core = new CourseService(resolve('dist/worker.cjs')), c = await core.open(join(root, 'course'));
-  const version = (await core.sources.importFile({ sessionId: c.sessionId, operationId: 'repair-source-ui', generation: 1, path, title: '待修复资料' })).version;
-  await core.close();
+  const prepared = await (async () => {
+    try {
+      const version = (await core.sources.importFile({ sessionId: c.sessionId, operationId: 'repair-source-ui', generation: 1, path, title: '待修复资料' })).version;
+      // Fault a retained hit, after initial indexing has stopped refreshing it.
+      let indexed = await core.search.rebuild({ sessionId: c.sessionId, batchSize: 8 });
+      for (let i = 0; indexed.pending && i < 100; i++) indexed = await core.search.rebuild({ sessionId: c.sessionId, batchSize: 8 });
+      expect(indexed.pending).toBe(0); expect(indexed.indexErrors).toEqual([]); expect(indexed.unreadable).toEqual([]);
+      const result = await core.search.query({ sessionId: c.sessionId, query: 'damaged original' });
+      expect(result.hits).toHaveLength(1); expect(result.hits[0].versionId).toBe(version.versionId);
+      return { version, indexed, hit: result.hits[0] };
+    } finally { await core.close(); }
+  })();
+  const { version } = prepared;
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  let page: Page | undefined;
+  const observations: unknown[] = [{ phase: 'prepared', ...prepared }];
   try {
-    const page = await app.firstWindow(); await resizeBoardWindow(app, page);
+    page = await app.firstWindow(); await resizeBoardWindow(app, page);
     await page.getByRole('button', { name: '搜索课程', exact: true }).click();
+    await expect(page.getByRole('status', { name: '搜索索引状态' })).toContainText('当前可读内容已索引。');
+    await expect(page.getByRole('button', { name: '重建索引', exact: true })).toBeEnabled();
     await page.getByRole('searchbox').fill('damaged original');
     await expect(page.getByRole('button', { name: '定位命中' })).toBeVisible();
+    const ready = await page.evaluate(async () => {
+      const b = (window as any).yizhi, c = await b.open();
+      return { status: await b.search.status({ sessionId: c.sessionId }), index: document.querySelector('[aria-label="搜索索引状态"]')?.textContent,
+        hits: [...document.querySelectorAll('.search-result')].map(el => el.textContent) };
+    });
+    expect(ready.status.pending).toBe(0);
+    observations.push({ phase: 'before-fault', ...ready });
     await writeFile(join(root, 'course/resources', version.sha256), 'damaged bytes');
     await page.getByRole('button', { name: '定位命中' }).click();
     await expect(page.getByRole('alert')).toContainText('损坏');
@@ -135,5 +157,25 @@ test('a changed or unreadable result is rejected, and exact original repair rest
     await expect(page.getByRole('alert')).toHaveCount(0);
     await page.getByRole('button', { name: '定位命中' }).click();
     await expect(page.locator('.source-panel [data-search-current="true"]')).toContainText('damaged original');
+  } catch (error) {
+    if (page) {
+      try {
+        const domPath = test.info().outputPath('search-failure-dom.html'), scenePath = test.info().outputPath('search-failure-scene.json');
+        await writeFile(domPath, await page.content());
+        await page.screenshot({ path: test.info().outputPath('search-failure.png') });
+        const state = await page.evaluate(async () => {
+          const b = (window as any).yizhi, c = await b.open();
+          return { viewport: [innerWidth, innerHeight], query: document.querySelector<HTMLInputElement>('input[type="search"]')?.value,
+            index: document.querySelector('[aria-label="搜索索引状态"]')?.textContent, results: document.querySelector('.search-results')?.outerHTML,
+            alerts: [...document.querySelectorAll('[role="alert"]')].map(el => el.textContent),
+            statusBefore: await b.search.status({ sessionId: c.sessionId }), rawQuery: await b.search.query({ sessionId: c.sessionId, query: 'damaged original' }),
+            statusAfter: await b.search.status({ sessionId: c.sessionId }) };
+        });
+        await writeFile(scenePath, JSON.stringify({ observations, state, error: String(error) }, null, 2));
+        await test.info().attach('search-failure-scene', { path: scenePath, contentType: 'application/json' });
+        await test.info().attach('search-failure-dom', { path: domPath, contentType: 'text/html' });
+      } catch (captureError) { console.error('Search failure evidence capture:', captureError); }
+    }
+    throw error;
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });

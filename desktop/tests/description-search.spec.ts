@@ -14,7 +14,8 @@ async function captureDescriptionFailure(page: Page) {
     return { viewport: [innerWidth, innerHeight], availability: document.querySelector('[aria-label="描述检索可用性"]')?.textContent,
       start: button ? { disabled: button.disabled, bounds: button.getBoundingClientRect().toJSON() } : null,
       clue: document.querySelector<HTMLTextAreaElement>('[aria-label="记忆线索"]')?.value,
-      status: section?.querySelector('[aria-label="描述检索状态"]')?.textContent, run };
+      status: section?.querySelector('[aria-label="描述检索状态"]')?.textContent,
+      interactions: (window as any).__descriptionInteractions ?? [], run };
   });
   const json = test.info().outputPath('description-failure.json'), dom = test.info().outputPath('description-failure.html'), screenshot = test.info().outputPath('description-failure.png');
   await writeFile(json, JSON.stringify(scene, null, 2)); await writeFile(dom, await page.content()); await page.screenshot({ path: screenshot });
@@ -91,6 +92,15 @@ test('literal input stays responsive while description is waiting, and stopping 
   let page: Page | undefined;
   try {
     page = await app.firstWindow(); await resizeBoardWindow(app, page);
+    await page.evaluate(() => {
+      const interactions: unknown[] = []; (window as any).__descriptionInteractions = interactions;
+      for (const type of ['pointerdown', 'pointerup', 'click']) document.addEventListener(type, event => {
+        const target = event.target instanceof Element ? event.target.closest<HTMLElement>('button, summary, textarea, select') : null;
+        if (!target?.closest('.description-search') || interactions.length >= 30) return;
+        interactions.push({ type, trusted: event.isTrusted, time: performance.now(), target: target.getAttribute('aria-label') ?? target.textContent,
+          disabled: target instanceof HTMLButtonElement ? target.disabled : undefined, bounds: target.getBoundingClientRect().toJSON() });
+      }, true);
+    });
     await page.getByRole('button', { name: '搜索课程', exact: true }).click();
     await page.getByText('按记忆线索查找（Agent）', { exact: true }).click();
     await page.getByRole('textbox', { name: '记忆线索' }).fill('记得位置会影响值');
