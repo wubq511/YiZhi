@@ -1,10 +1,13 @@
 import { prepareDirectory,publishDirectory,directoryStatus,recoverDirectory,admitDirectory,closeDirectoryLeases } from './directory-authority';
 import { importPersonal,importPersonalRecords } from './migration-personal';
 import { FormalHistory } from './formal-history';
+import { registerRetentionResourceRoot } from './retention-resources';
+import { generationRetentionResourceRoot } from './generation-retention';
 import { HistoryRetention } from './retention';
 import { CourseRestore } from './course-restore';
 import { LearningViews } from './learning-views';
 import { AgentMutations } from './agent-mutations';
+import { Generation } from './generation';
 import { CommandConsistency } from './command-consistency';
 import { Exchange } from './exchange';
 
@@ -34,6 +37,8 @@ import { transaction } from './save-store';
 import { resolveInput } from './save-store';
 import { initializeReviewState, reviewSnapshot, setReviewStatus, confirmReviewPrompt } from './review-state';
 
+registerRetentionResourceRoot('t30-generation-recovery',generationRetentionResourceRoot);
+
 const EDITABLE = 'RB-TH-01-01-what-is-positional-notation';
 interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; courseId: string; graph: CourseGraph;
   retention:HistoryRetention;
@@ -54,9 +59,10 @@ interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; cou
   relations: FormalRelations;
   agent: AgentStore;
   mutations: AgentMutations;
+  generation: Generation;
 }
 const courses = new Map<string, Course>();
-const historicalRoutes=new Set(['courseRestore:apply','courseRestore:query','queryOperation','commands:query','commands:history','formalHistory:query','formalHistory:release','formalHistory:detail','formalHistory:list','relations:query','annotations:query','drawings:query','drawings:queryPlacement','sources:query','parsing:query','agent:record','agent:task','agent:facts','agent:stop','agent:get','agent:list','agent:events','agent:work','agentMutation:query']);
+const historicalRoutes=new Set(['courseRestore:apply','courseRestore:query','queryOperation','commands:query','commands:history','formalHistory:query','formalHistory:release','formalHistory:detail','formalHistory:list','relations:query','annotations:query','drawings:query','drawings:queryPlacement','sources:query','parsing:query','agent:record','agent:task','agent:facts','agent:stop','agent:get','agent:list','agent:events','agent:work','agentMutation:query','generation:query','generation:candidates']);
 function session(id: string,action?:string): Course {
   const course = [...courses.values()].find(course => course.sessionId === id || action&&historicalRoutes.has(action)&&!!course.db.prepare('SELECT 1 FROM course_sessions WHERE id=?').get(id));
   if (!course) throw new Error('编辑会话已失效，请重新打开课程');
@@ -160,8 +166,9 @@ function open(directory: string,preparing=false): OpenedCourse {
     const exchange = new Exchange(db, canonical, graph, () => relations.graph(), () => ({ sources: sources.relationCatalog(relationCatalog.sources), retiredUnitIds: relationCatalog.retiredUnitIds }));
     const readableUnitIds = [...new Set([...db.prepare('SELECT id FROM units').all().map(r => String(r.id)), ...(!db.prepare("SELECT 1 FROM metadata WHERE key='content-scope'").get() ? ['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-035', 'KU-055', 'KU-057', 'KU-062'] : [])])];
     const search = new Search(db, sourceUnit, readableUnitIds, graph.nodes.length, sources);
+    const generation = new Generation(db,graph,sources,parsing,agent,groups,search);
     const formalHistory=new FormalHistory(db,groups,agent,graph,relations,experiments);
-    const course: Course = { retention:new HistoryRetention(db,formalHistory,canonical,id=>groups.protectsBlock(id),workerData?.retentionScheduling), courseRestore:undefined!, formalHistory, views:new LearningViews(db), exchange, db, owner, agent, mutations, search, unit: sourceUnit, annotations, drawings, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
+    const course: Course = { retention:new HistoryRetention(db,formalHistory,canonical,id=>groups.protectsBlock(id),workerData?.retentionScheduling), courseRestore:undefined!, formalHistory, views:new LearningViews(db), exchange, db, owner, agent, mutations, generation, search, unit: sourceUnit, annotations, drawings, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
 
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     course.courseRestore=new CourseRestore(db,formalHistory,graph,agent,experiments,extensions,next=>{course.sessionId=next;groups.releaseGeneration();formalHistory.releaseGeneration();},workerData?.restoreScheduling);
@@ -313,6 +320,12 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action.startsWith('search:')) value = await session(payload.sessionId,action).search.dispatch(action, payload);
     else if (action.startsWith('annotations:')) value = session(payload.sessionId,action).annotations.dispatch(action, payload);
     else if (action.startsWith('agentMutation:')) { const m=session(payload.sessionId,action).mutations; value=action==='agentMutation:read'?m.read(payload):action==='agentMutation:apply'?m.apply(payload):m.query(payload); }
+    else if (action.startsWith('generation:')) { const g=session(payload.sessionId,action).generation;
+      if(action==='generation:read')value=g.read(payload);
+      else if(action==='generation:publish')value=g.publish(payload);
+      else if(action==='generation:query')value=g.query(payload);
+      else if(action==='generation:candidates')value=g.candidates(payload.taskId);
+      else throw new Error('未知生成接口'); }
     else if (action.startsWith('agent:')) value = session(payload.sessionId,action).agent.dispatch(action, payload);
     else if (action.startsWith('parsing:')) value = await session(payload.sessionId,action).parsing.dispatch(action, payload);
     else if (action.startsWith('sources:')) value = await session(payload.sessionId,action).sources.dispatch(action, payload);

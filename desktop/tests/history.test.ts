@@ -255,7 +255,7 @@ test('unrecognized structural history stays whole and cannot be silently discard
  const producer=new DatabaseSync(join(d,'course.sqlite'));
  const row=producer.prepare('SELECT payload FROM cg_history WHERE operation_id=?').get('future-structure-group')!;
  const group=JSON.parse(String(row.payload));
- for(const objectId of ['unit:KU-001','graph:KU-001','theme:TH-01']){
+ for(const objectId of ['future-structure:KU-001']){
   group.changes.push({objectId,before:{name:'Before'},after:{name:'After'},beforeVersion:1,afterVersion:2});
   producer.prepare('INSERT INTO cg_objects VALUES(?,?,?,?)').run(objectId,objectId.split(':')[0],JSON.stringify({name:'After'}),2);
  }

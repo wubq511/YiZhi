@@ -1,5 +1,5 @@
 import type { ConsistencyEdits } from './consistency-api';
-export type AgentIntent = 'question' | 'modify' | 'add-to-board';
+export type AgentIntent = 'question' | 'modify' | 'add-to-board' | 'generate';
 export interface AgentIdentity { sessionId: string; taskId: string; attemptId: string; generation: number }
 /** Narrow proposal. The Core compiles it against the immutable read basis into editor patches. */
 export interface AgentMutation {

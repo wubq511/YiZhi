@@ -4,6 +4,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { CourseService } from '../src/core/course-service';
+import { resizeBoardWindow } from './board-test-helpers';
 
 test('actual displayed Unicode selection creates one note; note Undo/autosave/reopen leaves the continuous editor intact', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-note-ui-'));
@@ -69,6 +70,8 @@ test('real MathLive nested selection uses a lazy reading field, proven independe
   let app = await launch();
   let page = await app.firstWindow();
   try {
+    // Use a real Electron window at the compact macOS CI size.
+    await resizeBoardWindow(app, page);
     await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     await expect(page.locator('math-field')).toHaveCount(0);
     const formula = page.locator('.editor-formula').first();
@@ -152,9 +155,16 @@ test('real MathLive nested selection uses a lazy reading field, proven independe
     expect((await getNotes())[0].current.fragments.every((f: any) => f.blockId === copied)).toBe(true);
     // A retained formula selection must not override a later actual text selection.
     await editor.evaluate((el: any) => { el.editor.commands.setTextSelection({ from: 2, to: 6 }); el.editor.view.focus(); });
-    await page.getByRole('button', { name: '批注所选文字', exact: true }).click();
+    const annotateText = page.getByRole('button', { name: '批注所选文字', exact: true });
+    const board = (await page.locator('main.board').boundingBox())!, button = (await annotateText.boundingBox())!;
+    // Bring the toolbar back into the canvas without changing the held text selection.
+    await page.mouse.move(board.x + 8, board.y + board.height / 2);
+    await page.mouse.wheel(0, button.y + button.height / 2 - board.y - board.height / 2);
+    await expect(annotateText).toBeInViewport({ ratio: 0.99 });
+    await annotateText.click();
     await expect.poll(async () => (await getNotes()).length).toBe(3);
     expect((await getNotes())[2].original.fragments[0].field).toBe('text');
+    expect((await getNotes())[2].original.fragments[0].quote).toBe('式批注保');
     await app.close(); app = await launch(); page = await app.firstWindow();
     await page.getByRole('button', { name: '个人批注', exact: true }).click();
     await expect(page.getByRole('textbox', { name: '批注内容', exact: true })).toHaveValue('分子里的第二个 x');

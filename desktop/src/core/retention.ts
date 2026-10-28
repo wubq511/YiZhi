@@ -91,7 +91,10 @@ export class HistoryRetention {
    const later=this.db.prepare('SELECT operation_id FROM history_object_refs WHERE object_id=? AND seq>? AND (operation_id NOT IN(SELECT operation_id FROM history_expired) OR operation_id IN(SELECT operation_id FROM history_window_refs)) ORDER BY seq LIMIT 1').get(c.objectId,Number(group.order));
    const next=later?this.history.detail(String(later.operation_id),true).changes.find(n=>n.objectId===c.objectId):undefined;
    const current=this.history.currentObject(c.objectId),value=next?next.before:current.value,version=next?next.beforeVersion:current.version;
-   const canonical=(v:any)=>v?.retired?null:v;
+   // Placement commands own x/y/width; the lifecycle also records the node's
+   // initial height so a new identity can be rebuilt. Height is a read projection,
+   // and must not make an otherwise exact placement boundary look inconsistent.
+   const canonical=(v:any)=>v?.retired?null:c.objectId.startsWith('layout:')&&v?{unitId:v.unitId,x:v.x,y:v.y,width:v.width}:v;
    if(c.afterVersion<1||version!==c.afterVersion||!equal(canonical(value),canonical(c.after)))return {phase:'blocked',pending:false,removed:0,blocked:`窗口边界不能核对：${c.objectId}；原明细保留`};
   }
   transaction(this.db,()=>{

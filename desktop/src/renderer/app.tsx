@@ -533,19 +533,21 @@ function App() {
       }} />}
       {course && <ExchangePanel sessionId={course.sessionId} narrow={narrow} onOpenChange={value => { setExchangeOpen(value); if (value && narrow) setDirectory(false); }} prepare={async () => !!await channel.current?.flush() && (await notesPanel.current?.flush() ?? true)} imported={async () => { const [current, nextGraph, nextReview] = await Promise.all([window.yizhi.read(course.sessionId), window.yizhi.graph(course.sessionId), window.yizhi.reviewStates(course.sessionId)]); setCourse(current); setReview(nextReview); setGraph(nextGraph); }} />}
       {course && <SourcePanel ref={sourcesPanel} sessionId={course.sessionId} narrow={narrow} target={selected ? { unitId: selected.id } : undefined} onOpenChange={setSourcesOpen} onCitationsChange={setSourceCitations} onQuestion={citation => agentPanel.current?.attachCitation(citation)} />}
-      {course && <AgentPanel ref={agentPanel} sessionId={course.sessionId} narrow={narrow} target={{ unitId: selected?.id ?? course.unit.id }} targetName={selected?.name ?? course.unit.name} sourceOpen={sourcesOpen} prepareMutation={async()=>{ if(composing.current)throw new Error('请先完成中文候选输入。');if(!await channel.current?.flush() || !await flushUnitInputs())throw new Error('请先重试保存当前输入。'); }} onMutation={async(task,phase)=>{
-        workTarget.current=task.progress?.targetId ?? task.snapshot.target.blockId ?? task.snapshot.target.unitId;
+      {course && <AgentPanel ref={agentPanel} sessionId={course.sessionId} narrow={narrow} target={{ unitId: selected?.id ?? course.unit.id }} targetName={selected?.name ?? course.unit.name} anchorUnitId={course.unit.id} sourceOpen={sourcesOpen} prepareMutation={async()=>{ if(composing.current)throw new Error('请先完成中文候选输入。');if(!await channel.current?.flush() || !await flushUnitInputs())throw new Error('请先重试保存当前输入。'); }} onMutation={async(task,phase)=>{
+        const generatedUnitId=task.snapshot.generationSpec?.unitId;
+        const displayedUnitId=generatedUnitId&&(phase==='view'||task.progress?.stage==='committed')?generatedUnitId:task.snapshot.target.unitId;
+        workTarget.current=generatedUnitId?displayedUnitId:task.progress?.targetId ?? task.snapshot.target.blockId ?? task.snapshot.target.unitId;
         if(phase==='start') {
           camera.start(); persist({...(readingRef.current ?? {unitId:task.snapshot.target.unitId,expanded:{},returnStack:[],scrollTop:0}),modification:{targetId:workTarget.current,ended:false}});
         }
         if(phase==='start' || phase==='view' || task.progress?.stage==='committed') {
-          const unit=await window.yizhi.readUnit(course.sessionId,task.snapshot.target.unitId);
+          const unit=await window.yizhi.readUnit(course.sessionId,displayedUnitId);
           if(unit.id==='KU-001'){await channel.current?.synchronize();setCourse(await window.yizhi.open());}else await unitInputs.current.get(unit.id)?.synchronize();
           setMounted(previous=>previous.some(u=>u.id===unit.id)?previous.map(u=>u.id===unit.id?unit:u):[...previous,unit]);
           setSelected(previous=>previous?.id===unit.id?unit:previous);
           setGraph(await window.yizhi.graph(course.sessionId));setReview(await window.yizhi.reviewStates(course.sessionId));
         }
-        if(phase==='view'){if(!await flushUnitInputs(true))throw new Error('请先保存当前单元输入。');const unit=await window.yizhi.readUnit(course.sessionId,task.snapshot.target.unitId);setSelected(unit);setDirectoryTheme(unit.theme.id);if(readingRef.current)persist({...readingRef.current,unitId:unit.id});requestAnimationFrame(()=>camera.resume());}
+        if(phase==='view'){if(!await flushUnitInputs(true))throw new Error('请先保存当前单元输入。');const unit=await window.yizhi.readUnit(course.sessionId,displayedUnitId);setSelected(unit);setDirectoryTheme(unit.theme.id);if(readingRef.current)persist({...readingRef.current,unitId:unit.id});requestAnimationFrame(()=>camera.resume());}
         else if(phase==='finish'){camera.finish();if(readingRef.current)persist({...readingRef.current,modification:{targetId:workTarget.current,ended:true}});}
         else requestAnimationFrame(()=>camera.updated());
       }} onOpenChange={value => { setAgentOpen(value); if (value && narrow) setDirectory(false); }} openCitation={citation => sourcesPanel.current?.openCitation(citation)} />}
