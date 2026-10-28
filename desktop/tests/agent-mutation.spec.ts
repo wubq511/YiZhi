@@ -18,7 +18,8 @@ test('small actual Electron window follows real tool groups, keeps student takeo
   await page.getByRole('button',{name:'发送修改请求',exact:true}).click();
   await expect(page.getByRole('status',{name:'修改跟随'})).toHaveText('正在跟随修改');
   await expect(page.getByRole('textbox',{name:'编辑首段正文'})).toContainText('受控协议回归');
-  const matrix=()=>page.locator('.react-flow__viewport').evaluate(el=>{const m=new DOMMatrixReadOnly(getComputedStyle(el).transform);return {x:m.e,y:m.f,zoom:m.a};});
+  // Inline transform retains the actual camera precision; computed matrix() rounds to six significant digits.
+  const matrix=()=>page.locator('.react-flow__viewport').evaluate(el=>{const m=new DOMMatrixReadOnly((el as HTMLElement).style.transform);return {x:m.e,y:m.f,zoom:m.a};});
   await expect(page.getByRole('status',{name:'修改跟随'})).toHaveText('正在跟随修改');
   const board=(await page.locator('main.board').boundingBox())!;await page.mouse.move(board.x+8,board.y+board.height/2);await page.mouse.wheel(0,80);
   await expect(page.getByRole('status',{name:'修改跟随'})).toHaveText('已由你控制视野');
