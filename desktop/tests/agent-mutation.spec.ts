@@ -5,8 +5,8 @@ import { join,resolve } from 'node:path';
 import { resizeBoardWindow, revealBoardControl } from './board-test-helpers';
 
 test('small actual Electron window follows real tool groups, keeps student takeover, displays waiting and stopped receipts and reopens without a second body',async()=>{
- const root=await mkdtemp(join(tmpdir(),'yizhi-mutation-ui-')),fixture=resolve('dist/tests/agent-executor-fixture.cjs');await chmod(fixture,0o755);
- const launch=()=>electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile'),YIZHI_CODEX_PATH:fixture,YIZHI_FIXTURE_MODE:'mutation'}});
+ const root=await mkdtemp(join(tmpdir(),'yizhi-mutation-ui-')),fixture=resolve('dist/tests/agent-executor-fixture.cjs'),release=join(root,'release-second-group');await chmod(fixture,0o755);
+ const launch=()=>electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile'),YIZHI_CODEX_PATH:fixture,YIZHI_FIXTURE_MODE:'mutation',YIZHI_MUTATION_RELEASE:release}});
  let app=await launch();
  try{
   let page=await app.firstWindow();await resizeBoardWindow(app,page);
@@ -18,14 +18,15 @@ test('small actual Electron window follows real tool groups, keeps student takeo
   await page.getByRole('button',{name:'发送修改请求',exact:true}).click();
   await expect(page.getByRole('status',{name:'修改跟随'})).toHaveText('正在跟随修改');
   await expect(page.getByRole('textbox',{name:'编辑首段正文'})).toContainText('受控协议回归');
-  await page.waitForTimeout(250); // settle real local layout compensation before the student's deliberate takeover
   const matrix=()=>page.locator('.react-flow__viewport').evaluate(el=>{const m=new DOMMatrixReadOnly(getComputedStyle(el).transform);return {x:m.e,y:m.f,zoom:m.a};});
+  await expect(page.getByRole('status',{name:'修改跟随'})).toHaveText('正在跟随修改');
   const board=(await page.locator('main.board').boundingBox())!;await page.mouse.move(board.x+8,board.y+board.height/2);await page.mouse.wheel(0,80);
   await expect(page.getByRole('status',{name:'修改跟随'})).toHaveText('已由你控制视野');
   await page.evaluate(()=>new Promise<void>(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>done()))));
   const liveCamera=await matrix();
   await expect.poll(()=>page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return (await b.readingState(c.sessionId)).camera.y;})).toBeCloseTo(liveCamera.y,3);
   const camera=await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return (await b.readingState(c.sessionId)).camera;});
+  await writeFile(release,'continue');
   await expect(page.getByRole('status',{name:'回答状态'})).toContainText('等待整合',{timeout:15000});
   await expect(page.getByRole('status',{name:'修改跟随'})).toHaveText('已由你控制视野');
   await expect(page.getByRole('textbox',{name:'编辑首段正文'})).toContainText('受控协议回归');
@@ -45,7 +46,7 @@ test('small actual Electron window follows real tool groups, keeps student takeo
   await page.getByRole('button',{name:'查看实际修改',exact:true}).click();
   await expect.poll(()=>page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return (await b.readingState(c.sessionId)).unitId;})).toBe('KU-001');
   if(process.env.YIZHI_EVIDENCE_DIR)await page.screenshot({path:join(process.env.YIZHI_EVIDENCE_DIR,'t17-controlled-small-reopen.png')});
- }finally{await app.close();await rm(root,{recursive:true,force:true});}
+ }finally{await writeFile(release,'continue');await app.close();await rm(root,{recursive:true,force:true});}
 });
 
 
