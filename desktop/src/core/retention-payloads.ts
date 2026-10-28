@@ -5,6 +5,7 @@ const parse=(v:unknown)=>JSON.parse(String(v));
 const targets=[
  ['cg_objects','id'],
  ['cg_bases','id'],['cg_candidates','id'],['agent_tool_recovery','id'],['agent_executor_receipts','json_array(attempt_id,event_id)'],
+ ['generation_candidates','id'],
  ['annotation_operations','id'],['annotation_versions','json_array(block_id,version)'],['annotation_steps','CAST(seq AS TEXT)'],
  ['drawing_operations','id'],['drawing_history','CAST(seq AS TEXT)'],['builtin_experiment_operations','id'],
  ['builtin_definition_history','json_array(instance_id,revision)'],['extension_operations','id'],['restore_timeline','CAST(seq AS TEXT)'],
@@ -75,6 +76,15 @@ export class RetentionPayloads {
    if(this.db.prepare('SELECT 1 FROM cg_history WHERE operation_id=?').get(row.id))return false;
    this.db.prepare("UPDATE cg_candidates SET command='{}' WHERE id=?").run(row.id);return true;
   }
+  if(table==='generation_candidates'){
+   // Unresolved proposals remain real recovery drafts even after stop/reopen.
+   // Ended successful bodies have one formal history owner, not a second archive.
+   const proposal=parse(row.proposal),result=parse(row.result);
+   if(result.status==='retained'&&proposal.basisId||this.active(String(row.attempt_id)))return false;
+   if(this.db.prepare('SELECT 1 FROM cg_history WHERE operation_id=?').get(row.id))return false;
+   this.db.prepare("UPDATE generation_candidates SET proposal=?,checks='[]' WHERE id=?").run(JSON.stringify({stage:proposal.stage}),row.id);
+   return true;
+  }
   if(table==='agent_tool_recovery'){
    if(this.active(String(row.attempt_id)))return false;
    this.db.prepare("UPDATE agent_tool_recovery SET input=NULL,output=NULL,purpose='result-fact' WHERE id=?").run(row.id);return true;
@@ -106,6 +116,7 @@ export class RetentionPayloads {
  run(limit:number,cutoff:string,now:string){
   // Legacy rows lacking timestamps are registered once at first maintenance, conservatively.
   for(const [table,key] of targets){
+   if(!this.db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table))continue;
    const missing=this.db.prepare(`SELECT ${key} AS record_key FROM ${table} WHERE ${key} NOT IN(SELECT record_key FROM retention_payloads WHERE domain=?) LIMIT ?`).all(table,limit);
    if(missing.length){transaction(this.db,()=>{for(const row of missing)this.db.prepare('INSERT OR IGNORE INTO retention_payloads VALUES(?,?,?)').run(table,row.record_key!,now);});return {pending:true,removed:0,phase:'payload-index'};}
   }
@@ -120,7 +131,7 @@ export class RetentionPayloads {
     if(!row||this.crop(target[0],String(item.record_key),row)){
      removed++;this.db.prepare('DELETE FROM retention_payloads WHERE domain=? AND record_key=?').run(item.domain!,item.record_key!);
      // Keep a timestamp marker for minimized immutable receipts so they are not re-indexed.
-     if(row&&['cg_bases','cg_candidates','agent_tool_recovery','agent_executor_receipts','annotation_operations','drawing_operations','builtin_experiment_operations','extension_operations'].includes(target[0]))this.db.prepare('INSERT OR REPLACE INTO retention_payloads VALUES(?,?,?)').run(item.domain!,item.record_key!,'9999-12-31T00:00:00.000Z');
+     if(row&&['cg_bases','cg_candidates','generation_candidates','agent_tool_recovery','agent_executor_receipts','annotation_operations','drawing_operations','builtin_experiment_operations','extension_operations'].includes(target[0]))this.db.prepare('INSERT OR REPLACE INTO retention_payloads VALUES(?,?,?)').run(item.domain!,item.record_key!,'9999-12-31T00:00:00.000Z');
     }
    }
    this.db.prepare("INSERT OR REPLACE INTO metadata VALUES('retention-payload-cursor',?)").run(String(rows.at(-1)!.rowid));

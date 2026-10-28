@@ -564,6 +564,18 @@ test('retention expires a withdrawn generated creation without losing its result
     assert.deepEqual((await core.read(sessionId)).unit,opened.unit);
     const original=await core.sources.readResource({sessionId,versionId:basis.source.versionId,begin:0,end:4});
     assert.equal(Buffer.from(original.bytes).toString(),'%PDF');
+    await core.close();
+    const db=new DatabaseSync(join(root,'course/course.sqlite'),{readOnly:true});
+    try{
+      const candidate=db.prepare('SELECT proposal,result,digest,checks FROM generation_candidates WHERE id=?').get(published.operationId)!;
+      assert.deepEqual(JSON.parse(String(candidate.proposal)),{stage:'lesson'},'ended proposal body expires with its formal history');
+      assert.deepEqual(JSON.parse(String(candidate.result)),published);
+      assert.match(String(candidate.digest),/^[a-f0-9]{64}$/);
+      assert.equal(candidate.checks,'[]');
+      assert.deepEqual(JSON.parse(String(db.prepare('SELECT receipt FROM generation_groups WHERE operation_id=?').get(published.operationId)!.receipt)),published);
+      const readset=JSON.parse(String(db.prepare('SELECT payload FROM generation_bases WHERE id=?').get(basis.basisId)!.payload)).readset;
+      assert.ok(readset.some((entry:{id:string})=>entry.id===basis.source.versionId),'small original read-set facts remain');
+    }finally{db.close();}
   }finally{await core.close();await rm(root,{recursive:true,force:true});}
 });
 
