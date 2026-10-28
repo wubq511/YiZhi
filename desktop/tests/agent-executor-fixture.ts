@@ -113,6 +113,8 @@ async function receive(m: any) {
       notify('item/agentMessage/delta', { ...identity, itemId: 'answer', delta: 'AFTER FINISH' });
     };
     if (mode === 'mutation' && process.env.YIZHI_MUTATION_RELEASE) complete();
-    else setTimeout(complete, mode === 'steer-retry' ? 12000 : mode === 'linger' ? 3000 : 800);
+    else setTimeout(complete, process.env.YIZHI_FIXTURE_COMPLETION_DELAY_MS === undefined
+      ? mode === 'steer-retry' ? 12000 : mode === 'linger' ? 3000 : 800
+      : Number(process.env.YIZHI_FIXTURE_COMPLETION_DELAY_MS));
   }
 }
