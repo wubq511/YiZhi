@@ -1,3 +1,4 @@
+import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -59,9 +60,9 @@ test('controlled producer uses real IPC: stale premise is retained, reread integ
     await window.getByRole('button', { name: '提交可控修改', exact: true }).click();
     await expect(status).toContainText('尝试已停止');
     await expect(candidate).toHaveValue('停止后到达的新候选');
-    await window.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t03-desktop.png', fullPage: true });
+    await window.screenshot({ path: evidencePath('t03-desktop.png'), fullPage: true });
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(660, 600));
-    await window.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t03-narrow.png', fullPage: true });
+    await window.screenshot({ path: evidencePath('t03-narrow.png'), fullPage: true });
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
@@ -100,7 +101,7 @@ test('real Electron IPC saves, retains failed input, retries, drains quit, reope
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].close());
     await expect(window.getByRole('status', { name: '保存状态' })).toContainText('未保存');
     expect(window.isClosed()).toBe(false);
-    await window.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t01-error.png' });
+    await window.screenshot({ path: evidencePath('t01-error.png') });
     fault.exec('DROP TRIGGER reject_write');
     await window.getByRole('button', { name: '重试保存' }).click();
     await expect(window.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
@@ -138,9 +139,9 @@ test('real Electron IPC saves, retains failed input, retries, drains quit, reope
     const after = await reopened.evaluate(() => (window as any).yizhi.open());
     expect(after.courseId).toBe(identity.courseId);
     expect(after.unit.id).toBe('KU-001');
-    await reopened.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t01-electron.png', fullPage: true });
+    await reopened.screenshot({ path: evidencePath('t01-electron.png'), fullPage: true });
     await reopened.setViewportSize({ width: 660, height: 600 });
-    await reopened.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t01-narrow.png' });
+    await reopened.screenshot({ path: evidencePath('t01-narrow.png') });
     expect(await reopened.evaluate(() => document.documentElement.scrollWidth <= globalThis.innerWidth)).toBe(true);
   } finally { fault?.close(); await app?.close(); await rm(root, { recursive: true, force: true }); }
 });
@@ -154,11 +155,11 @@ test('board opens at overview and navigates the first unit within the workspace'
     await expect(window.getByRole('region', { name: '知识画板' })).toBeVisible();
     await expect(window.getByRole('navigation', { name: '课程目录' })).toBeVisible();
     await expect(window.getByLabel('小地图')).toBeVisible();
-    await window.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t04-overview.png' });
+    await window.screenshot({ path: evidencePath('t04-overview.png') });
     await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     await expect(window.getByRole('heading', { name: '位置记数法与权展开', exact: true })).toBeVisible();
     await expect(window.getByRole('textbox', { name: '编辑首段正文' })).toBeVisible();
-    await window.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t04-reading.png' });
+    await window.screenshot({ path: evidencePath('t04-reading.png') });
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
@@ -251,7 +252,7 @@ test('narrow directory traps keyboard focus and restores it when closed', async 
     await window.setViewportSize({ width: 700, height: 600 });
     const nav = window.getByRole('navigation', { name: '课程目录' });
     await expect(nav).toBeVisible();
-    await window.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t04-narrow.png' });
+    await window.screenshot({ path: evidencePath('t04-narrow.png') });
     await expect(window.locator('main.board')).toHaveAttribute('inert', '');
     await nav.getByRole('button', { name: '关闭目录' }).focus();
     await window.keyboard.press('Shift+Tab');
@@ -497,7 +498,7 @@ test('two actual IPC editors save both paragraphs, split once and recover an unf
     await expect(window.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
     await window.getByRole('textbox', { name: '编辑首段正文' }).fill('修正后继续保存');
     await expect(window.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
-    await window.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t02-electron.png', fullPage: true });
+    await window.screenshot({ path: evidencePath('t02-electron.png'), fullPage: true });
   } finally { await app?.close(); await rm(root, { recursive: true, force: true }); }
 });
 
