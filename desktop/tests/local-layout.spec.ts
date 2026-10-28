@@ -1,3 +1,4 @@
+import { evidencePath } from './evidence-paths';
 import { DatabaseSync } from 'node:sqlite';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -252,7 +253,7 @@ test('growth displaces the local chain while the current reading anchor and stud
     await expect(page.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
     const restoredHeading = page.getByRole('heading', { name: '非十进制与十进制互转', exact: true });
     await expect.poll(async () => Math.abs((await restoredHeading.boundingBox())!.y - finalY)).toBeLessThan(3);
-    await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t09-anchor.png' });
+    await page.screenshot({ path: evidencePath('t09-anchor.png') });
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
 

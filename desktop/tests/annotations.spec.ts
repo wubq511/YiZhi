@@ -1,3 +1,4 @@
+import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -47,7 +48,7 @@ test('actual displayed Unicode selection creates one note; note Undo/autosave/re
     await page.getByRole('button', { name: '定位当前选段', exact: true }).click();
     await expect.poll(async () => (await editor.locator('.annotation-highlight').allTextContents()).join('')).toBe('文𠮷重复重复句中文𠮷');
     await expect(page.getByRole('status', { name: '批注同步状态' })).toHaveText('已保存');
-    await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t07-notes-desktop.png' });
+    await page.screenshot({ path: evidencePath('t07-notes-desktop.png') });
     await app.close();
     app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
     page = await app.firstWindow(); await page.getByRole('button', { name: '个人批注', exact: true }).click();
@@ -115,7 +116,7 @@ test('real MathLive nested selection uses a lazy reading field, proven independe
     expect((await getNotes()).every((n: any) => n.current.status === 'orphan')).toBe(true);
     await page.getByRole('button', { name: '个人批注', exact: true }).click();
     await expect(page.getByRole('region', { name: '个人批注', exact: true })).toContainText('待重新关联');
-    await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t07-formula-orphan.png' });
+    await page.screenshot({ path: evidencePath('t07-formula-orphan.png') });
     await page.getByRole('button', { name: '关闭批注', exact: true }).click();
     await field.press('Meta+z');
     if (await field.evaluate((el: any) => el.getValue()) !== beforeRewrite) {
@@ -178,7 +179,7 @@ test('held displayed selection creates an old-version orphan and explicit reasso
     await page.setViewportSize({ width: 700, height: 700 });
     await expect(page.getByRole('dialog', { name: '个人批注', exact: true })).toBeVisible();
     expect(await page.locator('.workspace').evaluate((el: HTMLElement) => el.inert)).toBe(true);
-    await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t07-notes-narrow.png' });
+    await page.screenshot({ path: evidencePath('t07-notes-narrow.png') });
     await page.getByRole('button', { name: '关闭批注', exact: true }).click();
   } finally { await app.close(); await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }); }
 });

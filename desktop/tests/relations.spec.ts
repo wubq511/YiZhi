@@ -1,3 +1,4 @@
+import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -27,7 +28,7 @@ test('formal relation editor rejects incomplete evidence, saves a reviewed corre
     await expect(panel.getByText('副本审核：模与补数解释补码的表示依据，保留原有方向与来源。', { exact: true })).toBeVisible();
     await window.getByLabel('关系范围', { exact: true }).selectOption('all');
     await expect(panel.getByText(/G1 · 任选一条/)).toBeVisible();
-    await window.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t11-electron.png', fullPage: true });
+    await window.screenshot({ path: evidencePath('t11-electron.png'), fullPage: true });
     await app.close(); app = await launch(); window = await app.firstWindow();
     await window.getByRole('button', { name: '查看关系', exact: true }).click();
     await window.getByLabel('关系范围', { exact: true }).selectOption('auxiliary');
@@ -75,7 +76,7 @@ test('formal add/remove and stale-basis reconciliation use the same real IPC rou
     await expect(panel).toHaveAttribute('aria-modal', 'true');
     await panel.getByRole('button', { name: '新增正式关系', exact: true }).click();
     await panel.getByRole('button', { name: '添加来源', exact: true }).click();
-    await window.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t11-narrow-electron.png', fullPage: true });
+    await window.screenshot({ path: evidencePath('t11-narrow-electron.png'), fullPage: true });
     await window.keyboard.press('Escape');
     await expect(window.getByRole('button', { name: '查看关系', exact: true })).toBeFocused();
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }

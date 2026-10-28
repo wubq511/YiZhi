@@ -1,3 +1,4 @@
+import { evidencePath } from './evidence-paths';
 import {resizeBoardWindow,revealBoardControl} from './board-test-helpers';
 import {test,expect,_electron as electron} from '@playwright/test';
 import {mkdtemp,rm} from 'node:fs/promises';
@@ -32,7 +33,7 @@ test('a real sandboxed browser Worker verifies learning results, saves complete 
   const saved=await read();
   const actualFrame=page.frames().find(f=>f.url().startsWith('yizhi-extension:'))!;
   expect(await actualFrame.evaluate(()=>({origin:location.origin,node:typeof (window as any).require,bridge:typeof (window as any).yizhi,parentReadable:(()=>{try{return !!parent.document;}catch{return false;}})()}))).toEqual({origin:'yizhi-extension://package',node:'undefined',bridge:'undefined',parentReadable:false});
-  await page.screenshot({path:'/tmp/yizhi-implement-gFFkA7/t13-extension.png'});
+  await page.screenshot({path:evidencePath('t13-extension.png')});
   await app.evaluate(async({session})=>{await session.defaultSession.clearCache();await session.defaultSession.clearStorageData();await session.defaultSession.enableNetworkEmulation({offline:true});});
   await app.close();
   await rm(join(root,'profile','Cache'),{recursive:true,force:true});
@@ -55,7 +56,7 @@ test('a real sandboxed browser Worker verifies learning results, saves complete 
    beforeInput.y+beforeInput.height/2-narrowBoard.y-narrowBoard.height/2);
   await expect.poll(async()=>((await narrowInput.boundingBox())!.y+(await narrowInput.boundingBox())!.height/2)).toBeCloseTo(narrowBoard.y+narrowBoard.height/2,0);
   const inputBox=(await narrowInput.boundingBox())!;expect(inputBox.y).toBeGreaterThan(narrowBoard.y);expect(inputBox.y+inputBox.height).toBeLessThan(narrowBoard.y+narrowBoard.height);
-  await page.screenshot({path:'/tmp/yizhi-implement-gFFkA7/t13-extension-narrow.png'});
+  await page.screenshot({path:evidencePath('t13-extension-narrow.png')});
  }finally{await app.close();await rm(root,{recursive:true,force:true});}
 });
 
@@ -96,7 +97,7 @@ test('actual Worker nonresponse reports incomplete; destroyed generations cannot
   await lab.getByRole('button',{name:'暂停模拟',exact:true}).click();
   await expect.poll(async()=>(await read()).phase).toBe('paused');
   expect((await read()).definition.packageVersion).toBe('1.1.0');
-  await page.screenshot({path:'/tmp/yizhi-implement-gFFkA7/t13-conflict.png'});
+  await page.screenshot({path:evidencePath('t13-conflict.png')});
   await lab.getByRole('button',{name:'按新定义重新开始',exact:true}).click();
   await expect.poll(async()=>(await read()).definition.packageVersion).toBe('2.0.0');
   await expect(lab.getByRole('checkbox',{name:'D',exact:true})).toBeVisible();
@@ -119,7 +120,7 @@ test('a genuinely unresponsive learning renderer is recovered by the host with p
   expect(result.oldPid).not.toBe(result.newPid);expect(result.after.state).toEqual(result.before.state);
   expect(result.after.generation).toBeGreaterThan(result.before.generation);
   expect(result.text).toBe('Persisted before native renderer failure.');
-  await writeFile('/tmp/yizhi-implement-gFFkA7/t13-native-recovery-evidence.json',JSON.stringify(result,null,2));
+  await writeFile(evidencePath('t13-native-recovery-evidence.json'),JSON.stringify(result,null,2));
  }finally{if(child.exitCode===null&&child.signalCode===null)child.kill('SIGKILL');await rm(root,{recursive:true,force:true});}
 });
 

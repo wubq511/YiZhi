@@ -1,3 +1,4 @@
+import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron, type Page } from '@playwright/test';
 import { mkdtemp, rm, chmod, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -80,7 +81,7 @@ test('offline and a genuinely missing CLI preserve basic short-word/symbol searc
     await page.getByRole('textbox', { name: '记忆线索' }).focus();
     await page.keyboard.press('Shift+Tab');
     await expect(page.getByRole('dialog', { name: '搜索课程', exact: true })).toContainText('当前离线');
-    await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t20-description-narrow.png' });
+    await page.screenshot({ path: evidencePath('t20-description-narrow.png') });
     await page.keyboard.press('Escape');
     await expect(page.getByRole('button', { name: '搜索课程', exact: true })).toBeFocused();
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }

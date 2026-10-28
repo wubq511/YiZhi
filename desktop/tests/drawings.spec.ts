@@ -1,3 +1,4 @@
+import { evidencePath } from './evidence-paths';
 import { resizeBoardWindow } from './board-test-helpers';
 import { test, expect, _electron as electron } from '@playwright/test';
 import type { Page } from '@playwright/test';
@@ -17,7 +18,7 @@ test('real drawing gesture saves one personal shape, cancels without a commit, a
   let app = await launch();
   try {
     let page = await app.firstWindow(); await resizeBoardWindow(app,page); await expect(page.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
-    await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t08-before.png' });
+    await page.screenshot({ path: evidencePath('t08-before.png') });
     await page.getByRole('button', { name: '绘图标注', exact: true }).click();
     const board = (await page.locator('main.board').boundingBox())!, x = board.x + 450, y = board.y + 150;
     await page.getByRole('button', { name: '矩形', exact: true }).click();
@@ -202,8 +203,8 @@ test('actual save failure retains the unconfirmed shape, blocks normal close and
     await app.evaluate(({BrowserWindow,ipcMain})=>{(globalThis as any).drawingCloseResult=null;ipcMain.once('window:close-result',(_event,result)=>{(globalThis as any).drawingCloseResult=result.saved;});BrowserWindow.getAllWindows()[0].close();});await expect.poll(()=>app.evaluate(()=>(globalThis as any).drawingCloseResult)).toBe(false);await expect(page.getByRole('button',{name:'重试保存绘图'})).toBeVisible();expect(app.windows()).toHaveLength(1);
     fault.exec('DROP TRIGGER drawing_ui_fail');await page.getByRole('button',{name:'重试保存绘图'}).click();await expect(page.getByRole('status',{name:'绘图同步状态'})).toHaveText('已保存');
     expect((await snapshot(page)).history).toHaveLength(1);expect((await snapshot(page)).drawings).toHaveLength(1);await expect(page.locator('.drawing-preview')).toHaveCount(0);
-    await page.screenshot({path:'/tmp/yizhi-implement-gFFkA7/t08-drawings-desktop.png'});
-    await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(700,700));await page.getByRole('button',{name:'关闭目录',exact:true}).click();await page.screenshot({path:'/tmp/yizhi-implement-gFFkA7/t08-drawings-narrow.png'});complete=true;
+    await page.screenshot({path:evidencePath('t08-drawings-desktop.png')});
+    await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(700,700));await page.getByRole('button',{name:'关闭目录',exact:true}).click();await page.screenshot({path:evidencePath('t08-drawings-narrow.png')});complete=true;
   }finally{fault?.exec('DROP TRIGGER IF EXISTS drawing_ui_fail');fault?.close();if(complete)await app.close();else app.process().kill('SIGKILL');await rm(root,{recursive:true,force:true,maxRetries:5,retryDelay:50});}
 });
 
