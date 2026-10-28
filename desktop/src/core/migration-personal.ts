@@ -2,7 +2,7 @@ import { importRecordHistory } from './migration-history';
 import { migrateAgent } from './migration-agent';
 import { initializeMigrationRecords,migrateNativeState,origin } from './migration-state';
 import { DatabaseSync } from 'node:sqlite';
-import { readFileSync,realpathSync } from 'node:fs';
+import { readFileSync,realpathSync,existsSync,statSync } from 'node:fs';
 import { join } from 'node:path';
 import { locked,coursePath,legacySaveBarrier } from './migration';
 import { hashFile } from './immutable-resource';
@@ -15,19 +15,20 @@ export async function importPersonal(db:DatabaseSync,sourceDirectory:string) {
 }
 export function importPersonalRecords(db:DatabaseSync,root:string) {
   const manifest=JSON.parse(readFileSync(join(root,'课程.json'),'utf8')),path=coursePath(root,manifest.state),sourceHash=hashFile(path).sha256;
+  const sourceWalHash=existsSync(path+'-wal')&&statSync(path+'-wal').size?hashFile(path+'-wal').sha256:null;
   if(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()?.value!==manifest.courseId)throw new Error('个人记录与内容候选课程身份不同');
   const candidate=db.prepare("SELECT value FROM metadata WHERE key='legacy-content'").get();
   if(!candidate)throw new Error('缺少T24内容候选的来源证明');
   const content=JSON.parse(String(candidate.value));
   for(const [file,hash] of Object.entries(content.report.sourceHashes))if(hashFile(coursePath(root,file)).sha256!==hash)throw new Error('内容候选与当前源内容摘要不符，请重新转换');
   const oldReport=db.prepare("SELECT value FROM metadata WHERE key='personal-migration'").get();
-  if(oldReport){const report=JSON.parse(String(oldReport.value));if(report.sourceHash!==sourceHash)throw new Error('源个人记录已变化，请重新建立候选');return report;}
+  if(oldReport){const report=JSON.parse(String(oldReport.value));if(report.sourceHash!==sourceHash||(report.sourceWalHash??null)!==sourceWalHash)throw new Error('源个人记录已变化，请重新建立候选');return report;}
   if(db.prepare('SELECT 1 FROM personal_notes LIMIT 1').get())throw new Error('内容候选已有个人记录，拒绝覆盖');
   const source=new DatabaseSync(path,{readOnly:true});
   try {
    const all=source.prepare("SELECT * FROM documents ORDER BY namespace,key").all() as any[];
    const rows=all.filter(r=>r.namespace==='notes');initializeMigrationRecords(db);
-   const report={schema:'yizhi-personal-migration-1',sourceDirectory:root,sourceHash,namespaces:{notes:{total:rows.length,imported:0,deleted:0}},gaps:[] as string[]};
+   const report={schema:'yizhi-personal-migration-1',sourceDirectory:root,sourceHash,sourceWalHash,namespaces:{notes:{total:rows.length,imported:0,deleted:0}},gaps:[] as string[]};
    for(const r of all){const entries=report.namespaces as any;entries[r.namespace]??={total:0,imported:0,deleted:0};if(r.namespace!=='notes')entries[r.namespace].total++;}
    transaction(db,()=>{
     for(const r of all)origin(db,r,JSON.parse(r.value_json));

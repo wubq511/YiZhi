@@ -2,10 +2,10 @@ import {useEffect,useRef,useState} from 'react';
 import type {DirectoryDecision} from '../core/directory-authority';
 import './migration-panel.css';
 export function MigrationPanel({sessionId}:{sessionId?:string}){
- const [open,setOpen]=useState(false),[records,setRecords]=useState(false),[source,setSource]=useState(''),[target,setTarget]=useState(''),[decision,setDecision]=useState<DirectoryDecision>(),[busy,setBusy]=useState(false),[error,setError]=useState(''),[data,setData]=useState<any>(),[next,setNext]=useState<string>(),[history,setHistory]=useState<any>(),[detail,setDetail]=useState<any>();
+ const [open,setOpen]=useState(false),[records,setRecords]=useState(false),[source,setSource]=useState(''),[target,setTarget]=useState(''),[decision,setDecision]=useState<DirectoryDecision>(),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[data,setData]=useState<any>(),[next,setNext]=useState<string>(),[history,setHistory]=useState<any>(),[detail,setDetail]=useState<any>();
  const dialog=useRef<HTMLDialogElement>(null),operation=useRef<string>(crypto.randomUUID()),trigger=useRef<HTMLButtonElement>(null);
  useEffect(()=>{if(open)dialog.current?.showModal();else dialog.current?.close();},[open]);
- const run=async(fn:()=>Promise<unknown>)=>{setBusy(true);setError('');try{await fn();}catch(e){setError((e as Error).message);}finally{setBusy(false);}};
+ const run=async(fn:()=>Promise<unknown>)=>{setBusy(true);setError('');setNotice('');try{await fn();}catch(e){setError((e as Error).message);}finally{setBusy(false);}};
  const readRecords=async(after?:string)=>{const result=await window.yizhi.migration.records({sessionId:sessionId!,after,limit:30});setData(result);setNext(result.next);};
  const close=()=>{if(busy)return;setOpen(false);trigger.current?.focus();};
  return <>
@@ -38,10 +38,10 @@ export function MigrationPanel({sessionId}:{sessionId?:string}){
       <button disabled={busy} onClick={()=>void run(async()=>{const r=await window.yizhi.migration.publish({sourceDirectory:source,operationId:operation.current});setDecision(r);await window.yizhi.migration.openDirectory(target);})}>发布并打开新课程</button>
      </>}
      <h3>中断后继续</h3><p>选择原目录或已发布课程的当前位置，先核对完成事实，再接回唯一可写课程。</p>
-     <button disabled={busy||!source} onClick={()=>void run(async()=>{const status=await window.yizhi.migration.status({directory:source});if(status.phase==='abandoned'){setDecision(undefined);setTarget('');operation.current=crypto.randomUUID();setError('旧准备已放弃；请选择全新目标重新迁移。');return;}const r=await window.yizhi.migration.recover({directory:source});if(r.decision?.phase==='published')await window.yizhi.migration.openDirectory(r.directory);else if(r.decision){setDecision(r.decision);setTarget(r.decision.targetDirectory);operation.current=r.decision.operationId;await window.yizhi.migration.stage({sourceDirectory:source,directory:r.decision.targetDirectory,operationId:r.decision.operationId});}else setError('此目录尚无切换完成事实，可先准备迁移。');})}>核对并接回课程</button>
-     <button disabled={busy||!source} onClick={()=>void run(async()=>{const s=await window.yizhi.migration.status({directory:source});if(!s.decision)throw new Error('此目录没有未发布准备');await window.yizhi.migration.abandon({sourceDirectory:source,operationId:s.decision.operationId});setDecision(undefined);setTarget('');operation.current=crypto.randomUUID();setError('未发布准备已放弃，旧目标仍只读；请选择新目标重新迁移。');})}>放弃未发布准备</button>
+     <button disabled={busy||!source} onClick={()=>void run(async()=>{const status=await window.yizhi.migration.status({directory:source});if(status.phase==='abandoned'){setDecision(undefined);setTarget('');operation.current=crypto.randomUUID();setNotice('旧准备已放弃；请选择全新目标重新迁移。');return;}const r=await window.yizhi.migration.recover({directory:source});if(r.decision?.phase==='published')await window.yizhi.migration.openDirectory(r.directory);else if(r.decision){setDecision(r.decision);setTarget(r.decision.targetDirectory);operation.current=r.decision.operationId;await window.yizhi.migration.stage({sourceDirectory:source,directory:r.decision.targetDirectory,operationId:r.decision.operationId});}else setError('此目录尚无切换完成事实，可先准备迁移。');})}>核对并接回课程</button>
+     <button disabled={busy||!source} onClick={()=>void run(async()=>{const s=await window.yizhi.migration.status({directory:source});if(!s.decision)throw new Error('此目录没有未发布准备');await window.yizhi.migration.abandon({sourceDirectory:source,operationId:s.decision.operationId});setDecision(undefined);setTarget('');operation.current=crypto.randomUUID();setNotice('未发布准备已放弃，旧目标仍只读；请选择新目标重新迁移。');})}>放弃未发布准备</button>
     </>}
-    {busy&&<p role="status">正在核对课程文件与保存事实…</p>}{error&&<p role="alert">{error}</p>}
+    {notice&&<p role="status">{notice}</p>}{busy&&<p role="status">正在核对课程文件与保存事实…</p>}{error&&<p role="alert">{error}</p>}
    </section>
   </dialog>
  </>;

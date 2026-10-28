@@ -62,3 +62,5 @@ print(json.dumps({'note':note,'receipt':receipt,'request':request}))
 if len(sys.argv)>2 and sys.argv[2]=='content-history':
  knowledge=json.loads((root/manifest['knowledge']).read_text());before=knowledge['units'][0];store=CourseStore(root/manifest['state'],manifest['courseId']);put('knowledge','KU-001',before);value=json.loads(json.dumps(before));value['reading']['blocks'][0]['payload']['text']='SYNTHETIC old formal edited body'
  store.apply({'operationId':'OP-LEGACY-BODY','actor':'student','kind':'knowledge.edit','generation':1,'expectedRevisions':{'knowledge:KU-001':1},'changes':[{'namespace':'knowledge','key':'KU-001','value':value}]});store.close();knowledge['units'][0]=value;(root/manifest['knowledge']).write_text(json.dumps(knowledge,ensure_ascii=False))
+if len(sys.argv)>2 and sys.argv[2]=='confirmed-draft':
+ store=CourseStore(root/manifest['state'],manifest['courseId']);put('editingDrafts','confirmed',{'draft':request});put('editingDrafts','unresolved',{'draft':dict(request,operationId='SYNTHETIC-UNCOMMITTED')});store.close()
