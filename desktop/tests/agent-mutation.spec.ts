@@ -2,7 +2,7 @@ import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, chmod, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join,resolve } from 'node:path';
-import { resizeBoardWindow, revealBoardControl } from './board-test-helpers';
+import { resizeBoardWindow, revealBoardControl,readCameraTransform } from './board-test-helpers';
 
 test('small actual Electron window follows real tool groups, keeps student takeover, displays waiting and stopped receipts and reopens without a second body',async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-mutation-ui-')),fixture=resolve('dist/tests/agent-executor-fixture.cjs'),release=join(root,'release-second-group');await chmod(fixture,0o755);
@@ -18,8 +18,7 @@ test('small actual Electron window follows real tool groups, keeps student takeo
   await page.getByRole('button',{name:'发送修改请求',exact:true}).click();
   await expect(page.getByRole('status',{name:'修改跟随'})).toHaveText('正在跟随修改');
   await expect(page.getByRole('textbox',{name:'编辑首段正文'})).toContainText('受控协议回归');
-  // Inline transform retains the actual camera precision; computed matrix() rounds to six significant digits.
-  const matrix=()=>page.locator('.react-flow__viewport').evaluate(el=>{const m=new DOMMatrixReadOnly((el as HTMLElement).style.transform);return {x:m.e,y:m.f,zoom:m.a};});
+  const matrix=()=>readCameraTransform(page.locator('.react-flow__viewport'));
   await expect(page.getByRole('status',{name:'修改跟随'})).toHaveText('正在跟随修改');
   const board=(await page.locator('main.board').boundingBox())!;await page.mouse.move(board.x+8,board.y+board.height/2);await page.mouse.wheel(0,80);
   await expect(page.getByRole('status',{name:'修改跟随'})).toHaveText('已由你控制视野');
