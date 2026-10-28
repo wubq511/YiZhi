@@ -59,3 +59,5 @@ python3 /absolute/run-ui-serial.py \
 `arm-background` 提前布置一次独立更新，在下一次真实 trusted compositionstart 后执行，避免操作者切回聊天打断候选；`disarm-background` 取消。正式回执和 composition 前后状态均保存，候选已结束或焦点不在应用时不计重叠通过。此命令不生成输入，也不是模型调用。
 
 实体发现导致手势修正后，`YIZHI_GESTURE_INPUT=/persistent/corrected-input.json` 可选择 `tests/acceptance-gestures-installed.spec.ts` 做受影响安装检查。输入沿用 final schema，另包含实际 `courseDirectory`、`profileDirectory`、`evidenceDirectory`、`editableUnitId`；绑定 corrected clean source／真实包清单。它复用原 500 隔离课程，只检查修正手势、正文/草稿保全与重开，不重复 500 连续导航。旧完整负载证据和新受影响证据需同时保留；实体仍由操作者复验。
+
+正文选区与 pinch 合并修正的安装检查使用 `YIZHI_SELECTION_INPUT=/persistent/combined-input.json` 和 `tests/acceptance-selection-installed.spec.ts`，输入字段同上。它按真实字符矩形及浏览器命中位置执行原生鼠标点击、同一行／换行拖选，核对 0.85 和 1.2 倍率的 caret 与 Range，未用编辑器选区命令代替；拖动分段同步浏览器绘制。pinch 检查只控制浏览器帧调度边界，保留实际应用、事件处理和视口 setter；验证帧前不重复发布、帧后累计结果及指针锚点，再核对正文／草稿重开。程序鼠标和帧调度控制仍不是物理输入或手感结论。

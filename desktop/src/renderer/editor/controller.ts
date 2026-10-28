@@ -138,8 +138,8 @@ export class ContinuousEditor {
       onSelectionUpdate: () => { if (this.engaged) this.selectionChanged(); },
     });
     Object.assign(this.editor.storage, { courseSelection: { capture: () => this.captureSelection(), captureAnnotation: () => this.captureAnnotation(), settle: () => this.settleProtection() } });
-    // Paragraph aliases remain programmatically focusable for accessibility/legacy IPC tests,
-    // while ProseMirror owns the single native editing focus and selection observer.
+    // Paragraph aliases provide block-level labels without separate pointer focus.
+    // Explicit alias focus still transfers to ProseMirror's single editing host.
     this.editor.view.dom.addEventListener('focusin', event => {
       const formula = (event.target as HTMLElement).closest<HTMLElement>('.editor-formula');
       if (formula?.dataset.blockId) { this.engaged = true; this.setProtection([formula.dataset.blockId], (event.target as MathfieldElement).readOnly ? 'selection' : 'editing'); }
