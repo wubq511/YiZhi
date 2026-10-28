@@ -1,4 +1,5 @@
 import { historyClient } from '../history-api';
+import { courseRestoreClient } from '../course-restore-api';
 import { exchangeClient } from '../exchange-api';
 import { searchClient } from '../search-api';
 import { migrationClient } from '../migration-api';
@@ -16,6 +17,7 @@ import type { CourseGraph, CourseUnit, ReadingState, OpenedCourse, SaveParagraph
 
 /** One instance belongs to the application host, shared by all its windows/courses. */
 export class CourseService {
+  readonly courseRestore=courseRestoreClient((action,payload)=>this.request(action,payload));
   readonly formalHistory = historyClient((action,payload)=>this.request(action,payload));
   readonly exchange = exchangeClient((action, payload) => this.request(action, payload));
   readonly search = searchClient((action, payload) => this.request(action, payload));
@@ -45,7 +47,7 @@ export class CourseService {
   private stopped = false;
   private closing?: Promise<void>;
   private failure?: Error;
-  constructor(workerPath: string, options?: { parseScheduling?: ParseScheduling; migrationScheduling?: import('../migration-api').MigrationScheduling }) {
+  constructor(workerPath: string, options?: { parseScheduling?: ParseScheduling; migrationScheduling?: import('../migration-api').MigrationScheduling; restoreScheduling?:import('../course-restore-api').CourseRestoreScheduling }) {
     this.worker = new Worker(workerPath, { workerData: options });
     this.worker.on('message', message => {
       const waiter = this.pending.get(message.id);

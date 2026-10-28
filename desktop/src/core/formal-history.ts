@@ -19,7 +19,9 @@ const parse=(v:unknown)=>JSON.parse(String(v));
 export class FormalHistory {
   constructor(private db:DatabaseSync, private commands:CommandGroups, private agent:AgentStore, private graph:CourseGraph, private relations:FormalRelations, private experiments:BuiltinExperiments) {initializeHistoryIndex(db);}
   private hash(value:unknown) {return createHash('sha256').update(JSON.stringify(value)).digest('hex');}
+  currentObject(id:string){return this.object(id);}
   private object(id:string):{value:Record<string,any>|null;version:number;kind:string} {
+    if(id.startsWith('review:')){const unitId=id.slice(7),r=this.db.prepare('SELECT status,version FROM review_states WHERE unit_id=?').get(unitId);return {value:{unitId,status:r?String(r.status):'pending'},version:Number(r?.version??0),kind:'review'};}
     if(id.startsWith('layout:')) {const unitId=id.slice(7),n=layoutGraph(this.db,this.graph).layout.nodes.find(n=>n.unitId===unitId);return {value:n?{unitId:n.unitId,x:n.x,y:n.y,width:n.width}:null,version:Number(this.db.prepare('SELECT version FROM layout_versions WHERE unit_id=?').get(unitId)?.version??0),kind:'layout'};}
     if(id.startsWith('experiment:')) {const [unitId,blockId]=id.slice(11).split('/');const value=this.experiments.formalDefinition(unitId,blockId);return {value,version:value.revision,kind:'experiment'};}
     if(id.startsWith('REL-')||/^G[A-Za-z0-9]/.test(id))return this.relations.historyObject(id);
@@ -29,7 +31,7 @@ export class FormalHistory {
   /** Later producer domains must provide a checked inverse, never fall through as body objects. */
   private unsupported(changes:HistoryChange[]):string[] {
     return changes.filter(c=>/^(unit|graph|theme):/.test(c.objectId)||
-      !['block','structure','reference','dependency','layout','experiment','formal-relation'].includes(this.object(c.objectId).kind)).map(c=>c.objectId);
+      !['block','structure','reference','dependency','layout','experiment','formal-relation','review'].includes(this.object(c.objectId).kind)).map(c=>c.objectId);
   }
   private unsupportedReason(ids:string[]) {return `尚不支持这些结构对象的完整恢复，整个一致组保留：${ids.join('、')}`;}
   private selected(selection:HistorySelection) {
@@ -54,6 +56,40 @@ export class FormalHistory {
     };
     return {...unit,reading:{...unit.reading,blocks:build(unit.id,unit.reading.blocks)}};
   }
+  /** A projection from stored object differences; does not execute or replay old commands. */
+  courseProjection(unitIds:string[],atOperationId:string,side:'before'|'after',includeLayout=false) {
+    const anchor=this.detail(atOperationId),scope=new Set(unitIds),desired=new Map<string,Record<string,any>|null>();
+    const groups=this.groups(),later=groups.filter(g=>g.order>anchor.order||(side==='before'&&g.operationId===anchor.operationId)).reverse();
+    const owned=new Set<string>(),children=new Map<string,Set<string>>();
+    for(const id of unitIds){const row=this.db.prepare('SELECT payload FROM units WHERE id=?').get(id);if(row)for(const objectId of unitObjects(parse(row.payload)).keys())owned.add(objectId);owned.add(`structure:${id}`);}
+    // Stable historical membership also covers blocks removed from today's projection.
+    for(const g of groups)for(const c of g.changes)if(c.objectId.startsWith('structure:'))for(const value of [c.before,c.after]) {
+      const ids=children.get(c.objectId)??new Set<string>();for(const id of value?.blockIds??[])ids.add(id);children.set(c.objectId,ids);
+    }
+    for(const id of owned)for(const child of children.get(id)??[]){owned.add(child);owned.add(`structure:${child}`);}
+    const touches=(value:Record<string,any>|null):boolean=>!!value&&(
+      [value.fromUnitId,value.toUnitId].some(id=>unitIds.includes(id))||
+      [value.fromBlockId,value.toBlockId,value.sourceBlockId,value.dependentBlockId].some(id=>owned.has(id))||
+      (value.relationIds??[]).some((id:string)=>{const relation=this.object(id).value;return relation&&[relation.fromUnitId,relation.toUnitId].some(id=>unitIds.includes(id));}));
+    // Include complete aggregates touching the explicit selection. A layout neighbor
+    // does not select that neighbor's independent later body/history.
+    for(const g of later)if(g.unitIds.some(id=>unitIds.includes(id))) {
+      const ids=this.unsupported(g.changes);if(ids.length)throw new Error(this.unsupportedReason(ids));
+      const included=g.changes.filter(c=>(includeLayout||!c.objectId.startsWith('layout:'))&&!c.objectId.startsWith('review:'));
+      if(!included.some(c=>owned.has(c.objectId)||c.objectId.startsWith('experiment:')&&unitIds.includes(c.objectId.slice(11).split('/')[0])||touches(c.before)||touches(c.after)))continue;
+      if(included.length)for(const id of g.unitIds)scope.add(id);
+      for(const c of included)desired.set(c.objectId,c.before);
+    }
+    const changes:HistoryChange[]=[];
+    for(const [id,after] of desired){const now=this.object(id);if(!equal(now.value,after))changes.push({objectId:id,before:now.value,after,beforeVersion:now.version,afterVersion:now.version});}
+    const units=[...scope].flatMap(id=>{const row=this.db.prepare('SELECT payload FROM units WHERE id=?').get(id);return row?[this.projectUnit(parse(row.payload),desired)]:[];});
+    return {anchor,unitIds:[...scope],changes,units};
+  }
+  restoreInTransaction(changes:HistoryChange[],unitIds:string[]) {
+    if(!this.db.isTransaction)throw new Error('整课恢复必须使用共同事务');
+    const publications:Array<()=>void>=[],actual=this.write(changes,unitIds,publications);
+    return {changes:actual,publish:()=>{for(const p of publications)p();}};
+  }
   preview(p:any):HistoryPreview {
     let groups:HistoryGroup[],unit:CourseUnit|undefined,guardIds:string[]=[];
     const kind=p.selection?'undo':'restore';
@@ -73,6 +109,7 @@ export class FormalHistory {
         if(unsupported.length)throw new Error(this.unsupportedReason(unsupported));
         for(const c of g.changes) {
           if(!p.includeLayout&&c.objectId.startsWith('layout:'))continue;
+          if(c.objectId.startsWith('review:'))continue;
           desired.set(c.objectId,c.before);
           for(const id of g.unitIds)scope.add(id);
         }
@@ -178,6 +215,10 @@ export class FormalHistory {
     const relationChanges=changes.filter(c=>before.get(c.objectId)!.kind==='formal-relation');
     if(relationChanges.length)for(const c of this.relations.restoreInTransaction(relationChanges))overrides.set(c.objectId,c);
     for(const c of changes) {
+      if(c.objectId.startsWith('review:')) {
+        if(!c.after||!['pending','weak','mastered'].includes(c.after.status))throw new Error('历史掌握状态无效');
+        this.db.prepare('INSERT INTO review_states VALUES(?,?,1) ON CONFLICT(unit_id) DO UPDATE SET status=excluded.status,version=version+1').run(c.objectId.slice(7),c.after.status);
+      }
       if(c.objectId.startsWith('layout:')) {if(!c.after)throw new Error('历史布局缺少位置');saveLayout(this.db,this.graph,[c.after as any]);}
       if(c.objectId.startsWith('experiment:')) {
         const [unitId,blockId]=c.objectId.slice(11).split('/'),block=unitBlocks(units.get(unitId)).find(b=>b.id===blockId);

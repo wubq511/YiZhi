@@ -145,8 +145,10 @@ export class ContinuousEditor {
       if (formula?.dataset.blockId) { this.engaged = true; this.setProtection([formula.dataset.blockId], (event.target as MathfieldElement).readOnly ? 'selection' : 'editing'); }
       if ((event.target as HTMLElement).matches('p[data-block-id]')) queueMicrotask(() => {
         const selection = getSelection(), range = selection?.rangeCount ? selection.getRangeAt(0).cloneRange() : null;
-        this.editor.view.dom.focus({ preventScroll: true });
-        if (range && selection) { selection.removeAllRanges(); selection.addRange(range); }
+        if(range&&this.editor.view.dom.contains(range.startContainer)&&this.editor.view.dom.contains(range.endContainer)) {
+          this.editor.view.dom.focus({ preventScroll: true });
+          if(selection){selection.removeAllRanges();selection.addRange(range);}
+        }else this.editor.view.focus();
       });
     });
     element.addEventListener('formula-exit', () => this.editor.commands.focus());

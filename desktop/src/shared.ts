@@ -16,6 +16,8 @@ export interface CourseUnit {
   [key: string]: unknown;
 }
 export interface OpenedCourse {
+  generation: number;
+  preservedDraftCount?: number;
   inputRecovery?: {unconfirmedTail:boolean;detail:string};
   contentScope?: 'content-candidate';
   resourceAssets?: string[];
@@ -50,6 +52,7 @@ export interface SaveReceipt {
   basedOnRevision?: number;
 }
 export interface DesktopBridge extends SaveBridge {
+  courseRestore: import('./course-restore-api').CourseRestoreAPI;
   formalHistory: import('./history-api').HistoryAPI;
   description: import('./description-api').DescriptionAPI;
   drawings: import('./drawing-api').DrawingAPI;
@@ -75,6 +78,7 @@ export interface DesktopBridge extends SaveBridge {
   confirmReviewPrompt(sessionId: string, promptId: string, adjust: boolean): Promise<ReviewPromptResult>;
   save(command: SaveParagraph): Promise<SaveReceipt>;
   onCloseCancelled(listener: () => void): () => void;
+  onGenerationChanged(listener: () => void): () => void;
   onCloseRequested(listener: () => Promise<boolean>): () => void;
 }
 export type ReviewStatus = 'pending' | 'weak' | 'mastered';
