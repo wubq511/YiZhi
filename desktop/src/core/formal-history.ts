@@ -59,12 +59,24 @@ export class FormalHistory {
   /** A projection from stored object differences; does not execute or replay old commands. */
   courseProjection(unitIds:string[],atOperationId:string,side:'before'|'after',includeLayout=false) {
     const anchor=this.detail(atOperationId),scope=new Set(unitIds),desired=new Map<string,Record<string,any>|null>();
-    const later=this.groups().filter(g=>g.order>anchor.order||(side==='before'&&g.operationId===anchor.operationId)).reverse();
+    const groups=this.groups(),later=groups.filter(g=>g.order>anchor.order||(side==='before'&&g.operationId===anchor.operationId)).reverse();
+    const owned=new Set<string>(),children=new Map<string,Set<string>>();
+    for(const id of unitIds){const row=this.db.prepare('SELECT payload FROM units WHERE id=?').get(id);if(row)for(const objectId of unitObjects(parse(row.payload)).keys())owned.add(objectId);owned.add(`structure:${id}`);}
+    // Stable historical membership also covers blocks removed from today's projection.
+    for(const g of groups)for(const c of g.changes)if(c.objectId.startsWith('structure:'))for(const value of [c.before,c.after]) {
+      const ids=children.get(c.objectId)??new Set<string>();for(const id of value?.blockIds??[])ids.add(id);children.set(c.objectId,ids);
+    }
+    for(const id of owned)for(const child of children.get(id)??[]){owned.add(child);owned.add(`structure:${child}`);}
+    const touches=(value:Record<string,any>|null):boolean=>!!value&&(
+      [value.fromUnitId,value.toUnitId].some(id=>unitIds.includes(id))||
+      [value.fromBlockId,value.toBlockId,value.sourceBlockId,value.dependentBlockId].some(id=>owned.has(id))||
+      (value.relationIds??[]).some((id:string)=>{const relation=this.object(id).value;return relation&&[relation.fromUnitId,relation.toUnitId].some(id=>unitIds.includes(id));}));
     // Include complete aggregates touching the explicit selection. A layout neighbor
     // does not select that neighbor's independent later body/history.
     for(const g of later)if(g.unitIds.some(id=>unitIds.includes(id))) {
       const ids=this.unsupported(g.changes);if(ids.length)throw new Error(this.unsupportedReason(ids));
       const included=g.changes.filter(c=>(includeLayout||!c.objectId.startsWith('layout:'))&&!c.objectId.startsWith('review:'));
+      if(!included.some(c=>owned.has(c.objectId)||c.objectId.startsWith('experiment:')&&unitIds.includes(c.objectId.slice(11).split('/')[0])||touches(c.before)||touches(c.after)))continue;
       if(included.length)for(const id of g.unitIds)scope.add(id);
       for(const c of included)desired.set(c.objectId,c.before);
     }

@@ -226,7 +226,10 @@ test('a layout consistency neighbor keeps its unrelated newer body and unselecte
  const task=await s.commands.startAttempt({sessionId,taskId:'scope-task'}),basis=await s.commands.read({sessionId,attemptId:task.attemptId,objectIds:[A],context:true});
  const nodes=(await s.graph(sessionId)).layout.nodes.filter(n=>['KU-001','KU-002'].includes(n.unitId));
  const coupled=await s.commands.commit({sessionId,operationId:'scope-coupling',attemptId:task.attemptId,basisId:basis.basisId,changes:[{objectId:A,value:{...basis.objects.find(o=>o.id===A)!.value,payload:{text:'Selected new body'}}}],bundle:{layout:nodes.map(n=>({unitId:n.unitId,x:n.x+30,y:n.y,width:n.width}))}});assert.equal(coupled.status,'committed',coupled.reason);
- await s.commitEdit({sessionId,unitId:'KU-002',operationId:'neighbor-later',inputSeq:1,baseRevision:other.revision,complete:true,changes:[{blockId:b.id,text:'Unselected independent new body'}]});
+ const neighbor=await s.commands.startAttempt({sessionId,taskId:'neighbor-task'}),neighborBasis=await s.commands.read({sessionId,unitId:'KU-002',attemptId:neighbor.attemptId,objectIds:[b.id],context:true});
+ const placement=neighborBasis.context!.layout.find(n=>n.unitId==='KU-001')!;
+ const neighborChange=await s.commands.commit({sessionId,unitId:'KU-002',operationId:'neighbor-later',attemptId:neighbor.attemptId,basisId:neighborBasis.basisId,changes:[{objectId:b.id,value:{...neighborBasis.objects.find(o=>o.id===b.id)!.value,payload:{...b.payload,text:'Unselected independent new body'}}}],bundle:{layout:[{...placement,x:placement.x+20}]}});
+ assert.equal(neighborChange.status,'committed',neighborChange.reason);
  await s.setReviewStatus(sessionId,'KU-002','mastered');
  const preview=await s.courseRestore.preview({sessionId,atOperationId:'scope-anchor',side:'after',unitIds:['KU-001'],userState:{layout:false,review:true}});
  assert.ok(!preview.changes.some(c=>c.objectId===b.id));
