@@ -30,6 +30,7 @@ export type AgentWorkRequest = AgentSession & { taskId: string; attemptId: strin
   { action: 'delivery'; deliveryId: string; state: AgentDelivery['state']; threadId?: string; turnId?: string; error?: string }
 );
 export interface AgentTask {
+  legacy?:Record<string,any>;
   id: string; operationId: string; conversationId: string; attemptId: string; generation: number;
   blockedBy?: string[];
   guidedFrom?: { taskId: string; deliveryId: string };
@@ -44,13 +45,14 @@ export interface AgentTask {
   progress?: { targetId: string; stage: 'read' | 'committed' | 'retained'; sequence: number };
   generationProgress?: {completedStages:Array<'lesson'|'practice'>;pendingStages:Array<'lesson'|'practice'>};
   snapshot: QuestionSnapshot; status: AgentTaskStatus; threadId: string | null; turnId: string | null;
-  model: string | null; error: string | null; createdAt: string; cursor: number;
+  model: string | null; error: string | null; createdAt: string|null; cursor: number;
   stopRequested?: boolean; continuesTaskId?: string; continuedByTaskId?: string;
   recovery?: { state: 'active' | 'resolved' | 'unknown'; checkedAt: string; detail: string };
 }
 export interface Conversation { id: string; title: string; updatedAt: string }
 export interface AgentMessage {
-  id: string; taskId: string; role: 'user' | 'assistant'; text: string;
+  legacy?:Record<string,any>;
+  id: string; taskId: string|null; role: 'user' | 'assistant'; text: string;
   state: 'streaming' | 'partial' | 'complete'; itemId: string | null;
   deliveryId?: string;
 }

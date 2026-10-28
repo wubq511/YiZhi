@@ -28,7 +28,7 @@ export class Drawings {
   private visible(record: PersonalDrawing): PersonalDrawing {
     const v = record.value;
     const note = v?.anchor.space === 'text' && this.annotations.dispatch('annotations:list', {}).find((n: any) => n.id === (v.anchor as { noteId: string }).noteId);
-    return { ...record, status: !v ? 'deleted' : v.anchor.space === 'text' ? note?.current.status ?? 'orphan' : v.anchor.space === 'board' || this.target(v) ? 'attached' : 'orphan' };
+    return { ...record, status: record.legacy?.geometryPending?'orphan':!v ? 'deleted' : v.anchor.space === 'text' ? note?.current.status ?? 'orphan' : v.anchor.space === 'board' || this.target(v) ? 'attached' : 'orphan' };
   }
   private validate(value: DrawingValue, old?: PersonalDrawing) {
     if (!value || !['rectangle','ellipse','arrow','line','wave','highlighter'].includes(value.kind) || !value.anchor ||

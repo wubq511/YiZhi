@@ -14,6 +14,7 @@ from pathlib import Path
 import shutil
 import sqlite3
 import sys
+from directory_authority import acquire_migration
 
 
 def inside(root, name):
@@ -30,7 +31,7 @@ def inside(root, name):
 def main():
     root = Path(sys.argv[1]).resolve(strict=True)
     manifest = json.loads((root / '课程.json').read_text())
-    handles = []
+    handles = [acquire_migration(root)]
     for path in [root / '.review-board/service.lock', inside(root, manifest['knowledge'] + '.content.lock')]:
         handle = path.open('rb')  # Never creates lock files on the original course.
         handles.append(handle)
@@ -39,9 +40,15 @@ def main():
         except BlockingIOError:
             raise ValueError('源课程仍有活动写入者，须正常停止旧服务并释放写入锁')
     state = inside(root, manifest['state'])
+    # Initialize and retain the WAL reader before reserving WAL_WRITE_LOCK.
+    # A reopened idle WAL may need shared-index recovery; taking its write byte
+    # first would prevent SQLite's reader from completing that normal recovery.
+    reader = sqlite3.connect(state.as_uri() + '?mode=ro', uri=True) if state.exists() else None
+    if reader is not None:
+        reader.execute('SELECT * FROM sqlite_master LIMIT 1').fetchone()
     # SQLite POSIX byte locks detect writers even outside the normal host. WAL
     # readers do not protect WAL_WRITE_LOCK; reserve it explicitly until release.
-    for path, offset, length in [(state, 1073741824, 2), (Path(str(state) + '-shm'), 120, 1)]:
+    for path, offset, length in [(state, 1073741825, 1), (Path(str(state) + '-shm'), 120, 1)]:
         if path.exists():
             handle = path.open('r+b')  # No data is written, and no missing file is created.
             handles.append(handle)
@@ -106,6 +113,8 @@ def main():
         raise ValueError('未知锁请求')
     for handle in reversed(handles):
         handle.close()
+    if reader is not None:
+        reader.close()
 
 
 try:

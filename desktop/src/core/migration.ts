@@ -20,16 +20,22 @@ export function coursePath(root: string, name: string) {
   while (current !== root) { if (existsSync(current) && lstatSync(current).isSymbolicLink()) throw new Error('课程资源不接受软链'); current = dirname(current); }
   return path;
 }
-async function locked<T>(source: string, use: (child: ReturnType<typeof spawn>) => Promise<T>): Promise<T> {
-  const child = spawn('python3', [join(__dirname, 'legacy-lock.py'), source], { stdio: ['pipe', 'pipe', 'pipe'], shell: false });
-  child.stdin!.on('error',()=>{}); // Process exit is observed below, including a lost lease.
-  let errorText = '';
-  child.stderr!.on('data', data => { errorText += data; });
-  const ended = new Promise<number | null>((resolve, reject) => { child.once('error', reject); child.once('exit', resolve); });
-  // Observe early exit even if the process never produced its ready line.
-  await Promise.race([new Promise<void>(resolve => child.stdout!.once('data', () => resolve())), ended.then(() => { throw new Error(errorText || '无法取得源课程写入锁'); })]);
-  try { return await use(child); }
-  finally { child.stdin!.end(); await ended; }
+/** A stopped writer lease proves quiescence; this separate receipt proves the old window's confirmed tail. */
+export function legacySaveBarrier(root:string,courseId:string,generation:number,sequence:number){
+ const path=join(root,'.review-board','migration-barrier.json');if(!existsSync(path))return null;
+ const receipt=JSON.parse(readFileSync(path,'utf8'));
+ if(receipt.schema!=='yizhi-legacy-save-barrier-1'||receipt.saved!==true||receipt.courseId!==courseId||typeof receipt.operationId!=='string'||!Number.isSafeInteger(receipt.sequence)||!Number.isSafeInteger(receipt.confirmedSequence)||receipt.confirmedSequence>receipt.sequence)throw new Error('旧窗口保存屏障完成事实无效');
+ return {receipt,sha256:hashFile(path).sha256,validForVersion:receipt.generation===generation&&receipt.sequence===sequence};
+}
+export async function acquireLegacyLease(source:string) {
+  const child=spawn('python3',[join(__dirname,'legacy-lock.py'),source],{stdio:['pipe','pipe','pipe'],shell:false});
+  child.stdin!.on('error',()=>{});let errorText='';child.stderr!.on('data',data=>{errorText+=data;});
+  const ended=new Promise<number|null>((yes,no)=>{child.once('error',no);child.once('exit',yes);});
+  await Promise.race([new Promise<void>(yes=>child.stdout!.once('data',()=>yes())),ended.then(()=>{throw new Error(errorText||'无法取得源课程写入锁');})]);
+  return {child,async close(){child.stdin!.end();await ended;}};
+}
+export async function locked<T>(source:string,use:(child:ReturnType<typeof spawn>)=>Promise<T>):Promise<T>{
+ const lease=await acquireLegacyLease(source);try{return await use(lease.child);}finally{await lease.close();}
 }
 export async function snapshotLegacy(request: MigrationTarget) {
   const root = realpathSync(request.sourceDirectory), directory = resolve(request.directory);

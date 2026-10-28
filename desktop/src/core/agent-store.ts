@@ -17,6 +17,7 @@ export class AgentStore {
   constructor(private db: DatabaseSync, private sources: Sources, private unit: (id: string) => CourseUnit | undefined, private groups: CommandGroups) {
     db.exec(`CREATE TABLE IF NOT EXISTS agent_conversations(id TEXT PRIMARY KEY, title TEXT NOT NULL, updated_at TEXT NOT NULL,
         draft TEXT NOT NULL DEFAULT '', draft_session TEXT NOT NULL DEFAULT '', draft_seq INTEGER NOT NULL DEFAULT 0, thread_id TEXT, draft_context TEXT NOT NULL DEFAULT '{}');
+      CREATE TABLE IF NOT EXISTS agent_unthreaded_messages(id TEXT PRIMARY KEY,conversation_id TEXT NOT NULL REFERENCES agent_conversations(id),payload TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS agent_context(id INTEGER PRIMARY KEY CHECK(id=1), conversation_id TEXT REFERENCES agent_conversations(id));
       CREATE TABLE IF NOT EXISTS agent_operations(id TEXT PRIMARY KEY, digest TEXT NOT NULL, receipt TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS agent_tasks(id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL REFERENCES agent_conversations(id),
@@ -103,7 +104,7 @@ export class AgentStore {
         }
         return task;
       }),
-      messages: this.db.prepare('SELECT m.payload FROM agent_messages m JOIN agent_tasks t ON t.id=m.task_id WHERE t.conversation_id=? ORDER BY m.rowid').all(id).map(r => parse(r.payload)) };
+      messages: [...this.db.prepare('SELECT m.payload FROM agent_messages m JOIN agent_tasks t ON t.id=m.task_id WHERE t.conversation_id=? ORDER BY m.rowid').all(id),...this.db.prepare('SELECT payload FROM agent_unthreaded_messages WHERE conversation_id=? ORDER BY rowid').all(id)].map(r=>parse(r.payload)).sort((a,b)=>(a.legacy?.ordinal??1e9)-(b.legacy?.ordinal??1e9)) };
   }
   saveDraft(request: any) {
     if (!text(request.text) || !Number.isSafeInteger(request.seq) || request.seq < 1) throw new Error('输入草稿无效');
