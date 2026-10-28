@@ -1,3 +1,4 @@
+import { historyClient } from '../history-api';
 import { descriptionClient } from '../description-api';
 import { drawingClient } from '../drawing-api';
 import { exchangeBridge } from '../exchange-api';
@@ -20,6 +21,7 @@ async function invoke(channel: string, argument?: unknown) {
   }
 }
 const bridge: DesktopBridge = {
+  formalHistory: historyClient(invoke),
   description: descriptionClient(invoke),
   drawings: drawingClient(invoke),
   exchange: exchangeBridge(invoke),

@@ -61,6 +61,22 @@ export class BuiltinExperiments {
       return () => { if (pending && this.live.has(id)) this.live.set(id,pending); };
     } };
   }
+  /** Historical values are already stored facts. Restore their definition, never a runtime snapshot. */
+  restoreDefinition(unitId:string, block:ReadingBlock, historical:BuiltinDefinition) {
+    if(!this.db.isTransaction)throw new Error('历史实验恢复必须在共同事务内');
+    const before=this.formalDefinition(unitId,block.id), body=definitionFrom(block.payload);
+    if(!equal([historical.kind,historical.config,historical.initialInputs,historical.outputName],
+      [body.kind,body.config,body.initialInputs,body.outputName]))throw new Error('历史实验定义与正文配置不一致');
+    const definition={...structuredClone(historical),revision:before.revision+1};
+    const id=`${unitId}/${block.id}`;
+    this.db.prepare('INSERT INTO builtin_formal_definitions VALUES(?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload').run(id,JSON.stringify(definition));
+    this.db.prepare('INSERT INTO builtin_definition_history VALUES(?,?,?,?)').run(id,definition.revision,JSON.stringify(before),JSON.stringify(definition));
+    const row=this.db.prepare('SELECT payload FROM builtin_experiments WHERE id=?').get(id);
+    let pending:ExperimentView|undefined;
+    if(row) {pending=JSON.parse(String(row.payload));pending!.pendingDefinition=definition;pending!.version++;delete pending!.migrationError;this.persist(pending!);}
+    appendEvent(this.db,{type:'experiment.changed',instanceId:id,definitionRevision:definition.revision});
+    return {definition,publish:()=>{if(pending&&this.live.has(id))this.live.set(id,pending);}};
+  }
   fenceOperation(action: string, operationId: unknown) {
     if (typeof operationId !== 'string') return;
     if (action === 'experiments:act') {

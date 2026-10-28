@@ -1,3 +1,4 @@
+import { HistoryPanel,type HistoryPanelHandle } from './history-panel';
 import { Drawings, type DrawingHandle } from './drawings';
 import { ExchangePanel } from './exchange-panel';
 import { SearchPanel } from './search-panel';
@@ -123,6 +124,7 @@ function App() {
   };
   const [minimap, setMinimap] = useState(true);
   const [tool, setTool] = useState<"read" | "select" | "hand">("read");
+  const historyPanel=useRef<HistoryPanelHandle>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   useEffect(() => { if (narrow && searchOpen) setDirectory(false); }, [narrow, searchOpen]);
   const searchOrigin = useRef<(() => Promise<void>) | undefined>(undefined);
@@ -449,6 +451,26 @@ function App() {
   const status = { draft: '草稿已保留', saved: '已保存', pending: '待保存', saving: '正在保存…', error: '未保存' }[state.status];
   return <>
     <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen || sourcesOpen || agentOpen || notesOpen || searchOpen || exchangeOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
+      {course&&graph&&<HistoryPanel ref={historyPanel} sessionId={course.sessionId} units={graph.nodes.map(n=>({id:n.id,name:n.name}))} prepare={async()=>{
+        if(composing.current)throw new Error('请先完成中文候选输入，再查看或恢复历史。');
+        const saved=await channel.current?.flush();
+        const progress=channel.current?.progress();
+        if(!saved&&(!progress||progress.durableInputSeq<progress.inputSeq))throw new Error('当前输入尚未保留，请先重试保存。');
+        if(continuous.current&&!await continuous.current.finish())throw new Error('当前输入尚未保留。');
+      }} capture={()=>{
+        const oldCamera=flow.getViewport(),focused=document.activeElement as HTMLElement|null;
+        const selection=getSelection(),range=selection?.rangeCount?selection.getRangeAt(0).cloneRange():undefined;
+        camera.takeover();
+        return async()=>{await paintFrame();await flow.setViewport(oldCamera,{duration:0});if(readingRef.current)persist({...readingRef.current,camera:oldCamera});
+          if(focused?.isConnected)focused.focus({preventScroll:true});
+          if(range?.startContainer.isConnected&&range.endContainer.isConnected){const s=getSelection();s?.removeAllRanges();s?.addRange(range);}
+        };
+      }} changed={async()=>{
+        await channel.current?.synchronize();
+        const current=await window.yizhi.read(course.sessionId);setCourse(current);
+        const updated=await Promise.all(mounted.map(u=>window.yizhi.readUnit(course.sessionId,u.id)));setMounted(updated);
+        setSelected(previous=>updated.find(u=>u.id===previous?.id)??previous);setGraph(await window.yizhi.graph(course.sessionId));
+      }}/>}
       {course && <SearchPanel sessionId={course.sessionId} narrow={narrow} beforeOpen={() => { searchOrigin.current = captureSearchScene(); }} onOpenChange={value => { setSearchOpen(value); if (value && narrow) setDirectory(false); }} locate={locateSearch} />}
       {searchReturn && <button onClick={() => void searchReturn().catch(e => setReadError(e.message))}>返回搜索前位置</button>}
       {course && <AnnotationPanel ref={notesPanel} sessionId={course.sessionId} narrow={narrow} prepare={async () => !!await channel.current?.flush()} onOpenChange={value => { setNotesOpen(value); if (value && narrow) setDirectory(false); }} locate={async note => {
@@ -522,7 +544,7 @@ function App() {
           <ReadingSurface id={unit.id} name={unit.name} position={position} baseline={graph!.layout.nodes.find(node => node.unitId === unit.id)!} active={selected?.id === unit.id} articleRef={articleRef} measure={local.measure} gesture={local.gesture} commit={place} takeover={() => camera.takeover()}>
             <RoughFrame id={unit.id} />
 
-            <h1 data-search-field="name">{unit.name}</h1><div className="unit-aliases">{Array.isArray(unit.aliases) && unit.aliases.map((alias: string, i: number) => <span key={i} data-search-field={`aliases.${i}`}>{alias}</span>)}</div><p className="unit-meta">课程重要性 {unit.rating.stars} / 5 · {unit.id}</p>{review && <ReviewControls unitId={unit.id} snapshot={review} change={status => void changeReview(unit.id, status)} confirm={(id, adjust) => void confirmReview(id, adjust)} />}<p className="outcome" data-search-field="outcome">{unit.outcome}</p>
+            <h1 data-search-field="name">{unit.name}</h1><button onClick={()=>historyPanel.current?.open(unit.id)}>单元历史</button><div className="unit-aliases">{Array.isArray(unit.aliases) && unit.aliases.map((alias: string, i: number) => <span key={i} data-search-field={`aliases.${i}`}>{alias}</span>)}</div><p className="unit-meta">课程重要性 {unit.rating.stars} / 5 · {unit.id}</p>{review && <ReviewControls unitId={unit.id} snapshot={review} change={status => void changeReview(unit.id, status)} confirm={(id, adjust) => void confirmReview(id, adjust)} />}<p className="outcome" data-search-field="outcome">{unit.outcome}</p>
             {unit.id==='KU-001'&&!course.contentScope&&<ExtensionExperiment sessionId={course.sessionId} active={viewport.zoom>=0.55&&selected?.id===unit.id} disabled={closing}/>}
             <SourceReferences citations={sourceCitations.filter(citation => citation.target?.unitId === unit.id)} onOpen={citation => sourcesPanel.current?.openCitation(citation)} />
             {unit.id === 'KU-001' && channel.current ? <ContinuousUnitEditor course={course} channel={channel.current} disabled={closing || producerBusy || !cameraReady} saveError={state.status === 'error'}

@@ -16,6 +16,7 @@ export class FormalRelations {
     db.exec(`CREATE TABLE IF NOT EXISTS formal_relations(id TEXT PRIMARY KEY, payload TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS formal_requirement_groups(id TEXT PRIMARY KEY, payload TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS formal_relation_retired(id TEXT PRIMARY KEY);
+      CREATE TABLE IF NOT EXISTS formal_object_versions(id TEXT PRIMARY KEY, version INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS formal_relation_bases(id TEXT PRIMARY KEY, session_id TEXT NOT NULL, attempt_id TEXT, generation INTEGER NOT NULL, revision INTEGER NOT NULL);
       INSERT OR IGNORE INTO metadata VALUES ('formal-relations-revision', '1');`);
     if (!db.prepare("SELECT 1 FROM metadata WHERE key='formal-relations-seeded'").get()) transaction(db, () => {
@@ -23,6 +24,32 @@ export class FormalRelations {
       for (const group of seed.requirementGroups) db.prepare('INSERT INTO formal_requirement_groups VALUES (?, ?)').run(group.id, json(group));
       db.prepare("INSERT INTO metadata VALUES ('formal-relations-seeded', '1')").run();
     });
+  }
+  historyObject(id:string) {
+    const table=id.startsWith('REL-')?'formal_relations':'formal_requirement_groups';
+    const row=this.db.prepare(`SELECT payload FROM ${table} WHERE id=?`).get(id);
+    const saved=this.db.prepare('SELECT version FROM formal_object_versions WHERE id=?').get(id);
+    const last=saved?undefined:this.db.prepare("SELECT json_extract(c.value,'$.afterVersion') AS version FROM cg_history h,json_each(h.payload,'$.changes') c WHERE json_extract(c.value,'$.objectId')=? ORDER BY h.rowid DESC LIMIT 1").get(id);
+    return {value:row?parse(row.payload):null,version:Number(saved?.version??last?.version??(row?1:0)),kind:'formal-relation'};
+  }
+  restoreInTransaction(changes:GroupHistory['changes']):GroupHistory['changes'] {
+    if(!this.db.isTransaction)throw new Error('历史关系恢复必须在共同事务内');
+    const next=this.graph();
+    for(const c of changes) {
+      if(c.objectId.startsWith('REL-')) {next.edges=next.edges.filter(e=>e.id!==c.objectId);if(c.after)next.edges.push(c.after as any);}
+      else {next.requirementGroups=next.requirementGroups.filter(g=>g.id!==c.objectId);if(c.after)next.requirementGroups.push(c.after as any);}
+    }
+    validateRelationGraph(next,this.catalog.sources,this.catalog.retiredUnitIds);
+    const revision=this.revision()+1;
+    const result=changes.map(c=>{
+      const before=this.historyObject(c.objectId),table=c.objectId.startsWith('REL-')?'formal_relations':'formal_requirement_groups';
+      if(c.after)this.db.prepare(`INSERT INTO ${table} VALUES(?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload`).run(c.objectId,json(c.after));
+      else this.db.prepare(`DELETE FROM ${table} WHERE id=?`).run(c.objectId);
+      this.db.prepare('INSERT OR REPLACE INTO formal_object_versions VALUES(?,?)').run(c.objectId,revision);
+      return {...c,before:before.value,beforeVersion:before.version,afterVersion:revision};
+    });
+    this.db.prepare("UPDATE metadata SET value=? WHERE key='formal-relations-revision'").run(String(revision));
+    return result;
   }
   private generation() { return Number(this.db.prepare("SELECT value FROM metadata WHERE key='generation'").get()!.value); }
   private revision() { return Number(this.db.prepare("SELECT value FROM metadata WHERE key='formal-relations-revision'").get()!.value); }
@@ -143,12 +170,14 @@ export class FormalRelations {
         for (const id of ids) {
           const oldValue = oldValues.find(value => value.id === id) ?? null, newValue = newValues.find(value => value.id === id) ?? null;
           if (canonical(oldValue) === canonical(newValue)) continue;
+          const version=this.historyObject(id).version;
           if (newValue) this.db.prepare(`INSERT INTO ${table} VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload`).run(id, json(newValue));
           else {
             this.db.prepare(`DELETE FROM ${table} WHERE id=?`).run(id);
             this.db.prepare('INSERT INTO formal_relation_retired VALUES (?)').run(id);
           }
-          changes.push({ objectId: id, before: oldValue, after: newValue, beforeVersion: this.revision(), afterVersion: this.revision() + 1 });
+          changes.push({ objectId: id, before: oldValue, after: newValue, beforeVersion: version, afterVersion: this.revision() + 1 });
+          this.db.prepare('INSERT OR REPLACE INTO formal_object_versions VALUES(?,?)').run(id,this.revision()+1);
         }
       }
       if (!changes.length) throw new Error('没有实际的正式关系修改');

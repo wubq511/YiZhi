@@ -1,3 +1,4 @@
+import { objectVersions, unitChanges } from './history-objects';
 import { syncAnnotations } from './annotations';
 import type { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
@@ -190,6 +191,7 @@ export function commitEdit(db: DatabaseSync, command: EditCommand, afterWrite?: 
     }
     const row = db.prepare('SELECT payload, revision FROM units WHERE id=?').get('KU-001')!;
     const unit: CourseUnit = JSON.parse(String(row.payload));
+    const historyBefore = structuredClone(unit), historyVersions = objectVersions(db,unit);
     if (command.baseRevision > Number(row.revision)) throw new Error('正文版本尚不存在，输入仍保留');
     const stale = Number(row.revision) !== command.baseRevision;
     if (stale && (!command.patch || command.changes.length || command.splits?.length)) throw new Error('正文版本已变化，输入仍保留，请重新核对');
@@ -247,11 +249,13 @@ export function commitEdit(db: DatabaseSync, command: EditCommand, afterWrite?: 
     db.prepare('UPDATE units SET payload=?, revision=? WHERE id=?').run(JSON.stringify(unit), receipt.revision, unit.id);
     syncAnnotations(db, patch ?? { updates: [], correspondence: correspondence.map(s => ({ kind: 'split', sourceId: s.blockId, targetId: s.newBlockId, offset: s.offset })) });
     const relatedChanges = afterWrite?.();
+    const formalChanges = unitChanges(db,historyBefore,unit,historyVersions);
     receipt.cursor = appendEvent(db, { type: 'content.committed', receipt: { ...receipt, cursor: eventCursor(db) + 1 } });
     const legacyAffected = new Set([...command.changes.map(c => c.blockId), ...(command.splits ?? []).flatMap(s => [s.blockId, s.newBlockId])]);
     const after = [...legacyAffected].map(id => find(unit.reading.blocks, id)?.block).filter((block): block is ReadingBlock => !!block).map(valueOf);
     db.prepare('INSERT INTO operations VALUES (?, ?, ?, ?, ?, ?)')
-      .run(command.operationId, hash, JSON.stringify(receipt), unit.id, JSON.stringify([...before, ...(editorEffect?.before ?? [])]), JSON.stringify({ blocks: [...after, ...(editorEffect?.after ?? [])], splits: correspondence,
+      .run(command.operationId, hash, JSON.stringify(receipt), unit.id, JSON.stringify(formalChanges.filter(c=>!c.objectId.startsWith('structure:') && c.before).map(c=>c.before)), JSON.stringify({ blocks: formalChanges.filter(c=>!c.objectId.startsWith('structure:') && c.after).map(c=>c.after), splits: correspondence,
+        structures:formalChanges.filter(c=>c.objectId.startsWith('structure:')), objectVersions:Object.fromEntries(formalChanges.map(c=>[c.objectId,[c.beforeVersion,c.afterVersion]])),
         ...(editorEffect ? { structure: editorEffect.structure, correspondence: editorEffect.correspondence } : {}), relatedChanges: relatedChanges ?? [] }));
     db.prepare('INSERT INTO operation_times VALUES (?, ?)').run(command.operationId, new Date().toISOString());
     if (!progress || command.inputSeq > Number(progress.seq)) {

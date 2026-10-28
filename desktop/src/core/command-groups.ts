@@ -1,3 +1,4 @@
+import { objectVersions, unitChanges } from './history-objects';
 import { changedCouplings } from './consistency-links';
 import type { ConsistencyPort } from './command-consistency';
 import { applyContentPatch, validatePatch } from './editor-store';
@@ -103,7 +104,7 @@ export class CommandGroups {
     for (const row of this.db.prepare('SELECT payload FROM units').all()) { const unit: CourseUnit = parse(row.payload); walk(unit.reading.blocks, unit.id); }
     for (const row of this.db.prepare("SELECT id,value FROM cg_objects WHERE kind='block'").all()) if (!memberships.has(String(row.id))) {
       this.put(String(row.id), 'block', { id: String(row.id), retired: true });
-      if (!parse(row.value).retired) changed.add(String(row.id));
+      if (!parse(row.value).retired) { changed.add(String(row.id)); this.put(`structure:${row.id}`, 'structure', {blockIds:[]}); }
     }
     for (const row of this.db.prepare("SELECT id, value FROM cg_objects WHERE kind IN ('reference', 'dependency')").all()) {
       const relation = parse(row.value);
@@ -271,7 +272,7 @@ export class CommandGroups {
         }
       }
       const { unit, revision } = this.unit(command.unitId);
-      const beforeUnit = structuredClone(unit);
+      const beforeUnit = structuredClone(unit), historyVersions = objectVersions(this.db,unit);
       const changes: GroupHistory['changes'] = [];
       for (const change of command.changes) {
         const before = this.object(change.objectId);
@@ -345,9 +346,12 @@ export class CommandGroups {
       this.db.prepare('INSERT INTO cg_candidates VALUES (?, ?, ?, ?)').run(command.operationId, digest(command), '{}', json(result));
       if (changes.length) {
         const attempt = this.db.prepare('SELECT task_id FROM cg_attempts WHERE id=?').get(command.attemptId)!;
+        const bodyChanges = unitChanges(this.db,beforeUnit,unit,historyVersions);
+        const bodyIds = new Set(bodyChanges.map(c=>c.objectId));
+        const normalized = [...bodyChanges,...changes.filter(c=>!bodyIds.has(c.objectId))];
         const history: GroupHistory = { operationId: command.operationId, attemptId: command.attemptId,
           taskId: String(attempt.task_id), generation: this.generation(), revision: nextRevision,
-          committedAt: new Date().toISOString(), changes };
+          committedAt: new Date().toISOString(), changes: normalized };
         this.db.prepare('INSERT INTO cg_history VALUES (?, ?)').run(command.operationId, json(history));
       }
       this.consistency?.committed?.(result);

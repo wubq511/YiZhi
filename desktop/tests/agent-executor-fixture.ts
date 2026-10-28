@@ -53,13 +53,16 @@ async function receive(m: any) {
       const bad = await tool('yizhi_read_source_page', { versionId: '../../course.sqlite', pdfPageIndex: 0 });
       if (bad?.success) throw new Error('arbitrary file read was allowed');
     }
-    if (mode === 'mutation') {
+    if (mode === 'mutation' || mode === 'history-stop') {
       if(snapshot.intent !== 'question') {
         const context=JSON.parse((await tool('yizhi_read_edit_context',{})).contentItems[0].text);
         const other=JSON.parse((await tool('yizhi_read_edit_context',{})).contentItems[0].text);
         const paragraph=context.content.reading.blocks.find((b:any)=>b.kind==='paragraph'),example=context.content.reading.blocks.find((b:any)=>b.kind==='example');
         const input={operationId:'controlled-group1',basisId:context.basisId,conclusionOrMethodChanged:false,updates:[{blockId:paragraph.id,text:'受控协议回归：位置记数法按位权计算。'}],moves:[{blockId:example.id,beforeId:paragraph.id}],layout:context.context.layout.map((n:any)=>({unitId:n.unitId,x:n.x+24,y:n.y+36,width:n.width}))};
-        await tool('yizhi_apply_group',input); await new Promise(r=>setTimeout(r,1400));
+        await tool('yizhi_apply_group',input);
+        // Keep a real protocol turn alive until the history action interrupts it.
+        if(mode === 'history-stop')return;
+        await new Promise(r=>setTimeout(r,1400));
         await tool('yizhi_apply_group',{...input,operationId:'controlled-group2',basisId:other.basisId});
       } else {
         const denied=await tool('yizhi_read_edit_context',{});if(denied.success)throw new Error('QA acquired mutation');
