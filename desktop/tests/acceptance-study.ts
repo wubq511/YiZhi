@@ -4,7 +4,7 @@ import type { CourseGraph, OpenedCourse } from '../src/shared';
 import { AcceptanceMetrics } from './acceptance-metrics';
 import { exerciseDirtyIndex, exerciseHistoryPreview, exerciseParserPreparation, flattenBlocks, prepareLongHistory, type StudyAPI } from './acceptance-workload';
 import { parsingFixture } from './parsing-fixture';
-import { revealBoardControl } from './board-test-helpers';
+import { readCameraTransform, revealBoardControl } from './board-test-helpers';
 
 export function studyAPI(page: Page, other?: { page: Page; sessionId: string }): StudyAPI {
   const call = (path: string[], args: unknown[]) => {
@@ -238,12 +238,13 @@ export async function runStudyAcceptance(app: ElectronApplication, page: Page, m
   await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(page.getByRole('status', { name: '阅读状态', exact: true })).toHaveText('阅读位置已保存');
-  // A navigation/focus scroll can reach React Flow before its queued reading-state receipt.
-  // CSSOM loses precision at large coordinates; compare the actual numeric viewport.
-  await expect.poll(() => page.evaluate(async sessionId => {
-    const saved = await (window as any).yizhi.readingState(sessionId), viewport = (window as any).__yizhiViewport();
+  // A navigation/focus scroll can precede its queued reading-state receipt.
+  // The shared observer reads exact Typed OM components, without string/matrix loss.
+  await expect.poll(async () => {
+    const saved = await page.evaluate(sessionId => (window as any).yizhi.readingState(sessionId), opened.sessionId);
+    const viewport = await readCameraTransform(page.locator('.react-flow__viewport'));
     return !!saved?.camera && saved.camera.x === viewport.x && saved.camera.y === viewport.y && saved.camera.zoom === viewport.zoom;
-  }, opened.sessionId)).toBe(true);
+  }).toBe(true);
   const readingBeforePanels = await page.evaluate(sessionId => (window as any).yizhi.readingState(sessionId), opened.sessionId);
   const panelTrace = [{ phase: 'before', state: readingBeforePanels }];
   const panelSample = async (phase: string) => { panelTrace.push({ phase, state: await page.evaluate(sessionId => (window as any).yizhi.readingState(sessionId), opened.sessionId) }); await metrics.sample(`panel:${phase}`); };

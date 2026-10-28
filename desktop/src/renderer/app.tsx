@@ -105,13 +105,6 @@ function BlockContent({ block, onReference, reading, updateReading, onSource, ex
 function App() {
   const [readonlyReport,setReadonlyReport]=useState<import('../format-api').FormatCapabilities>();
   const flow = useReactFlow();
-  useEffect(() => {
-    if (!observation.active) return;
-    // CSSOM serializes/quantizes large coordinates. Observe the numeric camera
-    // through React Flow's read-only public API, without changing its behavior.
-    (window as any).__yizhiViewport = () => flow.getViewport();
-    return () => { delete (window as any).__yizhiViewport; };
-  }, [flow]);
   const boardRef = useRef<HTMLElement>(null);
   const [nodesReady, setNodesReady] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);

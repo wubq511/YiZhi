@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { arch, cpus, totalmem, release } from 'node:os';
 import type { CoreObservation, ObservationSnapshot } from '../src/acceptance-observation';
+import { readCameraTransform } from './board-test-helpers';
 
 function command(path: string, args: string[]) { try { return execFileSync(path, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim(); } catch { return null; } }
 export const deviceFacts = () => ({ platform: process.platform, arch: arch(), model: command('/usr/sbin/sysctl', ['-n', 'hw.model']),
@@ -71,9 +72,7 @@ export class AcceptanceMetrics {
           label: document.activeElement?.getAttribute('aria-label'), text: document.activeElement?.textContent?.slice(0, 120),
           headerInert: !!document.querySelector('header')?.hasAttribute('inert'), bodyInert: document.body.inert,
           rootInert: !!document.getElementById('root')?.hasAttribute('inert'), modalDialogs: [...document.querySelectorAll('dialog[open]')].map(node => node.getAttribute('aria-label')) },
-        camera: (() => { const element = document.querySelector('.react-flow__viewport'); if (!element) return null;
-          const matrix = new DOMMatrixReadOnly(getComputedStyle(element).transform), board = document.querySelector('main.board');
-          return { x: matrix.e, y: matrix.f, zoom: matrix.a, nativeScroll: [board?.scrollLeft, board?.scrollTop] }; })(),
+        nativeBoardScroll: (() => { const board = document.querySelector('main.board'); return [board?.scrollLeft, board?.scrollTop]; })(),
         reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
         heap: (performance as any).memory ? { usedJSHeapSize: (performance as any).memory.usedJSHeapSize, totalJSHeapSize: (performance as any).memory.totalJSHeapSize } : null,
         raf: state.raf, longtask: state.longtask, composition: state.composition, input: state.input,
@@ -94,6 +93,7 @@ export class AcceptanceMetrics {
         display: screen.getDisplayMatching(window.getBounds()), rendererPid: window.webContents.getOSProcessId() })) }));
     const renderers: RendererSample[] = [];
     for (const [page, name] of this.pages) if (!page.isClosed()) renderers.push({ label: name, ...await page.evaluate(() => (window as any).__t28Metrics.snapshot()),
+      camera: await readCameraTransform(page.locator('.react-flow__viewport')),
       v8Heap: await this.heaps.get(page)!.send('Runtime.getHeapUsage'), browserWorkers: { current: this.workers.get(page)!.active.size,
         peak: this.workers.get(page)!.peak, total: this.workers.get(page)!.total, urls: [...this.workers.get(page)!.active].map(worker => worker.url()) } });
     this.checkpoints.push({ label, at: new Date().toISOString(), core, processes, renderers });
