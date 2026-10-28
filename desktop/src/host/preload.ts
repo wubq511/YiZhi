@@ -1,4 +1,5 @@
 import { historyClient } from '../history-api';
+import { migrationClient } from '../migration-api';
 import { retentionClient } from '../retention-api';
 import { courseRestoreClient } from '../course-restore-api';
 import { descriptionClient } from '../description-api';
@@ -23,6 +24,7 @@ async function invoke(channel: string, argument?: unknown) {
   }
 }
 const bridge: DesktopBridge = {
+  migration:{...migrationClient(invoke),stage:p=>invoke('migration:stage',p),chooseDirectory:kind=>invoke('migration:chooseDirectory',kind),openDirectory:directory=>invoke('migration:openDirectory',directory),currentDirectory:()=>invoke('migration:currentDirectory')},
   retention:(()=>{const {resourceLease:_,resourceLeases:__,...bridge}=retentionClient(invoke);return bridge;})(),
   courseRestore:courseRestoreClient(invoke),
   formalHistory: historyClient(invoke),

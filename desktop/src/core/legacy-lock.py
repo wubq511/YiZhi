@@ -40,6 +40,12 @@ def main():
         except BlockingIOError:
             raise ValueError('源课程仍有活动写入者，须正常停止旧服务并释放写入锁')
     state = inside(root, manifest['state'])
+    # Initialize and retain the WAL reader before reserving WAL_WRITE_LOCK.
+    # A reopened idle WAL may need shared-index recovery; taking its write byte
+    # first would prevent SQLite's reader from completing that normal recovery.
+    reader = sqlite3.connect(state.as_uri() + '?mode=ro', uri=True) if state.exists() else None
+    if reader is not None:
+        reader.execute('SELECT * FROM sqlite_master LIMIT 1').fetchone()
     # SQLite POSIX byte locks detect writers even outside the normal host. WAL
     # readers do not protect WAL_WRITE_LOCK; reserve it explicitly until release.
     for path, offset, length in [(state, 1073741825, 1), (Path(str(state) + '-shm'), 120, 1)]:
@@ -107,6 +113,8 @@ def main():
         raise ValueError('未知锁请求')
     for handle in reversed(handles):
         handle.close()
+    if reader is not None:
+        reader.close()
 
 
 try:

@@ -11,7 +11,7 @@ export interface AnnotationSelection { unitId: string; fragments: AnnotationFrag
 export interface AnchorLocation { blockId: string; version: string; field: 'text' | 'latex'; from: number; to: number; quote: string;
   model?: FormulaModel; status: 'attached' | 'orphan'; reason?: string }
 export interface PersonalNote { legacy?:{anchor:Record<string,any>;revision:number;[key:string]:unknown}; id: string; text: string; version: number; original: AnnotationSelection; originalVersions: string[];
-  current: { unitId?: string; status: 'attached' | 'orphan'; fragments: AnchorLocation[] }; createdAt: string; updatedAt: string }
+  current: { unitId?: string; status: 'attached' | 'orphan'; fragments: AnchorLocation[] }; createdAt: string|null; updatedAt: string|null }
 type Session = { sessionId: string };
 type Write = Session & { operationId: string };
 export interface AnnotationAPI {

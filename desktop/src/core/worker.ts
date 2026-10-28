@@ -1,4 +1,6 @@
-import { prepareDirectory,publishDirectory,directoryStatus,recoverDirectory,admitDirectory,closeDirectoryLeases } from './directory-authority';
+import { initializeMigrationHistory,migratedHistory,migratedOperation } from './migration-history';
+import { migrationRecords } from './migration-state';
+import { prepareDirectory,publishDirectory,directoryStatus,recoverDirectory,admitDirectory,closeDirectoryLeases,abandonDirectory,directoryTransition } from './directory-authority';
 import { importPersonal,importPersonalRecords } from './migration-personal';
 import { FormalHistory } from './formal-history';
 import { registerRetentionResourceRoot } from './retention-resources';
@@ -172,7 +174,7 @@ function open(directory: string,preparing=false): OpenedCourse {
 
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     course.courseRestore=new CourseRestore(db,formalHistory,graph,agent,experiments,extensions,next=>{course.sessionId=next;groups.releaseGeneration();formalHistory.releaseGeneration();},workerData?.restoreScheduling);
-    course.retention.installPayloadTracking();
+    initializeMigrationHistory(db);course.retention.installPayloadTracking();
     db.prepare('INSERT INTO course_sessions VALUES(?,?)').run(course.sessionId,Number(db.prepare("SELECT value FROM metadata WHERE key='generation'").get()!.value));
     const result = snapshot(course);
     courses.set(canonical, course);
@@ -203,9 +205,9 @@ parentPort!.on('message', message => {
     const course = [...courses.values()].find(c => c.sessionId === message.payload?.sessionId);
     try { course?.experiments.stopIssuing(message.payload); } catch { /* Invalid input is rejected by the ordered dispatcher below. */ }
   }
-  if (message.action === 'sources:page' || message.action.startsWith('search:') || message.action==='migration:prepare' || message.action==='migration:publish') {
-    // Immutable source bytes may parse asynchronously while short core requests continue.
-    // Start after prior ordered writes; only close drains these read-only operations.
+  if (message.action === 'sources:page' || message.action.startsWith('search:') || message.action==='migration:prepare' || message.action==='migration:publish' || message.action==='migration:convert' || message.action==='migration:snapshot') {
+    // Independent file staging and immutable parsing yield while other courses save.
+    // Start after prior ordered writes; close drains every pending stage/lease.
     queue = queue.then(() => {
       const pending = dispatch(message); sourceReads.add(pending);
       void pending.finally(() => sourceReads.delete(pending));
@@ -220,6 +222,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       const course = session(payload.sessionId,action);
       if(course.db.prepare('SELECT 1 FROM expired_payloads WHERE operation_id=?').get(payload.operationId))throw new Error('这项操作明细已过期清理；原身份保留，不能重新应用，请重新读取当前内容');
       if(action!=='courseRestore:apply'&&!action.endsWith(':query')&&action!=='queryOperation'&&action!=='formalHistory:detail'&&course.db.prepare('SELECT 1 FROM course_restore_requests WHERE id=?').get(payload.operationId))throw new Error('操作身份已用于整课恢复');
+      if(!action.startsWith('migration:')&&action!=='formalHistory:detail'&&!action.endsWith(':query')&&action!=='queryOperation'&&course.db.prepare('SELECT 1 FROM migration_receipts WHERE id=?').get(payload.operationId))throw new Error('旧版操作身份已迁移，仅可查询原收据，不能作为新操作执行');
       const fencedAction = action === 'commands:resolveInput' ? 'commitEdit' : (action === 'formalHistory:apply'||action === 'courseRestore:apply') ? 'commands:commit' : action;
       course.exchange.fence(fencedAction, payload.operationId);
       course.annotations.fence(fencedAction, payload.operationId);
@@ -247,8 +250,14 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       finally{course.retention.stop();course.experiments.dispose();await course.parsing.close();course.db.close();course.owner.close();courses.delete(key);}
     });
     else if(action==='migration:publish')value=await publishDirectory(payload,workerData?.cutoverScheduling);
+    else if(action==='migration:abandon')value=await abandonDirectory(payload);
+    else if(action==='migration:transition')value=directoryTransition(payload);
     else if(action==='migration:status')value=directoryStatus(payload.directory);
     else if(action==='migration:recover')value=recoverDirectory(payload.directory);
+    else if(action==='migration:history')value=migratedHistory(session(payload.sessionId,action).db,payload);
+    else if(action==='migration:operation')value=migratedOperation(session(payload.sessionId,action).db,payload.operationId);
+    else if(action==='migration:pending'){const db=session(payload.sessionId,action).db;value=db.prepare("SELECT 1 FROM sqlite_master WHERE name='migration_pending'").get()?db.prepare('SELECT * FROM migration_pending ORDER BY id').all().map(r=>({id:r.id,namespace:r.namespace,key:r.record_key,purpose:r.purpose,state:r.state,payload:r.payload?JSON.parse(String(r.payload)):null,createdAt:r.created_at})):[];}
+    else if (action === 'migration:records')value=migrationRecords(session(payload.sessionId,action).db,payload);
     else if (action === 'migration:personal') value=await importPersonal(session(payload.sessionId,action).db,payload.sourceDirectory);
     else if (action === 'migration:snapshot') value = await snapshotLegacy(payload);
     else if (action === 'migration:convert') value = await convertLegacy(payload, workerData?.migrationScheduling);

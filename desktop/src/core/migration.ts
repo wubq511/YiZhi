@@ -20,6 +20,13 @@ export function coursePath(root: string, name: string) {
   while (current !== root) { if (existsSync(current) && lstatSync(current).isSymbolicLink()) throw new Error('课程资源不接受软链'); current = dirname(current); }
   return path;
 }
+/** A stopped writer lease proves quiescence; this separate receipt proves the old window's confirmed tail. */
+export function legacySaveBarrier(root:string,courseId:string,generation:number,sequence:number){
+ const path=join(root,'.review-board','migration-barrier.json');if(!existsSync(path))return null;
+ const receipt=JSON.parse(readFileSync(path,'utf8'));
+ if(receipt.schema!=='yizhi-legacy-save-barrier-1'||receipt.saved!==true||receipt.courseId!==courseId||typeof receipt.operationId!=='string'||!Number.isSafeInteger(receipt.sequence)||!Number.isSafeInteger(receipt.confirmedSequence)||receipt.confirmedSequence>receipt.sequence)throw new Error('旧窗口保存屏障完成事实无效');
+ return {receipt,sha256:hashFile(path).sha256,validForVersion:receipt.generation===generation&&receipt.sequence===sequence};
+}
 export async function acquireLegacyLease(source:string) {
   const child=spawn('python3',[join(__dirname,'legacy-lock.py'),source],{stdio:['pipe','pipe','pipe'],shell:false});
   child.stdin!.on('error',()=>{});let errorText='';child.stderr!.on('data',data=>{errorText+=data;});

@@ -138,6 +138,8 @@ class CourseStore:
     @contextmanager
     def _transaction(self, write=False):
         if write:
+            if getattr(self,'_writes_frozen',False):
+                raise StoreError('save_failed','课程已完成迁移保存屏障，旧连接不再接纳写入')
             with writer_admission(self._course_root):
                 with self._unchecked_transaction(write=True) as db:
                     yield db
