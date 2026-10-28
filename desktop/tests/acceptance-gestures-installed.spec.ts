@@ -34,9 +34,13 @@ test('T28 corrected installed gestures retain the existing 500 course and reopen
     const original = await page.evaluate(async ({ sessionId, unitId }) => (window as any).yizhi.read(sessionId, unitId), { sessionId: opened.sessionId, unitId: ids[0] });
     expect(original.drafts.some((draft: any) => draft.input.formulaDrafts?.length)).toBe(true);
     const viewport = page.locator('.react-flow__viewport'), before = await readCameraTransform(viewport); expect(before.zoom).toBe(.85);
-    const board = (await page.locator('main.board').boundingBox())!, pointer = { x: 100, y: 150 };
+    const board = (await page.locator('main.board').boundingBox())!;
+    // MouseEvent client coordinates are integers, while this installed header
+    // places the board at fractional CSS pixels. Use the point actually sent.
+    const client = { x: Math.round(board.x + 100), y: Math.round(board.y + 150) };
+    const pointer = { x: client.x - board.x, y: client.y - board.y };
     const send = (deltaX: number, deltaY: number, keys: { shiftKey?: boolean; ctrlKey?: boolean; metaKey?: boolean } = {}) => page.locator('.react-flow__pane').dispatchEvent('wheel', {
-      deltaX, deltaY, deltaMode: 0, ...keys, clientX: board.x + pointer.x, clientY: board.y + pointer.y, bubbles: true, cancelable: true });
+      deltaX, deltaY, deltaMode: 0, ...keys, clientX: client.x, clientY: client.y, bubbles: true, cancelable: true });
     await send(40, 0, { shiftKey: true });
     await expect.poll(async () => (await readCameraTransform(viewport)).x).toBeCloseTo(before.x - 40, 8);
     expect((await readCameraTransform(viewport)).y).toBe(before.y);
@@ -58,7 +62,7 @@ test('T28 corrected installed gestures retain the existing 500 course and reopen
     expect(saved.unit).toEqual(original.unit); expect(saved.drafts).toEqual(original.drafts);
     const reopenedCamera = await readCameraTransform(reopened.locator('.react-flow__viewport')); expect(reopenedCamera.zoom).toBe(.85);
     await writeFile(join(input.evidenceDirectory, 'affected-installed.json'), JSON.stringify({ status: 'passed', scope: 'affected installed gesture reacceptance; no repeated 500 load',
-      input, appManifestSha256: digest(manifestBytes), runtime, graphUnits: graph.nodes.length, before, panned, pinched, commandWheel, ready, reopenedCamera,
+      input, appManifestSha256: digest(manifestBytes), runtime, graphUnits: graph.nodes.length, board, client, pointer, before, panned, pinched, commandWheel, ready, reopenedCamera,
       unitAndDraftPreserved: true, programmaticEventReplay: true, physicalStatus: 'failed gestures still require Robert recheck' }, null, 2) + '\n');
   } finally { await app.close(); }
 });

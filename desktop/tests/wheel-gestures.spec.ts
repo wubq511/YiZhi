@@ -40,10 +40,11 @@ test('native macOS pinch deltas use normalized pinch gain with a fixed pointer a
     const viewport = page.locator('.react-flow__viewport'), before = await readCameraTransform(viewport);
     expect(before.zoom).toBe(.85); // Public normal navigation supplies a midrange camera.
     const board = (await page.locator('main.board').boundingBox())!;
-    const pointer = { x: 100, y: 150 };
+    const client = { x: Math.round(board.x + 100), y: Math.round(board.y + 150) };
+    const pointer = { x: client.x - board.x, y: client.y - board.y };
     const send = (deltaY: number, metaKey = false) => page.locator('.react-flow__pane').dispatchEvent('wheel', {
       deltaX: 0, deltaY, deltaMode: 0, ctrlKey: !metaKey, metaKey,
-      clientX: board.x + pointer.x, clientY: board.y + pointer.y, bubbles: true, cancelable: true });
+      clientX: client.x, clientY: client.y, bubbles: true, cancelable: true });
     // First two deltas from Robert's real trace, replayed as explicitly controlled events.
     await send(-0.49772170186042786); await send(-2.052461624145508);
     // Worked value for React Flow's existing macOS pinch normalization, not a feel/latency threshold.
