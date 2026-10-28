@@ -1,3 +1,4 @@
+import { historyTimestamp } from './history-clock';
 import { objectVersions, unitChanges } from './history-objects';
 import { syncAnnotations } from './annotations';
 import { changedCouplings } from './consistency-links';
@@ -269,7 +270,7 @@ export function commitEdit(db: DatabaseSync, command: EditCommand, afterWrite?: 
       .run(command.operationId, hash, JSON.stringify(receipt), unit.id, JSON.stringify(formalChanges.filter(c=>!c.objectId.startsWith('structure:') && c.before).map(c=>c.before)), JSON.stringify({ blocks: formalChanges.filter(c=>!c.objectId.startsWith('structure:') && c.after).map(c=>c.after), splits: correspondence,
         structures:formalChanges.filter(c=>c.objectId.startsWith('structure:')), objectVersions:Object.fromEntries(formalChanges.map(c=>[c.objectId,[c.beforeVersion,c.afterVersion]])),
         ...(editorEffect ? { structure: editorEffect.structure, correspondence: editorEffect.correspondence } : {}), relatedChanges: relatedChanges ?? [] }));
-    db.prepare('INSERT INTO operation_times VALUES (?, ?)').run(command.operationId, new Date().toISOString());
+    db.prepare('INSERT INTO operation_times VALUES (?, ?)').run(command.operationId, historyTimestamp());
     if (!progress || command.inputSeq > Number(progress.seq)) {
       db.prepare(`INSERT INTO input_progress VALUES (?, ?, ?, ?, ?) ON CONFLICT(session_id)
         DO UPDATE SET seq=excluded.seq, digest=excluded.digest, receipt=excluded.receipt, confirmed_seq=excluded.confirmed_seq`)

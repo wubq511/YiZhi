@@ -1,3 +1,4 @@
+import { historyTimestamp } from './history-clock';
 import { objectVersions, unitChanges } from './history-objects';
 import { changedCouplings } from './consistency-links';
 import type { ConsistencyPort } from './command-consistency';
@@ -58,7 +59,9 @@ export class CommandGroups {
     }
     this.protections.set(input.editorId, structuredClone(input));
   }
-  private protectedWrites(ids: string[]) {
+  protectsBlock(id:string){return [...this.protections.values()].some(p=>p.blockIds.includes(id));}
+  /** Shared Core publication fence; the renderer cannot call this query. */
+  protectedWrites(ids: string[]) {
     for (const row of this.db.prepare('SELECT payload FROM units').all()) {
     const unit: CourseUnit = parse(row.payload);
     for (const protection of this.protections.values()) {
@@ -132,6 +135,7 @@ export class CommandGroups {
       if (kind === 'reference' || kind === 'dependency') return { id, kind, version: 0, value: {} };
       throw new Error(`读取对象不存在：${id}`);
     }
+    if(!['block','structure','reference','dependency'].includes(String(row.kind)))throw new Error(`读取对象不属于正文命令域：${id}`);
     return { id, kind: String(row.kind) as CommandObject['kind'], version: Number(row.version), value: parse(row.value) };
   }
   startAttempt(request: AttemptRequest): Attempt {
@@ -367,7 +371,7 @@ export class CommandGroups {
         const normalized = [...bodyChanges,...changes.filter(c=>!bodyIds.has(c.objectId))];
         const history: GroupHistory = { operationId: command.operationId, attemptId: command.attemptId,
           taskId: String(attempt.task_id), generation: this.generation(), revision: nextRevision,
-          committedAt: new Date().toISOString(), changes: normalized };
+          committedAt: historyTimestamp(), changes: normalized };
         this.db.prepare('INSERT INTO cg_history VALUES (?, ?)').run(command.operationId, json(history));
       }
       this.consistency?.committed?.(result);
@@ -411,7 +415,8 @@ export class CommandGroups {
   }
   candidates(attemptId?: string, limit = 50): import('../command-api').RetainedCandidate[] {
     return this.db.prepare(`SELECT command, result FROM cg_candidates
-      WHERE json_extract(result, '$.status')='retained' AND NOT EXISTS (SELECT 1 FROM cg_resolved WHERE candidate_id=cg_candidates.id)
+      WHERE json_extract(result, '$.status')='retained' AND COALESCE(json_extract(command,'$.domain'),'')<>'generation'
+        AND NOT EXISTS (SELECT 1 FROM cg_resolved WHERE candidate_id=cg_candidates.id)
         AND (? IS NULL OR json_extract(command, '$.attemptId')=?)
       ORDER BY rowid DESC LIMIT ?`).all(attemptId ?? null, attemptId ?? null, Math.min(100, Math.max(1, limit)))
       .map(row => ({ command: parse(row.command), result: parse(row.result) }));

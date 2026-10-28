@@ -1,3 +1,4 @@
+import { historyTimestamp } from './history-clock';
 import { createHash,randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import type { CourseGraph } from '../shared';
@@ -19,6 +20,7 @@ export class CourseRestore {
     CREATE TABLE IF NOT EXISTS course_restore_requests(id TEXT PRIMARY KEY,digest TEXT NOT NULL,generation INTEGER NOT NULL,created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS retired_drafts(session_id TEXT PRIMARY KEY,generation INTEGER NOT NULL,restore_operation_id TEXT NOT NULL);`);
   this.state=new RestoreState(db,graph);
+  if(!db.prepare('PRAGMA table_info(course_restore_requests)').all().some(r=>r.name==='scope'))db.exec('ALTER TABLE course_restore_requests ADD COLUMN scope TEXT');
  }
  private generation(){return Number(this.db.prepare("SELECT value FROM metadata WHERE key='generation'").get()!.value);}
  private boundary(buffer?:SharedArrayBuffer){if(buffer){const flag=new Int32Array(buffer);Atomics.store(flag,0,1);Atomics.notify(flag,0);Atomics.wait(flag,0,1);}}
@@ -49,7 +51,7 @@ export class CourseRestore {
    const fresh=this.preview(p.preview);
    if(generation!==fresh.generation||token!==fresh.token)throw new Error('预览后课程或草稿已变化，请重新核对整课范围和代际');
    // Reserve only identity, never content: survives a later rollback or process death.
-   this.db.prepare('INSERT INTO course_restore_requests VALUES(?,?,?,?)').run(p.operationId,digest,generation,new Date().toISOString());
+   this.db.prepare('INSERT INTO course_restore_requests(id,digest,generation,created_at,scope) VALUES(?,?,?,?,?)').run(p.operationId,digest,generation,historyTimestamp(),JSON.stringify({atOperationId,side,unitIds}));
   }
   const publications:Array<()=>void>=[];
   const result=transaction(this.db,()=>{
@@ -69,7 +71,7 @@ export class CourseRestore {
    const receipt:CourseRestoreResult={domain:'course-restore',operationId:p.operationId,status:'committed',generation:nextGeneration,sessionId:nextSession,cursor:0,unitIds:fresh.affectedUnitIds,changedObjectIds:restored.changes.map(c=>c.objectId),preservedDrafts:fresh.preservedDrafts};
    receipt.cursor=appendEvent(this.db,{type:'group.committed',operationId:p.operationId,revision:Math.max(1,...this.db.prepare('SELECT revision FROM units').all().map(r=>Number(r.revision))),changedObjectIds:receipt.changedObjectIds});
    this.db.prepare('INSERT INTO cg_candidates VALUES(?,?,?,?)').run(p.operationId,digest,'{}',JSON.stringify(receipt));
-   this.db.prepare('INSERT INTO cg_history VALUES(?,?)').run(p.operationId,JSON.stringify({operationId:p.operationId,actor:'student',unitIds:fresh.affectedUnitIds,explanation:'整课所选范围恢复',generation:nextGeneration,revision:Math.max(1,...this.db.prepare('SELECT revision FROM units').all().map(r=>Number(r.revision))),committedAt:new Date().toISOString(),recovery:{kind:'course-restore',atOperationId:fresh.atOperationId,side:fresh.side,userState:fresh.userState,previousGeneration},changes:restored.changes}));
+   this.db.prepare('INSERT INTO cg_history VALUES(?,?)').run(p.operationId,JSON.stringify({operationId:p.operationId,actor:'student',unitIds:fresh.affectedUnitIds,explanation:'整课所选范围恢复',generation:nextGeneration,revision:Math.max(1,...this.db.prepare('SELECT revision FROM units').all().map(r=>Number(r.revision))),committedAt:historyTimestamp(),recovery:{kind:'course-restore',atOperationId:fresh.atOperationId,side:fresh.side,userState:fresh.userState,previousGeneration},changes:restored.changes}));
    this.boundary(this.scheduling?.beforeCommit);return receipt;
   });
   this.boundary(this.scheduling?.afterCommit);

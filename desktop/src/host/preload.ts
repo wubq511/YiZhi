@@ -1,4 +1,5 @@
 import { historyClient } from '../history-api';
+import { retentionClient } from '../retention-api';
 import { courseRestoreClient } from '../course-restore-api';
 import { descriptionClient } from '../description-api';
 import { drawingClient } from '../drawing-api';
@@ -22,6 +23,7 @@ async function invoke(channel: string, argument?: unknown) {
   }
 }
 const bridge: DesktopBridge = {
+  retention:(()=>{const {resourceLease:_,resourceLeases:__,...bridge}=retentionClient(invoke);return bridge;})(),
   courseRestore:courseRestoreClient(invoke),
   formalHistory: historyClient(invoke),
   description: descriptionClient(invoke),
@@ -31,7 +33,8 @@ const bridge: DesktopBridge = {
   annotations: annotationClient(invoke),
   extensions: (() => { const {resource, ...api}=extensionsClient(invoke); return api; })(),
   experiments: experimentsClient(invoke),
-  agent: { ...agentClient(invoke), status: () => invoke('agent:status'), reconcile: request => invoke('agent:reconcile',request), retryDelivery: request => invoke('agent:retryDelivery', request) },
+  agent: { ...agentClient(invoke), status: () => invoke('agent:status'), reconcile: request => invoke('agent:reconcile',request), retryDelivery: request => invoke('agent:retryDelivery', request),
+    generationCandidates: request => invoke('agent:generationCandidates',request) },
   parsing: parsingBridge(invoke),
   sources: sourceBridge(invoke),
   commands: commandClient(invoke),

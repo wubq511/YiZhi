@@ -1,3 +1,4 @@
+import { historyTimestamp } from './history-clock';
 import { validateRelationCommand, validateRelationGraph } from './relation-validation';
 import { randomUUID, createHash } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
@@ -136,7 +137,7 @@ export class FormalRelations {
       this.db.prepare('INSERT INTO cg_history VALUES (?, ?)').run(command.operationId, json({ operationId: command.operationId,
         domain: 'formal-relation', actor: command.attemptId ? 'agent' : 'student', attemptId: command.attemptId,
         taskId: command.attemptId ? String(this.db.prepare('SELECT task_id FROM cg_attempts WHERE id=?').get(command.attemptId)!.task_id) : undefined,
-        generation: this.generation(), revision, committedAt: new Date().toISOString(), changes }));
+        generation: this.generation(), revision, committedAt: historyTimestamp(), changes }));
       return receipt;
     });
   }

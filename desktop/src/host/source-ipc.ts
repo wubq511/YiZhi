@@ -1,4 +1,4 @@
-import { dialog, ipcMain } from 'electron';
+import { BrowserWindow, dialog, ipcMain } from 'electron';
 import { basename } from 'node:path';
 import type { CourseService } from '../core/course-service';
 import type { SourceCommand, ImportSource } from '../sources-api';
@@ -23,7 +23,9 @@ export function registerSourceIPC(core: CourseService, checkSender: (event: Elec
       if (old && old.identity !== identity) throw new Error('同一操作不能换用不同内容');
       let command = old?.command;
       if (!command) {
-        const result = await dialog.showOpenDialog({ title: mode === 'chooseImport' ? '导入课程原件' : '选择该版本的原件以修复',
+        const owner = BrowserWindow.fromWebContents(event.sender);
+        if (!owner || owner.isDestroyed()) throw new Error('学习窗口已关闭，请从当前窗口重新选择资料');
+        const result = await dialog.showOpenDialog(owner, { title: mode === 'chooseImport' ? '导入课程原件' : '选择该版本的原件以修复',
           properties: ['openFile'], filters: [{ name: '课程资料', extensions: ['pdf', 'png', 'jpg', 'jpeg'] }] });
         if (result.canceled || !result.filePaths[0]) return null;
         const path = result.filePaths[0];

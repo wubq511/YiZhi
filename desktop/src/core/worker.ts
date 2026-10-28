@@ -1,7 +1,11 @@
 import { FormalHistory } from './formal-history';
+import { registerRetentionResourceRoot } from './retention-resources';
+import { generationRetentionResourceRoot } from './generation-retention';
+import { HistoryRetention } from './retention';
 import { CourseRestore } from './course-restore';
 import { LearningViews } from './learning-views';
 import { AgentMutations } from './agent-mutations';
+import { Generation } from './generation';
 import { CommandConsistency } from './command-consistency';
 import { Exchange } from './exchange';
 
@@ -31,8 +35,11 @@ import { transaction } from './save-store';
 import { resolveInput } from './save-store';
 import { initializeReviewState, reviewSnapshot, setReviewStatus, confirmReviewPrompt } from './review-state';
 
+registerRetentionResourceRoot('t30-generation-recovery',generationRetentionResourceRoot);
+
 const EDITABLE = 'RB-TH-01-01-what-is-positional-notation';
 interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; courseId: string; graph: CourseGraph;
+  retention:HistoryRetention;
   // T03 constructs its observer on this same connection; both student save entry points call it in-transaction.
   formalHistory: FormalHistory;
   courseRestore: CourseRestore;
@@ -50,9 +57,10 @@ interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; cou
   relations: FormalRelations;
   agent: AgentStore;
   mutations: AgentMutations;
+  generation: Generation;
 }
 const courses = new Map<string, Course>();
-const historicalRoutes=new Set(['courseRestore:apply','courseRestore:query','queryOperation','commands:query','commands:history','formalHistory:query','formalHistory:detail','formalHistory:list','relations:query','annotations:query','drawings:query','drawings:queryPlacement','sources:query','parsing:query','agent:record','agent:task','agent:facts','agent:stop','agent:get','agent:list','agent:events','agent:work','agentMutation:query']);
+const historicalRoutes=new Set(['courseRestore:apply','courseRestore:query','queryOperation','commands:query','commands:history','formalHistory:query','formalHistory:release','formalHistory:detail','formalHistory:list','relations:query','annotations:query','drawings:query','drawings:queryPlacement','sources:query','parsing:query','agent:record','agent:task','agent:facts','agent:stop','agent:get','agent:list','agent:events','agent:work','agentMutation:query','generation:query','generation:candidates']);
 function session(id: string,action?:string): Course {
   const course = [...courses.values()].find(course => course.sessionId === id || action&&historicalRoutes.has(action)&&!!course.db.prepare('SELECT 1 FROM course_sessions WHERE id=?').get(id));
   if (!course) throw new Error('编辑会话已失效，请重新打开课程');
@@ -155,11 +163,13 @@ function open(directory: string): OpenedCourse {
     const exchange = new Exchange(db, canonical, graph, () => relations.graph(), () => ({ sources: sources.relationCatalog(relationCatalog.sources), retiredUnitIds: relationCatalog.retiredUnitIds }));
     const readableUnitIds = [...new Set([...db.prepare('SELECT id FROM units').all().map(r => String(r.id)), ...(!db.prepare("SELECT 1 FROM metadata WHERE key='content-scope'").get() ? ['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-035', 'KU-055', 'KU-057', 'KU-062'] : [])])];
     const search = new Search(db, sourceUnit, readableUnitIds, graph.nodes.length, sources);
+    const generation = new Generation(db,graph,sources,parsing,agent,groups,search);
     const formalHistory=new FormalHistory(db,groups,agent,graph,relations,experiments);
-    const course: Course = { courseRestore:undefined!, formalHistory, views:new LearningViews(db), exchange, db, owner, agent, mutations, search, unit: sourceUnit, annotations, drawings, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
+    const course: Course = { retention:new HistoryRetention(db,formalHistory,canonical,id=>groups.protectsBlock(id),workerData?.retentionScheduling), courseRestore:undefined!, formalHistory, views:new LearningViews(db), exchange, db, owner, agent, mutations, generation, search, unit: sourceUnit, annotations, drawings, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
 
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
-    course.courseRestore=new CourseRestore(db,formalHistory,graph,agent,experiments,extensions,next=>{course.sessionId=next;groups.releaseGeneration();},workerData?.restoreScheduling);
+    course.courseRestore=new CourseRestore(db,formalHistory,graph,agent,experiments,extensions,next=>{course.sessionId=next;groups.releaseGeneration();formalHistory.releaseGeneration();},workerData?.restoreScheduling);
+    course.retention.installPayloadTracking();
     db.prepare('INSERT INTO course_sessions VALUES(?,?)').run(course.sessionId,Number(db.prepare("SELECT value FROM metadata WHERE key='generation'").get()!.value));
     const result = snapshot(course);
     courses.set(canonical, course);
@@ -201,9 +211,11 @@ parentPort!.on('message', message => {
 });
 async function dispatch({ id, action, payload }: { id: number; action: string; payload: any }) {
   try {
+    if(workerData?.retentionScheduling?.clock)for(const course of courses.values())course.retention.synchronizeClock();
     if(action==='courseRestore:apply' && session(payload.sessionId,action).sessionId!==payload.sessionId && !session(payload.sessionId,action).courseRestore.query(payload.operationId))throw new Error('编辑会话已失效，未执行新的整课恢复，请重新打开核对');
     if (payload?.operationId) {
       const course = session(payload.sessionId,action);
+      if(course.db.prepare('SELECT 1 FROM expired_payloads WHERE operation_id=?').get(payload.operationId))throw new Error('这项操作明细已过期清理；原身份保留，不能重新应用，请重新读取当前内容');
       if(action!=='courseRestore:apply'&&!action.endsWith(':query')&&action!=='queryOperation'&&action!=='formalHistory:detail'&&course.db.prepare('SELECT 1 FROM course_restore_requests WHERE id=?').get(payload.operationId))throw new Error('操作身份已用于整课恢复');
       const fencedAction = action === 'commands:resolveInput' ? 'commitEdit' : (action === 'formalHistory:apply'||action === 'courseRestore:apply') ? 'commands:commit' : action;
       course.exchange.fence(fencedAction, payload.operationId);
@@ -215,7 +227,8 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       course.extensions.fence(fencedAction, payload.operationId);
     }
     let value: unknown;
-    if(action.startsWith('courseRestore:')) {const restore=session(payload.sessionId,action).courseRestore;if(action==='courseRestore:preview')value=restore.preview(payload);else if(action==='courseRestore:apply')value=restore.apply(payload);else if(action==='courseRestore:query')value=restore.query(payload.operationId);else if(action==='courseRestore:drafts')value=restore.drafts();else throw new Error('未知整课恢复接口');}
+    if(action.startsWith('retention:')) {const retention=session(payload.sessionId,action).retention;if(action==='retention:get')value=retention.get();else if(action==='retention:set')value=retention.set(payload.days);else if(action==='retention:run')value=retention.run(payload.limit);else if(action==='retention:resourceLease')value=retention.resources.lease(payload.id,payload.action,new Date().toISOString());else if(action==='retention:resourceLeases')value=retention.resources.leases();else if(action==='retention:space')value=retention.storage.space();else if(action==='retention:clearCache')value=retention.storage.clearCache(payload.limit);else throw new Error('未知历史保留接口');}
+    else if(action.startsWith('courseRestore:')) {const restore=session(payload.sessionId,action).courseRestore;if(action==='courseRestore:preview')value=restore.preview(payload);else if(action==='courseRestore:apply')value=restore.apply(payload);else if(action==='courseRestore:query')value=restore.query(payload.operationId);else if(action==='courseRestore:drafts')value=restore.drafts();else throw new Error('未知整课恢复接口');}
     else if (action.startsWith('exchange:')) {
       const exchange = session(payload.sessionId,action).exchange;
       if (action === 'exchange:available') value = exchange.available();
@@ -283,7 +296,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
         cursor: eventCursor(course.db), snapshot: snapshot(course) };
     }
     else if (action.startsWith('formalHistory:')) value = session(payload.sessionId,action).formalHistory.dispatch(action,payload);
-    else if (action === 'history') value = history(session(payload.sessionId,action).db);
+    else if (action === 'history') {const c=session(payload.sessionId,action);value=history(c.db).filter(h=>!c.db.prepare('SELECT 1 FROM history_expired WHERE operation_id=?').get(h.receipt.operationId));}
     else if (action === 'save') value = save(payload);
     else if (action === 'relations:prerequisites') value = session(payload.sessionId,action).relations.prerequisites(payload.unitId);
     else if (action === 'relations:read') { const course = session(payload.sessionId,action); const basis = course.relations.read(payload); value = { ...basis, graph: layoutGraph(course.db, basis.graph) }; }
@@ -295,14 +308,21 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action.startsWith('search:')) value = await session(payload.sessionId,action).search.dispatch(action, payload);
     else if (action.startsWith('annotations:')) value = session(payload.sessionId,action).annotations.dispatch(action, payload);
     else if (action.startsWith('agentMutation:')) { const m=session(payload.sessionId,action).mutations; value=action==='agentMutation:read'?m.read(payload):action==='agentMutation:apply'?m.apply(payload):m.query(payload); }
+    else if (action.startsWith('generation:')) { const g=session(payload.sessionId,action).generation;
+      if(action==='generation:read')value=g.read(payload);
+      else if(action==='generation:publish')value=g.publish(payload);
+      else if(action==='generation:query')value=g.query(payload);
+      else if(action==='generation:candidates')value=g.candidates(payload.taskId);
+      else throw new Error('未知生成接口'); }
     else if (action.startsWith('agent:')) value = session(payload.sessionId,action).agent.dispatch(action, payload);
     else if (action.startsWith('parsing:')) value = await session(payload.sessionId,action).parsing.dispatch(action, payload);
     else if (action.startsWith('sources:')) value = await session(payload.sessionId,action).sources.dispatch(action, payload);
     else if (action === 'close') {
       await Promise.all(sourceReads);
-      for (const course of courses.values()) { course.experiments.dispose(); await course.parsing.close(); course.db.close(); course.owner.close(); }
+      for (const course of courses.values()) { course.retention.stop();course.experiments.dispose(); await course.parsing.close(); course.db.close(); course.owner.close(); }
       courses.clear();
     } else throw new Error('未知课程命令');
     parentPort!.postMessage({ id, ok: true, value });
+    for(const course of courses.values())course.retention.onActivity(run=>{queue=queue.then(()=>{if(!draining)run();}).catch(error=>console.error('Retention maintenance:',error));});
   } catch (error) { parentPort!.postMessage({ id, ok: false, error: (error as Error).message }); }
 }

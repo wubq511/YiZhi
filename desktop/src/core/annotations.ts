@@ -1,3 +1,4 @@
+import { historyTimestamp } from './history-clock';
 import { createHash, randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import type { ReadingBlock, CourseUnit } from '../shared';
@@ -183,7 +184,7 @@ export class Annotations {
   }
   private createStored(selection: AnnotationSelection): Stored {
         const { original, locations } = this.capture(selection);
-        const now = new Date().toISOString();
+        const now = historyTimestamp();
         const stored: Stored = { note: { id: randomUUID(), text: '', version: 1, original, originalVersions: locations.map(l => l.version), current: { unitId: selection.unitId, status: 'attached', fragments: locations }, createdAt: now, updatedAt: now }, lineage: [structuredClone(locations)] };
         const all: Head[] = this.db.prepare('SELECT value FROM annotation_heads').all().map(r => parse(r.value));
         for (const step of this.db.prepare('SELECT value FROM annotation_steps ORDER BY seq').all()) advance(stored, parse(step.value), all);
@@ -218,7 +219,7 @@ export class Annotations {
         if (!row) throw new Error('笔记不存在');
         stored = parse(row.value);
         if (request.expectedVersion !== stored.note.version) throw new Error('笔记已变化，请重新读取后继续');
-        stored.note.version++; stored.note.updatedAt = new Date().toISOString();
+        stored.note.version++; stored.note.updatedAt = historyTimestamp();
         if (action === 'annotations:reassociate') {
           const captured = this.capture(request.selection);
           const currentHeads: Head[] = this.db.prepare('SELECT value FROM annotation_heads').all().map(r => parse(r.value));

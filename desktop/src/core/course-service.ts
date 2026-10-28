@@ -1,4 +1,5 @@
 import { historyClient } from '../history-api';
+import { retentionClient } from '../retention-api';
 import { courseRestoreClient } from '../course-restore-api';
 import { exchangeClient } from '../exchange-api';
 import { searchClient } from '../search-api';
@@ -17,6 +18,7 @@ import type { CourseGraph, CourseUnit, ReadingState, OpenedCourse, SaveParagraph
 
 /** One instance belongs to the application host, shared by all its windows/courses. */
 export class CourseService {
+  readonly retention=retentionClient((action,payload)=>this.request(action,payload));
   readonly courseRestore=courseRestoreClient((action,payload)=>this.request(action,payload));
   readonly formalHistory = historyClient((action,payload)=>this.request(action,payload));
   readonly exchange = exchangeClient((action, payload) => this.request(action, payload));
@@ -31,6 +33,10 @@ export class CourseService {
   readAgentMutation(request: import('../agent-mutation-api').AgentIdentity): Promise<import('../agent-mutation-api').AgentMutationContext> { return this.request('agentMutation:read',request); }
   applyAgentMutation(request: import('../agent-mutation-api').AgentIdentity & {input: import('../agent-mutation-api').AgentMutation}): Promise<import('../command-api').GroupResult> { return this.request('agentMutation:apply',request); }
   queryAgentMutation(request: import('../agent-mutation-api').AgentIdentity & {operationId:string}): Promise<import('../command-api').GroupResult|null> { return this.request('agentMutation:query',request); }
+  readAgentGeneration(request: import('../agent-mutation-api').AgentIdentity): Promise<import('../generation-api').GenerationContext> { return this.request('generation:read',request); }
+  publishAgentGeneration(request: import('../generation-api').GenerationRequest): Promise<import('../generation-api').GenerationResult> { return this.request('generation:publish',request); }
+  queryAgentGeneration(request: import('../agent-mutation-api').AgentIdentity & {operationId:string}): Promise<import('../generation-api').GenerationResult|null> { return this.request('generation:query',request); }
+  generationCandidates(request: {sessionId:string;taskId:string}): Promise<import('../generation-api').GenerationCandidateView[]> { return this.request('generation:candidates',request); }
   recordAgent(event: AgentEvent): Promise<AgentTask> { return this.request('agent:record', event); }
   agentTask(request: {sessionId:string;taskId:string}): Promise<AgentTask> { return this.request('agent:task',request); }
   prepareAgentShutdown(): Promise<Array<{sessionId:string;task:AgentTask}>> { return this.request('agentShutdown'); }
@@ -47,7 +53,7 @@ export class CourseService {
   private stopped = false;
   private closing?: Promise<void>;
   private failure?: Error;
-  constructor(workerPath: string, options?: { parseScheduling?: ParseScheduling; migrationScheduling?: import('../migration-api').MigrationScheduling; restoreScheduling?:import('../course-restore-api').CourseRestoreScheduling }) {
+  constructor(workerPath: string, options?: { retentionScheduling?:import('../retention-api').RetentionScheduling; parseScheduling?: ParseScheduling; migrationScheduling?: import('../migration-api').MigrationScheduling; restoreScheduling?:import('../course-restore-api').CourseRestoreScheduling }) {
     this.worker = new Worker(workerPath, { workerData: options });
     this.worker.on('message', message => {
       const waiter = this.pending.get(message.id);

@@ -1,4 +1,4 @@
-import { forwardRef,useImperativeHandle,useRef,useState } from 'react';
+import { forwardRef,useImperativeHandle,useRef,useState,useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import katex from 'katex';
 import type { HistoryActivity,HistoryGroup,HistoryPreview,HistorySelection,HistoryResult } from '../history-api';
@@ -31,26 +31,30 @@ export const HistoryPanel=forwardRef<HistoryPanelHandle,Props>(function HistoryP
   const [busy,setBusy]=useState(false),[error,setError]=useState('');
   const dialog=useRef<HTMLDialogElement>(null),origin=useRef<(()=>Promise<void>)|undefined>(undefined),trigger=useRef<HTMLButtonElement>(null);
   const pending=useRef<{sessionId:string;operationId:string;preview:HistoryPreview}|undefined>(undefined);
+  const held=useRef<{sessionId:string;pinId:string}|undefined>(undefined);
+  const release=()=>{const p=held.current;held.current=undefined;if(p)void window.yizhi.formalHistory.release(p).catch(()=>{});};
+  const replacePreview=(value?:HistoryPreview)=>{release();if(value?.retentionPin)held.current={sessionId,pinId:value.retentionPin};setPreview(value);};
+  useEffect(()=>()=>{if(!pending.current)release();},[sessionId]);
   const load=async(unitId:string|undefined,before?:string)=>{
     const page=await window.yizhi.formalHistory.list({sessionId,unitId,limit:20,before});
     setActivities(old=>before?[...old,...page.activities]:page.activities);setNext(page.next);
   };
   const work=async(run:()=>Promise<void>)=>{setBusy(true);setError('');try{await run();}catch(e){setError((e as Error).message);}finally{setBusy(false);}};
-  const show=(unitId?:string)=>{origin.current=capture();setScope(unitId);setOpen(true);setResult(undefined);if(!pending.current)setPreview(undefined);setDetails({});void work(async()=>{await prepare();await load(unitId);});};
+  const show=(unitId?:string)=>{origin.current=capture();setScope(unitId);setOpen(true);setResult(undefined);if(!pending.current)replacePreview(undefined);setDetails({});void work(async()=>{await prepare();await load(unitId);});};
   useImperativeHandle(ref,()=>({open:show}));
-  const close=()=>{if(busy)return;setOpen(false);void origin.current?.().catch(e=>setError(e.message));};
+  const close=()=>{if(busy)return;setOpen(false);if(!pending.current)replacePreview(undefined);void origin.current?.().catch(e=>setError(e.message));};
   const inspect=async(activity:HistoryActivity,count=10)=>{
     const groups=await Promise.all(activity.operationIds.slice(-count).reverse().map(operationId=>window.yizhi.formalHistory.detail({sessionId,operationId})));
     setDetails(old=>({...old,[activity.id]:groups}));
   };
-  const undo=(selection:HistorySelection)=>void work(async()=>{await prepare();pending.current=undefined;setResult(undefined);setPreview(await window.yizhi.formalHistory.preview({sessionId,selection}));});
-  const oldVersion=(group:HistoryGroup,unitId:string,side:'before'|'after',includeLayout=false)=>void work(async()=>{await prepare();pending.current=undefined;setResult(undefined);setPreview(await window.yizhi.formalHistory.preview({sessionId,unitId,atOperationId:group.operationId,side,includeLayout}));});
+  const undo=(selection:HistorySelection)=>void work(async()=>{await prepare();pending.current=undefined;setResult(undefined);replacePreview(await window.yizhi.formalHistory.preview({sessionId,selection}));});
+  const oldVersion=(group:HistoryGroup,unitId:string,side:'before'|'after',includeLayout=false)=>void work(async()=>{await prepare();pending.current=undefined;setResult(undefined);replacePreview(await window.yizhi.formalHistory.preview({sessionId,unitId,atOperationId:group.operationId,side,includeLayout}));});
   const apply=()=>void work(async()=>{
     if(!preview)return;
     pending.current??={sessionId,operationId:crypto.randomUUID(),preview};
     const request=pending.current;
     const receipt=await window.yizhi.formalHistory.query({sessionId,operationId:request.operationId})??await window.yizhi.formalHistory.apply(request);
-    setResult(receipt);pending.current=undefined;
+    setResult(receipt);pending.current=undefined;release();
     await changed(receipt);await load(scope);
   });
   const names=(ids:string[])=>ids.map(id=>units.find(u=>u.id===id)?.name??id).join('、');
@@ -58,7 +62,7 @@ export const HistoryPanel=forwardRef<HistoryPanelHandle,Props>(function HistoryP
     e.stopPropagation();if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z')e.preventDefault();
   }}>
     <header className="history-heading"><h2>修改历史</h2><button disabled={busy} onClick={close}>返回原阅读位置</button></header>
-    <div className="history-controls"><label>查看范围 <select aria-label="历史范围" value={scope??''} disabled={busy||!!pending.current} onChange={e=>{const id=e.target.value||undefined;setScope(id);setPreview(undefined);setResult(undefined);void work(()=>load(id));}}><option value="">全课活动</option>{units.map(u=><option key={u.id} value={u.id}>{u.name}</option>)}</select></label><button disabled={busy} onClick={()=>void work(()=>load(scope))}>刷新历史</button></div>
+    <div className="history-controls"><label>查看范围 <select aria-label="历史范围" value={scope??''} disabled={busy||!!pending.current} onChange={e=>{const id=e.target.value||undefined;setScope(id);replacePreview(undefined);setResult(undefined);void work(()=>load(id));}}><option value="">全课活动</option>{units.map(u=><option key={u.id} value={u.id}>{u.name}</option>)}</select></label><button disabled={busy} onClick={()=>void work(()=>load(scope))}>刷新历史</button></div>
     {error&&<div className="history-error" role="alert"><p>{error}</p>{pending.current&&<button disabled={busy} onClick={apply}>核对并重试原操作</button>}</div>}
     {busy&&<p role="status">正在核对历史与当前内容…</p>}
     {result&&<section className="history-result" role="status" aria-label="历史操作结果"><p>{result.status==='committed'?(preview?.kind==='restore'?'已恢复所选版本；恢复前内容仍在历史中。':'已撤回所选修改。'):result.status==='partial'?`已撤回 ${result.applied.length} 组；${result.conflicts.length} 组因冲突保留。`:'当前内容已保留，未执行撤回或恢复。'}</p>{result.conflicts.map(c=><p key={c.operationId}>{c.reason} · {c.objectIds.join('、')}</p>)}</section>}
@@ -84,7 +88,7 @@ export const HistoryPanel=forwardRef<HistoryPanelHandle,Props>(function HistoryP
         </details>)}
         {next&&<button disabled={busy} onClick={()=>void work(()=>load(scope,next))}>加载更早活动</button>}
       </section>
-      {preview&&<section className="history-preview" aria-label="旧版只读预览"><header><h3>{preview.kind==='restore'?'旧版只读预览':'撤回范围预览'}</h3><button disabled={busy||!!pending.current} onClick={()=>{setPreview(undefined);setResult(undefined);}}>返回历史列表</button></header>
+      {preview&&<section className="history-preview" aria-label="旧版只读预览"><header><h3>{preview.kind==='restore'?'旧版只读预览':'撤回范围预览'}</h3><button disabled={busy||!!pending.current} onClick={()=>{replacePreview(undefined);setResult(undefined);}}>返回历史列表</button></header>
         <p>{names(preview.unitIds)}</p>{preview.explanations.map(t=><p key={t}>{t}</p>)}
         {preview.runningTaskIds.length>0&&<p>此任务仍在运行。执行时先停止，再核对已完成修改；若集合有变化，需要重新预览。</p>}
         {preview.drafts>0&&<p>{preview.drafts} 份相关输入草稿已保留，不会转为正文。</p>}
