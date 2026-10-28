@@ -51,12 +51,19 @@ function session(id: string): Course {
   if (!course) throw new Error('编辑会话已失效，请重新打开课程');
   return course;
 }
-function snapshot(course: Course): OpenedCourse {
-  const row = course.db.prepare('SELECT payload, revision FROM units WHERE id = ?').get('KU-001')!;
+function snapshot(course: Course, unitId = 'KU-001'): OpenedCourse {
+  let row = course.db.prepare('SELECT payload, revision FROM units WHERE id = ?').get(unitId);
+  if (!row) {
+    const unit = course.unit(unitId);
+    if (!unit) throw new Error('该单元正文不可读');
+    course.db.prepare('INSERT INTO units VALUES(?,?,1)').run(unitId, JSON.stringify(unit));
+    course.groups.observe();
+    row = course.db.prepare('SELECT payload, revision FROM units WHERE id = ?').get(unitId)!;
+  }
   return { resourceAssets: course.db.prepare('SELECT asset FROM exchange_resources ORDER BY asset').all().map(r => String(r.asset)), contentScope: course.db.prepare("SELECT value FROM metadata WHERE key='content-scope'").get()?.value === 'content-candidate' ? 'content-candidate' : undefined, courseId: course.courseId, sessionId: course.sessionId, revision: Number(row.revision),
     blockVersions: Object.fromEntries(course.db.prepare("SELECT id, version FROM cg_objects WHERE kind='block'").all().map(r => [String(r.id), Number(r.version)])),
-    drafts: readDrafts(course.db), eventCursor: eventCursor(course.db),
-    confirmedInputSeq: confirmedInput(course.db, course.sessionId), editableBlockId: EDITABLE, unit: JSON.parse(String(row.payload)),
+    drafts: readDrafts(course.db).filter(d => (d.input.unitId ?? 'KU-001') === unitId), eventCursor: eventCursor(course.db),
+    confirmedInputSeq: confirmedInput(course.db, course.sessionId, unitId), editableBlockId: JSON.parse(String(row.payload)).reading.blocks.find((b: any) => b.kind === 'paragraph')?.id ?? unitId, unit: JSON.parse(String(row.payload)),
     runtime: { node: process.versions.node, electron: process.versions.electron,
       sqlite: String(course.db.prepare('SELECT sqlite_version() AS version').get()!.version),
       pragmas: {
@@ -136,7 +143,7 @@ function open(directory: string): OpenedCourse {
     consistency = new CommandConsistency(db,graph,relations,experiments,sources);
     const extensions = new Extensions(db, canonical);
     const parsing = new Parsing(db, canonical, sources, run => { queue = queue.then(run).catch(error => { console.error(error); }); }, workerData?.parseScheduling);
-    const agent = new AgentStore(db, sources, sourceUnit);
+    const agent = new AgentStore(db, sources, sourceUnit, groups);
     const mutations = new AgentMutations(db,groups,agent,sourceUnit,relations);
     const exchange = new Exchange(db, canonical, graph, () => relations.graph(), () => ({ sources: sources.relationCatalog(relationCatalog.sources), retiredUnitIds: relationCatalog.retiredUnitIds }));
     const readableUnitIds = [...new Set([...db.prepare('SELECT id FROM units').all().map(r => String(r.id)), ...(!db.prepare("SELECT 1 FROM metadata WHERE key='content-scope'").get() ? ['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-035', 'KU-055', 'KU-057', 'KU-062'] : [])])];
@@ -150,7 +157,11 @@ function open(directory: string): OpenedCourse {
   } catch (error) { db?.close(); owner.close(); throw error; }
 }
 function commit(course: Course, command: EditCommand) {
-  return commitEdit(course.db, command, () => course.groups.observe());
+  return commitEdit(course.db, command, (unitId, revision, blockIds) => {
+    const changes = course.groups.observe();
+    course.agent.studentChanged({ operationId: command.operationId, unitId, revision, objectIds: blockIds });
+    return changes;
+  });
 }
 function save(command: SaveParagraph): SaveReceipt {
   if (!command || command.blockId !== EDITABLE) throw new Error('无效的段落保存请求');
@@ -206,7 +217,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action === 'migration:content') value = legacyContent(session(payload.sessionId).db);
     else if (action === 'migration:resource') { const c=session(payload.sessionId); const directory=[...courses.entries()].find(([,v])=>v===c)![0]; value=candidateResource(c.db,directory,payload.asset); }
     else if (action === 'open') value = open(payload.directory);
-    else if (action === 'read') value = snapshot(session(payload.sessionId));
+    else if (action === 'read') value = snapshot(session(payload.sessionId), payload.unitId);
     else if (action === 'readingState') {
       const row = session(payload.sessionId).db.prepare('SELECT payload FROM reading_state WHERE id=1').get();
       value = row ? JSON.parse(String(row.payload)) : null;

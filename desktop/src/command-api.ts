@@ -6,8 +6,10 @@ export interface CommandRead { context?: boolean; unitId?: string; sessionId: st
 export interface CommandBasis { context?: import('./consistency-api').ConsistencyContext; basisId: string; generation: number; objects: CommandObject[] }
 export interface ObjectChange { objectId: string; value: Record<string, any> }
 export interface GroupCommand { bundle?: import('./consistency-api').ConsistencyEdits; patch?: import('./editor-api').ContentPatch; unitId?: string; sessionId: string; attemptId: string; operationId: string; basisId: string; changes: ObjectChange[];
+  resolves?: string[];
   semanticImpact?: { version: 1; unitId: string; conclusionOrMethodChanged: boolean } }
 export interface GroupResult {
+  basisId?: string; resolvedCandidateIds?: string[];
   operationId: string; attemptId: string; status: 'committed' | 'retained';
   unitId?: string; related?: import('./consistency-api').ConsistencyReceipt; revision?: number; cursor?: number; changedObjectIds: string[]; reason?: string;
   reviewPrompt?: import('./shared').ReviewPrompt;
@@ -17,17 +19,18 @@ export interface GroupHistory {
   changes: { objectId: string; before: Record<string, any> | null; after: Record<string, any> | null; beforeVersion: number; afterVersion: number }[];
 }
 export interface RetainedCandidate { command: GroupCommand; result: GroupResult }
-export interface EditorProtection { sessionId: string; editorId: string; sequence: number; blockIds: string[];
+export interface EditorProtection { sessionId: string; unitId?: string; editorId: string; sequence: number; blockIds: string[];
   mode: 'editing' | 'selection'; inputSeq: number }
 export interface CandidateCheck { candidateId: string; status: 'committed' | 'waiting' | 'needs-reread' | 'conflict' | 'ineligible';
   reason?: string; objectIds: string[]; receipt?: GroupResult;
   parts?: Array<{ objectId: string; current: Record<string, any>; incoming: Record<string, any> }> }
 export interface InputResolution { sessionId: string; operationId: string; draftSessionId: string; inputSeq: number;
+  unitId?: string;
   basisRevision: number; blockIds: string[]; choice: 'student' | 'external' }
 export interface CommandAPI {
   protect(request: EditorProtection): Promise<void>;
   releaseView(request: { sessionId: string }): Promise<void>;
-  recheck(request: { sessionId: string }): Promise<CandidateCheck[]>;
+  recheck(request: { sessionId: string; attemptId?: string }): Promise<CandidateCheck[]>;
   resolveInput(request: InputResolution): Promise<import('./shared').EditReceipt>;
   resolveCandidate(request: { sessionId: string; candidateId: string; basisRevision: number; choice: 'current' | 'incoming' }): Promise<GroupResult | null>;
   startAttempt(request: AttemptRequest): Promise<Attempt>;

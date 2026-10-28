@@ -6,4 +6,5 @@ export function registerAgentIPC(core: CourseService, runtime: AgentRuntime, che
   for (const method of ['list', 'create', 'get', 'select', 'saveDraft'] as const)
     ipcMain.handle(`agent:${method}`, (event, request) => { checkSender(event); return core.agent[method](request); });
   ipcMain.handle('agent:submit', (event, request) => { checkSender(event); return runtime.submit(request); });
+  ipcMain.handle('agent:retryDelivery', (event, request) => { checkSender(event); return runtime.retryDelivery(request); });
 }

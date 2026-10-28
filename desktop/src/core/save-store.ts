@@ -1,4 +1,5 @@
 import { syncAnnotations } from './annotations';
+import { changedCouplings } from './consistency-links';
 import type { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
 import { patchTargets } from '../editor-api';
@@ -33,10 +34,13 @@ function canonical(value: any): string {
 function digest(value: unknown): string {
   return createHash('sha256').update(canonical(value)).digest('hex');
 }
-export function confirmedInput(db: DatabaseSync, sessionId: string): number {
-  return Number(db.prepare('SELECT confirmed_seq FROM input_progress WHERE session_id=?').get(sessionId)?.confirmed_seq ?? 0);
+export const inputKey = (sessionId: string, unitId = 'KU-001') => unitId === 'KU-001' ? sessionId : JSON.stringify([sessionId, unitId]);
+const inputUnit = (input: { unitId?: string }) => input.unitId ?? 'KU-001';
+export function confirmedInput(db: DatabaseSync, sessionId: string, unitId = 'KU-001'): number {
+  return Number(db.prepare('SELECT confirmed_seq FROM input_progress WHERE session_id=?').get(inputKey(sessionId, unitId))?.confirmed_seq ?? 0);
 }
 function validate(input: DraftInput) {
+  if (input?.unitId !== undefined && (typeof input.unitId !== 'string' || !input.unitId.length || input.unitId.length > 200)) throw new Error('输入单元身份无效');
   if (!input || typeof input.sessionId !== 'string' || !Number.isSafeInteger(input.inputSeq) || input.inputSeq < 1 ||
     !Number.isSafeInteger(input.baseRevision) || input.baseRevision < 1 || typeof input.complete !== 'boolean' ||
     !Array.isArray(input.changes) || input.changes.length > 1000 ||
@@ -70,9 +74,10 @@ export function resolveInput(db: DatabaseSync, request: import('../command-api')
       if (old.digest !== digest(request)) throw new Error('同一冲突处理操作不能换用不同选择');
       return queryOperation(db, request.operationId) as EditReceipt;
     }
-    const row = db.prepare("SELECT payload, revision FROM units WHERE id='KU-001'").get()!;
+    const row = db.prepare('SELECT payload, revision FROM units WHERE id=?').get(inputUnit(request));
+    if (!row) throw new Error('输入单元尚未读取');
     if (Number(row.revision) !== request.basisRevision) throw new Error('正文版本已变化，请重新查看冲突部分');
-    const draft = readDrafts(db).find(d => d.input.sessionId === request.draftSessionId && d.input.inputSeq === request.inputSeq);
+    const draft = readDrafts(db).find(d => inputUnit(d.input) === inputUnit(request) && d.input.sessionId === request.draftSessionId && d.input.inputSeq === request.inputSeq);
     if (!draft?.input.patch || draft.input.patch.structure || draft.input.formulaDrafts?.length || !draft.input.complete)
       throw new Error('该草稿需要完成输入或结构整合，不能按文本冲突处理');
     const unit: CourseUnit = JSON.parse(String(row.payload));
@@ -90,9 +95,9 @@ export function resolveInput(db: DatabaseSync, request: import('../command-api')
       u.before = block.payload;
     }
     touchDraft(db, draft.input);
-    db.prepare('DELETE FROM drafts WHERE session_id=?').run(draft.input.sessionId);
-    const seq = Number(db.prepare('SELECT seq FROM input_progress WHERE session_id=?').get(request.sessionId)?.seq ?? 0) + 1;
-    const receipt = commitEdit(db, { sessionId: request.sessionId, operationId: request.operationId, inputSeq: seq,
+    db.prepare('DELETE FROM drafts WHERE session_id=?').run(inputKey(draft.input.sessionId, draft.input.unitId));
+    const seq = Number(db.prepare('SELECT seq FROM input_progress WHERE session_id=?').get(inputKey(request.sessionId, request.unitId))?.seq ?? 0) + 1;
+    const receipt = commitEdit(db, { sessionId: request.sessionId, unitId: request.unitId, operationId: request.operationId, inputSeq: seq,
       baseRevision: request.basisRevision, complete: true, changes: [], patch }, afterWrite);
     db.prepare('INSERT INTO input_resolutions VALUES (?, ?)').run(request.operationId, digest(request));
     return receipt;
@@ -109,7 +114,8 @@ export function saveDraft(db: DatabaseSync, input: DraftInput): DraftReceipt {
   validate(input);
   return transaction(db, () => {
     const hash = digest(input);
-    const previous = db.prepare('SELECT * FROM input_progress WHERE session_id=?').get(input.sessionId);
+    const key = inputKey(input.sessionId, input.unitId);
+    const previous = db.prepare('SELECT * FROM input_progress WHERE session_id=?').get(key);
     if (input.inputSeq <= Number(previous?.confirmed_seq ?? 0)) throw new Error('输入序号已过期');
     if (previous) {
       if (input.inputSeq < Number(previous.seq)) throw new Error('输入序号已过期');
@@ -118,23 +124,23 @@ export function saveDraft(db: DatabaseSync, input: DraftInput): DraftReceipt {
         return JSON.parse(String(previous.receipt));
       }
     }
-    const receipt = { sessionId: input.sessionId, inputSeq: input.inputSeq,
+    const receipt = { sessionId: input.sessionId, ...(input.unitId ? { unitId: input.unitId } : {}), inputSeq: input.inputSeq,
       cursor: appendEvent(db, { type: 'draft.saved', sessionId: input.sessionId, inputSeq: input.inputSeq }) };
-    const superseded = readDrafts(db).find(d => d.input.sessionId === input.sessionId);
+    const superseded = readDrafts(db).find(d => inputUnit(d.input) === inputUnit(input) && d.input.sessionId === input.sessionId);
     if (superseded) touchDraft(db, superseded.input);
     if (input.replacesDraft) {
-      const old = readDrafts(db).find(d => d.input.sessionId === input.replacesDraft!.sessionId);
-      if (!old || old.input.inputSeq !== input.replacesDraft.inputSeq || old.input.sessionId === input.sessionId)
+      const old = readDrafts(db).find(d => inputUnit(d.input) === inputUnit(input.replacesDraft!) && d.input.sessionId === input.replacesDraft!.sessionId);
+      if (!old || inputUnit(old.input) !== inputUnit(input) || old.input.inputSeq !== input.replacesDraft.inputSeq || old.input.sessionId === input.sessionId)
         throw new Error('恢复草稿已变化，请重新读取');
       touchDraft(db, old.input);
-      db.prepare('DELETE FROM drafts WHERE session_id=?').run(old.input.sessionId);
+      db.prepare('DELETE FROM drafts WHERE session_id=?').run(inputKey(old.input.sessionId, old.input.unitId));
     }
     db.prepare(`INSERT INTO input_progress VALUES (?, ?, ?, ?, ?) ON CONFLICT(session_id)
       DO UPDATE SET seq=excluded.seq, digest=excluded.digest, receipt=excluded.receipt`)
-      .run(input.sessionId, input.inputSeq, hash, JSON.stringify(receipt), Number(previous?.confirmed_seq ?? 0));
+      .run(key, input.inputSeq, hash, JSON.stringify(receipt), Number(previous?.confirmed_seq ?? 0));
     touchDraft(db, input);
     db.prepare('INSERT OR REPLACE INTO drafts VALUES (?, ?, ?)')
-      .run(input.sessionId, JSON.stringify(input), JSON.stringify(receipt));
+      .run(key, JSON.stringify(input), JSON.stringify(receipt));
     return receipt;
   });
 }
@@ -160,7 +166,7 @@ export function draftTargets(input: DraftInput): Set<string> {
  * The observer may update block/ancestor/dependency projections on the same connection;
  * a thrown error rolls back every fact. Returned changed-object effects belong in history.
  */
-export function commitEdit(db: DatabaseSync, command: EditCommand, afterWrite?: () => unknown): EditReceipt {
+export function commitEdit(db: DatabaseSync, command: EditCommand, afterWrite?: (unitId: string, revision: number, blockIds: string[]) => unknown): EditReceipt {
   validate(command);
   if (typeof command.operationId !== 'string' || !command.operationId.length || command.operationId.length > 160)
     throw new Error('无效的操作身份');
@@ -174,22 +180,25 @@ export function commitEdit(db: DatabaseSync, command: EditCommand, afterWrite?: 
   return transaction(db, () => {
     if (!command.complete) throw new Error('输入尚未形成有效正文，草稿仍保留');
     const { operationId: _, ...input } = command;
-    const progress = db.prepare('SELECT * FROM input_progress WHERE session_id=?').get(command.sessionId);
+    const key = inputKey(command.sessionId, command.unitId);
+    const progress = db.prepare('SELECT * FROM input_progress WHERE session_id=?').get(key);
     if (command.inputSeq <= Number(progress?.confirmed_seq ?? 0)) throw new Error('输入序号已过期');
     if (progress && command.inputSeq === Number(progress.seq) && progress.digest !== digest(input))
       throw new Error('同一输入序号不能换用不同内容');
     const affected = draftTargets(command);
     // A cancelled editor action/finished draft may have no body diff, but still needs an exact durable input receipt.
     if (!affected.size && !command.patch) throw new Error('没有待提交的修改');
-    const drafts = readDrafts(db);
+    const drafts = readDrafts(db).filter(d => inputUnit(d.input) === inputUnit(command));
     for (const draft of drafts) {
       if (draft.input.sessionId === command.sessionId && draft.input.inputSeq === command.inputSeq) continue;
       if ([...draftTargets(draft.input)].some(id => affected.has(id))) throw new Error('较新或其他会话草稿仍待整合');
       // Splits share the same block list, even if their text targets differ.
       if ((draft.input.splits?.length || command.splits?.length || draft.input.patch?.structure || command.patch?.structure)) throw new Error('共同结构上的草稿仍待整合');
     }
-    const row = db.prepare('SELECT payload, revision FROM units WHERE id=?').get('KU-001')!;
+    const row = db.prepare('SELECT payload, revision FROM units WHERE id=?').get(inputUnit(command));
+    if (!row) throw new Error('输入单元尚未读取');
     const unit: CourseUnit = JSON.parse(String(row.payload));
+    const beforeUnit = structuredClone(unit);
     if (command.baseRevision > Number(row.revision)) throw new Error('正文版本尚不存在，输入仍保留');
     const stale = Number(row.revision) !== command.baseRevision;
     if (stale && (!command.patch || command.changes.length || command.splits?.length)) throw new Error('正文版本已变化，输入仍保留，请重新核对');
@@ -240,13 +249,16 @@ export function commitEdit(db: DatabaseSync, command: EditCommand, afterWrite?: 
       found.block.payload.text = text.slice(0, split.offset).join('');
       found.siblings.splice(found.siblings.indexOf(found.block) + 1, 0, next);
     }
+    // Ordinary student editing has no finite proof/source/necessary-relation bundle.
+    // Inspect both sides, including newly inserted and retargeted links, before any formal publication.
+    if (changedCouplings(beforeUnit, unit).size) throw new Error('关联公式与实验定义必须通过完整一致组共同核验；输入未正式提交，请通过 Agent 共同修改。');
     const receipt: EditReceipt = { operationId: command.operationId, sessionId: command.sessionId,
-      basedOnRevision: command.baseRevision,
+      basedOnRevision: command.baseRevision, unitId: unit.id,
       inputSeq: command.inputSeq, revision: Number(row.revision) + 1,
       blockId: command.changes[0]?.blockId ?? command.splits?.[0]?.blockId ?? patchTargets(command.patch)[0] ?? unit.id, blockIds: [...affected], cursor: 0 };
     db.prepare('UPDATE units SET payload=?, revision=? WHERE id=?').run(JSON.stringify(unit), receipt.revision, unit.id);
     syncAnnotations(db, patch ?? { updates: [], correspondence: correspondence.map(s => ({ kind: 'split', sourceId: s.blockId, targetId: s.newBlockId, offset: s.offset })) });
-    const relatedChanges = afterWrite?.();
+    const relatedChanges = afterWrite?.(unit.id, receipt.revision, receipt.blockIds);
     receipt.cursor = appendEvent(db, { type: 'content.committed', receipt: { ...receipt, cursor: eventCursor(db) + 1 } });
     const legacyAffected = new Set([...command.changes.map(c => c.blockId), ...(command.splits ?? []).flatMap(s => [s.blockId, s.newBlockId])]);
     const after = [...legacyAffected].map(id => find(unit.reading.blocks, id)?.block).filter((block): block is ReadingBlock => !!block).map(valueOf);
@@ -257,13 +269,13 @@ export function commitEdit(db: DatabaseSync, command: EditCommand, afterWrite?: 
     if (!progress || command.inputSeq > Number(progress.seq)) {
       db.prepare(`INSERT INTO input_progress VALUES (?, ?, ?, ?, ?) ON CONFLICT(session_id)
         DO UPDATE SET seq=excluded.seq, digest=excluded.digest, receipt=excluded.receipt, confirmed_seq=excluded.confirmed_seq`)
-        .run(command.sessionId, command.inputSeq, digest(input), JSON.stringify({ sessionId: command.sessionId,
+        .run(key, command.inputSeq, digest(input), JSON.stringify({ sessionId: command.sessionId, unitId: unit.id,
           inputSeq: command.inputSeq, cursor: receipt.cursor }), command.inputSeq);
-    } else db.prepare('UPDATE input_progress SET confirmed_seq=? WHERE session_id=?').run(command.inputSeq, command.sessionId);
+    } else db.prepare('UPDATE input_progress SET confirmed_seq=? WHERE session_id=?').run(command.inputSeq, key);
     for (const draft of drafts) if (draft.input.sessionId === command.sessionId && draft.input.inputSeq <= command.inputSeq)
       touchDraft(db, draft.input);
     db.prepare('DELETE FROM drafts WHERE session_id=? AND json_extract(input, \'$.inputSeq\') <= ?')
-      .run(command.sessionId, command.inputSeq);
+      .run(key, command.inputSeq);
     return receipt;
   });
 }
@@ -283,6 +295,7 @@ export function readEvents(db: DatabaseSync, after: number, limit: number) {
 
 /** Ordinary sibling text stays independent; splits additionally change their actual sibling list. */
 export function draftScopes(unit: CourseUnit, input: DraftInput) {
+  if (input.unitId !== undefined && input.unitId !== unit.id) return { direct: new Set<string>(), ancestors: new Set<string>() };
   const parents = new Map<string, string>();
   const walk = (blocks: ReadingBlock[], parentId: string) => {
     for (const block of blocks) { parents.set(block.id, parentId); walk(block.children ?? [], block.id); }
@@ -304,7 +317,9 @@ export function draftScopes(unit: CourseUnit, input: DraftInput) {
 
 /** Monotonic metadata only, not another draft body/history. Consuming or replacing input also advances it. */
 function touchDraft(db: DatabaseSync, input: DraftInput) {
-  const unit = JSON.parse(String(db.prepare("SELECT payload FROM units WHERE id='KU-001'").get()!.payload));
+  const row = db.prepare('SELECT payload FROM units WHERE id=?').get(inputUnit(input));
+  if (!row) throw new Error('输入单元尚未读取');
+  const unit = JSON.parse(String(row.payload));
   const { direct, ancestors } = draftScopes(unit, input);
   const keys = new Set([...direct, ...[...ancestors].filter(id => !id.startsWith('structure:')).map(id => `draft-under:${id}`)]);
   for (const id of keys) db.prepare(`INSERT INTO draft_versions VALUES (?, 1) ON CONFLICT(object_id)

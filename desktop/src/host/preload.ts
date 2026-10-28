@@ -27,7 +27,7 @@ const bridge: DesktopBridge = {
   annotations: annotationClient(invoke),
   extensions: (() => { const {resource, ...api}=extensionsClient(invoke); return api; })(),
   experiments: experimentsClient(invoke),
-  agent: { ...agentClient(invoke), status: () => invoke('agent:status') },
+  agent: { ...agentClient(invoke), status: () => invoke('agent:status'), retryDelivery: request => invoke('agent:retryDelivery', request) },
   parsing: parsingBridge(invoke),
   sources: sourceBridge(invoke),
   commands: commandClient(invoke),
@@ -47,7 +47,7 @@ const bridge: DesktopBridge = {
   commitEdit: command => invoke('course:commitEdit', command),
   queryOperation: (sessionId, operationId) => invoke('course:queryOperation', { sessionId, operationId }),
   readEvents: (sessionId, after, limit = 64) => invoke('course:readEvents', { sessionId, after, limit }),
-  read: sessionId => invoke('course:read', { sessionId }),
+  read: (sessionId, unitId) => invoke('course:read', { sessionId, unitId }),
   onCloseRequested(listener) {
     const handler = async (_event: Electron.IpcRendererEvent, requestId: number) => {
       let saved = false;

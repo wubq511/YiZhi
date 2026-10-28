@@ -3,6 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import type { AgentEvent, AgentTask, AgentMessage, ConversationView, QuestionSnapshot, SubmitQuestion } from '../agent-api';
 import type { CourseUnit, ReadingBlock } from '../shared';
 import type { Sources } from './sources';
+import type { CommandGroups } from './command-groups';
 import { transaction, appendEvent } from './save-store';
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const parse = (value: unknown) => JSON.parse(String(value));
@@ -10,7 +11,7 @@ const valid = (s: unknown): s is string => typeof s === 'string' && s.length > 0
 const text = (s: unknown, max = 20_000): s is string => typeof s === 'string' && s.length <= max;
 
 export class AgentStore {
-  constructor(private db: DatabaseSync, private sources: Sources, private unit: (id: string) => CourseUnit | undefined) {
+  constructor(private db: DatabaseSync, private sources: Sources, private unit: (id: string) => CourseUnit | undefined, private groups: CommandGroups) {
     db.exec(`CREATE TABLE IF NOT EXISTS agent_conversations(id TEXT PRIMARY KEY, title TEXT NOT NULL, updated_at TEXT NOT NULL,
         draft TEXT NOT NULL DEFAULT '', draft_session TEXT NOT NULL DEFAULT '', draft_seq INTEGER NOT NULL DEFAULT 0, thread_id TEXT, draft_context TEXT NOT NULL DEFAULT '{}');
       CREATE TABLE IF NOT EXISTS agent_context(id INTEGER PRIMARY KEY CHECK(id=1), conversation_id TEXT REFERENCES agent_conversations(id));
@@ -26,7 +27,7 @@ export class AgentStore {
     transaction(db, () => {
       for (const row of db.prepare('SELECT payload FROM agent_tasks').all()) {
         const task = parse(row.payload) as AgentTask;
-        if (task.status === 'running') this.finish(task, 'unknown', '上次执行连接已结束，结果未知；已收到的内容已保留。');
+        if (['running','waiting','queued'].includes(task.status)) this.finish(task, 'unknown', '上次执行连接已结束，结果未知；已收到的内容已保留。');
       }
     });
   }
@@ -113,10 +114,14 @@ export class AgentStore {
       this.conversation(request.conversationId);
       if (request.generation !== this.generation()) throw new Error('课程代际已变化');
       if (request.intent !== undefined && !['question','modify','add-to-board'].includes(request.intent)) throw new Error('请求意图无效');
+      if (request.mode !== undefined && !['steer','queue'].includes(request.mode)) throw new Error('消息送达方式无效');
       if (!text(request.text) || !request.text.trim() || !valid(request.target?.unitId) ||
         (request.model !== undefined && !valid(request.model)) || !Array.isArray(request.citationIds ?? []) || (request.citationIds?.length ?? 0) > 8) throw new Error('问题或目标无效');
-      const existing = this.get(request.sessionId, request.conversationId).tasks.find(t => t.status === 'running');
-      if (existing) throw new Error('当前对话仍在回答，请等待完成或使用另一段对话');
+      const unfinished = this.db.prepare('SELECT payload FROM agent_tasks ORDER BY rowid').all()
+        .map(row => parse(row.payload) as AgentTask).filter(t => ['running','waiting','queued'].includes(t.status));
+      const current = unfinished.find(t => t.conversationId === request.conversationId && t.status !== 'queued');
+      const blockedBy = unfinished.filter(t => t.conversationId === request.conversationId ||
+        request.intent && request.intent !== 'question' && t.snapshot.intent && t.snapshot.intent !== 'question').map(t => t.id);
       const unit = this.unit(request.target.unitId);
       if (!unit) throw new Error('请求的课程正文不可读');
       const find = (blocks: ReadingBlock[]): ReadingBlock | undefined => {
@@ -134,11 +139,20 @@ export class AgentStore {
       });
       const snapshot: QuestionSnapshot = { intent: request.intent ?? 'question', text: request.text, target: { ...request.target, unitName: unit.name, revision: String(revision),
         ...(block ? { blockVersion: Number(this.db.prepare('SELECT version FROM cg_objects WHERE id=?').get(block.id)?.version ?? 1) } : {}) }, citations };
+      if (current && request.mode !== 'queue') {
+        const delivery = { id: randomUUID(), operationId: request.operationId, kind: 'steer' as const, state: 'pending' as const, target: request.target, snapshot, model: request.model ?? current.model };
+        current.deliveries = [...(current.deliveries ?? []), delivery];
+        current.integrationRounds = 0;
+        this.message({ id: `${current.id}:${delivery.id}`, taskId: current.id, role: 'user', text: request.text,
+          state: 'complete', itemId: null, deliveryId: delivery.id });
+        this.db.prepare("UPDATE agent_conversations SET draft='',draft_context='{}',updated_at=? WHERE id=?").run(new Date().toISOString(), current.conversationId);
+        return this.saveTask(current);
+      }
       const id = randomUUID(), attemptId = randomUUID(), createdAt = new Date().toISOString();
       // Same shared qualification table and generation as all producer commits, created atomically with the task.
       this.db.prepare('INSERT INTO cg_attempts VALUES(?,?,?,?)').run(attemptId, id, request.generation, 'running');
       const task: AgentTask = { id, operationId: request.operationId, conversationId: request.conversationId, attemptId, generation: request.generation,
-        snapshot, status: 'running', threadId: null, turnId: null, model: request.model ?? null, error: null, createdAt, cursor: 0 };
+        snapshot, status: blockedBy.length ? 'queued' : 'running', blockedBy, threadId: null, turnId: null, model: request.model ?? null, error: null, createdAt, cursor: 0 };
       task.cursor = this.changed(request.conversationId, id);
       this.db.prepare('INSERT INTO agent_tasks VALUES(?,?,?,?)').run(id, request.conversationId, attemptId, JSON.stringify(task));
       this.message({ id: `${id}:user`, taskId: id, role: 'user', text: request.text, state: 'complete', itemId: null });
@@ -146,14 +160,99 @@ export class AgentStore {
       this.select(request.conversationId); return task;
     });
   }
+  /** Only the Agent chooses to defer a submitted new matter; no model-supplied target or intent. */
+  queueGuidance(request: import('../agent-mutation-api').AgentIdentity & { deliveryId: string }): AgentTask {
+    return transaction(this.db, () => {
+      const parent = this.active(request), delivery = parent.deliveries?.find(d => d.id === request.deliveryId && d.kind === 'steer');
+      if (!delivery?.snapshot) throw new Error('找不到已明确提交的新事项');
+      if (delivery.handledTaskId) return this.task(delivery.handledTaskId);
+      const unfinished = this.db.prepare('SELECT payload FROM agent_tasks ORDER BY rowid').all().map(r => parse(r.payload) as AgentTask)
+        .filter(t => ['running','waiting','queued'].includes(t.status));
+      const snapshot = structuredClone(delivery.snapshot), id = randomUUID(), attemptId = randomUUID(), createdAt = new Date().toISOString();
+      const blockedBy = unfinished.filter(t => t.conversationId === parent.conversationId || snapshot.intent !== 'question' && t.snapshot.intent !== 'question').map(t => t.id);
+      const child: AgentTask = { id, operationId: `guided:${delivery.id}`, conversationId: parent.conversationId, attemptId, generation: parent.generation,
+        snapshot, status: 'queued', blockedBy, threadId: null, turnId: null, model: delivery.model ?? parent.model, error: null, createdAt, cursor: 0,
+        guidedFrom: { taskId: parent.id, deliveryId: delivery.id } };
+      this.db.prepare('INSERT INTO cg_attempts VALUES(?,?,?,?)').run(attemptId,id,parent.generation,'running');
+      child.cursor = this.changed(parent.conversationId,id);
+      this.db.prepare('INSERT INTO agent_tasks VALUES(?,?,?,?)').run(id,parent.conversationId,attemptId,JSON.stringify(child));
+      delivery.handledTaskId = id; this.saveTask(parent);
+      return child;
+    });
+  }
   private task(id: string): AgentTask {
     const row = this.db.prepare('SELECT payload FROM agent_tasks WHERE id=?').get(id);
     if (!row) throw new Error('任务不存在'); return parse(row.payload);
   }
+  private saveTask(task: AgentTask) {
+    task.cursor = this.changed(task.conversationId, task.id);
+    this.db.prepare('UPDATE agent_tasks SET payload=? WHERE id=?').run(JSON.stringify(task), task.id);
+    return task;
+  }
+  /** Called in the SAME transaction as a real student's content/history/receipt publication. */
+  studentChanged(change: NonNullable<import('../agent-api').AgentDelivery['change']>) {
+    for (const row of this.db.prepare('SELECT payload FROM agent_tasks').all()) {
+      const task = parse(row.payload) as AgentTask;
+      if (!['running','waiting'].includes(task.status) || task.snapshot.intent === 'question' || task.snapshot.target.unitId !== change.unitId) continue;
+      task.deliveries ??= [];
+      if (task.deliveries.some(d => d.kind === 'student-change' && d.change?.operationId === change.operationId)) continue;
+      task.deliveries.push({ id: randomUUID(), operationId: change.operationId, kind: 'student-change', state: 'pending', change });
+      this.saveTask(task);
+    }
+  }
+  reviewed(taskId: string, basisId: string) {
+    return transaction(this.db, () => {
+      const task = this.task(taskId);
+      if (!task.deliveries?.some(d => d.kind === 'student-change')) return [];
+      for (const delivery of task.deliveries) if (delivery.kind === 'student-change') delivery.reviewedBasisId = basisId;
+      this.saveTask(task);
+      return task.deliveries.filter(d => d.kind === 'student-change');
+    });
+  }
+  work(request: import('../agent-api').AgentWorkRequest) {
+    return transaction(this.db, () => {
+      const task = this.task(request.taskId);
+      const before = JSON.stringify(task);
+      if (task.attemptId !== request.attemptId || task.generation !== request.generation || request.generation !== this.generation()) throw new Error('任务尝试已停止或失效');
+      if (request.action === 'activate') {
+        if (task.status !== 'queued') return task;
+        if (task.blockedBy?.some(id => ['running','waiting','queued'].includes(this.task(id).status))) return task;
+        const attempt = this.db.prepare('SELECT status FROM cg_attempts WHERE id=?').get(task.attemptId);
+        if (attempt?.status !== 'running') throw new Error('任务尝试已停止或失效');
+        task.status = 'running';
+      } else if (request.action === 'inspect' || request.action === 'integrate') {
+        if (!['running','waiting'].includes(task.status)) return task;
+        this.active(request);
+        task.integrationChecks = this.groups.recheck(request.sessionId, task.attemptId);
+        const blocked = task.integrationChecks.find(c => ['waiting','conflict','ineligible'].includes(c.status));
+        task.waitingReason = blocked?.reason ?? (task.integrationChecks.length ? '正在基于最新学生输入重新整合' : undefined);
+        if (task.status === 'waiting' && !task.integrationChecks.length &&
+          !task.deliveries?.some(d => d.kind === 'student-change' ? !d.reviewedBasisId : ['pending','sending'].includes(d.state))) {
+          this.finish(task, 'completed'); return task;
+        }
+        if (request.action === 'integrate') {
+          if (task.status !== 'waiting' || task.executorStatus !== 'completed') throw new Error('只有仍有效且模型已结束的未完成工作可自动整合');
+          const guided = task.deliveries?.some(d => d.kind === 'steer' && d.state === 'pending');
+          if (blocked && !guided || (task.integrationRounds ?? 0) >= 3) return task;
+          if (task.threadId && task.turnId) task.turnHistory = [...(task.turnHistory ?? []), { threadId: task.threadId, turnId: task.turnId, status: task.executorStatus }];
+          task.turnId = null; delete task.executorStatus;
+          task.status = 'running'; task.integrationRounds = (task.integrationRounds ?? 0) + 1;
+        }
+        if ((task.integrationRounds ?? 0) >= 3 && task.status === 'waiting') task.waitingReason = '自动整合未完成，双方记录仍在；可补充要求后重试。';
+      } else {
+        const delivery = task.deliveries?.find(d => d.id === request.deliveryId);
+        if (!delivery) throw new Error('送达记录不存在');
+        if (delivery.state === 'accepted' || delivery.state === 'unknown') return task;
+        if (request.state === 'sending') this.active(request);
+        Object.assign(delivery, { state: request.state, threadId: request.threadId, turnId: request.turnId, error: request.error });
+      }
+      return JSON.stringify(task) === before ? task : this.saveTask(task);
+    });
+  }
   active(request: { taskId: string; attemptId: string; generation: number }) {
     const task = this.task(request.taskId);
     const attempt = this.db.prepare('SELECT status,generation FROM cg_attempts WHERE id=?').get(request.attemptId);
-    if (task.status !== 'running' || task.attemptId !== request.attemptId || task.generation !== request.generation ||
+    if (!['running','waiting'].includes(task.status) || task.attemptId !== request.attemptId || task.generation !== request.generation ||
       request.generation !== this.generation() || attempt?.status !== 'running' || attempt.generation !== request.generation) throw new Error('任务尝试已停止或失效');
     return task;
   }
@@ -170,18 +269,23 @@ export class AgentStore {
     if (['completed','failed','interrupted','unknown'].includes(status)) task.executorStatus = status as AgentTask['executorStatus'];
     if (task.snapshot.intent && task.snapshot.intent !== 'question') {
       const committed = task.groups?.some(g => g.status === 'committed' && g.changedObjectIds.length);
-      const unfinished = status !== 'completed' || task.mutationFailure || task.groups?.some(g => g.status === 'retained');
-      status = committed ? unfinished ? 'partial' : 'completed' : 'pending';
+      const retained = this.db.prepare(`SELECT 1 FROM cg_candidates c WHERE json_extract(c.command,'$.attemptId')=?
+        AND json_extract(c.result,'$.status')='retained' AND NOT EXISTS(SELECT 1 FROM cg_resolved r WHERE r.candidate_id=c.id) LIMIT 1`).get(task.attemptId);
+      const unfinished = status !== 'completed' || task.mutationFailure || retained;
+      const unreadInput = task.deliveries?.some(d => d.kind === 'student-change' && !d.reviewedBasisId);
+      status = executorCompleted && (retained || unreadInput) ? 'waiting' : committed ? unfinished ? 'partial' : 'completed' : 'pending';
     }
     task.status = status; task.error = error ?? task.mutationFailure ?? null;
     for (const row of this.db.prepare('SELECT payload FROM agent_messages WHERE task_id=?').all(task.id)) {
       const message = parse(row.payload) as AgentMessage;
       if (message.role === 'assistant') { message.state = executorCompleted && message.state === 'complete' ? 'complete' : 'partial'; this.message(message); }
     }
-    this.db.prepare("UPDATE cg_attempts SET status='stopped' WHERE id=?").run(task.attemptId);
-    this.db.prepare("UPDATE cg_bases SET read_values='[]',domain_basis=NULL WHERE attempt_id=?").run(task.attemptId);
-    // Completed/unknown attempts never need a permanent duplicate of whole tool reads.
-    this.db.prepare("UPDATE agent_tool_recovery SET input=NULL,output=NULL,purpose='result-fact' WHERE attempt_id=?").run(task.attemptId);
+    if (task.status !== 'waiting') {
+      this.db.prepare("UPDATE cg_attempts SET status='stopped' WHERE id=?").run(task.attemptId);
+      this.db.prepare("UPDATE cg_bases SET read_values='[]',domain_basis=NULL WHERE attempt_id=?").run(task.attemptId);
+      // Completed/unknown attempts never need a permanent duplicate of whole tool reads.
+      this.db.prepare("UPDATE agent_tool_recovery SET input=NULL,output=NULL,purpose='result-fact' WHERE attempt_id=?").run(task.attemptId);
+    }
     task.cursor = this.changed(task.conversationId, task.id);
     this.db.prepare('UPDATE agent_tasks SET payload=? WHERE id=?').run(JSON.stringify(task), task.id);
   }
@@ -192,13 +296,14 @@ export class AgentStore {
       const digest = hash(event);
       if (duplicate) { if (duplicate.digest !== digest) throw new Error('执行器事件身份冲突'); return this.task(event.taskId); }
       const task = this.active(event);
+      if (event.turnId && task.turnHistory?.some(turn => turn.turnId === event.turnId)) throw new Error('旧模型轮次已经结束');
       if (task.threadId && event.threadId && task.threadId !== event.threadId || task.turnId && event.turnId && task.turnId !== event.turnId) throw new Error('执行器 thread/turn 不匹配');
       if (event.kind === 'bind') {
         task.threadId = event.threadId ?? task.threadId; task.turnId = event.turnId ?? task.turnId; task.model = event.model ?? task.model;
         this.db.prepare('UPDATE agent_conversations SET thread_id=? WHERE id=?').run(task.threadId, task.conversationId);
       } else if (event.kind === 'delta' || event.kind === 'message') {
         if (!valid(event.itemId) || !text(event.text, 200_000)) throw new Error('执行器消息无效');
-        const id = `${task.id}:${event.itemId}`;
+        const id = task.turnHistory?.length ? `${task.id}:${event.turnId ?? task.turnId ?? 'unbound'}:${event.itemId}` : `${task.id}:${event.itemId}`;
         const row = this.db.prepare('SELECT payload FROM agent_messages WHERE id=?').get(id);
         const previous = row ? parse(row.payload) as AgentMessage : undefined;
         if (previous?.state !== 'complete') this.message({ id, taskId: task.id, role: 'assistant', itemId: event.itemId,
@@ -234,6 +339,10 @@ export class AgentStore {
       task.groups ??= [];
       if (task.groups.some(g => g.operationId === result.operationId)) return;
       task.groups.push(result);
+      if (result.status === 'committed') for (const delivery of task.deliveries ?? []) {
+        if (delivery.kind === 'student-change' && delivery.reviewedBasisId === result.basisId)
+          delivery.integratedOperationIds = [...(delivery.integratedOperationIds ?? []), result.operationId];
+      }
       if(result.status==='committed' && result.changedObjectIds.length)delete task.mutationFailure;
       task.cursor = this.changed(task.conversationId,task.id);
       this.db.prepare('UPDATE agent_tasks SET payload=? WHERE id=?').run(JSON.stringify(task),task.id);
@@ -250,6 +359,8 @@ export class AgentStore {
     if (action === 'agent:record') return this.record(p);
     if (action === 'agent:readTarget') return this.readTarget(p);
     if (action === 'agent:active') return this.active(p);
+    if (action === 'agent:work') return this.work(p);
+    if (action === 'agent:queueGuidance') return this.queueGuidance(p);
     throw new Error('未知对话命令');
   }
 }

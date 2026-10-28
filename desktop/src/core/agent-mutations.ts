@@ -28,14 +28,20 @@ export class AgentMutations {
   const context=basis.context!;
   const narrowContext={layout:context.layout,experiments:context.experiments,relations:{graph:{edges:context.relations.graph.edges.filter(e=>[e.fromUnitId,e.toUnitId].includes(unit.id))},sources:context.relations.sources}};
   this.agent.mutationProgress(task.id,task.snapshot.target.blockId??unit.id,'read');
-  return {...basis,context:narrowContext,unitId:unit.id,submittedTarget:task.snapshot.target,content:unit,
+  const concurrentChanges = this.agent.reviewed(task.id,basis.basisId);
+  const checks = this.groups.recheck(r.sessionId, task.attemptId);
+  const pendingGroups = this.groups.candidates(task.attemptId).map(({command,result}) => ({candidateId:command.operationId,
+    status: checks.find(c=>c.candidateId===command.operationId)?.status ?? 'needs-reread', reason:result.reason,
+    proposal: { changes:command.changes, patch:command.patch, bundle:command.bundle }}));
+  return {...basis,context:narrowContext,unitId:unit.id,submittedTarget:task.snapshot.target,content:unit,concurrentChanges,pendingGroups,
    capabilities:{updates:'root paragraph.text or formula.latex',structure:'root remove/move/copy/insert; opaque children preserved',layout:'target plus returned two neighbors',experiment:'independently verified six-bit 4:1 MUX; attached citation required; formulaBlockId writes the linked formula atomically from the same formula parameter'}};
  }
  private operation(taskId:string,operationId:string){if(!id(operationId))throw new Error('工具操作身份无效');return `agent:${taskId}:${hash(operationId).slice(0,24)}`;}
  query(r:AgentIdentity & {operationId:string}){const task=this.active(r);return this.groups.query(this.operation(task.id,r.operationId));}
  apply(r:AgentIdentity & {input:AgentMutation}) {
   const task=this.active(r),v=r.input;
-  keys(v,['operationId','basisId','conclusionOrMethodChanged','updates','remove','moves','copies','insert','layout','relations','experiments']);
+  keys(v,['operationId','basisId','conclusionOrMethodChanged','updates','remove','moves','copies','insert','layout','relations','experiments','replaces']);
+  if(v.replaces !== undefined && (!Array.isArray(v.replaces)||v.replaces.length>30||v.replaces.some(x=>!id(x))))throw new Error('待整合候选身份无效');
   if(!id(v.basisId)||typeof v.conclusionOrMethodChanged!=='boolean'||JSON.stringify(v).length>100_000)throw new Error('修改组参数无效');
   for(const k of ['updates','remove','moves','copies','insert','layout','experiments'] as const)if(v[k]!==undefined&&(!Array.isArray(v[k])||v[k]!.length>30))throw new Error('修改范围过大或无效');
   const operationId=this.operation(task.id,v.operationId),digest=hash(v),prior=this.db.prepare('SELECT digest FROM agent_mutation_requests WHERE operation_id=?').get(operationId);
@@ -87,7 +93,7 @@ export class AgentMutations {
     });
     return {id:c.id,value:{...old,value:c.value,sourceRefs}};
   })} : undefined;
-  const result=this.groups.commit({...r,unitId:basis.unitId,operationId,basisId:v.basisId,changes,patch,
+  const result=this.groups.commit({...r,unitId:basis.unitId,operationId,basisId:v.basisId,changes,patch,resolves:v.replaces,
    semanticImpact:{version:1,unitId:basis.unitId,conclusionOrMethodChanged:v.conclusionOrMethodChanged},
    bundle:{layout:v.layout,relations,experiments:v.experiments?.map(({config:_,inputNames:__,...e})=>e)}});
   this.agent.group(result);return result;
