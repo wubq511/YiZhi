@@ -98,8 +98,13 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
     requestAnimationFrame(() => composer.current?.focus());
     return () => { cancelled = true; clearInterval(interval); };
   }, [open, sessionId]);
-  // Parent inert state must settle before close returns keyboard focus to its trigger.
-  useLayoutEffect(() => { onOpenChange(open); }, [open]);
+  const wasOpen = useRef(false);
+  // Return focus only after the closed state and parent's inert state have committed.
+  useLayoutEffect(() => {
+    onOpenChange(open);
+    if (!open && wasOpen.current) requestAnimationFrame(() => trigger.current?.focus({ preventScroll: true }));
+    wasOpen.current = open;
+  }, [open]);
   useEffect(()=>{setGeneratedTarget(null);setUpdateGenerated(false);setGenerationSource(null);},[sessionId,target.unitId]);
   useEffect(()=>{
     if(intent!=='generate')return;
@@ -137,7 +142,7 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
       if (!element) throw new Error('消息阅读位置暂不可用');
       highlightSearch(element, hit); element.scrollIntoView({ block: 'center' });
     }, attachCitation(citation) { chosenCitations.current = chosenCitations.current.some(c => c.id === citation.id) ? chosenCitations.current : [...chosenCitations.current, citation].slice(-8); setAttachments(chosenCitations.current); markDirty(); setOpen(true); } }));
-  const close = async () => { if (!await flush()) return; setOpen(false); requestAnimationFrame(() => trigger.current?.focus()); };
+  const close = async () => { if (!await flush()) return; setOpen(false); };
   const guard = async (action: () => Promise<void>) => { if (busy) return; setBusy(true); setError(''); try { await action(); } catch (error) { setError((error as Error).message); } finally { setBusy(false); } };
   const send = async () => {
     if (!await flush() || !current.current || composing.current) return;

@@ -1,6 +1,6 @@
 import type { SearchHit } from '../search-api';
 import { paintFrame } from './search-location';
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useEffect, useLayoutEffect, useImperativeHandle, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { SourcePage, SourceCitation, SourceReadingContext, SourceList, CiteSource, PrintedPage } from '../sources-api';
 import { ParsingSection } from './parsing-section';
@@ -38,7 +38,13 @@ export const SourcePanel = forwardRef<SourcePanelHandle, { sessionId: string; na
     }).catch(error => { if (active) { setError(error.message); setInitialized(true); } });
     return () => { active = false; clearTimeout(timer.current); };
   }, [sessionId]);
-  useEffect(() => { onOpenChange(open); if (open) panel.current?.querySelector<HTMLButtonElement>('button')?.focus(); }, [open]);
+  const wasOpen = useRef(false);
+  useLayoutEffect(() => {
+    onOpenChange(open);
+    if (open) panel.current?.querySelector<HTMLButtonElement>('button')?.focus();
+    else if (wasOpen.current) requestAnimationFrame(() => trigger.current?.focus({ preventScroll: true }));
+    wasOpen.current = open;
+  }, [open]);
   const saveLatest = async () => {
     clearTimeout(timer.current);
     const current = context.current;
@@ -113,7 +119,7 @@ export const SourcePanel = forwardRef<SourcePanelHandle, { sessionId: string; na
     const previous = context.current;
     if (context.current) persist({ ...context.current, open: false });
     if (!await flush()) { if (previous) context.current = { ...previous, open: true }; return; }
-    setOpen(false); requestAnimationFrame(() => trigger.current?.focus());
+    setOpen(false);
   };
   const intent = [...list.intents].reverse().find(item => item.versionId === versionId);
   return <><button ref={trigger} disabled={!initialized} className="source-launcher" aria-expanded={open} onClick={() => {

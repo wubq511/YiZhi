@@ -9,6 +9,8 @@ import { validateFinalInput } from './acceptance-input';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
+import { CourseService } from '../src/core/course-service';
+import { prepareTargetResults } from './acceptance-targets-prepare';
 
 const digest = (bytes: Buffer | string) => createHash('sha256').update(bytes).digest('hex');
 
@@ -19,13 +21,17 @@ test('T28 opt-in small development harness records real counters and timings wit
   const evidence = join(process.env.YIZHI_EVIDENCE_DIR, `smoke-${Date.now()}`);
   await mkdir(evidence, { recursive: true });
   const root = await mkdtemp(join(tmpdir(), 'yizhi-t28-harness-'));
+  const preparation = new CourseService(resolve('dist/worker.cjs'));
+  let targetResults;
+  try { targetResults = await prepareTargetResults(preparation, join(root, 'course'), ['KU-001', 'KU-002', 'KU-004', 'KU-005']); } finally { await preparation.close(); }
+  await writeFile(join(evidence, 'controlled-result-fixture.json'), JSON.stringify(targetResults, null, 2) + '\n');
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`],
     env: { ...process.env, YIZHI_OBSERVE: '1', YIZHI_DATA_HOME: join(root, 'profile'), YIZHI_CODEX_PATH: join(root, 'missing-cli') } });
   const metrics = new AcceptanceMetrics(app, evidence, { scope: 'small development fixture, not final T28', physicalInput: 'not exercised' });
   try {
     const page = await app.firstWindow(); await resizeBoardWindow(app, page);
     await metrics.attach(page, 'A');
-    const study = await runStudyAcceptance(app, page, metrics, { runDirectory: root, evidenceDirectory: evidence, secondCourseDirectory: join(root, 'second'), final: false, historyGroups: 12 });
+    const study = await runStudyAcceptance(app, page, metrics, { runDirectory: root, evidenceDirectory: evidence, secondCourseDirectory: join(root, 'second'), final: false, historyGroups: 12, targetResults });
     await metrics.sample('settled');
     const value = await metrics.write('small-harness.json', { study });
     expect(value.checkpoints.length).toBeGreaterThan(0);
@@ -64,6 +70,15 @@ test('T28 final installed migrated 500-unit acceptance consumes the explicitly c
   execFileSync('/usr/bin/codesign', ['--verify', '--deep', '--strict', installed]);
   await cp(input.growthCourse, course, { recursive: true }); await mkdir(join(root, 'empty'));
   const executablePath = join(installed, 'Contents/MacOS/YiZhi');
+  if (growth.appended.length < 3) throw new Error('Need three distinct synthetic targets for saved-result display coverage');
+  const resultPreparation = join(root, 'acceptance-targets-prepare.cjs'), targetResultsPath = join(root, 'controlled-result-fixture.json');
+  await cp(resolve('dist/tests/acceptance-targets-prepare.cjs'), resultPreparation);
+  // Use the delivered Electron/Node/Core for fixture preparation, then close it before the app launches.
+  const preparationLog = execFileSync(executablePath, [resultPreparation, '--worker', join(installed, 'Contents/Resources/app/dist/worker.cjs'),
+    '--course', course, '--units', growth.appended.slice(0, 3).map((entry: any) => entry.id).join(','), '--output', targetResultsPath],
+    { encoding: 'utf8', env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, stdio: ['ignore', 'pipe', 'pipe'] });
+  await writeFile(join(root, 'controlled-result-preparation.log'), preparationLog);
+  const targetResults = JSON.parse(await readFile(targetResultsPath, 'utf8'));
   const launch = () => electron.launch({ executablePath, args: [`--course=${course}`, '--host-resolver-rules=MAP * ~NOTFOUND', '--enable-precise-memory-info'], cwd: join(root, 'empty'),
     env: { ...process.env, PATH: '/usr/bin:/bin:/usr/sbin:/sbin', NODE_PATH: '', NODE_OPTIONS: '', YIZHI_OBSERVE: '1',
       YIZHI_DATA_HOME: join(root, 'profile'), YIZHI_CODEX_PATH: join(root, 'empty/missing-executor') } });
@@ -77,7 +92,7 @@ test('T28 final installed migrated 500-unit acceptance consumes the explicitly c
     await resizeBoardWindow(app, page); await metrics.attach(page, 'A');
     const runtime = await app.evaluate(({ app }) => ({ packaged: app.isPackaged, appPath: app.getAppPath(), execPath: process.execPath, versions: process.versions }));
     expect(runtime.packaged).toBe(true); expect(runtime.execPath).toBe(executablePath); expect(runtime.appPath.startsWith(installed + '/')).toBe(true);
-    const study = await runStudyAcceptance(app, page, metrics, { runDirectory: root, evidenceDirectory: root, secondCourseDirectory: join(root, 'course-B'), final: true, historyGroups: 300 });
+    const study = await runStudyAcceptance(app, page, metrics, { runDirectory: root, evidenceDirectory: root, secondCourseDirectory: join(root, 'course-B'), final: true, historyGroups: 300, targetResults });
     await metrics.sample('settled-final'); await metrics.write('measurement-before-reopen.json', { runtime, study, automatedStatus: 'pending-integrity-and-reopen', physicalStatus: 'pending' });
     await metrics.stop(); await app.close();
     // Independent raw-payload preservation check after all app DB handles are closed.

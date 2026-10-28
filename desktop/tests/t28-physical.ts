@@ -40,7 +40,8 @@ async function main() {
         } else if (command === 'background') {
           const receipt = await page.evaluate(async () => {
             const observation = (window as any).__t28Metrics.snapshot();
-            if (!observation.composition.active) throw new Error('No live composition observed; cannot claim an IME-overlap update');
+            if (!observation.composition.active || !observation.composition.lastStartTrusted || !observation.focus.documentFocused)
+              throw new Error('No focused native composition observed; cannot claim an IME-overlap update');
             const api = (window as any).yizhi, course = await api.open(), article = document.querySelector('article[data-reading-active=true]');
             const unitId = article?.getAttribute('data-unit-id');
             if (!unitId?.startsWith('KU-LOAD-')) throw new Error('Use an explicitly synthetic growth unit for the physical edit');
@@ -54,7 +55,10 @@ async function main() {
             const result = await api.commands.commit({ sessionId: course.sessionId, unitId, attemptId: attempt.attemptId, basisId: basis.basisId, operationId: crypto.randomUUID(),
               changes: [{ objectId: target.id, value: { ...object.value, payload: { ...object.value.payload, text: object.value.payload.text + ' [physical-session controlled independent update]' } } }] });
             await api.commands.stop({ sessionId: course.sessionId, attemptId: attempt.attemptId });
-            return { at: new Date().toISOString(), compositionBefore: observation.composition, compositionAfter: (window as any).__t28Metrics.snapshot().composition, receipt: result, independentBlockId: target.id, producer: 'controlled, not actual model' };
+            const after = (window as any).__t28Metrics.snapshot().composition;
+            return { at: new Date().toISOString(), compositionBefore: observation.composition, compositionAfter: after,
+              nativeCompositionObservedBeforeAndAfter: observation.composition.active && after.active && after.lastStartTrusted,
+              receipt: result, independentBlockId: target.id, producer: 'controlled, not actual model' };
           });
           updates.push(receipt); await metrics.sample('live-composition-independent-update'); console.log(JSON.stringify(receipt));
         } else if (command) throw new Error('Unknown command');

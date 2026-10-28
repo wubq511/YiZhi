@@ -31,9 +31,11 @@ export class AcceptanceMetrics {
       const state = { raf: { count: 0, sum: 0, min: Infinity, max: 0, bins: Array(2002).fill(0) },
         longtask: { supported: PerformanceObserver.supportedEntryTypes.includes('longtask'), count: 0, sum: 0, max: 0 },
         peaks: {} as Record<string, number>, current: {} as Record<string, number>, frame: 0, last: 0, stopped: false,
-        composition: { active: false, starts: 0, ends: 0, blockId: '' }, input: { events: 0, lastAt: 0, pendingSeen: false, acknowledged: 0, totalMs: 0, maxMs: 0 } };
+        composition: { active: false, starts: 0, ends: 0, blockId: '', lastStartTrusted: false }, input: { events: 0, lastAt: 0, pendingSeen: false, acknowledged: 0, totalMs: 0, maxMs: 0 } };
       const compositionStart = (event: Event) => { state.composition.active = true; state.composition.starts++;
-        state.composition.blockId = (event.target as Element).closest('[data-block-id]')?.getAttribute('data-block-id') ?? ''; };
+        state.composition.lastStartTrusted = event.isTrusted;
+        const anchor = getSelection()?.anchorNode, anchorElement = anchor instanceof Element ? anchor : anchor?.parentElement;
+        state.composition.blockId = ((event.target as Element).closest('[data-block-id]') ?? anchorElement?.closest('[data-block-id]'))?.getAttribute('data-block-id') ?? ''; };
       const compositionEnd = () => { state.composition.active = false; state.composition.ends++; };
       const input = () => { state.input.events++; state.input.lastAt = performance.now(); state.input.pendingSeen = false; };
       document.addEventListener('compositionstart', compositionStart, true); document.addEventListener('compositionend', compositionEnd, true); document.addEventListener('input', input, true);
@@ -69,6 +71,9 @@ export class AcceptanceMetrics {
           label: document.activeElement?.getAttribute('aria-label'), text: document.activeElement?.textContent?.slice(0, 120),
           headerInert: !!document.querySelector('header')?.hasAttribute('inert'), bodyInert: document.body.inert,
           rootInert: !!document.getElementById('root')?.hasAttribute('inert'), modalDialogs: [...document.querySelectorAll('dialog[open]')].map(node => node.getAttribute('aria-label')) },
+        camera: (() => { const element = document.querySelector('.react-flow__viewport'); if (!element) return null;
+          const matrix = new DOMMatrixReadOnly(getComputedStyle(element).transform), board = document.querySelector('main.board');
+          return { x: matrix.e, y: matrix.f, zoom: matrix.a, nativeScroll: [board?.scrollLeft, board?.scrollTop] }; })(),
         reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
         heap: (performance as any).memory ? { usedJSHeapSize: (performance as any).memory.usedJSHeapSize, totalJSHeapSize: (performance as any).memory.totalJSHeapSize } : null,
         raf: state.raf, longtask: state.longtask, composition: state.composition, input: state.input,

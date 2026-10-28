@@ -550,11 +550,25 @@ function App() {
         if(phase==='start' || phase==='view' || task.progress?.stage==='committed') {
           const unit=await window.yizhi.readUnit(course.sessionId,displayedUnitId);
           if(unit.id==='KU-001'){await channel.current?.synchronize();setCourse(await window.yizhi.open());}else await unitInputs.current.get(unit.id)?.synchronize();
-          setMounted(previous=>previous.some(u=>u.id===unit.id)?previous.map(u=>u.id===unit.id?unit:u):[...previous,unit]);
+          // Keep the current interaction and incoming target; old task displays are reading projections.
+          const protectedUnits = new Set([readingRef.current?.unitId, document.activeElement?.closest('article[data-unit-id]')?.getAttribute('data-unit-id')]);
+          const selection = getSelection();
+          if (selection && !selection.isCollapsed) for (const article of document.querySelectorAll('article[data-unit-id]'))
+            for (let index = 0; index < selection.rangeCount; index++) if (selection.getRangeAt(index).intersectsNode(article)) protectedUnits.add(article.getAttribute('data-unit-id'));
+          setMounted(previous=>{
+            const retained=previous.filter(item=>item.id==='KU-001'||item.id===unit.id||protectedUnits.has(item.id));
+            return retained.some(item=>item.id===unit.id)?retained.map(item=>item.id===unit.id?unit:item):[...retained,unit];
+          });
           setSelected(previous=>previous?.id===unit.id?unit:previous);
           setGraph(await window.yizhi.graph(course.sessionId));setReview(await window.yizhi.reviewStates(course.sessionId));
         }
-        if(phase==='view'){if(!await flushUnitInputs(true))throw new Error('请先保存当前单元输入。');const unit=await window.yizhi.readUnit(course.sessionId,displayedUnitId);setSelected(unit);setDirectoryTheme(unit.theme.id);if(readingRef.current)persist({...readingRef.current,unitId:unit.id});requestAnimationFrame(()=>camera.resume());}
+        if(phase==='view'){
+          if(composing.current)throw new Error('请先完成中文候选输入，再查看修改结果。');
+          if(!await flushUnitInputs(true))throw new Error('请先保存当前单元输入。');
+          const unit=await window.yizhi.readUnit(course.sessionId,displayedUnitId);
+          setMounted(previous=>[...previous.filter(item=>item.id==='KU-001'&&item.id!==unit.id),unit]);
+          setSelected(unit);setDirectoryTheme(unit.theme.id);if(readingRef.current)persist({...readingRef.current,unitId:unit.id});requestAnimationFrame(()=>camera.resume());
+        }
         else if(phase==='finish'){camera.finish();if(readingRef.current)persist({...readingRef.current,modification:{targetId:workTarget.current,ended:true}});}
         else requestAnimationFrame(()=>camera.updated());
       }} onOpenChange={value => { setAgentOpen(value); if (value && narrow) setDirectory(false); }} openCitation={citation => sourcesPanel.current?.openCitation(citation)} />}

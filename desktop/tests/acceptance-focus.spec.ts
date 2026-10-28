@@ -23,3 +23,18 @@ test('closing the narrow Agent dialog with keyboard returns focus to its enabled
     throw error;
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
+
+test('closing the narrow source dialog with Escape returns focus after the header is enabled', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-narrow-source-focus-'));
+  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile'), YIZHI_CODEX_PATH: join(root, 'missing-cli') } });
+  try {
+    const page = await app.firstWindow(); await resizeBoardWindow(app, page, 700, 700);
+    await page.getByRole('button', { name: '关闭目录', exact: true }).click();
+    await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
+    const trigger = page.getByRole('button', { name: '原文资料', exact: true });
+    await trigger.focus(); await expect(trigger).toBeFocused(); await page.keyboard.press('Enter');
+    await expect(page.getByRole('dialog', { name: '原文资料', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: '返回画板', exact: true }).focus();
+    await page.keyboard.press('Escape'); await expect(trigger).toBeFocused();
+  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+});

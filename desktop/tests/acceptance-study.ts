@@ -40,9 +40,26 @@ export async function navigateUnit(page: Page, graph: CourseGraph, id: string) {
   await expect(page.locator(`article[data-unit-id="${id}"] .tiptap.ProseMirror`)).toHaveCount(1);
 }
 
+export interface SavedTargetFixture { conversationId: string; results: Array<{ unitId: string; marker: string; taskId: string }> }
+export async function exerciseTargetDisplays(page: Page, fixture: SavedTargetFixture, metrics: AcceptanceMetrics) {
+  await page.getByRole('button', { name: 'Agent · 学习对话', exact: true }).click();
+  await page.getByRole('combobox', { name: '学习对话列表', exact: true }).selectOption(fixture.conversationId);
+  const buttons = page.getByRole('button', { name: '查看实际修改', exact: true }); await expect(buttons).toHaveCount(fixture.results.length);
+  const displays = [];
+  for (let index = 0; index < fixture.results.length; index++) {
+    const result = fixture.results[index]; await buttons.nth(index).click();
+    const article = page.locator(`article[data-unit-id="${result.unitId}"][data-reading-active=true]`);
+    await expect(article).toHaveCount(1); await expect(article).toContainText(result.marker);
+    const layers = await page.locator('.reading-layer').count(); expect(layers).toBeLessThanOrEqual(2);
+    await metrics.sample(`saved-target:${index + 1}`); displays.push({ unitId: result.unitId, taskId: result.taskId, layers });
+  }
+  await page.getByRole('button', { name: '收起对话', exact: true }).click();
+  return { producer: 'synthetic public Core commits; no model or executor', displays };
+}
+
 /** Identical public/UI scenarios in a small preparation run and the gated final installed run. */
 export async function runStudyAcceptance(app: ElectronApplication, page: Page, metrics: AcceptanceMetrics, options: {
-  runDirectory: string; evidenceDirectory: string; secondCourseDirectory: string; final: boolean; historyGroups: number;
+  runDirectory: string; evidenceDirectory: string; secondCourseDirectory: string; final: boolean; historyGroups: number; targetResults?: SavedTargetFixture;
 }) {
   let api = studyAPI(page);
   const opened: OpenedCourse = await page.evaluate(() => (window as any).yizhi.open());
@@ -71,6 +88,7 @@ export async function runStudyAcceptance(app: ElectronApplication, page: Page, m
     if (index % 25 === 0 && await summary.count()) { await summary.click(); disclosures++; await metrics.sample(`disclosure:${id}`); await summary.click(); }
     if (index % 25 === 0 || index + 1 === ids.length) await metrics.sample(`navigation:${index + 1}/${ids.length}`);
   }
+  const targetDisplays = options.targetResults ? await exerciseTargetDisplays(page, options.targetResults, metrics) : { status: 'not exercised in this preparation' };
   await navigateUnit(page, graph, editableId);
   let a = await api.read(opened.sessionId, editableId);
   const history = await prepareLongHistory(api, a, options.historyGroups);
@@ -127,6 +145,8 @@ export async function runStudyAcceptance(app: ElectronApplication, page: Page, m
   await expect.poll(async () => (await experimentState()).state.step).toBeGreaterThan(pausedExperiment.state.step);
   const resumedExperiment = await experimentState();
   await region.getByRole('button', { name: '暂停遍历', exact: true }).click();
+  let extensionEvidence: unknown = { status: 'not part of this migrated course', exercised: false };
+  if (!opened.contentScope) {
   await navigateUnit(page, graph, 'KU-001');
   const extensionButton = page.locator('article[data-unit-id="KU-001"]').getByRole('button', { name: '奇偶校验扩展实验', exact: true });
   await revealBoardControl(page, extensionButton); await extensionButton.click();
@@ -148,6 +168,8 @@ export async function runStudyAcceptance(app: ElectronApplication, page: Page, m
   const extensionResumed = await extensionState();
   const stopExtension = extension.getByRole('button', { name: '暂停模拟', exact: true }); await revealBoardControl(page, stopExtension); await stopExtension.click();
   await revealBoardControl(page, extensionButton); await extensionButton.click();
+  extensionEvidence = { exercised: true, running: extensionRunning, paused: extensionPaused, resumed: extensionResumed };
+  }
   await navigateUnit(page, graph, editableId);
   // Actual trusted editor input/selection plus an independent formal update; no synthetic IME events.
   const editor = page.locator(`article[data-unit-id="${editableId}"] .tiptap.ProseMirror`);
@@ -212,20 +234,33 @@ export async function runStudyAcceptance(app: ElectronApplication, page: Page, m
   await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(page.getByRole('status', { name: '阅读状态', exact: true })).toHaveText('阅读位置已保存');
+  // A navigation/focus scroll can reach the DOM before its queued reading-state receipt.
+  // Baseline the actual displayed camera after that receipt, not an older "saved" label.
+  await expect.poll(() => page.evaluate(async sessionId => {
+    const saved = await (window as any).yizhi.readingState(sessionId), matrix = new DOMMatrixReadOnly(getComputedStyle(document.querySelector('.react-flow__viewport')!).transform);
+    return !!saved?.camera && Math.abs(saved.camera.x - matrix.e) < .001 && Math.abs(saved.camera.y - matrix.f) < .001 && Math.abs(saved.camera.zoom - matrix.a) < .000001;
+  }, opened.sessionId)).toBe(true);
   const readingBeforePanels = await page.evaluate(sessionId => (window as any).yizhi.readingState(sessionId), opened.sessionId);
+  const panelTrace = [{ phase: 'before', state: readingBeforePanels }];
+  const panelSample = async (phase: string) => { panelTrace.push({ phase, state: await page.evaluate(sessionId => (window as any).yizhi.readingState(sessionId), opened.sessionId) }); await metrics.sample(`panel:${phase}`); };
   const agentButton = page.getByRole('button', { name: 'Agent · 学习对话', exact: true });
   await agentButton.focus(); await expect(agentButton).toBeFocused(); await page.keyboard.press('Enter');
   await expect(page.getByRole('textbox', { name: '学习对话草稿', exact: true })).toBeFocused();
+  await panelSample('agent-open');
   await expect(page.getByText(/生成暂不可用/)).toBeVisible();
   await expect(page.getByRole('button', { name: '发送问题', exact: true })).toBeDisabled();
   const closeAgent = page.getByRole('button', { name: '收起对话', exact: true });
   await closeAgent.focus(); await page.keyboard.press('Shift+Tab');
+  await panelSample('agent-tab-wrap');
   expect(await page.getByRole('dialog', { name: 'Agent 学习对话', exact: true }).evaluate(element => element.contains(document.activeElement))).toBe(true);
   await closeAgent.focus(); await page.keyboard.press('Enter');
   await expect(agentButton).toBeFocused();
+  await panelSample('agent-closed');
   const sourceButton = page.getByRole('button', { name: '原文资料', exact: true }); await sourceButton.focus(); await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog', { name: '原文资料', exact: true })).toBeVisible();
+  await panelSample('source-open');
   await page.keyboard.press('Escape'); await expect(sourceButton).toBeFocused();
+  await panelSample('source-closed');
   await expect(page.getByRole('status', { name: '阅读状态', exact: true })).toHaveText('阅读位置已保存');
   const readingAfterPanels = await page.evaluate(sessionId => (window as any).yizhi.readingState(sessionId), opened.sessionId);
   expect(readingAfterPanels).toEqual(readingBeforePanels);
@@ -239,10 +274,10 @@ export async function runStudyAcceptance(app: ElectronApplication, page: Page, m
   await page.screenshot({ path: join(options.evidenceDirectory, 'narrow-keyboard-reduced-motion.png') });
   return { graphUnits: graph.nodes.length, navigated: ids.length, disclosures, editableId, courseId: opened.courseId, secondCourseId: b.courseId,
     sharedCore: { instanceId: sharedCore.instanceId, threadId: sharedCore.threadId }, history, historyOverlap, indexOverlap, parserOverlap,
-    originalPages, update, textMarker, savedDraftInputSeq: savedDraft.drafts.at(-1)?.input.inputSeq,
+    originalPages, update, targetDisplays, textMarker, savedDraftInputSeq: savedDraft.drafts.at(-1)?.input.inputSeq,
     experiment: { running: runningExperiment, paused: pausedExperiment, resumed: resumedExperiment },
-    extension: { running: extensionRunning, paused: extensionPaused, resumed: extensionResumed },
+    extension: extensionEvidence,
     programmaticUndo: { formula: true, body: true, independentUpdatePreserved: true }, accessibility,
-    panelReadingState: { before: readingBeforePanels, after: readingAfterPanels },
+    panelReadingState: { before: readingBeforePanels, after: readingAfterPanels, trace: panelTrace },
     physical: { mouse: 'pending', trackpad: 'pending', doubaoIME: 'pending' }, limitations: ['Controlled producer update is not an actual model call.'] };
 }
