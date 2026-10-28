@@ -214,6 +214,7 @@ export class AgentRuntime {
     const prior = history.messages.filter(m => m.taskId !== task.id && settled.has(m.taskId) && m.state === 'complete').slice(-12).map(m => ({ role: m.role, text: m.text.slice(0, 3000) }));
     const response = await this.rpc!.request('turn/start', { threadId, model, environments: [],
       input: [{ type: 'text', text: JSON.stringify({ previousVisibleMessages: prior, submittedRequest: task.snapshot,
+        ...(task.guidedFrom ? { independentGuidanceTask: { ...task.guidedFrom, taskId: task.id, instruction: '这已经是原 Agent 为学生新事项建立的独立业务任务。现在直接读取本次固定目标并执行 submittedRequest 的实际意图，不要再次安排同一事项，不复用父任务的 deliveryId 调度。' } } : {}),
         ...(task.integrationRounds ? { automaticIntegration: { taskId: task.id, originalAttemptId: task.attemptId, businessStatus: 'running', priorTurnStatus: 'completed', round: task.integrationRounds,
           instruction: '原业务任务尚未完成。宿主允许本轮继续整合或处理新引导；当前是否受保护以工具返回为准，仍被保护的部分保持候选。必须重新读取实际最新内容，保留学生输入，在原有效意图内完整整合 pendingGroups，用新操作与 replaces 消耗整组候选。不要重复已提交修改，不要求逐块采纳；只有真实冲突才询问。完成说明同时修改的位置和处理结果。' } } : {}) }) }],
       effort: this.statusValue!.models.find(m => m.model === model)?.defaultReasoningEffort,
