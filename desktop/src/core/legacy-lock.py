@@ -14,6 +14,7 @@ from pathlib import Path
 import shutil
 import sqlite3
 import sys
+from directory_authority import acquire_migration
 
 
 def inside(root, name):
@@ -30,7 +31,7 @@ def inside(root, name):
 def main():
     root = Path(sys.argv[1]).resolve(strict=True)
     manifest = json.loads((root / '课程.json').read_text())
-    handles = []
+    handles = [acquire_migration(root)]
     for path in [root / '.review-board/service.lock', inside(root, manifest['knowledge'] + '.content.lock')]:
         handle = path.open('rb')  # Never creates lock files on the original course.
         handles.append(handle)
@@ -41,7 +42,7 @@ def main():
     state = inside(root, manifest['state'])
     # SQLite POSIX byte locks detect writers even outside the normal host. WAL
     # readers do not protect WAL_WRITE_LOCK; reserve it explicitly until release.
-    for path, offset, length in [(state, 1073741824, 2), (Path(str(state) + '-shm'), 120, 1)]:
+    for path, offset, length in [(state, 1073741825, 1), (Path(str(state) + '-shm'), 120, 1)]:
         if path.exists():
             handle = path.open('r+b')  # No data is written, and no missing file is created.
             handles.append(handle)

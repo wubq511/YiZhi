@@ -11,6 +11,11 @@ export interface MigrationReport {
 export interface LegacyContent { manifest: Record<string, any>; knowledge: Record<string, any>; layout: Record<string, any>; report: MigrationReport;retention?:{originalUnitBodies:'expired';expiredAt:string;registeredAt:string} }
 export function migrationClient(invoke: (action: string, payload: any) => Promise<any>) {
   return {
+    prepare:(request:{sourceDirectory:string;contentCandidateDirectory:string;directory:string;operationId:string}):Promise<import('./core/directory-authority').DirectoryDecision>=>invoke('migration:prepare',request),
+    publish:(request:{sourceDirectory:string;operationId:string}):Promise<import('./core/directory-authority').DirectoryDecision>=>invoke('migration:publish',request),
+    status:(request:{directory:string}):Promise<import('./core/directory-authority').DirectoryDecision|null>=>invoke('migration:status',request),
+    recover:(request:{directory:string}):Promise<{directory:string;decision:import('./core/directory-authority').DirectoryDecision|null}>=>invoke('migration:recover',request),
+    personal: (request: {sessionId:string;sourceDirectory:string}): Promise<any> => invoke('migration:personal', request),
     snapshot: (request: MigrationTarget): Promise<{ directory: string; files: Record<string, string> }> => invoke('migration:snapshot', request),
     convert: (request: MigrationTarget): Promise<MigrationReport> => invoke('migration:convert', request),
     content: (request: { sessionId: string }): Promise<LegacyContent> => invoke('migration:content', request),

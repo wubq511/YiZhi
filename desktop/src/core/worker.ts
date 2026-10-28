@@ -1,3 +1,5 @@
+import { prepareDirectory,publishDirectory,directoryStatus,recoverDirectory,admitDirectory,closeDirectoryLeases } from './directory-authority';
+import { importPersonal,importPersonalRecords } from './migration-personal';
 import { FormalHistory } from './formal-history';
 import { HistoryRetention } from './retention';
 import { CourseRestore } from './course-restore';
@@ -81,10 +83,11 @@ function snapshot(course: Course, unitId = 'KU-001'): OpenedCourse {
         synchronous: Number(course.db.prepare('PRAGMA synchronous').get()!.synchronous),
       } } };
 }
-function open(directory: string): OpenedCourse {
+function open(directory: string,preparing=false): OpenedCourse {
   if (existsSync(join(directory, '课程.json')) && !existsSync(join(directory, 'course.sqlite'))) throw new Error('这是旧版课程，请从停止写入的一致副本转换到新目录');
   mkdirSync(directory, { recursive: true });
   const canonical = realpathSync(directory);
+  if(!preparing)admitDirectory(canonical);
   const existing = courses.get(canonical);
   if (existing) return snapshot(existing);
   // A separate DB holds an OS-backed exclusive transaction for the entire session.
@@ -193,7 +196,7 @@ parentPort!.on('message', message => {
     const course = [...courses.values()].find(c => c.sessionId === message.payload?.sessionId);
     try { course?.experiments.stopIssuing(message.payload); } catch { /* Invalid input is rejected by the ordered dispatcher below. */ }
   }
-  if (message.action === 'sources:page' || message.action.startsWith('search:')) {
+  if (message.action === 'sources:page' || message.action.startsWith('search:') || message.action==='migration:prepare' || message.action==='migration:publish') {
     // Immutable source bytes may parse asynchronously while short core requests continue.
     // Start after prior ordered writes; only close drains these read-only operations.
     queue = queue.then(() => {
@@ -206,7 +209,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
   try {
     if(workerData?.retentionScheduling?.clock)for(const course of courses.values())course.retention.synchronizeClock();
     if(action==='courseRestore:apply' && session(payload.sessionId,action).sessionId!==payload.sessionId && !session(payload.sessionId,action).courseRestore.query(payload.operationId))throw new Error('编辑会话已失效，未执行新的整课恢复，请重新打开核对');
-    if (payload?.operationId) {
+    if (payload?.operationId && payload.sessionId) {
       const course = session(payload.sessionId,action);
       if(course.db.prepare('SELECT 1 FROM expired_payloads WHERE operation_id=?').get(payload.operationId))throw new Error('这项操作明细已过期清理；原身份保留，不能重新应用，请重新读取当前内容');
       if(action!=='courseRestore:apply'&&!action.endsWith(':query')&&action!=='queryOperation'&&action!=='formalHistory:detail'&&course.db.prepare('SELECT 1 FROM course_restore_requests WHERE id=?').get(payload.operationId))throw new Error('操作身份已用于整课恢复');
@@ -231,6 +234,15 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       else if (action === 'exchange:query') value = exchange.query(payload.operationId);
       else throw new Error('未知交换接口');
     }
+    else if(action==='migration:prepare')value=await prepareDirectory(payload,async(directory,source)=>{
+      const opened=open(directory,true),key=realpathSync(directory),course=courses.get(key)!;
+      try{return importPersonalRecords(course.db,source);}
+      finally{course.retention.stop();course.experiments.dispose();await course.parsing.close();course.db.close();course.owner.close();courses.delete(key);}
+    });
+    else if(action==='migration:publish')value=await publishDirectory(payload,workerData?.cutoverScheduling);
+    else if(action==='migration:status')value=directoryStatus(payload.directory);
+    else if(action==='migration:recover')value=recoverDirectory(payload.directory);
+    else if (action === 'migration:personal') value=await importPersonal(session(payload.sessionId,action).db,payload.sourceDirectory);
     else if (action === 'migration:snapshot') value = await snapshotLegacy(payload);
     else if (action === 'migration:convert') value = await convertLegacy(payload, workerData?.migrationScheduling);
     else if (action === 'migration:content') value = legacyContent(session(payload.sessionId,action).db);
@@ -305,7 +317,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action.startsWith('parsing:')) value = await session(payload.sessionId,action).parsing.dispatch(action, payload);
     else if (action.startsWith('sources:')) value = await session(payload.sessionId,action).sources.dispatch(action, payload);
     else if (action === 'close') {
-      await Promise.all(sourceReads);
+      await Promise.all(sourceReads);await closeDirectoryLeases();
       for (const course of courses.values()) { course.retention.stop();course.experiments.dispose(); await course.parsing.close(); course.db.close(); course.owner.close(); }
       courses.clear();
     } else throw new Error('未知课程命令');

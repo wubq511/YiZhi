@@ -92,6 +92,8 @@ def _merge(base, current, desired, path="", conflicts=None):
     return _copy(current)
 
 
+from .directory_authority import writer_admission
+
 class ContentCommands:
     def __init__(self, service, *, changed=None, initialize=True):
         self.service = service
@@ -118,6 +120,12 @@ class ContentCommands:
 
     @contextmanager
     def writer_lock(self):
+        with writer_admission(self.service.root):
+            with self._writer_lock():
+                yield
+
+    @contextmanager
+    def _writer_lock(self):
         """Integration lock: service -> advisory file -> store; never notify here.
 
         POSIX flock and Windows byte-range locks serialize independent service

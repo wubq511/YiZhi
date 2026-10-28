@@ -13,6 +13,7 @@ from .knowledge import KnowledgeCatalog
 from .search import CourseSearch
 from .material_sources import MaterialSourceLibrary
 from .storage import CourseStore, StoreError
+from .directory_authority import writer_admission
 
 
 def inside(root: Path, relative: str) -> Path:
@@ -23,6 +24,11 @@ def inside(root: Path, relative: str) -> Path:
 
 
 def open_manifest(root: Path):
+    with writer_admission(root):
+        return _open_manifest(root)
+
+
+def _open_manifest(root: Path):
     path = root / "课程.json"
     if not path.exists():
         manifest = {
@@ -61,6 +67,10 @@ class CourseService:
                     "sources.read", "search.keyword"]
 
     def __init__(self, root: Path, *, catalog=None):
+        with writer_admission(root):
+            self._initialize(root,catalog=catalog)
+
+    def _initialize(self, root: Path, *, catalog=None):
         self.root = Path(root).resolve()
         self.manifest = open_manifest(self.root)
         self.catalog = catalog or KnowledgeCatalog(
