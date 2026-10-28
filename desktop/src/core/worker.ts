@@ -1,4 +1,7 @@
 import { FormalHistory } from './formal-history';
+import { CourseBackups } from './backup';
+import { assertWritableFormat,inspectFormat,readUnderstoodUnit } from './course-format';
+import { claimPortableIdentity } from './course-identity';
 import { registerRetentionResourceRoot } from './retention-resources';
 import { generationRetentionResourceRoot } from './generation-retention';
 import { HistoryRetention } from './retention';
@@ -22,7 +25,7 @@ import { AgentStore } from './agent-store';
 import { parentPort, workerData } from 'node:worker_threads';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, realpathSync, readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join,resolve } from 'node:path';
 import { FormalRelations } from './formal-relations';
 import { CommandGroups } from './command-groups';
 import { Parsing } from './parsing';
@@ -39,6 +42,7 @@ registerRetentionResourceRoot('t30-generation-recovery',generationRetentionResou
 
 const EDITABLE = 'RB-TH-01-01-what-is-positional-notation';
 interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; courseId: string; graph: CourseGraph;
+  identityOwner?:DatabaseSync;
   retention:HistoryRetention;
   // T03 constructs its observer on this same connection; both student save entry points call it in-transaction.
   formalHistory: FormalHistory;
@@ -60,6 +64,7 @@ interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; cou
   generation: Generation;
 }
 const courses = new Map<string, Course>();
+const backups=new CourseBackups(workerData?.backupScheduling);
 const historicalRoutes=new Set(['courseRestore:apply','courseRestore:query','queryOperation','commands:query','commands:history','formalHistory:query','formalHistory:release','formalHistory:detail','formalHistory:list','relations:query','annotations:query','drawings:query','drawings:queryPlacement','sources:query','parsing:query','agent:record','agent:task','agent:facts','agent:stop','agent:get','agent:list','agent:events','agent:work','agentMutation:query','generation:query','generation:candidates']);
 function session(id: string,action?:string): Course {
   const course = [...courses.values()].find(course => course.sessionId === id || action&&historicalRoutes.has(action)&&!!course.db.prepare('SELECT 1 FROM course_sessions WHERE id=?').get(id));
@@ -88,15 +93,18 @@ function snapshot(course: Course, unitId = 'KU-001'): OpenedCourse {
       } } };
 }
 function open(directory: string): OpenedCourse {
+  if(existsSync(join(directory,'backup-manifest.json'))&&!existsSync(join(directory,'backup-complete.json')))throw new Error('备份未完成，拒绝打开');
   if (existsSync(join(directory, '课程.json')) && !existsSync(join(directory, 'course.sqlite'))) throw new Error('这是旧版课程，请从停止写入的一致副本转换到新目录');
   mkdirSync(directory, { recursive: true });
   const canonical = realpathSync(directory);
   const existing = courses.get(canonical);
   if (existing) return snapshot(existing);
+  if(existsSync(join(canonical,'course.sqlite')))assertWritableFormat(canonical);
   // A separate DB holds an OS-backed exclusive transaction for the entire session.
   // It survives window closure and is released by SQLite on process death; no stale PID lock.
   const owner = new DatabaseSync(join(canonical, 'ownership.sqlite'));
   let db: DatabaseSync | undefined;
+  let identityOwner:DatabaseSync|undefined;
   try {
     owner.exec('PRAGMA busy_timeout=0; BEGIN EXCLUSIVE');
   } catch {
@@ -104,10 +112,14 @@ function open(directory: string): OpenedCourse {
     throw new Error('课程已由另一应用进程打开，不能取得第二份写入资格');
   }
   try {
+    if(existsSync(join(canonical,'course.sqlite'))){
+      const inspect=new DatabaseSync(join(canonical,'course.sqlite'),{readOnly:true});
+      try{if(inspect.prepare("SELECT 1 FROM metadata WHERE key='portable-identity'").get())identityOwner=claimPortableIdentity(String(inspect.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value));}finally{inspect.close();}
+    }
     db = new DatabaseSync(join(canonical, 'course.sqlite'));
     db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL; PRAGMA busy_timeout=1000');
     const version = Number(db.prepare('PRAGMA user_version').get()!.user_version);
-    if (version !== 0 && version !== 1) throw new Error('不支持的课程格式，拒绝写入');
+    if (version !== 0 && version !== 1 && version !== 2) throw new Error('不支持的课程格式，拒绝写入');
     if (db.prepare("SELECT 1 FROM sqlite_master WHERE name='metadata'").get() && db.prepare("SELECT 1 FROM metadata WHERE key='content-scope'").get() && !existsSync(join(canonical,'content-candidate.json'))) throw new Error('内容候选缺少完成标记，拒绝打开');
     db.exec(`BEGIN IMMEDIATE;
       CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -115,7 +127,7 @@ function open(directory: string): OpenedCourse {
       CREATE TABLE IF NOT EXISTS units(id TEXT PRIMARY KEY, payload TEXT NOT NULL, revision INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS operations(id TEXT PRIMARY KEY, digest TEXT NOT NULL, receipt TEXT NOT NULL,
         unit_id TEXT NOT NULL REFERENCES units(id), before_text TEXT NOT NULL, after_text TEXT NOT NULL);
-      PRAGMA user_version=1; COMMIT;`);
+      PRAGMA user_version=${version||1}; COMMIT;`);
     if (!db.prepare('SELECT 1 FROM units LIMIT 1').get()) {
       const seed = readFileSync(join(__dirname, 'fixtures/unit-001.json'), 'utf8');
       db.exec('BEGIN IMMEDIATE');
@@ -165,7 +177,7 @@ function open(directory: string): OpenedCourse {
     const search = new Search(db, sourceUnit, readableUnitIds, graph.nodes.length, sources);
     const generation = new Generation(db,graph,sources,parsing,agent,groups,search);
     const formalHistory=new FormalHistory(db,groups,agent,graph,relations,experiments);
-    const course: Course = { retention:new HistoryRetention(db,formalHistory,canonical,id=>groups.protectsBlock(id),workerData?.retentionScheduling), courseRestore:undefined!, formalHistory, views:new LearningViews(db), exchange, db, owner, agent, mutations, generation, search, unit: sourceUnit, annotations, drawings, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
+    const course: Course = { identityOwner,retention:new HistoryRetention(db,formalHistory,canonical,id=>groups.protectsBlock(id),workerData?.retentionScheduling), courseRestore:undefined!, formalHistory, views:new LearningViews(db), exchange, db, owner, agent, mutations, generation, search, unit: sourceUnit, annotations, drawings, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
 
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     course.courseRestore=new CourseRestore(db,formalHistory,graph,agent,experiments,extensions,next=>{course.sessionId=next;groups.releaseGeneration();formalHistory.releaseGeneration();},workerData?.restoreScheduling);
@@ -174,7 +186,7 @@ function open(directory: string): OpenedCourse {
     const result = snapshot(course);
     courses.set(canonical, course);
     return result;
-  } catch (error) { db?.close(); owner.close(); throw error; }
+  } catch (error) { db?.close();identityOwner?.close(); owner.close(); throw error; }
 }
 function commit(course: Course, command: EditCommand) {
   return commitEdit(course.db, command, (unitId, revision, blockIds) => {
@@ -200,7 +212,7 @@ parentPort!.on('message', message => {
     const course = [...courses.values()].find(c => c.sessionId === message.payload?.sessionId);
     try { course?.experiments.stopIssuing(message.payload); } catch { /* Invalid input is rejected by the ordered dispatcher below. */ }
   }
-  if (message.action === 'sources:page' || message.action.startsWith('search:')) {
+  if (message.action === 'sources:page' || message.action.startsWith('search:') || message.action.startsWith('backup:')) {
     // Immutable source bytes may parse asynchronously while short core requests continue.
     // Start after prior ordered writes; only close drains these read-only operations.
     queue = queue.then(() => {
@@ -227,7 +239,27 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       course.extensions.fence(fencedAction, payload.operationId);
     }
     let value: unknown;
-    if(action.startsWith('retention:')) {const retention=session(payload.sessionId,action).retention;if(action==='retention:get')value=retention.get();else if(action==='retention:set')value=retention.set(payload.days);else if(action==='retention:run')value=retention.run(payload.limit);else if(action==='retention:resourceLease')value=retention.resources.lease(payload.id,payload.action,new Date().toISOString());else if(action==='retention:resourceLeases')value=retention.resources.leases();else if(action==='retention:space')value=retention.storage.space();else if(action==='retention:clearCache')value=retention.storage.clearCache(payload.limit);else throw new Error('未知历史保留接口');}
+    if(action==='format:inspect')value=inspectFormat(payload.directory);
+    else if(action==='format:readUnit')value=readUnderstoodUnit(payload.directory,payload.unitId);
+    else if(action.startsWith('backup:')) {
+      if(action==='backup:status')value=await backups.status(payload.directory);
+      else if(action==='backup:verify')value=await backups.verify(payload.directory);
+      else if(action==='backup:create'||action==='backup:resume'){
+        const c=session(payload.sessionId,action),directory=[...courses.entries()].find(([,v])=>v===c)![0];
+        value=await backups.create(payload,{directory,courseId:c.courseId,acquire:()=>{
+          c.identityOwner??=claimPortableIdentity(c.courseId);
+          transaction(c.db,()=>{
+            c.db.exec('CREATE TABLE IF NOT EXISTS backup_jobs(id TEXT PRIMARY KEY,directory TEXT NOT NULL)');
+            const old=c.db.prepare('SELECT directory FROM backup_jobs WHERE id=?').get(payload.backupId);
+            if(old&&old.directory!==resolve(payload.directory))throw new Error('备份身份已用于另一目录，请使用原目录重试');
+            c.db.prepare('INSERT OR IGNORE INTO backup_jobs VALUES(?,?)').run(payload.backupId,resolve(payload.directory));
+            c.db.prepare("INSERT OR IGNORE INTO metadata VALUES('portable-identity','1')").run();
+            c.retention.resources.lease('backup:'+payload.backupId,'acquire',new Date().toISOString());
+          });
+        },release:()=>{c.retention.resources.lease('backup:'+payload.backupId,'release',new Date().toISOString());}},action==='backup:resume');
+      }else throw new Error('未知备份接口');
+    }
+    else if(action.startsWith('retention:')) {const retention=session(payload.sessionId,action).retention;if(action==='retention:get')value=retention.get();else if(action==='retention:set')value=retention.set(payload.days);else if(action==='retention:run')value=retention.run(payload.limit);else if(action==='retention:resourceLease')value=retention.resources.lease(payload.id,payload.action,new Date().toISOString());else if(action==='retention:resourceLeases')value=retention.resources.leases();else if(action==='retention:space')value=retention.storage.space();else if(action==='retention:clearCache')value=retention.storage.clearCache(payload.limit);else throw new Error('未知历史保留接口');}
     else if(action.startsWith('courseRestore:')) {const restore=session(payload.sessionId,action).courseRestore;if(action==='courseRestore:preview')value=restore.preview(payload);else if(action==='courseRestore:apply')value=restore.apply(payload);else if(action==='courseRestore:query')value=restore.query(payload.operationId);else if(action==='courseRestore:drafts')value=restore.drafts();else throw new Error('未知整课恢复接口');}
     else if (action.startsWith('exchange:')) {
       const exchange = session(payload.sessionId,action).exchange;
@@ -319,7 +351,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action.startsWith('sources:')) value = await session(payload.sessionId,action).sources.dispatch(action, payload);
     else if (action === 'close') {
       await Promise.all(sourceReads);
-      for (const course of courses.values()) { course.retention.stop();course.experiments.dispose(); await course.parsing.close(); course.db.close(); course.owner.close(); }
+      for (const course of courses.values()) { course.retention.stop();course.experiments.dispose(); await course.parsing.close(); course.db.close(); course.owner.close();course.identityOwner?.close(); }
       courses.clear();
     } else throw new Error('未知课程命令');
     parentPort!.postMessage({ id, ok: true, value });

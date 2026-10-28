@@ -1,10 +1,23 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { readdirSync,lstatSync,unlinkSync,existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { declaredResourceRoots as enumerateDeclared } from './resource-roots';
+import type { BackupResource } from '../backup-api';
 type RootCheck=(db:DatabaseSync,sha256:string)=>boolean;
 const extraRoots=new Map<string,RootCheck>();
+const extraEnumerators=new Map<string,(db:DatabaseSync)=>BackupResource[]>();
 /** Trusted producer modules register actual roots here; never an IPC/evaluation surface. */
-export function registerRetentionResourceRoot(name:string,check:RootCheck){extraRoots.set(name,check);}
+export function registerRetentionResourceRoot(name:string,check:RootCheck,enumerate?:(db:DatabaseSync)=>BackupResource[]){extraRoots.set(name,check);if(enumerate)extraEnumerators.set(name,enumerate);}
+/** Same trusted producer registry, with enumeration for backup instead of on-disk membership queries. */
+export function declaredResourceRoots(db:DatabaseSync){
+ const refs=enumerateDeclared(db);
+ for(const [name,enumerate] of extraEnumerators)for(const ref of enumerate(db)){
+  const old=refs.find(r=>r.sha256===ref.sha256);
+  if(old){if(old.byteLength!==null&&ref.byteLength!==null&&old.byteLength!==ref.byteLength)throw new Error('资源根长度冲突: '+name);if(old.byteLength===null)old.byteLength=ref.byteLength;old.declaredBy.push(name);}
+  else refs.push({...ref,declaredBy:[...ref.declaredBy,name]});
+ }
+ return refs.sort((a,b)=>a.sha256.localeCompare(b.sha256));
+}
 const roots=[['source_versions','payload'],['parse_artifacts','payload'],['exchange_resources','payload'],['extension_packages','manifest'],
  ['units','payload'],['personal_notes','value'],['personal_drawings','value'],['drafts','input'],['annotation_versions','block'],
  ['builtin_experiments','payload'],['builtin_formal_definitions','payload'],['extension_scene','payload'],['cg_history','payload'],

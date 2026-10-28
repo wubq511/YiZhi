@@ -1,4 +1,5 @@
 import { LearningHost } from './learning-host';
+import { registerBackupIPC } from './backup-ipc';
 import { DescriptionRuntime } from '../agent/description-search';
 import { drawingMethods } from '../drawing-api';
 import { registerExchangeIPC } from './exchange-ipc';
@@ -46,6 +47,7 @@ else {
     void agent.detect();
     host=new LearningHost(core,agent,description,courseDirectory,__dirname);
     const checkSender=host.sender;
+    registerBackupIPC(core,checkSender);
     registerExtensionProtocol(core);
     registerSourceProtocols(core, join(__dirname, 'renderer'));
     registerSourceIPC(core, checkSender);

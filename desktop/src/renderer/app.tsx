@@ -1,3 +1,4 @@
+import { BackupPanel } from './backup-panel';
 import { CourseRestorePanel } from './course-restore-panel';
 import { RetentionPanel } from './retention-panel';
 import { HistoryPanel,type HistoryPanelHandle } from './history-panel';
@@ -474,17 +475,9 @@ function App() {
     }
     setSearchReturn(() => restore);
   };
-  const status = { draft: '草稿已保留', saved: '已保存', pending: '待保存', saving: '正在保存…', error: '未保存' }[state.status];
-  return <>
-    <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen || sourcesOpen || agentOpen || notesOpen || searchOpen || exchangeOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
-      {course&&<RetentionPanel key={course.sessionId} sessionId={course.sessionId} onReturn={()=>{if(narrow)setDirectory(false);}} prepare={async()=>{
-        if(composing.current)throw new Error('请先完成中文候选输入，再管理历史与空间。');
-        const saved=await channel.current?.flush(),progress=channel.current?.progress();
-        if(!saved&&(!progress||progress.durableInputSeq<progress.inputSeq))throw new Error('当前输入尚未保留，请先重试保存。');
-        if(continuous.current&&!await continuous.current.finish()||!await flushUnitInputs(true))throw new Error('当前单元输入尚未保留，请先重试保存。');
-      }}/>}
-      {course&&graph&&<CourseRestorePanel sessionId={course.sessionId} courseId={course.courseId} units={graph.nodes.map(n=>({id:n.id,name:n.name}))} prepare={async()=>{
-        if(composing.current)throw new Error('请先完成中文候选输入，再核对整课恢复。');
+  const prepareCourseSnapshot=async()=>{
+    if(!course)throw new Error('课程尚未打开');
+        if(composing.current)throw new Error('请先完成中文候选输入，再保存课程副本。');
         await navigation.current;await writes.current;await layoutWrites.current;
         if(layoutPending.current.length||readingFailed.current)throw new Error('当前布局或阅读位置尚未保存，请先重试。');
         if(readingRef.current)await window.yizhi.setReadingState(course.sessionId,{...readingRef.current,camera:flow.getViewport()});
@@ -494,7 +487,18 @@ function App() {
         if(agentPanel.current&&!await agentPanel.current.flush())throw new Error('学习对话输入尚未确认保存。');
         if(!await flushExtensions(course.sessionId)||!await flushBuiltinExperiments(window.yizhi,course.sessionId))throw new Error('实验现场尚未确认，请先保存或恢复最近确认现场。');
         if(!await channel.current?.flush()||!await flushUnitInputs(true)||continuous.current&&!await continuous.current.finish())throw new Error('当前输入尚未持久保留，请先重试保存。');
+  };
+  const status = { draft: '草稿已保留', saved: '已保存', pending: '待保存', saving: '正在保存…', error: '未保存' }[state.status];
+  return <>
+    <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen || sourcesOpen || agentOpen || notesOpen || searchOpen || exchangeOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
+      {course&&<BackupPanel sessionId={course.sessionId} prepare={prepareCourseSnapshot} onReturn={()=>{if(narrow)setDirectory(false);}}/>}
+      {course&&<RetentionPanel key={course.sessionId} sessionId={course.sessionId} onReturn={()=>{if(narrow)setDirectory(false);}} prepare={async()=>{
+        if(composing.current)throw new Error('请先完成中文候选输入，再管理历史与空间。');
+        const saved=await channel.current?.flush(),progress=channel.current?.progress();
+        if(!saved&&(!progress||progress.durableInputSeq<progress.inputSeq))throw new Error('当前输入尚未保留，请先重试保存。');
+        if(continuous.current&&!await continuous.current.finish()||!await flushUnitInputs(true))throw new Error('当前单元输入尚未保留，请先重试保存。');
       }}/>}
+      {course&&graph&&<CourseRestorePanel sessionId={course.sessionId} courseId={course.courseId} units={graph.nodes.map(n=>({id:n.id,name:n.name}))} prepare={prepareCourseSnapshot}/>}
       {course&&graph&&<HistoryPanel ref={historyPanel} sessionId={course.sessionId} units={graph.nodes.map(n=>({id:n.id,name:n.name}))} prepare={async()=>{
         if(composing.current)throw new Error('请先完成中文候选输入，再查看或恢复历史。');
         const saved=await channel.current?.flush();
