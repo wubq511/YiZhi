@@ -85,7 +85,11 @@ export async function runStudyAcceptance(app: ElectronApplication, page: Page, m
     await metrics.time(`navigation:${id}`, () => navigateUnit(page, graph, id));
     expect(await page.locator('.reading-layer').count()).toBeLessThanOrEqual(2);
     const summary = page.locator(`article[data-unit-id="${id}"] details > summary`).first();
-    if (index % 25 === 0 && await summary.count()) { await summary.click(); disclosures++; await metrics.sample(`disclosure:${id}`); await summary.click(); }
+    if (index % 25 === 0 && await summary.count()) {
+      await revealBoardControl(page, summary); await summary.click(); disclosures++;
+      await metrics.sample(`disclosure:${id}`);
+      await revealBoardControl(page, summary); await summary.click();
+    }
     if (index % 25 === 0 || index + 1 === ids.length) await metrics.sample(`navigation:${index + 1}/${ids.length}`);
   }
   const targetDisplays = options.targetResults ? await exerciseTargetDisplays(page, options.targetResults, metrics) : { status: 'not exercised in this preparation' };
@@ -234,11 +238,11 @@ export async function runStudyAcceptance(app: ElectronApplication, page: Page, m
   await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(page.getByRole('status', { name: '阅读状态', exact: true })).toHaveText('阅读位置已保存');
-  // A navigation/focus scroll can reach the DOM before its queued reading-state receipt.
-  // Baseline the actual displayed camera after that receipt, not an older "saved" label.
+  // A navigation/focus scroll can reach React Flow before its queued reading-state receipt.
+  // CSSOM loses precision at large coordinates; compare the actual numeric viewport.
   await expect.poll(() => page.evaluate(async sessionId => {
-    const saved = await (window as any).yizhi.readingState(sessionId), matrix = new DOMMatrixReadOnly(getComputedStyle(document.querySelector('.react-flow__viewport')!).transform);
-    return !!saved?.camera && Math.abs(saved.camera.x - matrix.e) < .001 && Math.abs(saved.camera.y - matrix.f) < .001 && Math.abs(saved.camera.zoom - matrix.a) < .000001;
+    const saved = await (window as any).yizhi.readingState(sessionId), viewport = (window as any).__yizhiViewport();
+    return !!saved?.camera && saved.camera.x === viewport.x && saved.camera.y === viewport.y && saved.camera.zoom === viewport.zoom;
   }, opened.sessionId)).toBe(true);
   const readingBeforePanels = await page.evaluate(sessionId => (window as any).yizhi.readingState(sessionId), opened.sessionId);
   const panelTrace = [{ phase: 'before', state: readingBeforePanels }];
