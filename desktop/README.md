@@ -25,6 +25,8 @@ npm run test:smoke
 
 `test:electron` 在锁定 Electron 的内置 Node 中运行同一组真实 Worker／SQLite 测试；`test:smoke` 自动发现 `**/*.spec.ts`，使用 Playwright 驱动真实 Electron、公开 preload IPC 和编辑区，验证连续输入／拆合／复制与移动、公式内外撤销、独立外部更新后撤销、完整结构重开、失败保留／重试、关闭保存屏障、强杀后的草稿恢复、应用单实例与跨应用课程锁。Node 测试仍只发现 `*.test.ts`。所有写入和故障注入均使用临时课程副本。测试截图和构建产物不进入 Git。
 
+`agent-lifecycle-real.spec.ts` 的真实模型检查需显式设置 `YIZHI_REAL_EXECUTOR=1`。修改生命周期用例验证首组实际提交后停止、原收据查询、明确继续、关学习窗口与应用重开；可用 `YIZHI_REAL_MODEL` 选择实际目录中的模型、`YIZHI_REAL_CODEX_PATH` 选择已配置的真实 CLI 启动器，`YIZHI_EVIDENCE_DIR` 保存完整结果。启动器仍须运行真实 Codex app-server；协议替身不计实际模型验收。
+
 已验证运行组合为 Electron **45.0.0**、Node **24.22.0**、SQLite **3.53.4**，实际连接启用 WAL、外键和 `synchronous=FULL`。外部 Node 仅是测试驱动，不代替该 Electron 组合验收。
 
 顶栏“可控生产者 · 验证入口”连接真实 preload IPC、CourseService、Worker 和同一课程数据库。先读取前提与目标，再修改首段并等待自动保存，提交可控候选会保留旧候选并说明依据变化；“重读并整合”用当前正文重新形成候选。停止后拒绝新提交，原成功回执仍可核对。此入口是固定规则的开发验证工具；真实只读问答使用顶栏「Agent · 学习对话」，见[接入说明](docs/agent.md)。展开面板内可滚动，Escape 收起并返回入口。
