@@ -2,11 +2,12 @@
   "name": "yizhi-desktop",
   "version": "0.1.0",
   "private": true,
-  "description": "YiZhi macOS desktop — T01 single-unit delivery",
+  "description": "YiZhi offline macOS learning workspace",
   "main": "dist/main.cjs",
   "scripts": {
     "build": "node scripts/build.mjs",
     "start": "npm run build && electron .",
+    "package:mac": "node scripts/package-mac.mjs",
     "typecheck": "tsc --noEmit",
     "test": "npm run build && node scripts/run-tests.mjs",
     "test:electron": "npm run build && node scripts/run-tests.mjs --electron",
@@ -28,6 +29,7 @@
     "roughjs": "4.6.6"
   },
   "devDependencies": {
+    "@electron/packager": "20.3.0",
     "@playwright/test": "1.64.1",
     "@types/node": "24.19.2",
     "@types/react": "19.3.0",
