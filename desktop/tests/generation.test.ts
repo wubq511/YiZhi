@@ -249,12 +249,15 @@ test('generated lifecycle rollback publishes no graph heap and equal placement a
     const preview=await core.formalHistory.preview({sessionId,selection});
     const fault=new DatabaseSync(join(root,'course/course.sqlite'));
     try{
+      // Fault DDL is a second writer. Use Core's bounded lock wait so real idle
+      // retention cannot make trigger setup/teardown fail before testing rollback.
+      fault.exec('PRAGMA busy_timeout=1000');
       fault.exec("CREATE TRIGGER fail_generated_history BEFORE INSERT ON cg_history WHEN new.operation_id='fault-generated-history' BEGIN SELECT RAISE(ABORT,'generated history fault'); END");
       await assert.rejects(core.formalHistory.apply({sessionId,operationId:'fault-generated-history',preview}),/generated history fault/);
       assert.deepEqual(await core.readUnit(sessionId,unit.id),unit);
       assert.deepEqual(await core.graph(sessionId),graph);
       assert.equal(await core.formalHistory.query({sessionId,operationId:'fault-generated-history'}),null);
-    }finally{fault.exec('DROP TRIGGER fail_generated_history');fault.close();}
+    }finally{try{fault.exec('DROP TRIGGER IF EXISTS fail_generated_history');}finally{fault.close();}}
     const node=graph.layout.nodes.find(item=>item.unitId===unit.id)!;
     const before={unitId:unit.id,x:node.x,y:node.y,width:node.width},away={...before,x:node.x+80};
     await core.drawings.place({sessionId,operationId:'placement-away',before,after:away});
