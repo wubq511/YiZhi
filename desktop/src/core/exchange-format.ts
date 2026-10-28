@@ -48,7 +48,7 @@ export interface Package {
     note: import('../annotation-api').PersonalNote;
     lineage: import('../annotation-api').AnchorLocation[][];
   }>;
-  annotationVersions: Array<{ block_id: string; version: string; revision: number; block: ReadingBlock }>;
+  annotationVersions: Array<{ block_id: string; version: string; revision: number; block: ReadingBlock; unit_id?: string }>;
 }
 /** Portable relative names, exact case/NFC spelling. Host absolute directory names are not package paths. */
 function relative(name: unknown): asserts name is string {
@@ -379,6 +379,7 @@ export function validate(p: Package) {
   for (const v of p.annotationVersions) {
     if (
       !id(v.block_id) ||
+      (v.unit_id !== undefined && !id(v.unit_id)) ||
       v.block.id !== v.block_id ||
       !['paragraph', 'formula'].includes(v.block.kind) ||
       !Number.isSafeInteger(v.revision) ||
@@ -393,6 +394,7 @@ export function validate(p: Package) {
     if (
       !n ||
       !p.scope.unitIds.includes(n.original?.unitId) ||
+      (n.current?.unitId !== undefined && !p.scope.unitIds.includes(n.current.unitId)) ||
       typeof n.text !== 'string' ||
       !Number.isSafeInteger(n.version) ||
       n.version < 1 ||

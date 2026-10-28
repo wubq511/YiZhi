@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join,resolve } from 'node:path';
 import { resizeBoardWindow, revealBoardControl } from './board-test-helpers';
 
-test('small actual Electron window follows real tool groups, keeps student takeover, displays partial receipts and reopens without a second body',async()=>{
+test('small actual Electron window follows real tool groups, keeps student takeover, displays waiting and stopped receipts and reopens without a second body',async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-mutation-ui-')),fixture=resolve('dist/tests/agent-executor-fixture.cjs');await chmod(fixture,0o755);
  const launch=()=>electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile'),YIZHI_CODEX_PATH:fixture,YIZHI_FIXTURE_MODE:'mutation'}});
  let app=await launch();
@@ -26,8 +26,8 @@ test('small actual Electron window follows real tool groups, keeps student takeo
   const liveCamera=await matrix();
   await expect.poll(()=>page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return (await b.readingState(c.sessionId)).camera.y;})).toBeCloseTo(liveCamera.y,3);
   const camera=await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return (await b.readingState(c.sessionId)).camera;});
-  await expect(page.getByRole('status',{name:'回答状态'})).toContainText('部分完成',{timeout:15000});
-  await expect(page.getByRole('status',{name:'修改跟随'})).toHaveText('修改已结束');
+  await expect(page.getByRole('status',{name:'回答状态'})).toContainText('等待整合',{timeout:15000});
+  await expect(page.getByRole('status',{name:'修改跟随'})).toHaveText('已由你控制视野');
   await expect(page.getByRole('textbox',{name:'编辑首段正文'})).toContainText('受控协议回归');
   await expect(page.getByRole('status',{name:'回答状态'})).toContainText('草稿候选');
   const actual=await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return {state:await b.readingState(c.sessionId),unit:c.unit,graph:await b.graph(c.sessionId)};});expect(actual.state.camera).toEqual(camera);const finalCamera=await matrix();expect(finalCamera.x).toBeCloseTo(liveCamera.x,3);expect(finalCamera.y).toBeCloseTo(liveCamera.y,3);expect(finalCamera.zoom).toBeCloseTo(liveCamera.zoom,6);
@@ -35,8 +35,11 @@ test('small actual Electron window follows real tool groups, keeps student takeo
   await page.getByRole('button',{name:'收起对话',exact:true}).click();
   const summary=page.locator('[data-agent-unit="KU-001"] details summary').first();await revealBoardControl(page,summary);await summary.click();await summary.click();
   expect((await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return b.graph(c.sessionId);})).layout.nodes.find((n:any)=>n.unitId==='KU-001')).toEqual(baseline);
+  await page.getByRole('button',{name:'Agent · 学习对话',exact:true}).click();
+  await page.getByRole('button',{name:'停止任务',exact:true}).click();
+  await expect(page.getByRole('status',{name:'回答状态'})).toContainText('已停止');
   await app.close();app=await launch();page=await app.firstWindow();await resizeBoardWindow(app,page);
-  await page.getByRole('button',{name:'Agent · 学习对话',exact:true}).click();await expect(page.getByRole('status',{name:'回答状态'})).toContainText('部分完成');
+  await page.getByRole('button',{name:'Agent · 学习对话',exact:true}).click();await expect(page.getByRole('status',{name:'回答状态'})).toContainText('已停止');
   expect((await page.evaluate(()=>(window as any).yizhi.open())).unit).toEqual(actual.unit);
   await page.getByRole('button',{name:'非十进制与十进制互转',exact:true}).click();
   await page.getByRole('button',{name:'查看实际修改',exact:true}).click();

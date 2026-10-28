@@ -66,6 +66,7 @@ test('installed CLI interprets a new-target guidance and schedules its own fixed
     await page.evaluate(async({original,blockId})=>{const b=window.yizhi,c=await b.open();await b.agent.submit({sessionId:c.sessionId,conversationId:original.conversationId,generation:1,operationId:crypto.randomUUID(),intent:'modify',model:'gpt-6-luna',target:{unitId:'KU-057'},text:`明确的新事项：请在提交目标KU-057的段落${blockId}末尾加上“新事项补充：先确定选择位顺序。”，保留原文。这与原位权问答独立；原任务保持只读，请用yizhi_queue_guidance以本消息deliveryId安排独立固定目标任务，再实际完成该修改。`});},{original,blockId:paragraph.id});
     await expect.poll(async()=>{const v=await view(page);return v.tasks.length===2&&v.tasks.every(t=>t.status==='completed');},{timeout:100000}).toBe(true);
     const done=await view(page);evidence.done=done;
+    expect(done.toolFacts.filter(t=>t.taskId===done.tasks[1].id&&t.name==='yizhi_queue_guidance')).toHaveLength(0);
     expect(done.tasks[0].snapshot.target.unitId).toBe('KU-001');expect(done.tasks[0].snapshot.intent).toBe('question');expect(done.tasks[0].groups??[]).toHaveLength(0);
     expect(done.tasks[1].snapshot.target.unitId).toBe('KU-057');expect(done.tasks[1].snapshot.intent).toBe('modify');expect(done.tasks[1].guidedFrom?.taskId).toBe(original.id);
     expect(done.toolFacts.some(t=>t.taskId===original.id&&t.name==='yizhi_queue_guidance')).toBe(true);

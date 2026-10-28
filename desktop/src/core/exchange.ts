@@ -387,8 +387,8 @@ export class Exchange {
         );
       for (const v of p.annotationVersions)
         register(
-          'INSERT OR IGNORE INTO annotation_versions VALUES(?,?,?,?)',
-          [v.block_id, v.version, v.revision, json(v.block)],
+          'INSERT OR IGNORE INTO annotation_versions(block_id,version,revision,block,unit_id) VALUES(?,?,?,?,?)',
+          [v.block_id, v.version, v.revision, json(v.block), v.unit_id ?? 'KU-001'],
           'annotation-version',
           v.block_id + ':' + v.version,
           v,
