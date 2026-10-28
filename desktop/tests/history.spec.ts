@@ -1,3 +1,5 @@
+import type { DatabaseSync } from 'node:sqlite';
+import { openFaultDatabase } from './fault-database';
 import { test,expect,_electron as electron } from '@playwright/test';
 import { mkdtemp,rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -50,7 +52,6 @@ test('real history UI expands real differences, previews read-only and restores 
   await expect(page.getByRole('textbox',{name:'编辑首段正文'})).toHaveText('当前新版讲解');
  }finally{await app.close();await rm(root,{recursive:true,force:true});}
 });
-import { DatabaseSync } from 'node:sqlite';
 import { revealBoardControl } from './board-test-helpers';
 test('real incomplete formula remains a draft through failed history restore, exact retry, narrow preview and reopen',async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-t21-draft-ui-')),directory=join(root,'course');
@@ -71,7 +72,7 @@ test('real incomplete formula remains a draft through failed history restore, ex
   await expect(dialog.getByRole('region',{name:'旧版只读预览'})).toContainText('草稿已保留');
   const before=await page.evaluate(async()=>(await(window as any).yizhi.open()).drafts);
   expect(before[0].input.formulaDrafts[0].latex).toContain('placeholder');
-  fault=new DatabaseSync(join(directory,'course.sqlite'));
+  fault=openFaultDatabase(join(directory,'course.sqlite'));
   fault.exec("CREATE TRIGGER history_ui_fault BEFORE INSERT ON cg_history BEGIN SELECT RAISE(ABORT,'history UI disk failure'); END");
   await dialog.getByRole('button',{name:'恢复此版本',exact:true}).click();await expect(dialog.getByRole('alert')).toContainText('history UI disk failure');
   expect((await page.evaluate(async()=>(await(window as any).yizhi.open()).unit.reading.blocks[0].payload.text))).toBe('恢复前新讲解');
@@ -133,7 +134,7 @@ test('active B history preserves a failed input tail before preview and restores
   const block=original.other.reading.blocks.find((b:any)=>b.kind==='paragraph');
   const paragraph=editor.locator(`[data-block-id="${block.id}"]`);
   await revealBoardControl(page,paragraph);await paragraph.click();await page.keyboard.press('Home');
-  fault=new DatabaseSync(join(directory,'course.sqlite'));
+  fault=openFaultDatabase(join(directory,'course.sqlite'));
   fault.exec("CREATE TRIGGER history_b_draft_fault BEFORE INSERT ON drafts BEGIN SELECT RAISE(ABORT,'active B input disk fault'); END");
   await page.keyboard.insertText('历史保留当前单元尾部：');
   await expect(reader.getByRole('status',{name:'当前单元保存状态'})).toHaveText('未保存');

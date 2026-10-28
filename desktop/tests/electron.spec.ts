@@ -1,9 +1,10 @@
+import type { DatabaseSync } from 'node:sqlite';
+import { openFaultDatabase } from './fault-database';
 import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 import type { ElectronApplication, Locator, Page } from '@playwright/test';
 
 async function reveal(window: Page, target: Locator) {
@@ -92,7 +93,7 @@ test('real Electron IPC saves, retains failed input, retries, drains quit, reope
       await contender.evaluate(({ app }) => app.quit());
       await expect.poll(() => contenderProcess.exitCode, { timeout: 3000 }).not.toBeNull();
     } finally { if (contenderProcess.exitCode === null) contenderProcess.kill('SIGKILL'); }
-    fault = new DatabaseSync(join(root, 'course/course.sqlite'));
+    fault = openFaultDatabase(join(root, 'course/course.sqlite'));
     fault.exec("CREATE TRIGGER reject_write BEFORE UPDATE ON units BEGIN SELECT RAISE(ABORT, 'storage unavailable'); END");
     await editor.fill('保存失败后保留这段输入，重试仍是它。');
     await expect(window.getByRole('status', { name: '保存状态' })).toContainText('未保存');
@@ -399,7 +400,7 @@ test('a rejected reading position stays visible and can be retried', async () =>
     const window = await app.firstWindow();
     await window.emulateMedia({ reducedMotion: 'reduce' });
     await expect(window.getByRole('button', { name: '数制与数制转换', exact: true }).first()).toBeVisible();
-    fault = new DatabaseSync(join(root, 'course/course.sqlite'));
+    fault = openFaultDatabase(join(root, 'course/course.sqlite'));
     fault.exec("CREATE TRIGGER reject_reading BEFORE INSERT ON reading_state BEGIN SELECT RAISE(ABORT, 'reading storage unavailable'); END");
     await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     await expect(window.getByRole('status', { name: '阅读状态' })).toContainText('未保存');

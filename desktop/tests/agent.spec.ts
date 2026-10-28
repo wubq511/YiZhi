@@ -1,4 +1,4 @@
-import { DatabaseSync } from 'node:sqlite';
+import { openFaultDatabase } from './fault-database';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, chmod, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -87,7 +87,7 @@ test('missing executor retains offline reading; failed composer save blocks clos
     const page = await app.firstWindow(); await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click(); await openAgent(page);
     await expect(page.getByText(/生成暂不可用/)).toBeVisible(); await expect(page.getByRole('button', { name: '发送问题' })).toBeDisabled();
     await page.getByRole('textbox', { name: '学习对话草稿' }).fill('离线留下问题'); await expect(page.getByRole('status', { name: '对话草稿保存' })).toHaveText('草稿已保存');
-    const fault = new DatabaseSync(join(root, 'course/course.sqlite'));
+    const fault = openFaultDatabase(join(root, 'course/course.sqlite'));
     try {
       fault.exec("CREATE TRIGGER fail_composer BEFORE UPDATE OF draft ON agent_conversations BEGIN SELECT RAISE(ABORT,'composer disk fault'); END");
       await page.getByRole('textbox', { name: '学习对话草稿' }).fill('未保存尾部必须保留');

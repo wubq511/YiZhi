@@ -1,3 +1,5 @@
+import type { DatabaseSync } from 'node:sqlite';
+import { openFaultDatabase } from './fault-database';
 import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -228,10 +230,10 @@ test('held displayed selection creates an old-version orphan and explicit reasso
 });
 
 test('actual note autosave failure retains newer input and retries the original operation before confirming the latest text', async () => {
-  const { DatabaseSync } = await import('node:sqlite');
+
   const root = await mkdtemp(join(tmpdir(), 'yizhi-note-failure-'));
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
-  let fault: InstanceType<typeof DatabaseSync> | undefined;
+  let fault: DatabaseSync | undefined;
   try {
     const page = await app.firstWindow(); await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     const editor = page.getByRole('textbox', { name: '连续编辑正文', exact: true });
@@ -241,7 +243,7 @@ test('actual note autosave failure retains newer input and retries the original 
     await text.fill('已经保存的笔记');
     await expect(page.getByRole('status', { name: '批注同步状态' })).toHaveText('已保存');
     const before = await page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return { c, notes: await b.annotations.list({ sessionId: c.sessionId }) }; });
-    fault = new DatabaseSync(join(root, 'course', 'course.sqlite'));
+    fault = openFaultDatabase(join(root, 'course', 'course.sqlite'));
     fault.exec("CREATE TRIGGER fail_note_ui BEFORE INSERT ON annotation_operations BEGIN SELECT RAISE(ABORT, 'note disk failure'); END");
     await text.fill('保存失败时的第一笔');
     await expect(page.getByRole('status', { name: '批注同步状态' })).toHaveText('未保存');

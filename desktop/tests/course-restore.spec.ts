@@ -1,3 +1,5 @@
+import type { DatabaseSync } from 'node:sqlite';
+import { openFaultDatabase } from './fault-database';
 import { test,expect,_electron as electron } from '@playwright/test';
 import { mkdtemp,rm,chmod } from 'node:fs/promises';
 import { join,resolve } from 'node:path';
@@ -130,7 +132,6 @@ test('whole-course recovery interrupts an actual host protocol turn while its or
  }finally{await app.close();await rm(root,{recursive:true,force:true});}
 });
 
-import { DatabaseSync } from 'node:sqlite';
 test('selected user states and the original recovery identity survive a real SQL failure and app restart before explicit retry',async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-t22-ui-retry-')),directory=join(root,'course'),core=new CourseService(resolve('dist/worker.cjs'));
  const o=await core.open(directory),n=(await core.graph(o.sessionId)).layout.nodes.find(n=>n.unitId==='KU-001')!;
@@ -145,7 +146,7 @@ test('selected user states and the original recovery identity survive a real SQL
   await page.getByRole('button',{name:'整课历史恢复',exact:true}).click();let dialog=page.getByRole('dialog',{name:'整课历史恢复',exact:true});
   await dialog.getByLabel('历史时间点').selectOption('ui-state-anchor');await dialog.getByLabel('恢复所选单元的布局').check();await dialog.getByLabel('恢复所选单元的掌握状态').check();
   await dialog.getByRole('button',{name:'预览整课所选范围',exact:true}).click();await expect(dialog.getByRole('region',{name:'整课恢复影响'})).toContainText('掌握状态按所选时间恢复');
-  fault=new DatabaseSync(join(directory,'course.sqlite'));fault.exec("CREATE TRIGGER ui_course_restore_fault BEFORE INSERT ON cg_history BEGIN SELECT RAISE(ABORT,'whole course UI disk fault'); END");
+  fault=openFaultDatabase(join(directory,'course.sqlite'));fault.exec("CREATE TRIGGER ui_course_restore_fault BEFORE INSERT ON cg_history BEGIN SELECT RAISE(ABORT,'whole course UI disk fault'); END");
   await dialog.getByRole('button',{name:'确认恢复并隔离旧任务',exact:true}).click();await expect(dialog.getByRole('alert')).toContainText('whole course UI disk fault');
   const pending=await page.evaluate(()=>JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k=>k.startsWith('yizhi-course-restore:'))!)!));
   expect((await page.evaluate(()=>(window as any).yizhi.open())).generation).toBe(1);

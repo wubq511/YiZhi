@@ -1,10 +1,11 @@
+import type { DatabaseSync } from 'node:sqlite';
+import { openFaultDatabase } from './fault-database';
 import { test,expect,_electron as electron } from '@playwright/test';
 import type { ElectronApplication,Page } from '@playwright/test';
 import { mkdtemp,rm,chmod } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join,resolve } from 'node:path';
 import { CourseService } from '../src/core/course-service';
-import { DatabaseSync } from 'node:sqlite';
 import { resizeBoardWindow,revealBoardControl } from './board-test-helpers';
 async function resize(app:ElectronApplication,page:Page){await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');const handle=await app.browserWindow(page);const size=await handle.evaluate(w=>{w.setSize(1024,688);return w.getContentSize();});await expect.poll(()=>page.evaluate(()=>[innerWidth,innerHeight])).toEqual(size);}
 async function choose(app:ElectronApplication,directory:string){await app.evaluate(({dialog,Menu},directory)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[directory]});const menu=Menu.getApplicationMenu()!.items.find(i=>i.label==='课程')!.submenu!.items[0];menu.click(undefined,undefined,undefined);},directory);}
@@ -23,7 +24,7 @@ test('explicit quit collects actual latest input in both course windows, rejects
   stage='edit first';console.log(stage);await first.bringToFront();await body(first,'第一课程最新正文尾部');await composer(first,'第一课程最新对话尾部');
   stage='edit second';console.log(stage);await second.bringToFront();await body(second,'第二课程最新正文尾部');await composer(second,'第二课程旧草稿');
   await expect(second.getByRole('status',{name:'对话草稿保存'})).toHaveText('草稿已保存');
-  fault=new DatabaseSync(join(dirs[1],'course.sqlite'));fault.exec("CREATE TRIGGER lifecycle_save_failure BEFORE UPDATE OF draft ON agent_conversations BEGIN SELECT RAISE(ABORT,'latest composer disk fault'); END");
+  fault=openFaultDatabase(join(dirs[1],'course.sqlite'));fault.exec("CREATE TRIGGER lifecycle_save_failure BEFORE UPDATE OF draft ON agent_conversations BEGIN SELECT RAISE(ABORT,'latest composer disk fault'); END");
   await second.getByRole('textbox',{name:'学习对话草稿'}).fill('第二课程失败现场新尾部');
   stage='failed quit';console.log(stage);await app.evaluate(({dialog,app})=>{dialog.showErrorBox=(title,content)=>{(globalThis as any).lastLifecycleError={title,content};};app.quit();});
   await expect.poll(()=>app.evaluate(()=>((globalThis as any).lastLifecycleError)?.title)).toBe('退出未完成');
@@ -76,7 +77,7 @@ test('an actual crashed renderer reopens confirmed composer content and disclose
  const root=await mkdtemp(join(tmpdir(),'yizhi-renderer-loss-')),app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile'),YIZHI_CODEX_PATH:resolve('dist/tests/agent-executor-fixture.cjs')}});let fault:DatabaseSync|undefined;
  try {
   let page=await app.firstWindow();await resizeBoardWindow(app,page);await composer(page,'异常前已确认草稿');await expect(page.getByRole('status',{name:'对话草稿保存'})).toHaveText('草稿已保存');
-  fault=new DatabaseSync(join(root,'course/course.sqlite'));fault.exec("CREATE TRIGGER crash_draft_fault BEFORE UPDATE OF draft ON agent_conversations BEGIN SELECT RAISE(ABORT,'unconfirmed renderer tail'); END");
+  fault=openFaultDatabase(join(root,'course/course.sqlite'));fault.exec("CREATE TRIGGER crash_draft_fault BEFORE UPDATE OF draft ON agent_conversations BEGIN SELECT RAISE(ABORT,'unconfirmed renderer tail'); END");
   await page.getByRole('textbox',{name:'学习对话草稿'}).fill('未确认尾部不能冒充保存');await expect(page.getByRole('status',{name:'对话草稿保存'})).toHaveText('草稿未保存');
   fault.exec('DROP TRIGGER crash_draft_fault');fault.close();fault=undefined;crashStage='crash';console.log(crashStage);
   await app.evaluate(({BrowserWindow})=>new Promise<void>(resolve=>{const w=BrowserWindow.getAllWindows()[0];w.webContents.once('render-process-gone',()=>resolve());setTimeout(()=>w.webContents.forcefullyCrashRenderer(),0);}));crashStage='recover menu';console.log(crashStage);

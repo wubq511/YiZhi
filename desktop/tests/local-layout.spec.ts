@@ -1,7 +1,7 @@
+import type { DatabaseSync } from 'node:sqlite';
+import { openFaultDatabase, holdFaultWriter } from './fault-database';
 import { evidencePath } from './evidence-paths';
-import { DatabaseSync } from 'node:sqlite';
-import { once } from 'node:events';
-import { Worker } from 'node:worker_threads';
+import type { Worker } from 'node:worker_threads';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -276,22 +276,8 @@ test('layout persistence failure retains the visible placement and retry confirm
   try {
     const page = await app.firstWindow();
     await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
-    fault = new DatabaseSync(join(root, 'course/course.sqlite'));
-    fault.exec('PRAGMA busy_timeout = 5000');
-    // Reproduce the real setup race: another connection may be committing when
-    // this test installs its fault. The independent thread releases the write lock.
-    setupWriter = new Worker(`
-      const { parentPort, workerData } = require('node:worker_threads');
-      const { DatabaseSync } = require('node:sqlite');
-      const db = new DatabaseSync(workerData);
-      db.exec('PRAGMA busy_timeout = 5000; BEGIN IMMEDIATE');
-      parentPort.postMessage('locked');
-      parentPort.once('message', () => setTimeout(() => {
-        db.exec('COMMIT'); db.close(); parentPort.close();
-      }, 150));
-    `, { eval: true, workerData: join(root, 'course/course.sqlite') });
-    const [ready] = await once(setupWriter, 'message');
-    expect(ready).toBe('locked');
+    fault = openFaultDatabase(join(root, 'course/course.sqlite'));
+    setupWriter = await holdFaultWriter(join(root, 'course/course.sqlite'));
     setupWriter.postMessage('release');
     fault.exec("CREATE TRIGGER reject_ui_layout BEFORE INSERT ON layout_baseline BEGIN SELECT RAISE(ABORT, 'layout storage unavailable'); END");
     const width = page.getByRole('slider', { name: '调整位置记数法与权展开宽度' });

@@ -1,3 +1,5 @@
+import type { DatabaseSync } from 'node:sqlite';
+import { openFaultDatabase } from './fault-database';
 import { evidencePath } from './evidence-paths';
 import {resizeBoardWindow,revealBoardControl} from './board-test-helpers';
 import {test,expect,_electron as electron} from '@playwright/test';
@@ -198,8 +200,8 @@ test('new input during an actual target-frame migration invalidates its held res
 });
 
 test('an actual confirmation disk fault stops browser steps and offers explicit recovery while retaining the last saved scene',async()=>{
- const {DatabaseSync}=await import('node:sqlite');const root=await mkdtemp(join(tmpdir(),'yizhi-extension-disk-fault-'));
- const app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});const child=app.process();let fault:InstanceType<typeof DatabaseSync>|undefined;
+ const root=await mkdtemp(join(tmpdir(),'yizhi-extension-disk-fault-'));
+ const app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});const child=app.process();let fault:DatabaseSync|undefined;
  try{
   const page=await app.firstWindow();await resizeBoardWindow(app,page);await page.getByRole('button',{name:'数制与数制转换',exact:true}).click();await revealBoardControl(page,page.getByRole('button',{name:'奇偶校验扩展实验',exact:true}));
   await page.getByRole('button',{name:'奇偶校验扩展实验',exact:true}).click();
@@ -209,7 +211,7 @@ test('an actual confirmation disk fault stops browser steps and offers explicit 
   await lab.getByRole('button',{name:'开始模拟',exact:true}).click();
   const read=()=>page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return b.extensions.read({sessionId:c.sessionId});});
   await expect.poll(async()=>(await read()).state.step).toBeGreaterThan(0);
-  fault=new DatabaseSync(join(root,'course/course.sqlite'));fault.exec("CREATE TRIGGER extension_ui_disk_fault BEFORE INSERT ON save_events BEGIN SELECT RAISE(ABORT,'actual extension disk fault'); END");
+  fault=openFaultDatabase(join(root,'course/course.sqlite'));fault.exec("CREATE TRIGGER extension_ui_disk_fault BEFORE INSERT ON save_events BEGIN SELECT RAISE(ABORT,'actual extension disk fault'); END");
   await expect(lab.getByRole('status',{name:'扩展保存状态'})).toHaveText('暂停未完成');
   const confirmed=(await read()).state,issued=await frame.evaluate(()=>(window as any).__issuedSteps);
   await page.waitForTimeout(700);expect(await frame.evaluate(()=>(window as any).__issuedSteps)).toBe(issued);expect((await read()).state).toEqual(confirmed);

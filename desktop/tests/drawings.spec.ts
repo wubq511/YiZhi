@@ -1,3 +1,5 @@
+import type { DatabaseSync } from 'node:sqlite';
+import { openFaultDatabase } from './fault-database';
 import { evidencePath } from './evidence-paths';
 import { resizeBoardWindow } from './board-test-helpers';
 import { test, expect, _electron as electron } from '@playwright/test';
@@ -193,11 +195,11 @@ test('body, MathLive, personal note and conversation input consume their own sho
 });
 
 test('actual save failure retains the unconfirmed shape, blocks normal close and retries the same gesture exactly once',async()=>{
-  const {DatabaseSync}=await import('node:sqlite');
-  const root=await mkdtemp(join(tmpdir(),'yizhi-drawing-failure-')),app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});let fault:InstanceType<typeof DatabaseSync>|undefined;let complete=false;
+
+  const root=await mkdtemp(join(tmpdir(),'yizhi-drawing-failure-')),app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});let fault:DatabaseSync|undefined;let complete=false;
   try{
     const page=await app.firstWindow();await resizeBoardWindow(app,page);await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');
-    fault=new DatabaseSync(join(root,'course','course.sqlite'));fault.exec("CREATE TRIGGER drawing_ui_fail BEFORE INSERT ON drawing_operations BEGIN SELECT RAISE(ABORT,'drawing UI save failure'); END");
+    fault=openFaultDatabase(join(root,'course','course.sqlite'));fault.exec("CREATE TRIGGER drawing_ui_fail BEFORE INSERT ON drawing_operations BEGIN SELECT RAISE(ABORT,'drawing UI save failure'); END");
     await page.getByRole('button',{name:'绘图标注',exact:true}).click();await page.getByRole('button',{name:'个人箭头',exact:true}).click();const board=(await page.locator('main.board').boundingBox())!;await drag(page,board.x+450,board.y+150);
     await expect(page.getByRole('status',{name:'绘图同步状态'})).toHaveText('未保存');await expect(page.locator('.drawing-preview')).toHaveCount(1);expect((await snapshot(page)).history).toHaveLength(0);
     await app.evaluate(({BrowserWindow,ipcMain})=>{(globalThis as any).drawingCloseResult=null;ipcMain.once('window:close-result',(_event,result)=>{(globalThis as any).drawingCloseResult=result.saved;});BrowserWindow.getAllWindows()[0].close();});await expect.poll(()=>app.evaluate(()=>(globalThis as any).drawingCloseResult)).toBe(false);await expect(page.getByRole('button',{name:'重试保存绘图'})).toBeVisible();expect(app.windows()).toHaveLength(1);
