@@ -22,6 +22,8 @@
 .agent-task p { margin: 4px 0; }
 .agent-composer { flex: 0 0 auto; max-height: calc(100% - 180px); overflow-y: auto; margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e5eb; }
 .agent-composer label { display: block; }
+.agent-composer-options { display: flex; align-items: end; gap: 8px; }
+.agent-composer-options label { flex: 1; min-width: 0; }
 .agent-composer textarea { width: 100%; min-height: 92px; height: 112px; max-height: 30vh; resize: vertical; margin: 8px 0; border: 1px solid #b6c3cf; border-radius: 8px; padding: 10px; font: 14px/1.75 "PingFang SC", system-ui, sans-serif; color: #27343e; background: #fffefa; caret-color: #6965db; }
 .agent-composer textarea::placeholder { color: #687080; }
 .agent-panel ::selection { color: #27343e; background: #eeedff; }

@@ -51,7 +51,8 @@ test('persisted long conversation keeps the working composer usable at desktop a
     }
     for (const layout of observations) {
       const visibleBottom = Math.min(layout.panel.bottom, layout.composer.bottom, layout.inner.height);
-      expect(layout.messages.bottom - layout.messages.top).toBeGreaterThan(40);
+      // Enough room to read a message label and several lines while composing.
+      expect(layout.messages.bottom - layout.messages.top).toBeGreaterThan(100);
       for (const control of [layout.textarea, layout.mode, layout.model, layout.send]) {
         expect(control.top).toBeGreaterThanOrEqual(layout.panel.top);
         expect(control.bottom).toBeLessThanOrEqual(visibleBottom);
