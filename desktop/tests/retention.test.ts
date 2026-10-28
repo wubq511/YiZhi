@@ -181,6 +181,25 @@ test('storage categories distinguish disposable search cache from history and cl
   assert.ok((await core.search.query({...c,query:'Cache rebuildable'})).hits.length);
  }finally{await core.close();await rm(root,{recursive:true,force:true});}
 });
+test('idle retention still reclaims superseded search epochs while current unindexed content stays searchable',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-retention-search-epochs-')),core=new CourseService(resolve('dist/worker.cjs'),{retentionScheduling:{manual:true}});
+ try{
+  const c=await core.open(root);
+  await core.save({...c,operationId:'indexed-old-epoch',inputSeq:1,baseRevision:1,blockId:A,text:'Superseded searchable epoch'});
+  let index=await core.search.rebuild({...c,batchSize:8});for(let i=0;index.pending&&i<100;i++)index=await core.search.rebuild({...c,batchSize:8});
+  assert.equal(index.pending,0);assert.equal((await core.search.query({...c,query:'Superseded searchable epoch'})).hits.length,1);
+  const bytes=(await core.retention.space(c)).categories.find(x=>x.id==='cache')!.bytes;
+  await core.save({...c,operationId:'pending-new-epoch',inputSeq:2,baseRevision:2,blockId:A,text:'Current unindexed replacement'});
+  let cleanup=await core.retention.run({...c,limit:16});for(let i=0;cleanup.pending&&i<100;i++)cleanup=await core.retention.run({...c,limit:16});
+  assert.equal(cleanup.pending,false);
+  assert.ok((await core.retention.space(c)).categories.find(x=>x.id==='cache')!.bytes<bytes,'superseded cache is reclaimed without an explicit clear or rebuild');
+  assert.equal((await core.search.query({...c,query:'Superseded searchable epoch'})).hits.length,0);
+  const current=await core.search.query({...c,query:'Current unindexed replacement'});
+  assert.equal(current.hits.length,1);assert.ok(current.status.pending>0);assert.ok(current.directChecked>0);
+  index=await core.search.rebuild({...c,batchSize:8});assert.equal(index.pending,0);
+  assert.equal((await core.search.query({...c,query:'Current unindexed replacement'})).hits.length,1);
+ }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
 test('the legacy whole-unit cache becomes an explicit provenance manifest after its window while current content, unknown metadata and registered resources remain readable',async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-retention-legacy-')),clock=new SharedArrayBuffer(8),t=Date.parse('2030-01-01T00:00:00Z');Atomics.store(new BigInt64Array(clock),0,BigInt(t));
  const core=new CourseService(resolve('dist/worker.cjs'),{retentionScheduling:{clock,manual:true}});

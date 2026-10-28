@@ -123,6 +123,39 @@ test('sources search pins actual immutable PDF page projections, isolates missin
   } finally { await core.close(); await rm(root, { recursive: true, force: true }); }
 });
 
+test('exact-original repair preserves searchable pages when retention runs between source indexing batches', async () => {
+  const { sourceFixture } = await import('./source-fixture');
+  const { writeFile } = await import('node:fs/promises');
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-search-locate-repair-'));
+  const core = new CourseService(resolve('dist/worker.cjs'), { retentionScheduling: { manual: true } });
+  try {
+    const path = join(root, 'original.pdf'); await sourceFixture(path, 'Literal damaged original evidence');
+    const c = await core.open(join(root, 'course'));
+    const version = (await core.sources.importFile({ sessionId: c.sessionId, generation: 1, operationId: 'locate-repair-source', path, title: '待修复资料' })).version;
+    let status = await core.search.rebuild({ sessionId: c.sessionId, batchSize: 2 });
+    for (let i = 0; status.pending && i < 100; i++) status = await core.search.rebuild({ sessionId: c.sessionId, batchSize: 2 });
+    assert.equal(status.pending, 0);
+    const find = () => core.search.query({ sessionId: c.sessionId, query: 'damaged original' });
+    const before = await find(); assert.equal(before.hits.length, 1);
+    await writeFile(join(root, 'course', 'resources', version.sha256), 'damaged bytes');
+    await assert.rejects(core.search.locate({ sessionId: c.sessionId, hit: before.hits[0] }), /损坏/);
+    assert.ok((await core.search.status({ sessionId: c.sessionId })).unreadable.some(e => e.entityId === version.versionId));
+    const { generation } = await core.sources.list({ sessionId: c.sessionId });
+    await core.sources.repairFile({ sessionId: c.sessionId, generation, operationId: 'locate-repair', versionId: version.versionId, path });
+    status = await core.search.rebuild({ sessionId: c.sessionId, retryErrors: true, batchSize: 2 });
+    assert.ok(status.pending > 0, 'the second source page still needs a separate indexing batch');
+    // Run the real idle maintenance at the same public boundary used by the host.
+    let maintenance = await core.retention.run({ sessionId: c.sessionId, limit: 16 });
+    for (let i = 0; maintenance.pending && i < 100; i++) maintenance = await core.retention.run({ sessionId: c.sessionId, limit: 16 });
+    assert.equal(maintenance.pending, false);
+    for (let i = 0; status.pending && i < 100; i++) status = await core.search.rebuild({ sessionId: c.sessionId, batchSize: 2 });
+    assert.equal(status.pending, 0); assert.deepEqual(status.unreadable, []); assert.deepEqual(status.indexErrors, []);
+    const repaired = await find();
+    assert.equal(repaired.hits.length, 1, 'exact-original repair must restore the retained source hit');
+    assert.deepEqual(await core.search.locate({ sessionId: c.sessionId, hit: repaired.hits[0] }), before.hits[0]);
+  } finally { await core.close(); await rm(root, { recursive: true, force: true }); }
+});
+
 test('pending coverage is explicit and bounded; independent course saving proceeds between real source indexing batches', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-search-bounds-')); const core = new CourseService(resolve('dist/worker.cjs'));
   try {
