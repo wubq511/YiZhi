@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /** Isolated protocol fixture for regression tests only; never an acceptance executor. */
 import { createInterface } from 'node:readline';
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, watch, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 const args = process.argv.slice(2), mode = process.env.YIZHI_FIXTURE_MODE;
 if (args.includes('--version')) { console.log('codex-cli 0.163.0-fixture'); process.exit(0); }
 if (args.includes('generate-json-schema')) {
@@ -14,6 +14,15 @@ const send = (message: unknown) => process.stdout.write(JSON.stringify(message) 
 const notify = (method: string, params: any) => send({ method, params });
 let threadSeq = 0, turnSeq = 0, toolSeq = 100, snapshot: any, active: any;
 const toolResults = new Map<number, (value: any) => void>();
+function waitForMutationRelease(path: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const watcher = watch(dirname(path), () => {
+      if (existsSync(path)) { watcher.close(); resolve(); }
+    });
+    watcher.on('error', error => { watcher.close(); reject(error); });
+    if (existsSync(path)) { watcher.close(); resolve(); }
+  });
+}
 function tool(tool: string, arguments_: unknown) {
   const id = ++toolSeq;
   return new Promise<any>(resolve => { toolResults.set(id, resolve); send({ id, method: 'item/tool/call', params: { ...active, callId: `call-${id}`, tool, arguments: arguments_ } }); });
@@ -49,7 +58,9 @@ async function receive(m: any) {
         const other=JSON.parse((await tool('yizhi_read_edit_context',{})).contentItems[0].text);
         const paragraph=context.content.reading.blocks.find((b:any)=>b.kind==='paragraph'),example=context.content.reading.blocks.find((b:any)=>b.kind==='example');
         const input={operationId:'controlled-group1',basisId:context.basisId,conclusionOrMethodChanged:false,updates:[{blockId:paragraph.id,text:'受控协议回归：位置记数法按位权计算。'}],moves:[{blockId:example.id,beforeId:paragraph.id}],layout:context.context.layout.map((n:any)=>({unitId:n.unitId,x:n.x+24,y:n.y+36,width:n.width}))};
-        await tool('yizhi_apply_group',input); await new Promise(r=>setTimeout(r,1400));
+        await tool('yizhi_apply_group',input);
+        if (process.env.YIZHI_MUTATION_RELEASE) await waitForMutationRelease(process.env.YIZHI_MUTATION_RELEASE);
+        else await new Promise(r=>setTimeout(r,1400));
         await tool('yizhi_apply_group',{...input,operationId:'controlled-group2',basisId:other.basisId});
       } else {
         const denied=await tool('yizhi_read_edit_context',{});if(denied.success)throw new Error('QA acquired mutation');
@@ -60,12 +71,14 @@ async function receive(m: any) {
     notify('item/agentMessage/delta', { ...identity, itemId: 'answer', delta: partial });
     if (mode === 'disconnect') { setTimeout(() => process.exit(17), 80); return; }
     if (mode === 'malformed') { process.stdout.write('not-json\n'); return; }
-    setTimeout(() => {
+    const complete = () => {
       notify('item/completed', { ...identity, item: { type: 'agentMessage', id: 'answer', text: full } });
       notify('item/agentMessage/delta', { ...identity, itemId: 'answer', delta: 'LATE DUPLICATE' });
       notify('item/completed', { ...identity, item: { type: 'agentMessage', id: 'answer', text: full } });
       notify('turn/completed', { threadId: identity.threadId, turn: { id: identity.turnId, status: mode === 'failed' ? 'failed' : 'completed', error: mode === 'failed' ? { message: 'provider failed precisely', codexErrorInfo: 'other' } : null } });
       notify('item/agentMessage/delta', { ...identity, itemId: 'answer', delta: 'AFTER FINISH' });
-    }, mode === 'linger' ? 3000 : 800);
+    };
+    if (mode === 'mutation' && process.env.YIZHI_MUTATION_RELEASE) complete();
+    else setTimeout(complete, mode === 'linger' ? 3000 : 800);
   }
 }

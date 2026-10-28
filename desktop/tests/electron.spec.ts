@@ -369,12 +369,21 @@ test('selection and hand tools offer distinct canvas drag modes', async () => {
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const window = await app.firstWindow();
+    await expect(window.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
     const select = window.getByRole('button', { name: '选择工具' });
     const hand = window.getByRole('button', { name: '手形工具' });
     const board = (await window.locator('main.board').boundingBox())!;
     const transform = () => window.locator('.react-flow__viewport').evaluate(el => getComputedStyle(el).transform);
-    const drag = async () => { await window.mouse.move(board.x + 40, board.y + 120); await window.mouse.down(); await window.mouse.move(board.x + 100, board.y + 180, { steps: 4 }); await window.mouse.up(); };
     await select.click(); await expect(select).toHaveAttribute('aria-pressed', 'true');
+    // Start on empty pane, clear of edges that can auto-pan during a selection drag.
+    const origin = await window.evaluate(({ x, y, width, height }) => {
+      const clear = (px: number, py: number) => document.elementFromPoint(px, py)?.classList.contains('react-flow__pane');
+      for (let py = y + 80; py < y + height - 80; py += 24)
+        for (let px = x + 80; px < x + width - 140; px += 24)
+          if ([0, 15, 30, 45, 60].every(step => clear(px + step, py))) return { x: px, y: py };
+      throw new Error('No clear pane path for canvas drag');
+    }, board);
+    const drag = async () => { await window.mouse.move(origin.x, origin.y); await window.mouse.down(); await window.mouse.move(origin.x + 60, origin.y, { steps: 4 }); await window.mouse.up(); };
     const before = await transform(); await drag(); expect(await transform()).toBe(before);
     await hand.click(); await expect(hand).toHaveAttribute('aria-pressed', 'true');
     await drag(); await expect.poll(transform).not.toBe(before);
