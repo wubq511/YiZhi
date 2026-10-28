@@ -2,10 +2,11 @@ import type { DatabaseSync } from 'node:sqlite';
 import { openFaultDatabase } from './fault-database';
 import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import type { ElectronApplication, Locator, Page } from '@playwright/test';
+import { resizeBoardWindow } from './board-test-helpers';
 
 async function reveal(window: Page, target: Locator) {
   await expect(window.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
@@ -19,6 +20,18 @@ async function reveal(window: Page, target: Locator) {
     await window.waitForTimeout(30);
   }
   throw new Error('无法通过画板平移找到阅读位置');
+}
+async function sourcePointerState(target: Locator) {
+  return target.evaluate(el => {
+    const r=el.getBoundingClientRect(),board=document.querySelector('main.board')!,b=board.getBoundingClientRect();
+    const points=[[r.x+r.width/2,r.y+r.height/2],[r.left+2,r.top+2],[r.right-2,r.top+2],[r.left+2,r.bottom-2],[r.right-2,r.bottom-2]];
+    const inside=r.left>=b.left&&r.right<=b.right&&r.top>=b.top&&r.bottom<=b.bottom;
+    const hits=points.map(([x,y])=>document.elementFromPoint(x,y));
+    return {ready:inside&&hits.every(hit=>!!hit&&el.contains(hit)),
+      box:{x:r.x,y:r.y,width:r.width,height:r.height},board:{x:b.x,y:b.y,width:b.width,height:b.height},
+      nativeScroll:[board.scrollLeft,board.scrollTop],viewport:[innerWidth,innerHeight],visible:document.visibilityState,focused:document.hasFocus(),
+      hits:hits.map(n=>n?{tag:n.tagName,classes:String(n.className),block:n.getAttribute('data-block-id')}:null)};
+  });
 }
 import { spawn } from 'node:child_process';
 
@@ -328,13 +341,29 @@ test('the local device source opens and returns focus to its reading context', a
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const window = await app.firstWindow();
+    await resizeBoardWindow(app, window, 1024, 600);
     await window.getByRole('button', { name: '复用器与分配器', exact: true }).click();
     await window.getByRole('navigation', { name: '课程目录' }).getByRole('button', { name: 'MUX 器件、级联与扩展' }).click();
     const source = window.getByRole('button', { name: '查看 TI 74153 原页', includeHidden: true });
-    await reveal(window, source); await source.click();
-    await expect(window.getByRole('dialog', { name: 'TI 74153 原页' })).toBeVisible();
-    await window.getByRole('button', { name: '返回正文' }).click();
-    await expect(source).toBeFocused();
+    try {
+      await reveal(window, source);
+      // Visible geometry can still be covered by preserved content or board tools.
+      // Verify real pointer ownership before the driver's scroll/click path runs.
+      await expect.poll(async()=> (await sourcePointerState(source)).ready).toBe(true);
+      await writeFile(test.info().outputPath('source-button-before.json'),JSON.stringify(await sourcePointerState(source),null,2));
+      await source.click();
+      await expect(window.getByRole('dialog', { name: 'TI 74153 原页' })).toBeVisible();
+      await window.getByRole('button', { name: '返回正文' }).click();
+      await expect(source).toBeFocused();
+    } catch(error) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try { await Promise.race([Promise.allSettled([
+        sourcePointerState(source).then(value=>writeFile(test.info().outputPath('source-pointer-failure.json'),JSON.stringify(value,null,2))),
+        window.screenshot({path:test.info().outputPath('source-pointer-failure.png'),timeout:1500}),
+      ]),new Promise<void>(done=>{timer=setTimeout(done,2000);})]); }
+      finally {clearTimeout(timer);}
+      throw error;
+    }
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
