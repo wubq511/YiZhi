@@ -57,6 +57,13 @@ try {
     }
   }
   await inventory(join(stage, 'node_modules'));
+  const nativeNotices = JSON.parse(await readFile(join(stage, 'licenses/native-canvas/manifest.json'), 'utf8'));
+  if (nativeNotices.target.os !== process.platform || nativeNotices.target.arch !== process.arch)
+    throw new Error('Native notice materials do not cover this target architecture.');
+  const nativePackage = nativeNotices.target.npmNative.slice(0, nativeNotices.target.npmNative.lastIndexOf('@'));
+  const nativeBinary = await readFile(join(stage, 'node_modules', nativePackage, nativeNotices.target.file));
+  if (digest(nativeBinary) !== nativeNotices.target.sha256 || nativeBinary.length !== nativeNotices.target.bytes)
+    throw new Error('Native binary differs from the audited notice input.');
   for (const [from, to] of [['LICENSE', 'LICENSE.electron.txt'], ['LICENSES.chromium.html', 'LICENSES.chromium.html']])
     await cp(join(project, 'node_modules/electron/dist', from), join(stage, to));
   // Decode and encode using the staged native module before signing or publishing an artifact.
@@ -68,6 +75,7 @@ try {
     productionPackages: production.sort((a,b) => a.path.localeCompare(b.path)),
     licenseFiles: licenseFiles.sort((a,b) => a.path.localeCompare(b.path)),
     nativeSbom: `node_modules/@napi-rs/canvas-darwin-${process.arch}/sbom.cdx.json`,
+    nativeNotices: { path: 'licenses/native-canvas/manifest.json', sha256: digest(await readFile(join(stage, 'licenses/native-canvas/manifest.json'))) },
     signing: { identity: 'ad-hoc', notarized: false }
   }, null, 2) + '\n');
   const outputs = await packager({ dir: stage, out, name: 'YiZhi', executableName: 'YiZhi',
@@ -79,6 +87,14 @@ try {
   });
   for (const output of outputs) {
     const app = join(output, 'YiZhi.app');
+    const packaged = join(app, 'Contents/Resources/app');
+    const sums = await readFile(join(stage, 'licenses/native-canvas/SHA256SUMS'), 'utf8');
+    for (const line of sums.trim().split('\n')) {
+      const match = line.match(/^([a-f0-9]{64})  (.+)$/);
+      if (!match || match[2].split('/').includes('..')) throw new Error('Invalid native notice checksum manifest.');
+      const path = join(packaged, 'licenses/native-canvas', match[2]);
+      if (digest(await readFile(path)) !== match[1]) throw new Error(`Packaged native notice differs: ${match[2]}`);
+    }
     run('/usr/bin/codesign', ['--verify', '--deep', '--strict', app], project);
     console.log(`Packaged application: ${app}`);
   }
