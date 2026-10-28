@@ -69,4 +69,3 @@ export function practice(basis:Awaited<ReturnType<CourseService['readAgentGenera
     exercise:{problem:'S1=1、S0=1、I3=0 时，单通道输出 Z 是多少？',hint:'11 选择 C3=I3。',answer:'Z=0，因为所选 I3=0。',inputs:{S1:1,S0:1,I0:1,I1:1,I2:1,I3:0},output:0},
     evidence:{enable:[],selection:[],formula:[],example:[],exercise:basis.evidenceIds.exercise}};
 }
-

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from socketserver import TCPServer
 import json
 import mimetypes
 from pathlib import Path
@@ -24,6 +25,12 @@ class CourseHTTPServer(ThreadingHTTPServer):
         self.app_root = Path(app_root)
         self.instance_id = instance_id
         super().__init__(address, CourseHandler)
+
+    def server_bind(self):
+        # HTTPServer resolves a reverse hostname before listen(). This loopback
+        # service only needs its bound address, even when name service is offline.
+        TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
 
 
 class CourseHandler(BaseHTTPRequestHandler):
