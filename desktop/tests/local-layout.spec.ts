@@ -43,10 +43,13 @@ async function followScene(page: Page) {
   return page.evaluate(() => {
     const viewport = document.querySelector('.react-flow__viewport')!;
     const m = new DOMMatrixReadOnly(getComputedStyle(viewport).transform);
+    const action = document.querySelector<HTMLElement>('.follow-control button'), rect = action?.getBoundingClientRect();
+    const hit = rect && document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
     return { viewport: [innerWidth, innerHeight], scroll: [scrollX, scrollY], camera: { x: m.e, y: m.f, zoom: m.a },
       board: document.querySelector('main.board')?.getBoundingClientRect().toJSON(), producer: document.querySelector('.producer-panel')?.getBoundingClientRect().toJSON(),
       activeElement: document.activeElement?.outerHTML.slice(0, 280),
       follow: document.querySelector('[aria-label="修改跟随"]')?.textContent, controls: document.querySelector('.follow-control')?.outerHTML,
+      returnControl: rect && { box: rect.toJSON(), clear: hit === action || !!action?.contains(hit ?? null), hit: hit?.outerHTML.slice(0, 280) },
       wheel: (window as any).__layoutWheelEvidence ?? null };
   });
 }
@@ -181,10 +184,14 @@ test('actual producer follows only actual changes, student takeover cancels moti
       await page.getByRole('button', { name: '提交可控修改', exact: true }).click();
       await expect(page.getByRole('status', { name: '可控生产者状态' })).toContainText('正式修改已保存');
       await expect.poll(matrix).toEqual(taken);
+      observations.push({ phase: 'before-close-producer', scene: await followScene(page) });
+      // The producer popover can cover the independent follow control at 900px.
+      await page.getByText('可控生产者 · 验证入口', { exact: true }).click();
+      expect(await matrix()).toEqual(taken);
+      observations.push({ phase: 'return-control-uncovered', scene: await followScene(page) });
       await page.getByRole('button', { name: '返回并继续跟随', exact: true }).click();
       await expect(page.getByRole('status', { name: '修改跟随' })).toHaveText('正在跟随修改');
       await expect.poll(async () => (await matrix()).y).not.toBe(taken.y);
-      await page.getByText('可控生产者 · 验证入口', { exact: true }).click();
       await page.getByRole('button', { name: '全图', exact: true }).click();
       await expect(page.getByRole('button', { name: '返回并继续跟随', exact: true })).toBeVisible();
       await expect.poll(async () => (await matrix()).zoom).toBeLessThan(.35);
