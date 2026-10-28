@@ -1,9 +1,26 @@
 import { evidencePath } from './evidence-paths';
 import {resizeBoardWindow,revealBoardControl} from './board-test-helpers';
 import {test,expect,_electron as electron} from '@playwright/test';
-import {mkdtemp,rm} from 'node:fs/promises';
+import {mkdtemp,rm,writeFile} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
+import type {ElectronApplication,Page} from '@playwright/test';
+async function captureVisibility(app:ElectronApplication,page:Page,phase:string){
+ const renderer=await page.evaluate(async()=>{const b=window.yizhi,c=await b.open(),lab=document.querySelector('.extension-lab'),board=document.querySelector('main.board')!;
+  const intersection=lab?await new Promise(resolve=>{const o=new IntersectionObserver(entries=>{o.disconnect();const e=entries[0];resolve({intersecting:e.isIntersecting,ratio:e.intersectionRatio,root:e.rootBounds?.toJSON(),target:e.boundingClientRect.toJSON(),intersection:e.intersectionRect.toJSON()});},{root:board});o.observe(lab);}):null;
+  const v=await b.extensions.read({sessionId:c.sessionId});return {visibility:document.visibilityState,focus:document.hasFocus(),viewport:[innerWidth,innerHeight],dpr:devicePixelRatio,header:document.querySelector('header')?.getBoundingClientRect().toJSON(),board:board.getBoundingClientRect().toJSON(),scroll:[board.scrollLeft,board.scrollTop],lab:lab?.getBoundingClientRect().toJSON(),intersection,active:document.activeElement?.outerHTML.slice(0,250),inert:[...document.querySelectorAll('[inert]')].slice(0,8).map(el=>el.outerHTML.slice(0,180)),inline:document.querySelector<HTMLElement>('.react-flow__viewport')?.style.transform,camera:(await b.readingState(c.sessionId))?.camera,extension:{visible:v.visible,running:v.running,phase:v.phase,generation:v.generation,revision:v.revision,state:v.state,definition:v.definition.packageVersion,pending:v.pending?.packageVersion,error:v.error}};});
+ const native=await app.evaluate(({BrowserWindow})=>{const w=BrowserWindow.getAllWindows()[0];return {outer:w.getSize(),content:w.getContentSize(),visible:w.isVisible(),focused:w.isFocused(),minimized:w.isMinimized()};});
+ const path=test.info().outputPath('visibility-'+phase+'.json');await writeFile(path,JSON.stringify({...renderer,native},null,2));await test.info().attach('visibility-'+phase,{path,contentType:'application/json'});await page.screenshot({path:test.info().outputPath('visibility-'+phase+'.png'),timeout:1000});
+}
+async function verifyVisibility(app:ElectronApplication,page:Page,phase:string,verify:()=>Promise<void>){
+ try{await verify();}catch(error){
+  // Bound failure evidence so diagnostics cannot hold the serial UI lease indefinitely.
+  let timer:ReturnType<typeof setTimeout>|undefined;
+  try{await Promise.race([captureVisibility(app,page,phase),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('visibility capture deadline')),2000);})]);}
+  catch(captureError){console.error('Extension visibility evidence:',String(captureError));}finally{clearTimeout(timer);}
+  throw error;
+ }
+}
 
 test('a real sandboxed browser Worker verifies learning results, saves complete steps and reopens offline after cache removal', async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-extension-ui-'));
@@ -26,8 +43,15 @@ test('a real sandboxed browser Worker verifies learning results, saves complete 
   await page.getByRole('button',{name:'组合逻辑分析与设计',exact:true}).click();
   await expect.poll(async()=>(await read()).phase).toBe('paused');
   const offscreen=(await read()).state;await page.waitForTimeout(650);expect((await read()).state).toEqual(offscreen);
+  // A short native viewport puts the lab below the unit header after navigation.
+  await resizeBoardWindow(app,page,1024,600);
   await page.getByRole('button',{name:'数制与数制转换',exact:true}).click();
-  await expect.poll(async()=>(await read()).phase).toBe('running');
+  await verifyVisibility(app,page,'return-to-running',async()=>{
+   await revealBoardControl(page,lab().getByRole('button',{name:'暂停模拟',exact:true}));
+   await expect.poll(async()=>(await read()).visible).toBe(true);
+   await expect.poll(async()=>(await read()).phase).toBe('running');
+   await expect.poll(async()=>(await read()).state.step).toBeGreaterThan(offscreen.step);
+  });
   await lab().getByRole('button',{name:'暂停模拟',exact:true}).click();
   await expect.poll(async()=>(await read()).phase).toBe('paused');
   const saved=await read();
@@ -89,8 +113,12 @@ test('actual Worker nonresponse reports incomplete; destroyed generations cannot
   await lab.getByRole('button',{name:'载入四位定义 2.0.0',exact:true}).click();
   await expect(lab.getByRole('button',{name:'按新定义重新开始',exact:true})).toBeVisible();
   expect((await read()).definition.packageVersion).toBe('1.1.0');
+  await resizeBoardWindow(app,page,1024,600);
   await page.getByRole('button',{name:'数制与数制转换',exact:true}).click();
-  await expect.poll(async()=>(await read()).visible).toBe(true);
+  await verifyVisibility(app,page,'return-to-visible',async()=>{
+   await revealBoardControl(page,lab.getByRole('button',{name:'开始模拟',exact:true}));
+   await expect.poll(async()=>(await read()).visible).toBe(true);
+  });
   const oldStep=(await read()).state.step;
   await lab.getByRole('button',{name:'开始模拟',exact:true}).click({timeout:1500});
   await expect.poll(async()=>(await read()).state.step).toBeGreaterThan(oldStep);
