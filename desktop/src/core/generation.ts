@@ -59,8 +59,14 @@ export class Generation {
   }
   private active(r:AgentIdentity) {const task=this.agent.active(r);this.spec(task);return task;}
   private completed(root:string) {
+    const taskRow=this.db.prepare('SELECT payload FROM agent_tasks WHERE id=?').get(root);
+    const spec=taskRow?this.spec(parse(taskRow.payload)):undefined;
+    const unitRow=spec?this.db.prepare('SELECT payload FROM units WHERE id=?').get(spec.unitId):undefined;
+    const unit=unitRow?parse(unitRow.payload) as CourseUnit:undefined;
+    const objects=unit?readingObjects(unit.reading.blocks,unit.id):new Map<string,unknown>();
     return this.db.prepare('SELECT stage,operation_id,receipt FROM generation_groups WHERE root_task_id=? ORDER BY rowid').all(root)
-      .map(row=>({stage:String(row.stage) as 'lesson'|'practice',operationId:String(row.operation_id),receipt:parse(row.receipt) as GenerationResult}));
+      .map(row=>({stage:String(row.stage) as 'lesson'|'practice',operationId:String(row.operation_id),receipt:parse(row.receipt) as GenerationResult}))
+      .filter(stage=>!!spec&&!!unit&&(stage.stage==='lesson'?roles.slice(0,8):roles.slice(8)).every(role=>objects.has(blockId(spec.unitId,role))));
   }
   private pending(root:string) {const done=new Set(this.completed(root).map(r=>r.stage));return stages.filter(s=>!done.has(s));}
   state(task:AgentTask) {
@@ -336,7 +342,10 @@ export class Generation {
           changedObjectIds:changes.map(c=>c.objectId),checks:checked,cursor:0};
         receipt.cursor=appendEvent(this.db,{type:'group.committed',operationId,revision,changedObjectIds:receipt.changedObjectIds});
         this.db.prepare('UPDATE generation_candidates SET result=?,checks=? WHERE id=?').run(json(receipt),json(checked),operationId);
-        this.db.prepare('INSERT INTO generation_groups VALUES(?,?,?,?)').run(root,input.stage,operationId,json(receipt));
+        // This is the current-stage projection. Earlier immutable receipts remain
+        // in generation_candidates/cg_history when a course recovery withdrew them.
+        this.db.prepare(`INSERT INTO generation_groups VALUES(?,?,?,?) ON CONFLICT(root_task_id,stage)
+          DO UPDATE SET operation_id=excluded.operation_id,receipt=excluded.receipt`).run(root,input.stage,operationId,json(receipt));
         // Once a stage is formally published, earlier failed proposals for that stage
         // are no longer a recovery draft. Keep their identities and result facts for
         // idempotent queries, but release duplicate full candidate bodies.

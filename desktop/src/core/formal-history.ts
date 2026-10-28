@@ -77,7 +77,7 @@ export class FormalHistory {
     const anchor=this.detail(atOperationId),scope=new Set(unitIds),desired=new Map<string,Record<string,any>|null>();
     const groups=this.groups(),later=groups.filter(g=>g.order>anchor.order||(side==='before'&&g.operationId===anchor.operationId)).reverse();
     const owned=new Set<string>(),children=new Map<string,Set<string>>();
-    for(const id of unitIds){const row=this.db.prepare('SELECT payload FROM units WHERE id=?').get(id);if(row)for(const objectId of unitObjects(parse(row.payload)).keys())owned.add(objectId);owned.add(`structure:${id}`);}
+    for(const id of unitIds){const row=this.db.prepare('SELECT payload FROM units WHERE id=?').get(id);if(row)for(const objectId of unitObjects(parse(row.payload)).keys())owned.add(objectId);owned.add(`structure:${id}`);owned.add(`unit:${id}`);owned.add(`graph:${id}`);}
     // Stable historical membership also covers blocks removed from today's projection.
     for(const g of groups)for(const c of g.changes)if(c.objectId.startsWith('structure:'))for(const value of [c.before,c.after]) {
       const ids=children.get(c.objectId)??new Set<string>();for(const id of value?.blockIds??[])ids.add(id);children.set(c.objectId,ids);
@@ -91,14 +91,19 @@ export class FormalHistory {
     // does not select that neighbor's independent later body/history.
     for(const g of later)if(g.unitIds.some(id=>unitIds.includes(id))) {
       const ids=this.unsupported(g.changes);if(ids.length)throw new Error(this.unsupportedReason(ids));
-      const included=g.changes.filter(c=>(includeLayout||!c.objectId.startsWith('layout:'))&&!c.objectId.startsWith('review:'));
+      const lifecycle=g.changes.some(c=>c.objectId.startsWith('unit:')&&(!c.before||!c.after));
+      const included=g.changes.filter(c=>(includeLayout||lifecycle||!c.objectId.startsWith('layout:'))&&!c.objectId.startsWith('review:'));
       if(!included.some(c=>owned.has(c.objectId)||c.objectId.startsWith('experiment:')&&unitIds.includes(c.objectId.slice(11).split('/')[0])||touches(c.before)||touches(c.after)))continue;
       if(included.length)for(const id of g.unitIds)scope.add(id);
       for(const c of included)desired.set(c.objectId,c.before);
     }
     const changes:HistoryChange[]=[];
     for(const [id,after] of desired){const now=this.object(id);if(!equal(now.value,after))changes.push({objectId:id,before:now.value,after,beforeVersion:now.version,afterVersion:now.version});}
-    const units=[...scope].flatMap(id=>{const row=this.db.prepare('SELECT payload FROM units WHERE id=?').get(id);return row?[this.projectUnit(parse(row.payload),desired)]:[];});
+    const units=[...scope].flatMap(id=>{
+      const row=this.db.prepare('SELECT payload FROM units WHERE id=?').get(id);
+      const unit=desired.has(`unit:${id}`)?desired.get(`unit:${id}`):row?parse(row.payload):null;
+      return unit?[this.projectUnit(unit as CourseUnit,desired)]:[];
+    });
     return {anchor,unitIds:[...scope],changes,units};
   }
   restoreInTransaction(changes:HistoryChange[],unitIds:string[]) {

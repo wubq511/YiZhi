@@ -265,6 +265,58 @@ test('generated lifecycle rollback publishes no graph heap and equal placement a
   }finally{await core.close();await rm(root,{recursive:true,force:true});}
 });
 
+test('course recovery can withdraw a newly generated identity and continue from fresh generation without trusting old stage receipts',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'yizhi-generation-course-recovery-'));
+  const core=new CourseService(resolve('dist/worker.cjs'));
+  try{
+    const {sessionId,task}=await prepared(core,root),identity={sessionId,taskId:task.id,attemptId:task.attemptId,generation:task.generation};
+    const initial=await core.readAgentGeneration(identity);
+    const first=await core.publishAgentGeneration({...identity,input:lesson(initial,'before-course-recovery')});
+    const oldBasis=await core.readAgentGeneration(identity);
+    const preview=await core.courseRestore.preview({sessionId,atOperationId:first.operationId,side:'before',unitIds:[initial.spec.unitId],userState:{layout:false,review:false}});
+    const restored=await core.courseRestore.apply({sessionId,operationId:'recover-before-generated-unit',preview});
+    assert.equal(restored.generation,2);
+    await assert.rejects(core.readUnit(restored.sessionId,initial.spec.unitId),/不存在/);
+    assert.equal((await core.graph(restored.sessionId)).nodes.some(node=>node.id===initial.spec.unitId),false);
+    await assert.rejects(core.publishAgentGeneration({...identity,input:practice(oldBasis,'late-old-generation')}),/会话|失效|代际/);
+    assert.deepEqual(await core.queryAgentGeneration({...identity,operationId:'before-course-recovery'}),first,'old session keeps only immutable result lookup');
+    await core.recordAgent({...identity,eventId:'old-generation-interrupted',kind:'finish',status:'interrupted',reconciliation:true});
+    const resumed=await core.agent.continue({sessionId:restored.sessionId,taskId:task.id,operationId:'explicit-after-course-recovery'});
+    const current={sessionId:restored.sessionId,taskId:resumed.id,attemptId:resumed.attemptId,generation:resumed.generation};
+    assert.equal(current.generation,2);
+    const basis=await core.readAgentGeneration(current);
+    assert.deepEqual(basis.completedStages,[]);assert.deepEqual(basis.pendingStages,['lesson','practice']);
+    assert.equal((await core.publishAgentGeneration({...current,input:lesson(basis,'new-generation-lesson')})).status,'committed');
+    const after=await core.readAgentGeneration(current);
+    assert.deepEqual(after.pendingStages,['practice']);
+    assert.equal((await core.publishAgentGeneration({...current,input:practice(after,'new-generation-practice')})).status,'committed');
+    assert.equal((await core.graph(restored.sessionId)).nodes.filter(node=>node.id===initial.spec.unitId).length,1);
+    assert.ok((await core.sources.list({sessionId:restored.sessionId})).versions.some(version=>version.versionId===initial.source.versionId));
+    assert.deepEqual(await core.queryAgentGeneration({...identity,operationId:'before-course-recovery'}),first);
+  }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+
+test('course recovery to a confirmed lesson rechecks current stages and continues only the withdrawn practice',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'yizhi-generation-partial-recovery-'));
+  const core=new CourseService(resolve('dist/worker.cjs'));
+  try{
+    const {sessionId,task}=await prepared(core,root),identity={sessionId,taskId:task.id,attemptId:task.attemptId,generation:task.generation};
+    const initial=await core.readAgentGeneration(identity);
+    const first=await core.publishAgentGeneration({...identity,input:lesson(initial,'confirmed-lesson')});
+    const next=await core.readAgentGeneration(identity);
+    assert.equal((await core.publishAgentGeneration({...identity,input:practice(next,'old-practice')})).status,'committed');
+    const restored=await core.courseRestore.apply({sessionId,operationId:'recover-lesson-only',preview:await core.courseRestore.preview({sessionId,atOperationId:first.operationId,side:'after',unitIds:[initial.spec.unitId],userState:{layout:false,review:false}})});
+    await core.recordAgent({...identity,eventId:'finish-before-practice-resume',kind:'finish',status:'interrupted',reconciliation:true});
+    const resumed=await core.agent.continue({sessionId:restored.sessionId,taskId:task.id,operationId:'continue-only-practice'});
+    const current={sessionId:restored.sessionId,taskId:resumed.id,attemptId:resumed.attemptId,generation:resumed.generation};
+    const basis=await core.readAgentGeneration(current);
+    assert.deepEqual(basis.completedStages.map(stage=>stage.stage),['lesson']);
+    assert.deepEqual(basis.pendingStages,['practice']);
+    assert.equal((await core.publishAgentGeneration({...current,input:practice(basis,'replacement-practice')})).status,'committed');
+    assert.equal((await core.readUnit(restored.sessionId,initial.spec.unitId)).reading.blocks.filter(block=>block.kind==='exercise').length,2);
+  }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+
 test('latest student draft stops a dependent practice group and preserves the published lesson',async()=>{
   const root=await mkdtemp(join(tmpdir(),'yizhi-generation-student-'));
   const core=new CourseService(resolve('dist/worker.cjs'));
