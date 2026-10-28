@@ -3,8 +3,13 @@ import { migrationRecords,initializeMigrationRecords } from './migration-state';
 import { prepareDirectory,publishDirectory,directoryStatus,recoverDirectory,admitDirectory,closeDirectoryLeases,abandonDirectory,directoryTransition } from './directory-authority';
 import { importPersonal,importPersonalRecords } from './migration-personal';
 import { FormalHistory } from './formal-history';
+import { CourseBackups } from './backup';
+import { CourseUpgrades,type UpgradeSource } from './upgrade';
+import { assertWritableFormat,inspectFormat,readUnderstoodUnit } from './course-format';
+import { claimPortableIdentity } from './course-identity';
+import { validateCourseCopy } from './course-validation';
 import { registerRetentionResourceRoot } from './retention-resources';
-import { generationRetentionResourceRoot } from './generation-retention';
+import { generationRetentionResourceRoot,generationRetentionResourceRoots } from './generation-retention';
 import { HistoryRetention } from './retention';
 import { CourseRestore } from './course-restore';
 import { LearningViews } from './learning-views';
@@ -27,7 +32,7 @@ import { parentPort, workerData, threadId } from 'node:worker_threads';
 import { observation } from '../acceptance-observation';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, realpathSync, readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join,basename } from 'node:path';
 import { FormalRelations } from './formal-relations';
 import { CommandGroups } from './command-groups';
 import { Parsing } from './parsing';
@@ -40,7 +45,7 @@ import { transaction } from './save-store';
 import { resolveInput } from './save-store';
 import { initializeReviewState, reviewSnapshot, setReviewStatus, confirmReviewPrompt } from './review-state';
 
-registerRetentionResourceRoot('t30-generation-recovery',generationRetentionResourceRoot);
+registerRetentionResourceRoot('t30-generation-recovery',generationRetentionResourceRoot,generationRetentionResourceRoots);
 if (workerData?.observe) observation.enable();
 const observedInstanceId = randomUUID();
 const queuedObservation = observation.resource('core.queued');
@@ -48,6 +53,8 @@ let observedQueued = 0;
 
 const EDITABLE = 'RB-TH-01-01-what-is-positional-notation';
 interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; courseId: string; graph: CourseGraph;
+  identityOwner?:DatabaseSync;
+  upgradeFrozen?:boolean;
   retention:HistoryRetention;
   // T03 constructs its observer on this same connection; both student save entry points call it in-transaction.
   formalHistory: FormalHistory;
@@ -69,10 +76,13 @@ interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; cou
   generation: Generation;
 }
 const courses = new Map<string, Course>();
+const backups=new CourseBackups(workerData?.backupScheduling);
+const upgrades=new CourseUpgrades(backups,workerData?.upgradeScheduling,workerData?.cutoverScheduling);
 const historicalRoutes=new Set(['courseRestore:apply','courseRestore:query','queryOperation','commands:query','commands:history','formalHistory:query','formalHistory:release','formalHistory:detail','formalHistory:list','relations:query','annotations:query','drawings:query','drawings:queryPlacement','sources:query','parsing:query','agent:record','agent:task','agent:facts','agent:stop','agent:get','agent:list','agent:events','agent:work','agentMutation:query','generation:query','generation:candidates']);
 function session(id: string,action?:string): Course {
   const course = [...courses.values()].find(course => course.sessionId === id || action&&historicalRoutes.has(action)&&!!course.db.prepare('SELECT 1 FROM course_sessions WHERE id=?').get(id));
   if (!course) throw new Error('编辑会话已失效，请重新打开课程');
+  if(course.upgradeFrozen&&!action?.startsWith('upgrade:'))throw new Error('该课程正在升级，已停止写入和新任务；其他课程可继续使用');
   return course;
 }
 function snapshot(course: Course, unitId = 'KU-001'): OpenedCourse {
@@ -84,7 +94,7 @@ function snapshot(course: Course, unitId = 'KU-001'): OpenedCourse {
     course.groups.observe();
     row = course.db.prepare('SELECT payload, revision FROM units WHERE id = ?').get(unitId)!;
   }
-  return { resourceAssets: course.db.prepare('SELECT asset FROM exchange_resources ORDER BY asset').all().map(r => String(r.asset)), contentScope: course.db.prepare("SELECT value FROM metadata WHERE key='content-scope'").get()?.value === 'content-candidate' ? 'content-candidate' : undefined, courseId: course.courseId, sessionId: course.sessionId, generation:Number(course.db.prepare("SELECT value FROM metadata WHERE key='generation'").get()!.value), preservedDraftCount:course.courseRestore.drafts().length, revision: Number(row.revision),
+  return { courseFormat:Number(course.db.prepare('PRAGMA user_version').get()!.user_version),resourceAssets: course.db.prepare('SELECT asset FROM exchange_resources ORDER BY asset').all().map(r => String(r.asset)), contentScope: course.db.prepare("SELECT value FROM metadata WHERE key='content-scope'").get()?.value === 'content-candidate' ? 'content-candidate' : undefined, courseId: course.courseId, sessionId: course.sessionId, generation:Number(course.db.prepare("SELECT value FROM metadata WHERE key='generation'").get()!.value), preservedDraftCount:course.courseRestore.drafts().length, revision: Number(row.revision),
     blockVersions: Object.fromEntries(course.db.prepare("SELECT id, version FROM cg_objects WHERE kind='block'").all().map(r => [String(r.id), Number(r.version)])),
     drafts: readDrafts(course.db).filter(d => (d.input.unitId ?? 'KU-001') === unitId), eventCursor: eventCursor(course.db),
     confirmedInputSeq: confirmedInput(course.db, course.sessionId, unitId), editableBlockId: JSON.parse(String(row.payload)).reading.blocks.find((b: any) => b.kind === 'paragraph')?.id ?? unitId, unit: JSON.parse(String(row.payload)),
@@ -97,16 +107,20 @@ function snapshot(course: Course, unitId = 'KU-001'): OpenedCourse {
       } } };
 }
 function open(directory: string,preparing=false): OpenedCourse {
+  if(/\.backup-starting-[\w-]+$/.test(basename(directory)))throw new Error('备份初始化未完成，拒绝打开');
+  if(existsSync(join(directory,'backup-manifest.json'))&&!existsSync(join(directory,'backup-complete.json')))throw new Error('备份未完成，拒绝打开');
   if (existsSync(join(directory, '课程.json')) && !existsSync(join(directory, 'course.sqlite'))) throw new Error('这是旧版课程，请从停止写入的一致副本转换到新目录');
   mkdirSync(directory, { recursive: true });
   const canonical = realpathSync(directory);
   if(!preparing)admitDirectory(canonical);
   const existing = courses.get(canonical);
-  if (existing) return snapshot(existing);
+  if (existing) {if(existing.upgradeFrozen)throw new Error('该课程正在升级，已停写');return snapshot(existing);}
+  if(existsSync(join(canonical,'course.sqlite')))assertWritableFormat(canonical);
   // A separate DB holds an OS-backed exclusive transaction for the entire session.
   // It survives window closure and is released by SQLite on process death; no stale PID lock.
   const owner = new DatabaseSync(join(canonical, 'ownership.sqlite'));
   let db: DatabaseSync | undefined;
+  let identityOwner:DatabaseSync|undefined;
   try {
     owner.exec('PRAGMA busy_timeout=0; BEGIN EXCLUSIVE');
   } catch {
@@ -114,10 +128,14 @@ function open(directory: string,preparing=false): OpenedCourse {
     throw new Error('课程已由另一应用进程打开，不能取得第二份写入资格');
   }
   try {
+    if(existsSync(join(canonical,'course.sqlite'))){
+      const inspect=new DatabaseSync(join(canonical,'course.sqlite'),{readOnly:true});
+      try{if(inspect.prepare("SELECT 1 FROM metadata WHERE key='portable-identity'").get())identityOwner=claimPortableIdentity(String(inspect.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value));}finally{inspect.close();}
+    }
     db = new DatabaseSync(join(canonical, 'course.sqlite'));
     db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL; PRAGMA busy_timeout=1000');
     const version = Number(db.prepare('PRAGMA user_version').get()!.user_version);
-    if (version !== 0 && version !== 1) throw new Error('不支持的课程格式，拒绝写入');
+    if (version !== 0 && version !== 1 && version !== 2) throw new Error('不支持的课程格式，拒绝写入');
     if (db.prepare("SELECT 1 FROM sqlite_master WHERE name='metadata'").get() && db.prepare("SELECT 1 FROM metadata WHERE key='content-scope'").get() && !existsSync(join(canonical,'content-candidate.json'))) throw new Error('内容候选缺少完成标记，拒绝打开');
     db.exec(`BEGIN IMMEDIATE;
       CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -125,7 +143,7 @@ function open(directory: string,preparing=false): OpenedCourse {
       CREATE TABLE IF NOT EXISTS units(id TEXT PRIMARY KEY, payload TEXT NOT NULL, revision INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS operations(id TEXT PRIMARY KEY, digest TEXT NOT NULL, receipt TEXT NOT NULL,
         unit_id TEXT NOT NULL REFERENCES units(id), before_text TEXT NOT NULL, after_text TEXT NOT NULL);
-      PRAGMA user_version=1; COMMIT;`);
+      PRAGMA user_version=${version||1}; COMMIT;`);
     if (!db.prepare('SELECT 1 FROM units LIMIT 1').get()) {
       const seed = readFileSync(join(__dirname, 'fixtures/unit-001.json'), 'utf8');
       db.exec('BEGIN IMMEDIATE');
@@ -175,7 +193,7 @@ function open(directory: string,preparing=false): OpenedCourse {
     const search = new Search(db, sourceUnit, readableUnitIds, graph.nodes.length, sources);
     const generation = new Generation(db,graph,sources,parsing,agent,groups,search);
     const formalHistory=new FormalHistory(db,groups,agent,graph,relations,experiments);
-    const course: Course = { retention:new HistoryRetention(db,formalHistory,canonical,id=>groups.protectsBlock(id),workerData?.retentionScheduling), courseRestore:undefined!, formalHistory, views:new LearningViews(db), exchange, db, owner, agent, mutations, generation, search, unit: sourceUnit, annotations, drawings, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
+    const course: Course = { identityOwner,retention:new HistoryRetention(db,formalHistory,canonical,id=>groups.protectsBlock(id),workerData?.retentionScheduling), courseRestore:undefined!, formalHistory, views:new LearningViews(db), exchange, db, owner, agent, mutations, generation, search, unit: sourceUnit, annotations, drawings, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
 
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     course.courseRestore=new CourseRestore(db,formalHistory,graph,agent,experiments,extensions,next=>{course.sessionId=next;groups.releaseGeneration();formalHistory.releaseGeneration();},workerData?.restoreScheduling);
@@ -184,7 +202,7 @@ function open(directory: string,preparing=false): OpenedCourse {
     const result = snapshot(course);
     courses.set(canonical, course);
     return result;
-  } catch (error) { db?.close(); owner.close(); throw error; }
+  } catch (error) { db?.close();identityOwner?.close(); owner.close(); throw error; }
 }
 function commit(course: Course, command: EditCommand) {
   return commitEdit(course.db, command, (unitId, revision, blockIds) => {
@@ -199,6 +217,33 @@ function save(command: SaveParagraph): SaveReceipt {
     inputSeq: command.inputSeq, baseRevision: command.baseRevision, operationId: command.operationId,
     complete: true, changes: [{ blockId: command.blockId, text: command.text }] });
 }
+function acquireBackup(c:Course,id:string,directory:string){
+ c.identityOwner??=claimPortableIdentity(c.courseId);
+ transaction(c.db,()=>{
+  c.db.exec('CREATE TABLE IF NOT EXISTS backup_jobs(id TEXT PRIMARY KEY,directory TEXT NOT NULL)');
+  const old=c.db.prepare('SELECT directory FROM backup_jobs WHERE id=?').get(id),canonical=realpathSync(directory);
+  if(old&&old.directory!==canonical)throw new Error('备份身份已用于另一目录，请使用原目录重试');
+  c.db.prepare('INSERT OR IGNORE INTO backup_jobs VALUES(?,?)').run(id,canonical);
+  c.db.prepare("INSERT OR IGNORE INTO metadata VALUES('portable-identity','1')").run();
+  c.retention.resources.lease('backup:'+id,'acquire',new Date().toISOString());
+ });
+}
+function releaseBackup(c:Course,id:string){c.retention.resources.lease('backup:'+id,'release',new Date().toISOString());}
+async function releaseCourse(directory:string,c:Course){
+ c.retention.stop();c.experiments.dispose();await c.parsing.close();c.db.close();c.owner.close();c.identityOwner?.close();courses.delete(directory);
+}
+function upgradeSource(c:Course,directory:string):UpgradeSource{
+ const preceding=[...sourceReads];
+ return {directory,courseId:c.courseId,
+  async pause(){
+   c.upgradeFrozen=true;c.retention.stop();c.experiments.pauseAll();c.experiments.dispose();c.agent.revokeForQuit();c.agent.prepareShutdown();
+   await Promise.all(preceding);await c.parsing.close();await queue;
+  },
+  async release(){await releaseCourse(directory,c);},
+  async resume(){await releaseCourse(directory,c);open(directory);},
+  acquireBackup:(id,target)=>acquireBackup(c,id,target),releaseBackup:id=>releaseBackup(c,id),
+ };
+}
 // Async validation/import shares the SAME ordered command boundary with saves, stop and close.
 let queue = Promise.resolve();
 const sourceReads = new Set<Promise<void>>();
@@ -211,7 +256,7 @@ parentPort!.on('message', message => {
     const course = [...courses.values()].find(c => c.sessionId === message.payload?.sessionId);
     try { course?.experiments.stopIssuing(message.payload); } catch { /* Invalid input is rejected by the ordered dispatcher below. */ }
   }
-  if (message.action === 'sources:page' || message.action.startsWith('search:') || message.action==='migration:prepare' || message.action==='migration:publish' || message.action==='migration:convert' || message.action==='migration:snapshot') {
+  if (message.action === 'sources:page' || message.action.startsWith('search:') || message.action.startsWith('backup:') || message.action.startsWith('format:') || message.action.startsWith('upgrade:') || message.action==='migration:prepare' || message.action==='migration:publish' || message.action==='migration:convert' || message.action==='migration:snapshot') {
     // Independent file staging and immutable parsing yield while other courses save.
     // Start after prior ordered writes; close drains every pending stage/lease.
     queue = queue.then(() => {
@@ -225,7 +270,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
   const started = performance.now(), activeObservation = observation.resource('core.active');
   activeObservation.set(1);
   try {
-    if(workerData?.retentionScheduling?.clock)for(const course of courses.values())course.retention.synchronizeClock();
+    if(workerData?.retentionScheduling?.clock)for(const course of courses.values())if(!course.upgradeFrozen)course.retention.synchronizeClock();
     if(action==='courseRestore:apply' && session(payload.sessionId,action).sessionId!==payload.sessionId && !session(payload.sessionId,action).courseRestore.query(payload.operationId))throw new Error('编辑会话已失效，未执行新的整课恢复，请重新打开核对');
     if (payload?.operationId && payload.sessionId) {
       const course = session(payload.sessionId,action);
@@ -242,7 +287,31 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       course.extensions.fence(fencedAction, payload.operationId);
     }
     let value: unknown;
-    if(action.startsWith('retention:')) {const retention=session(payload.sessionId,action).retention;if(action==='retention:get')value=retention.get();else if(action==='retention:set')value=retention.set(payload.days);else if(action==='retention:run')value=retention.run(payload.limit);else if(action==='retention:resourceLease')value=retention.resources.lease(payload.id,payload.action,new Date().toISOString());else if(action==='retention:resourceLeases')value=retention.resources.leases();else if(action==='retention:space')value=retention.storage.space();else if(action==='retention:clearCache')value=retention.storage.clearCache(payload.limit);else throw new Error('未知历史保留接口');}
+    if(action==='upgrade:status')value=upgrades.status(payload.directory);
+    else if(action==='upgrade:recover')value=await upgrades.recover(payload.directory);
+    else if(action==='upgrade:publish'){
+      const c=payload.sessionId?[...courses.values()].find(c=>c.sessionId===payload.sessionId):undefined;
+      const directory=c?[...courses.entries()].find(([,v])=>v===c)![0]:payload.sourceDirectory;
+      if(!directory)throw new Error('请重新打开原课程核对升级资格');value=await upgrades.publish(directory,payload.upgradeId,c?upgradeSource(c,directory):undefined);
+    }
+    else if(action==='upgrade:cancel'){
+      const c=session(payload.sessionId,action),directory=[...courses.entries()].find(([,v])=>v===c)![0];value=await upgrades.cancel(directory,payload.upgradeId,upgradeSource(c,directory));
+    }
+    else if(action==='upgrade:prepare'){
+      const c=session(payload.sessionId,action),directory=[...courses.entries()].find(([,v])=>v===c)![0];value=await upgrades.prepare(payload,upgradeSource(c,directory));
+    }
+    else if(action==='format:inspect')value=inspectFormat(payload.directory);
+    else if(action==='format:validate')value=await validateCourseCopy(payload.directory);
+    else if(action==='format:readUnit')value=readUnderstoodUnit(payload.directory,payload.unitId);
+    else if(action.startsWith('backup:')) {
+      if(action==='backup:status')value=await backups.status(payload.directory);
+      else if(action==='backup:verify')value=await backups.verify(payload.directory);
+      else if(action==='backup:create'||action==='backup:resume'){
+        const c=session(payload.sessionId,action),directory=[...courses.entries()].find(([,v])=>v===c)![0];
+        value=await backups.create(payload,{directory,courseId:c.courseId,acquire:()=>acquireBackup(c,payload.backupId,payload.directory),release:()=>releaseBackup(c,payload.backupId)},action==='backup:resume');
+      }else throw new Error('未知备份接口');
+    }
+    else if(action.startsWith('retention:')) {const retention=session(payload.sessionId,action).retention;if(action==='retention:get')value=retention.get();else if(action==='retention:set')value=retention.set(payload.days);else if(action==='retention:run')value=retention.run(payload.limit);else if(action==='retention:resourceLease')value=retention.resources.lease(payload.id,payload.action,new Date().toISOString());else if(action==='retention:resourceLeases')value=retention.resources.leases();else if(action==='retention:space')value=retention.storage.space();else if(action==='retention:clearCache')value=retention.storage.clearCache(payload.limit);else throw new Error('未知历史保留接口');}
     else if(action.startsWith('courseRestore:')) {const restore=session(payload.sessionId,action).courseRestore;if(action==='courseRestore:preview')value=restore.preview(payload);else if(action==='courseRestore:apply')value=restore.apply(payload);else if(action==='courseRestore:query')value=restore.query(payload.operationId);else if(action==='courseRestore:drafts')value=restore.drafts();else throw new Error('未知整课恢复接口');}
     else if (action.startsWith('exchange:')) {
       const exchange = session(payload.sessionId,action).exchange;
@@ -354,7 +423,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action.startsWith('sources:')) value = await session(payload.sessionId,action).sources.dispatch(action, payload);
     else if (action === 'close') {
       await Promise.all(sourceReads);await closeDirectoryLeases();
-      for (const course of courses.values()) { course.retention.stop();course.experiments.dispose(); await course.parsing.close(); course.db.close(); course.owner.close(); }
+      for (const course of courses.values()) { course.retention.stop();course.experiments.dispose(); await course.parsing.close(); course.db.close(); course.owner.close();course.identityOwner?.close(); }
       courses.clear();
     } else throw new Error('未知课程命令');
     parentPort!.postMessage({ id, ok: true, value });

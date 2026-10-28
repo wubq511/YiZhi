@@ -1,9 +1,16 @@
 import type { DatabaseSync } from 'node:sqlite';
+import type { BackupResource } from '../backup-api';
 
 /** Actual current/recovery dependencies, not a copy of formal or hidden content.
  * The Worker registers this predicate with T23's trusted resource-root registry. */
 export function generationRetentionResourceRoot(db:DatabaseSync,sha256:string):boolean {
-  if(!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='generation_bases'").get())return false;
+  return generationRetentionResourceRoots(db).some(r=>r.sha256===sha256);
+}
+/** Enumerates even a declared missing artifact; backup must not infer roots from existing files. */
+export function generationRetentionResourceRoots(db:DatabaseSync):BackupResource[] {
+  if(!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='generation_bases'").get())return [];
+  const refs=new Map<string,BackupResource>();
+  const add=(sha256:string,byteLength:number|null=null)=>{if(!/^[a-f0-9]{64}$/.test(sha256))throw new Error('生成恢复资源摘要无效');refs.set(sha256,{sha256,byteLength,path:'resources/'+sha256,declaredBy:['generation_bases.payload']});};
   const bases=db.prepare(`SELECT b.payload FROM generation_bases b
     JOIN agent_tasks t ON t.attempt_id=b.attempt_id
     WHERE (json_extract(t.payload,'$.status')<>'completed' AND json_extract(t.payload,'$.continuedByTaskId') IS NULL)
@@ -12,11 +19,11 @@ export function generationRetentionResourceRoot(db:DatabaseSync,sha256:string):b
           AND json_extract(c.proposal,'$.basisId')=b.id)`).all();
   for(const row of bases){
     const basis=JSON.parse(String(row.payload));
-    if(basis.sourceSha===sha256||basis.artifactDigest===sha256)return true;
+    add(basis.sourceSha);add(basis.artifactDigest);
     const artifact=db.prepare('SELECT payload FROM parse_artifacts WHERE id=?').get(basis.spec.artifactId);
     if(!artifact)continue;
     const ref=JSON.parse(String(artifact.payload));
-    if(ref.resource.sha256===sha256||ref.resources.some((resource:{sha256:string})=>resource.sha256===sha256))return true;
+    for(const r of [ref.resource,...ref.resources])add(r.sha256,r.byteLength);
   }
-  return false;
+  return [...refs.values()];
 }

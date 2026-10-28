@@ -1,4 +1,6 @@
 import { observation } from '../acceptance-observation';
+import { BackupPanel } from './backup-panel';
+import { ReadonlyCourse } from './readonly-course';
 import { CourseRestorePanel } from './course-restore-panel';
 import { MigrationPanel } from './migration-panel';
 import { RetentionPanel } from './retention-panel';
@@ -101,6 +103,7 @@ function BlockContent({ block, onReference, reading, updateReading, onSource, ex
 }
 
 function App() {
+  const [readonlyReport,setReadonlyReport]=useState<import('../format-api').FormatCapabilities>();
   const flow = useReactFlow();
   const boardRef = useRef<HTMLElement>(null);
   const [nodesReady, setNodesReady] = useState(false);
@@ -271,6 +274,7 @@ function App() {
   const composing = useRef(false);
   const load = async () => {
     setLoadError(undefined);
+    setReadonlyReport(undefined);
     setCameraReady(false);
     try {
       const opened = await window.yizhi.open();
@@ -281,7 +285,7 @@ function App() {
       if (savedReading?.pinnedUnitId === 'KU-001' || savedReading?.modification) setMounted([opened.unit]);
       if (savedReading?.modification) { workTarget.current = savedReading.modification.targetId; camera.restore(savedReading.modification.ended); }
       setGraph(loadedGraph); setReview(reviewSnapshot); readingRef.current = savedReading; restored.current = false; setReading(savedReading);
-    } catch (error) { setLoadError((error as Error).message); }
+    } catch (error) { setLoadError((error as Error).message);try{const report=await window.yizhi.courseFormat.inspect();if(!report.writable)setReadonlyReport(report);}catch{/* The original open error remains visible. */} }
   };
   useEffect(() => { void load(); return () => channel.current?.dispose(); }, []);
   useEffect(()=>window.yizhi.onCloseCancelled(()=>{document.body.inert=false;setClosing(false);}),[]);
@@ -480,18 +484,9 @@ function App() {
     }
     setSearchReturn(() => restore);
   };
-  const status = { draft: '草稿已保留', saved: '已保存', pending: '待保存', saving: '正在保存…', error: '未保存' }[state.status];
-  return <>
-    <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen || sourcesOpen || agentOpen || notesOpen || searchOpen || exchangeOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
-      <MigrationPanel sessionId={course?.sessionId}/>
-      {course&&<RetentionPanel key={course.sessionId} sessionId={course.sessionId} onReturn={()=>{if(narrow)setDirectory(false);}} prepare={async()=>{
-        if(composing.current)throw new Error('请先完成中文候选输入，再管理历史与空间。');
-        const saved=await channel.current?.flush(),progress=channel.current?.progress();
-        if(!saved&&(!progress||progress.durableInputSeq<progress.inputSeq))throw new Error('当前输入尚未保留，请先重试保存。');
-        if(continuous.current&&!await continuous.current.finish()||!await flushUnitInputs(true))throw new Error('当前单元输入尚未保留，请先重试保存。');
-      }}/>}
-      {course&&graph&&<CourseRestorePanel sessionId={course.sessionId} courseId={course.courseId} units={graph.nodes.map(n=>({id:n.id,name:n.name}))} prepare={async()=>{
-        if(composing.current)throw new Error('请先完成中文候选输入，再核对整课恢复。');
+  const prepareCourseSnapshot=async()=>{
+    if(!course)throw new Error('课程尚未打开');
+        if(composing.current)throw new Error('请先完成中文候选输入，再保存课程副本。');
         await navigation.current;await writes.current;await layoutWrites.current;
         if(layoutPending.current.length||readingFailed.current)throw new Error('当前布局或阅读位置尚未保存，请先重试。');
         if(readingRef.current)await window.yizhi.setReadingState(course.sessionId,{...readingRef.current,camera:flow.getViewport()});
@@ -501,7 +496,21 @@ function App() {
         if(agentPanel.current&&!await agentPanel.current.flush())throw new Error('学习对话输入尚未确认保存。');
         if(!await flushExtensions(course.sessionId)||!await flushBuiltinExperiments(window.yizhi,course.sessionId))throw new Error('实验现场尚未确认，请先保存或恢复最近确认现场。');
         if(!await channel.current?.flush()||!await flushUnitInputs(true)||continuous.current&&!await continuous.current.finish())throw new Error('当前输入尚未持久保留，请先重试保存。');
+  };
+  const status = { draft: '草稿已保留', saved: '已保存', pending: '待保存', saving: '正在保存…', error: '未保存' }[state.status];
+  if(!course&&readonlyReport)return <><header className="app-header"><strong className="brand">绎知</strong><span>兼容范围只读 · 拒绝写入</span><button onClick={()=>void load()}>重新核对版本</button></header><ReadonlyCourse report={readonlyReport}/></>;
+  return <>
+    <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen || sourcesOpen || agentOpen || notesOpen || searchOpen || exchangeOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
+      {course?.courseFormat===2&&<span role="status" aria-label="课程格式">课程已升级</span>}
+      <MigrationPanel sessionId={course?.sessionId}/>
+      {course&&<BackupPanel sessionId={course.sessionId} prepare={prepareCourseSnapshot} onReturn={()=>{if(narrow)setDirectory(false);}}/>}
+      {course&&<RetentionPanel key={course.sessionId} sessionId={course.sessionId} onReturn={()=>{if(narrow)setDirectory(false);}} prepare={async()=>{
+        if(composing.current)throw new Error('请先完成中文候选输入，再管理历史与空间。');
+        const saved=await channel.current?.flush(),progress=channel.current?.progress();
+        if(!saved&&(!progress||progress.durableInputSeq<progress.inputSeq))throw new Error('当前输入尚未保留，请先重试保存。');
+        if(continuous.current&&!await continuous.current.finish()||!await flushUnitInputs(true))throw new Error('当前单元输入尚未保留，请先重试保存。');
       }}/>}
+      {course&&graph&&<CourseRestorePanel sessionId={course.sessionId} courseId={course.courseId} units={graph.nodes.map(n=>({id:n.id,name:n.name}))} prepare={prepareCourseSnapshot}/>}
       {course&&graph&&<HistoryPanel ref={historyPanel} sessionId={course.sessionId} units={graph.nodes.map(n=>({id:n.id,name:n.name}))} prepare={async()=>{
         if(composing.current)throw new Error('请先完成中文候选输入，再查看或恢复历史。');
         const saved=await channel.current?.flush();
