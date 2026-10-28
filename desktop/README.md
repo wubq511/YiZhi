@@ -27,9 +27,9 @@ npm run test:smoke:built
 
 CI 将完整 UI 分为两片，各使用一台独立 macOS runner 和一个 Playwright worker，同时分别覆盖 Node／Electron Core，每台只构建一次；`desktop` 汇总检查只有两片都成功才成功。`npm run test:ui:coverage` 用 Playwright 实际发现结果检查两片并集恰为完整套件且无重复，`-- --json` 可输出逐用例归属。所有既有真实模型／安装包等 opt-in 条件保持不变。
 
-本机 UI 保持 `workers: 1`：39 个现有 spec 文件都启动真实 Electron 并取得原生窗口。编辑／保护／批注用例依赖焦点、选区、公式输入与 composition；`editor.spec.ts` 还读写和恢复系统剪贴板。`learning-lifecycle.spec.ts` 主动前置多个窗口，窗口／来源／打包用例覆盖宿主生命周期或原生 chooser 归属。扩展和实验依赖实际可见性、离屏暂停与计时；画板用例依赖窗口几何和真实 wheel。独立课程目录和 profile 能隔离数据，不能隔离这些桌面资源。
+本机 UI 保持 `workers: 1`：现有 UI spec 文件都启动真实 Electron 并取得原生窗口。编辑／保护／批注用例依赖焦点、选区、公式输入与 composition；`editor.spec.ts` 还读写和恢复系统剪贴板。`learning-lifecycle.spec.ts` 主动前置多个窗口，窗口／来源／打包用例覆盖宿主生命周期或原生 chooser 归属。扩展和实验依赖实际可见性、离屏暂停与计时；画板用例依赖窗口几何和真实 wheel。独立课程目录和 profile 能隔离数据，不能隔离这些桌面资源。
 
-当前没有可直接并发且值得单独调度的无桌面 UI 子集。最接近的 `camera-observation.spec.ts` 虽只读取 CSS Typed OM，仍启动完整可见应用并等待 rAF；把它改为隐藏窗口或另一浏览器会改变该回归的运行前提，而仅拆这一小例的收益不足以抵消额外启动／调度。纯计算和 Worker／SQLite 检查已经位于可并行的 Core 套件。共享本机的 UI／物理输入验收继续串行；UI 的并行收益来自独立 hosted runner，而非本机增加 worker。这里是现有源码边界评估，未声称做过本机多 GUI 并发性能验证。
+当前没有可直接并发且值得单独调度的无桌面 UI 子集。`camera-observation.spec.ts` 已收窄到同一锁定 Electron 版本的独立 DOM 页面，保留 CSS Typed OM 数值、跨帧与精确相等检查，避免无关课程启动／业务退出影响数值回归；它仍创建可见原生窗口并等待 rAF。仅拆这一小例不足以抵消额外启动／调度，当前也没有为它运行本机并发 GUI。纯计算和 Worker／SQLite 检查已经位于可并行的 Core 套件。共享本机的 UI／物理输入验收继续串行；UI 的并行收益来自独立 hosted runner，而非本机增加 worker。这里是现有源码边界评估，未声称做过本机多 GUI 并发性能验证。
 
 `test:electron` 在锁定 Electron 的内置 Node 中运行同一组真实 Worker／SQLite 测试；`test:smoke` 自动发现 `**/*.spec.ts`，使用 Playwright 驱动真实 Electron、公开 preload IPC 和编辑区，验证连续输入／拆合／复制与移动、公式内外撤销、独立外部更新后撤销、完整结构重开、失败保留／重试、关闭保存屏障、强杀后的草稿恢复、应用单实例与跨应用课程锁。Node 测试仍只发现 `*.test.ts`。所有写入和故障注入均使用临时课程副本。测试截图和构建产物不进入 Git。
 
