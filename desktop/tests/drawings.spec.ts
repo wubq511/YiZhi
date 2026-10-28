@@ -156,6 +156,8 @@ test('unit adjustment and drawing share the board context in gesture order and E
     const page=await app.firstWindow();await resizeBoardWindow(app,page);await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');
     await page.getByRole('button',{name:'绘图标注',exact:true}).click();await page.getByRole('button',{name:'矩形',exact:true}).click();
     const board=(await page.locator('main.board').boundingBox())!;await drag(page,board.x+450,board.y+150,100,70);
+    // Await this gesture's actual receipt, not the initial or previous saved label.
+    await expect.poll(async () => (await snapshot(page)).drawings.length).toBe(1);
     await expect(page.getByRole('status',{name:'绘图同步状态'})).toHaveText('已保存');
     const original=(await snapshot(page)).graph.layout.nodes.find((n:any)=>n.unitId==='KU-001');
     const width=page.getByRole('slider',{name:'调整位置记数法与权展开宽度'});await width.focus();await page.keyboard.press('ArrowRight');
