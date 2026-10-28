@@ -270,7 +270,8 @@ export class AgentStore {
     return transaction(this.db, () => {
       const task = this.task(request.taskId);
       const before = JSON.stringify(task);
-      if (task.attemptId !== request.attemptId || task.generation !== request.generation || request.generation !== this.generation()) throw new Error('任务尝试已停止或失效');
+      const deliveryFact=request.action==='delivery'&&['accepted','failed','unknown'].includes(request.state);
+      if (task.attemptId !== request.attemptId || task.generation !== request.generation || request.generation !== this.generation()&&!deliveryFact) throw new Error('任务尝试已停止或失效');
       if (request.action === 'activate') {
         if (task.status !== 'queued') return task;
         if (task.blockedBy?.some(id => ['running','waiting','queued','stopping'].includes(this.task(id).status))) return task;
@@ -372,8 +373,9 @@ export class AgentStore {
       const task=this.facts(event);
       if (event.turnId && task.turnHistory?.some(turn => turn.turnId === event.turnId)) throw new Error('旧模型轮次已经结束');
       const canReconcile=event.reconciliation && ['bind','message','finish'].includes(event.kind);
+      const retiredFact=task.generation!==this.generation()&&['tool','finish'].includes(event.kind);
       const stopped=!!this.db.prepare('SELECT 1 FROM agent_stop_requests WHERE task_id=? AND attempt_id=?').get(task.id,task.attemptId);
-      if(task.status!=='running' && !(task.status==='stopping'&&task.stopRequested) && !canReconcile && !(stopped&&!task.stopRequested))throw new Error('任务尝试已停止或失效');
+      if(task.status!=='running' && !(task.status==='stopping'&&task.stopRequested) && !canReconcile && !retiredFact && !(stopped&&!task.stopRequested))throw new Error('任务尝试已停止或失效');
       if(task.status==='running'&&!stopped)this.active(event);
       if(task.threadId&&event.threadId&&task.threadId!==event.threadId||task.turnId&&event.turnId&&task.turnId!==event.turnId)throw new Error('执行器 thread/turn 不匹配');
       if(JSON.stringify(event).length>500_000)throw new Error('执行器事件过大');
@@ -411,7 +413,7 @@ export class AgentStore {
       if (task.threadId && event.threadId && task.threadId !== event.threadId || task.turnId && event.turnId && task.turnId !== event.turnId) throw new Error('执行器 thread/turn 不匹配');
       if (event.kind === 'bind') {
         task.threadId = event.threadId ?? task.threadId; task.turnId = event.turnId ?? task.turnId; task.model = event.model ?? task.model;
-        this.db.prepare('UPDATE agent_conversations SET thread_id=? WHERE id=?').run(task.threadId, task.conversationId);
+        if(task.generation===this.generation())this.db.prepare('UPDATE agent_conversations SET thread_id=? WHERE id=?').run(task.threadId, task.conversationId);
       } else if (event.kind === 'delta' || event.kind === 'message') {
         if (!valid(event.itemId) || !text(event.text, 200_000)) throw new Error('执行器消息无效');
         const id = task.turnHistory?.length ? `${task.id}:${event.turnId ?? task.turnId ?? 'unbound'}:${event.itemId}` : `${task.id}:${event.itemId}`;
@@ -421,8 +423,9 @@ export class AgentStore {
           text: event.kind === 'message' ? event.text! : (previous?.text ?? '') + event.text!, state: event.kind === 'message' ? 'complete' : 'streaming' });
       } else if (event.kind === 'tool' && event.tool) {
         if (task.snapshot.intent !== 'question' && (event.tool.output as any)?.error) { task.mutationFailure = String((event.tool.output as any).error).slice(0,2000); task.toolErrors=[...(task.toolErrors??[]),{eventId:event.eventId,name:String(event.tool.name).slice(0,200),error:task.mutationFailure}].slice(-20); }
+        const activeRecovery=task.generation===this.generation()&&['running','waiting'].includes(task.status);
         this.db.prepare('INSERT INTO agent_tool_recovery VALUES(?,?,?,?,?,?,?,?,?)').run(`${task.attemptId}:${event.eventId}`, task.attemptId,
-          'active-recovery', task.id, event.tool.name, JSON.stringify(event.tool.input), JSON.stringify(event.tool.output), hash(event.tool), JSON.stringify(event.tool.references));
+          activeRecovery?'active-recovery':'result-fact', task.id, event.tool.name, activeRecovery?JSON.stringify(event.tool.input):null, activeRecovery?JSON.stringify(event.tool.output):null, hash(event.tool), JSON.stringify(event.tool.references));
       } else if (event.kind === 'finish') {
         if (!event.status || !['completed','failed','interrupted','unknown'].includes(event.status)) throw new Error('执行器终态无效');
         this.finish(task, event.status, event.error);

@@ -317,6 +317,7 @@ export class AgentRuntime {
     })();
   }
   cancelQuit() {if(!this.closed){this.quiescing=false;this.quitPreparation=undefined;this.watch();}}
+  async courseRestored(sessionId:string){await Promise.allSettled([...this.running.values()].filter(r=>r.sessionId===sessionId).map(r=>this.stop({sessionId,taskId:r.task.id})));}
   private async begin(running: Running) {
     await this.core.activeAgent({sessionId:running.sessionId,taskId:running.task.id,attemptId:running.task.attemptId,generation:running.task.generation});
     const task = running.task, model = task.model ?? this.statusValue!.models.find(m => m.isDefault)?.model ?? this.statusValue!.models[0].model;

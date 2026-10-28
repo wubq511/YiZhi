@@ -24,6 +24,7 @@ const record = (value: unknown): value is Record<string, any> => !!value && type
 /** All methods run synchronously in the host-owned Worker on its course connection. */
 export class CommandGroups {
   private protections = new Map<string, EditorProtection>();
+  releaseGeneration(){this.protections.clear();}
   constructor(private db: DatabaseSync, private graph: CourseGraph, private fenceOperation: (operationId: string) => void = () => {}, private loadUnit?: (id: string) => CourseUnit | undefined, private consistency?: ConsistencyPort) {
     db.exec(`
       CREATE TABLE IF NOT EXISTS cg_objects(id TEXT PRIMARY KEY, kind TEXT NOT NULL, value TEXT NOT NULL, version INTEGER NOT NULL);

@@ -1,4 +1,5 @@
 import { historyClient } from '../history-api';
+import { courseRestoreClient } from '../course-restore-api';
 import { descriptionClient } from '../description-api';
 import { drawingClient } from '../drawing-api';
 import { exchangeBridge } from '../exchange-api';
@@ -21,6 +22,7 @@ async function invoke(channel: string, argument?: unknown) {
   }
 }
 const bridge: DesktopBridge = {
+  courseRestore:courseRestoreClient(invoke),
   formalHistory: historyClient(invoke),
   description: descriptionClient(invoke),
   drawings: drawingClient(invoke),
@@ -52,6 +54,7 @@ const bridge: DesktopBridge = {
   readEvents: (sessionId, after, limit = 64) => invoke('course:readEvents', { sessionId, after, limit }),
   read: (sessionId, unitId) => invoke('course:read', { sessionId, unitId }),
   onCloseCancelled(listener) {const handler=()=>listener();ipcRenderer.on('window:close-cancelled',handler);return ()=>ipcRenderer.removeListener('window:close-cancelled',handler);},
+  onGenerationChanged(listener){const handler=()=>listener();ipcRenderer.on('course:generation-changed',handler);return()=>ipcRenderer.removeListener('course:generation-changed',handler);},
   onCloseRequested(listener) {
     const handler = async (_event: Electron.IpcRendererEvent, requestId: number) => {
       let saved = false;

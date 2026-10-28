@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { CourseService } from '../src/core/course-service';
@@ -174,10 +174,13 @@ test('host shutdown drains accepted question registration and leaves no running 
 
 test('mutation protocol exposes actual grouped receipts and waiting status; an independent QA uses a distinct ephemeral read-only thread',async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-mutation-rpc-')),core=new CourseService(resolve('dist/worker.cjs'));
- const runtime=new AgentRuntime(core,{cliPath:resolve('dist/tests/agent-executor-fixture.cjs'),directory:join(root,'runtime'),env:{...process.env,YIZHI_FIXTURE_MODE:'mutation'}});
+ const release=join(root,'mutation-release');
+ const runtime=new AgentRuntime(core,{cliPath:resolve('dist/tests/agent-executor-fixture.cjs'),directory:join(root,'runtime'),env:{...process.env,YIZHI_FIXTURE_MODE:'mutation',YIZHI_MUTATION_RELEASE:release}});
  try{
   const c=await core.open(join(root,'course')),sessionId=c.sessionId,conv=await core.agent.create({sessionId,operationId:'create'});
   await runtime.submit({sessionId,conversationId:conv.id,operationId:'explicit-modify',generation:1,intent:'modify',text:'受控协议修改',target:{unitId:'KU-001'}});
+  const first=await until(()=>core.agent.get({sessionId,conversationId:conv.id}),v=>!!v.tasks[0].groups?.some(g=>g.status==='committed'));
+  assert.equal(first.tasks[0].status,'running');await writeFile(release,'release');
   const done=await until(()=>core.agent.get({sessionId,conversationId:conv.id}),v=>v.tasks[0].status!=='running');
   assert.equal(done.tasks[0].status,'waiting');assert.equal(done.tasks[0].executorStatus,'completed');assert.ok(done.messages.filter(m=>m.role==='assistant').every(m=>m.state==='complete'));assert.deepEqual(done.tasks[0].groups!.map(g=>g.status),['committed','retained']);assert.ok(done.toolFacts.some(f=>f.hasRecoveryPayload));
   const saved=(await core.read(sessionId)).unit;

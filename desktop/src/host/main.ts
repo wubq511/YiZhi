@@ -72,6 +72,8 @@ else {
     ipcMain.handle('course:confirm-review-prompt', async (event, input) => { checkSender(event); return core.confirmReviewPrompt(input.sessionId, input.promptId, input.adjust); });
     ipcMain.handle('course:save', async (event, command: SaveParagraph) => { checkSender(event); return core.save(command); });
     ipcMain.handle('course:saveDraft', (event, input) => { checkSender(event); return core.saveDraft(input); });
+    for(const method of ['preview','query','drafts'] as const)ipcMain.handle(`courseRestore:${method}`,(event,request)=>{checkSender(event);return core.courseRestore[method](request);});
+    ipcMain.handle('courseRestore:apply',async(event,request)=>{checkSender(event);host.assertTaskAdmission();const result=await core.courseRestore.apply(request);await agent.courseRestored(request.sessionId);await host.restored(event);return result;});
     for(const method of ['list','detail','preview','query'] as const)ipcMain.handle(`formalHistory:${method}`,(event,request)=>{checkSender(event);return core.formalHistory[method](request);});
   ipcMain.handle('formalHistory:apply',async(event,request)=>{
     checkSender(event);
