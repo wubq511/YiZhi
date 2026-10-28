@@ -39,8 +39,12 @@ export class LearningHost {
       view.recovery=await this.core.openLearningView({sessionId:opened.sessionId,viewId:view.id});
     })();
     await view.opening;
+    // The Worker may rotate course authority after a committed whole-course recovery.
+    const latest=await this.core.open(view.directory);
+    if(view.sessionId!==latest.sessionId){view.sessionId=latest.sessionId;view.recovery=await this.core.openLearningView({sessionId:latest.sessionId,viewId:view.id});}
     return {...await this.core.read(view.sessionId!),inputRecovery:view.recovery};
   };
+  async restored(event:Electron.IpcMainInvokeEvent){const view=this.sender(event);await this.open(event);view.window.webContents.send('course:generation-changed');}
   async show(directory=this.lastDirectory,bounds?:Electron.Rectangle) {
     if(this.quiescing||this.exiting)return;
     mkdirSync(directory,{recursive:true});directory=canonical(directory);this.lastDirectory=directory;

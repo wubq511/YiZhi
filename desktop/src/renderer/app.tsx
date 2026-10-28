@@ -1,3 +1,4 @@
+import { CourseRestorePanel } from './course-restore-panel';
 import { HistoryPanel,type HistoryPanelHandle } from './history-panel';
 import { Drawings, type DrawingHandle } from './drawings';
 import { ExchangePanel } from './exchange-panel';
@@ -459,6 +460,18 @@ function App() {
   const status = { draft: '草稿已保留', saved: '已保存', pending: '待保存', saving: '正在保存…', error: '未保存' }[state.status];
   return <>
     <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen || sourcesOpen || agentOpen || notesOpen || searchOpen || exchangeOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
+      {course&&graph&&<CourseRestorePanel sessionId={course.sessionId} courseId={course.courseId} units={graph.nodes.map(n=>({id:n.id,name:n.name}))} prepare={async()=>{
+        if(composing.current)throw new Error('请先完成中文候选输入，再核对整课恢复。');
+        await navigation.current;await writes.current;await layoutWrites.current;
+        if(layoutPending.current.length||readingFailed.current)throw new Error('当前布局或阅读位置尚未保存，请先重试。');
+        if(readingRef.current)await window.yizhi.setReadingState(course.sessionId,{...readingRef.current,camera:flow.getViewport()});
+        if(drawingPanel.current&&!await drawingPanel.current.flush())throw new Error('个人图形尚未确认保存。');
+        if(notesPanel.current&&!await notesPanel.current.flush())throw new Error('个人笔记尚未确认保存。');
+        if(sourcesPanel.current&&!await sourcesPanel.current.flush())throw new Error('来源阅读状态尚未确认保存。');
+        if(agentPanel.current&&!await agentPanel.current.flush())throw new Error('学习对话输入尚未确认保存。');
+        if(!await flushExtensions(course.sessionId)||!await flushBuiltinExperiments(window.yizhi,course.sessionId))throw new Error('实验现场尚未确认，请先保存或恢复最近确认现场。');
+        if(!await channel.current?.flush()||!await flushUnitInputs(true)||continuous.current&&!await continuous.current.finish())throw new Error('当前输入尚未持久保留，请先重试保存。');
+      }}/>}
       {course&&graph&&<HistoryPanel ref={historyPanel} sessionId={course.sessionId} units={graph.nodes.map(n=>({id:n.id,name:n.name}))} prepare={async()=>{
         if(composing.current)throw new Error('请先完成中文候选输入，再查看或恢复历史。');
         const saved=await channel.current?.flush();
@@ -593,4 +606,5 @@ function App() {
     </div>
   </>;
 }
-createRoot(document.getElementById('root')!).render(<ReactFlowProvider><App /></ReactFlowProvider>);
+function GenerationBoundary(){const [epoch,setEpoch]=useState(0);useEffect(()=>window.yizhi.onGenerationChanged(()=>setEpoch(n=>n+1)),[]);return <ReactFlowProvider key={epoch}><App /></ReactFlowProvider>;}
+createRoot(document.getElementById('root')!).render(<GenerationBoundary/>);

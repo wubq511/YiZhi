@@ -50,6 +50,14 @@ export class Extensions {
     this.live=v;
   }
   read(): ExtensionView { if (!this.live) throw new Error('扩展尚未打开'); return structuredClone(this.live); }
+  fenceGeneration() {
+    if(!this.db.isTransaction)throw new Error('扩展代际切换必须与课程恢复共同提交');
+    for(const row of this.db.prepare('SELECT payload FROM extension_scene').all()) {
+      const v:ExtensionView=JSON.parse(String(row.payload));v.generation++;v.instanceId=randomUUID();v.revision++;
+      v.running=false;v.visible=false;v.gesture=false;v.phase=v.pending&&v.error?'conflict':v.checked.includes(v.definition.packageVersion)?'paused':'needs-check';this.persist(v);
+    }
+    return ()=>{this.live=undefined;};
+  }
   resource({version, path}: {version: ExtensionVersion; path: string}) {
     const row = this.db.prepare('SELECT manifest FROM extension_packages WHERE version=?').get(version);
     const m: ExtensionManifest | undefined = row && JSON.parse(String(row.manifest));

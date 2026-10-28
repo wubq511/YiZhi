@@ -209,4 +209,12 @@ export class BuiltinExperiments {
     return result;
   }
   dispose() { for (const t of this.timers.values()) clearTimeout(t); this.timers.clear(); }
+  fenceGeneration() {
+    if(!this.db.isTransaction)throw new Error('运行代际切换必须与课程恢复共同提交');
+    for(const row of this.db.prepare('SELECT payload FROM builtin_experiments').all()) {
+      const v:ExperimentView=JSON.parse(String(row.payload));v.generation++;v.version++;v.running=false;v.visible=false;v.gesture=false;
+      v.phase=v.definition.check==='verified'?'paused':'needs-check';this.persist(v);
+    }
+    return ()=>{this.dispose();this.live.clear();};
+  }
 }

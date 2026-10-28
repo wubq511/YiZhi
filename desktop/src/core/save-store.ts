@@ -16,13 +16,14 @@ export function initializeSaveStore(db: DatabaseSync) {
     CREATE TABLE IF NOT EXISTS drafts(session_id TEXT PRIMARY KEY, input TEXT NOT NULL, receipt TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS operation_times(operation_id TEXT PRIMARY KEY REFERENCES operations(id), committed_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS save_events(cursor INTEGER PRIMARY KEY AUTOINCREMENT, event TEXT NOT NULL);`);
-  db.exec('CREATE TABLE IF NOT EXISTS input_resolutions(id TEXT PRIMARY KEY REFERENCES operations(id), digest TEXT NOT NULL)');
+  db.exec(`CREATE TABLE IF NOT EXISTS input_resolutions(id TEXT PRIMARY KEY REFERENCES operations(id), digest TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS retired_drafts(session_id TEXT PRIMARY KEY,generation INTEGER NOT NULL,restore_operation_id TEXT NOT NULL)`);
 }
 export function eventCursor(db: DatabaseSync): number {
   return Number(db.prepare("SELECT seq FROM sqlite_sequence WHERE name='save_events'").get()?.seq ?? 0);
 }
 export function readDrafts(db: DatabaseSync): RecoverableDraft[] {
-  return db.prepare('SELECT input, receipt FROM drafts ORDER BY rowid').all().map(row => ({
+  return db.prepare('SELECT input, receipt FROM drafts WHERE session_id NOT IN(SELECT session_id FROM retired_drafts) ORDER BY rowid').all().map(row => ({
     input: JSON.parse(String(row.input)), receipt: JSON.parse(String(row.receipt)),
   }));
 }
