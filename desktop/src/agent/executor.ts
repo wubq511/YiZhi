@@ -131,8 +131,14 @@ export class AgentRuntime {
   }
   async stop(request:AgentTaskRequest):Promise<AgentTask> {
     const task=await this.core.agent.stop(request),running=this.running.get(task.id);
-    if(running) {running.task=task;void this.interrupt(running);}
-    else if(task.status==='stopping')void this.reconcile(request);
+    if(task.status!=='stopping')return task;
+    if(running)running.task=task;
+    if(task.executorStatus && task.executorStatus!=='unknown' || !running&&!task.turnId) {
+      const event={kind:'finish' as const,status:task.executorStatus && task.executorStatus!=='unknown'?task.executorStatus:'interrupted' as const,reconciliation:true};
+      if(running)void this.enqueue(running,()=>this.record(running,event));
+      else void this.core.recordAgent({...request,attemptId:task.attemptId,generation:task.generation,eventId:`stop-final:${this.instance}:${++this.sequence}`,...event}).catch(()=>{});
+    } else if(running)void this.interrupt(running);
+    else void this.reconcile(request);
     return task;
   }
   private interrupt(running:Running):Promise<void> {
@@ -140,6 +146,7 @@ export class AgentRuntime {
       await running.beginning; await running.chain;
       const task=await this.core.agentTask({sessionId:running.sessionId,taskId:running.task.id});running.task=task;
       if(task.status!=='stopping')return;
+      if(task.executorStatus && task.executorStatus!=='unknown'){await this.record(running,{kind:'finish',status:task.executorStatus,reconciliation:true});return;}
       if(!task.turnId) {await this.record(running,{kind:'finish',status:'interrupted',error:'已停止，未开始新的执行器 turn。'});return;}
       try { await this.rpc!.request('turn/interrupt',{threadId:task.threadId,turnId:task.turnId}); }
       catch {await this.reconcile({sessionId:running.sessionId,taskId:task.id});}
@@ -239,9 +246,11 @@ export class AgentRuntime {
     }
     await this.record(running, { kind: 'bind', threadId, model });
     await this.core.activeAgent({sessionId:running.sessionId,taskId:task.id,attemptId:task.attemptId,generation:task.generation});
+    const ancestors:AgentTask[]=[];let previousId=task.continuesTaskId;
+    while(previousId&&!ancestors.some(t=>t.id===previousId)){const previous=history.tasks.find(t=>t.id===previousId);if(!previous)break;ancestors.push(previous);previousId=previous.continuesTaskId;}
     const prior = history.messages.filter(m => m.taskId !== task.id && m.state === 'complete').slice(-12).map(m => ({ role: m.role, text: m.text.slice(0, 3000) }));
     const response = await this.rpc!.request('turn/start', { threadId, model, environments: [],
-      input: [{ type: 'text', text: JSON.stringify({ previousVisibleMessages: prior, submittedRequest: task.snapshot, continuation: task.continuesTaskId ? {previousTaskId:task.continuesTaskId,completedGroups:history.tasks.filter(t=>t.id!==task.id).flatMap(t=>(t.groups??[]).filter(g=>g.status==='committed')),rule:'必须先重读最新内容，仅处理剩余事项；不得重新生成或应用已提交组。保留当前学生内容。'} : undefined }) }],
+      input: [{ type: 'text', text: JSON.stringify({ previousVisibleMessages: prior, submittedRequest: task.snapshot, continuation: task.continuesTaskId ? {previousTaskId:task.continuesTaskId,originalSubmittedRequest:ancestors[0]?.snapshot,completedGroups:ancestors.flatMap(t=>(t.groups??[]).filter(g=>g.status==='committed')),rule:'必须先重读最新内容，仅处理剩余事项；不得重新生成或应用已提交组。保留当前学生内容。'} : undefined }) }],
       effort: this.statusValue!.models.find(m => m.model === model)?.defaultReasoningEffort,
     }, 45_000);
     if (response.turn?.id) await this.enqueue(running, () => this.record(running, { kind: 'bind', threadId, turnId: response.turn.id }));

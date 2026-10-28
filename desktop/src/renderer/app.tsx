@@ -154,6 +154,7 @@ function App() {
   const [loadError, setLoadError] = useState<string>();
   const [state, setState] = useState<SaveState>({ status: 'saved' });
   const [closing, setClosing] = useState(false);
+  const [inputRecovery,setInputRecovery]=useState<OpenedCourse['inputRecovery']>();
   const [producerBusy, setProducerBusy] = useState(false);
   const [producerOpen, setProducerOpen] = useState(false);
   const producerRunning = useRef(false);
@@ -246,7 +247,7 @@ function App() {
       const opened = await window.yizhi.open();
       channel.current?.dispose();
       channel.current = new ParagraphSaveChannel(window.yizhi, opened, setState, { onSnapshot: setCourse });
-      setCourse(opened);
+      setCourse(opened);setInputRecovery(opened.inputRecovery);
       const [loadedGraph, savedReading, reviewSnapshot] = await Promise.all([window.yizhi.graph(opened.sessionId), window.yizhi.readingState(opened.sessionId), window.yizhi.reviewStates(opened.sessionId)]);
       if (savedReading?.pinnedUnitId === 'KU-001' || savedReading?.modification) setMounted([opened.unit]);
       if (savedReading?.modification) { workTarget.current = savedReading.modification.targetId; camera.restore(savedReading.modification.ended); }
@@ -501,7 +502,7 @@ function App() {
         {state.status === 'error' && <button onClick={() => void channel.current?.flush()}>重试保存</button>}
       </div>
     </header>
-    {course?.inputRecovery?.unconfirmedTail && <div className="save-error" role="status">{course.inputRecovery.detail}</div>}
+    {inputRecovery?.unconfirmedTail && <div className="save-error" role="status">{inputRecovery.detail}</div>}
     {state.error && <div className="save-error" role="alert">{state.error}{!state.error.includes('冲突部分') && ' 输入仍保留，请重试保存。'}</div>}
     <div className="workspace board-workspace" inert={(!cameraReady && !loadError) || (narrow && (sourcesOpen || agentOpen || notesOpen || exchangeOpen || searchOpen))} aria-busy={!cameraReady && !loadError}>
       {directory && <nav ref={navRef} inert={sourceOpen || (narrow && (relationsOpen || producerOpen))} aria-label="课程目录" onKeyDown={event => trap(event, closeDirectory)}><h2>课程目录</h2>{narrow && <button onClick={closeDirectory}>关闭目录</button>}

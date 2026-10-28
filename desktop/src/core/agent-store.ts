@@ -153,7 +153,7 @@ export class AgentStore {
   }
   stop(request: { taskId: string }): AgentTask {
     const task=this.task(request.taskId);
-    if (!['running','queued','waiting','stopping'].includes(task.status)) return task;
+    if (!['running','queued','waiting','stopping'].includes(task.status) && !(task.status==='unknown'&&task.recovery?.state==='active')) return task;
     // Qualification is durable even if the later business-task projection cannot be written.
     transaction(this.db,()=>{
       this.db.prepare("UPDATE cg_attempts SET status='stopped' WHERE id=?").run(task.attemptId);
@@ -222,7 +222,11 @@ export class AgentStore {
   /** First persist the actual executor delivery, then publish its local projection.
    * A failed association cannot erase a fact already accepted from the external turn. */
   record(event: AgentEvent) {
-    if(!valid(event.eventId))throw new Error('执行器事件身份无效');
+    if(!valid(event.eventId)||!['bind','delta','message','tool','finish'].includes(event.kind)||
+      event.threadId!==undefined&&!valid(event.threadId)||event.turnId!==undefined&&!valid(event.turnId))throw new Error('执行器事件身份无效');
+    if(['delta','message'].includes(event.kind)&&(!valid(event.itemId)||!text(event.text,200_000)))throw new Error('执行器消息无效');
+    if(event.kind==='finish'&&(!event.status||!['completed','failed','interrupted','unknown'].includes(event.status)))throw new Error('执行器终态无效');
+    if(event.kind==='tool'&&(!event.tool||!valid(event.tool.name)||!Array.isArray(event.tool.references)||event.tool.references.some(id=>!valid(id))))throw new Error('执行器工具事实无效');
     const digest=hash(event),old=this.db.prepare('SELECT digest FROM agent_executor_receipts WHERE attempt_id=? AND event_id=?').get(event.attemptId,event.eventId);
     if(old && old.digest!==digest)throw new Error('执行器事件身份冲突');
     if(!old) {
@@ -242,7 +246,7 @@ export class AgentStore {
       const task=this.task(String(row.task_id));if(task.stopRequested)continue;
       transaction(this.db,()=>{
         task.stopRequested=true;
-        task.status=['running','queued','waiting'].includes(task.status)?'stopping':task.executorStatus==='unknown'?'unknown':'stopped';
+        task.status=['running','queued','waiting'].includes(task.status)||task.status==='unknown'&&task.recovery?.state==='active'?'stopping':task.executorStatus==='unknown'?'unknown':'stopped';
         task.cursor=this.changed(task.conversationId,task.id);
         this.db.prepare('UPDATE agent_tasks SET payload=? WHERE id=?').run(JSON.stringify(task),task.id);
       });

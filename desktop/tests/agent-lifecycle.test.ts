@@ -85,6 +85,9 @@ test('abnormal view loss releases only temporary input protection and reopening 
   await core.releaseLearningView({sessionId,viewId:'view-one',saved:false});
   const reopened=await core.openLearningView({sessionId,viewId:'view-two'});assert.equal(reopened.unconfirmedTail,true);
   assert.ok((await core.read(sessionId)).drafts.length);
+  const attempt=await core.commands.startAttempt({sessionId,taskId:'post-crash-producer'}),basis=await core.commands.read({sessionId,attemptId:attempt.attemptId,objectIds:[c.editableBlockId]});
+  const guarded=await core.commands.commit({sessionId,attemptId:attempt.attemptId,basisId:basis.basisId,operationId:'cannot-ignore-persisted-draft',changes:[{objectId:c.editableBlockId,value:{...basis.objects[0].value,payload:{...basis.objects[0].value.payload,text:'不得覆盖持久输入'}}}]});
+  assert.equal(guarded.status,'retained');
   await core.confirmLearningView({sessionId,viewId:'view-two'});
   await core.close();core=new CourseService(resolve('dist/worker.cjs'));
   const next=await core.open(root),fresh=await core.openLearningView({sessionId:next.sessionId,viewId:'view-three'});
@@ -189,5 +192,17 @@ test('Core shutdown drains admitted asynchronous source indexing and query befor
   assert.ok(status.indexed>0);assert.ok(results.hits.length>0);
   core=new CourseService(resolve('dist/worker.cjs'));c=await core.open(join(root,'course'));
   assert.ok((await core.search.query({sessionId:c.sessionId,query:'drain',scopes:['sources']})).hits.length);
+ }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+
+test('a malformed executor delivery is rejected before durable receipt admission and cannot poison later real messages or reopen',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-invalid-delivery-')),core=new CourseService(resolve('dist/worker.cjs'));
+ try {
+  const {sessionId}=await core.open(root),c=await core.agent.create({sessionId,operationId:'c'}),t=await core.agent.submit({sessionId,conversationId:c.id,operationId:'q',generation:1,text:'问题',target:{unitId:'KU-001'}});
+  const id={sessionId,taskId:t.id,attemptId:t.attemptId,generation:1};
+  await assert.rejects(core.recordAgent({...id,eventId:'bad',kind:'delta',itemId:'answer',text:42 as any}),/消息无效/);
+  await core.recordAgent({...id,eventId:'full',kind:'message',itemId:'answer',text:'真实完整回答'});
+  await core.recordAgent({...id,eventId:'finished',kind:'finish',status:'completed'});
+  const v=await core.agent.get({sessionId,conversationId:c.id});assert.equal(v.tasks[0].status,'completed');assert.equal(v.messages[1].text,'真实完整回答');
  }finally{await core.close();await rm(root,{recursive:true,force:true});}
 });

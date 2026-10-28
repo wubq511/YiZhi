@@ -70,3 +70,19 @@ test('normal learning-window close confirms body, incomplete MathLive formula, p
   if(process.env.YIZHI_EVIDENCE_DIR)await page.screenshot({path:join(process.env.YIZHI_EVIDENCE_DIR,'t19-all-inputs-reopen.png')});
  }finally{await app.close();await rm(root,{recursive:true,force:true});}
 });
+
+test('an actual crashed renderer reopens confirmed composer content and discloses its unconfirmed tail without fabricating native-unresponsive evidence',async()=>{
+ test.setTimeout(30000);let crashStage='launch';
+ const root=await mkdtemp(join(tmpdir(),'yizhi-renderer-loss-')),app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile'),YIZHI_CODEX_PATH:resolve('dist/tests/agent-executor-fixture.cjs')}});let fault:DatabaseSync|undefined;
+ try {
+  let page=await app.firstWindow();await resizeBoardWindow(app,page);await composer(page,'异常前已确认草稿');await expect(page.getByRole('status',{name:'对话草稿保存'})).toHaveText('草稿已保存');
+  fault=new DatabaseSync(join(root,'course/course.sqlite'));fault.exec("CREATE TRIGGER crash_draft_fault BEFORE UPDATE OF draft ON agent_conversations BEGIN SELECT RAISE(ABORT,'unconfirmed renderer tail'); END");
+  await page.getByRole('textbox',{name:'学习对话草稿'}).fill('未确认尾部不能冒充保存');await expect(page.getByRole('status',{name:'对话草稿保存'})).toHaveText('草稿未保存');
+  fault.exec('DROP TRIGGER crash_draft_fault');fault.close();fault=undefined;crashStage='crash';console.log(crashStage);
+  await app.evaluate(({BrowserWindow})=>new Promise<void>(resolve=>{const w=BrowserWindow.getAllWindows()[0];w.webContents.once('render-process-gone',()=>resolve());setTimeout(()=>w.webContents.forcefullyCrashRenderer(),0);}));crashStage='recover menu';console.log(crashStage);
+  const next=app.waitForEvent('window',{timeout:10000});await app.evaluate(({dialog,Menu,BrowserWindow})=>{BrowserWindow.getAllWindows()[0].focus();dialog.showErrorBox=(title,content)=>{console.log('recovery-error',title,content);};dialog.showMessageBox=async()=>({response:0,checkboxChecked:false});const item=Menu.getApplicationMenu()!.items.find(i=>i.label==='窗口')!.submenu!.items.find(i=>i.label==='恢复无响应窗口')!;item.click(undefined,undefined,undefined);});
+  page=await next;crashStage='new window';console.log(crashStage);await resizeBoardWindow(app,page);await page.getByRole('button',{name:'Agent · 学习对话',exact:true}).click();
+  await expect(page.getByRole('textbox',{name:'学习对话草稿'})).toHaveValue('异常前已确认草稿');
+  await expect(page.getByText('上次窗口异常结束。',{exact:false})).toBeVisible();crashStage='passed';
+ }finally{console.log('crash cleanup',crashStage);if(fault){fault.exec('DROP TRIGGER IF EXISTS crash_draft_fault');fault.close();}if(crashStage==='passed')await app.close();else app.process().kill('SIGKILL');await rm(root,{recursive:true,force:true});}
+});
