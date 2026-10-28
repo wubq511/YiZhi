@@ -149,3 +149,21 @@ test('annotations and generated extensions retain both directions of the shared 
     assert.deepEqual((await core.read(sessionId)).unit, c.unit);
   } finally { await core.close(); await rm(root, { recursive: true, force: true }); }
 });
+
+test('active B annotation follows its own proven edit and cross-unit reassociation without touching original creation context', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-b-note-')), core = new CourseService(resolve('dist/worker.cjs'));
+  try {
+    const a = await core.open(root), b = await core.read(a.sessionId, 'KU-057');
+    const block = b.unit.reading.blocks.find(x => x.kind === 'paragraph')!, captured = selection(b, [block]);
+    const note = await core.annotations.create({ sessionId: a.sessionId, operationId: 'B-note', selection: captured, text: 'B 的理解' });
+    await assert.rejects(core.annotations.create({ sessionId: a.sessionId, operationId: 'wrong-owner', selection: { ...captured, unitId: 'KU-001' }, text: 'wrong' }), /所属|单元/);
+    const before = String(block.payload.text), after = '前缀' + before;
+    await core.commitEdit({ sessionId: a.sessionId, unitId: b.unit.id, inputSeq: 1, baseRevision: b.revision, operationId: 'B-edit', complete: true, changes: [], patch: {
+      updates: [{ blockId: block.id, before: block.payload, after: { ...block.payload, text: after } }], correspondence: [], textEdits: [{ blockId: block.id, before, after, from: 0, to: 0, inserted: '前缀' }] } });
+    const latest = (await core.annotations.list({ sessionId: a.sessionId }))[0];
+    assert.equal(latest.current.status, 'attached'); assert.equal(latest.current.fragments[0].from, captured.fragments[0].from + 2);
+    const moved = await core.annotations.reassociate({ sessionId: a.sessionId, operationId: 'to-A', id: note.id, expectedVersion: latest.version, selection: selection(a) });
+    assert.equal(moved.current.unitId, 'KU-001'); assert.deepEqual(moved.original, captured);
+    assert.deepEqual((await core.read(a.sessionId)).unit, a.unit);
+  } finally { await core.close(); await rm(root, { recursive: true, force: true }); }
+});

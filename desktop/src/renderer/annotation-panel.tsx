@@ -107,7 +107,7 @@ export const AnnotationPanel = forwardRef<AnnotationPanelHandle, { sessionId: st
   const reassociate = async () => {
     setError(undefined);
     // Capture synchronously while the editor still owns the shown selection.
-    const capture = reassociation.current ?? (document.querySelector('[aria-label="连续编辑正文"]') as any)?.editor?.storage.courseSelection.captureAnnotation();
+    const capture = reassociation.current ?? (document.querySelector('[data-reading-active="true"] [aria-label="连续编辑正文"]') as any)?.editor?.storage.courseSelection.captureAnnotation();
     reassociation.current = undefined;
     if (!capture?.fragments.length || !current) { setError('请先在正文或公式中选择新的关联片段。'); return; }
     if (!await flush()) return;
@@ -141,7 +141,7 @@ export const AnnotationPanel = forwardRef<AnnotationPanelHandle, { sessionId: st
           }} /></label>
         <div className="annotation-actions"><button onClick={() => undo()}>撤销笔记</button><button onClick={() => undo(true)}>重做笔记</button>
           <button disabled={locating || current.current.status !== 'attached'} onClick={() => { setLocating(true); setError(undefined); void locate(current).catch(e => setError(e.message)).finally(() => setLocating(false)); }}>{locating ? '正在定位…' : '定位当前选段'}</button>
-          <button onPointerDown={() => { reassociation.current = (document.querySelector('[aria-label="连续编辑正文"]') as any)?.editor?.storage.courseSelection.captureAnnotation(); }} onMouseDown={e => e.preventDefault()} onClick={() => void reassociate()}>关联到当前选段</button></div>
+          <button onPointerDown={() => { reassociation.current = (document.querySelector('[data-reading-active="true"] [aria-label="连续编辑正文"]') as any)?.editor?.storage.courseSelection.captureAnnotation(); }} onMouseDown={e => e.preventDefault()} onClick={() => void reassociate()}>关联到当前选段</button></div>
         <details><summary>书写时的原引用与语境</summary>{current.original.fragments.map((f, i) => <div key={i} className="annotation-context"><p>{f.blockId} · 正文版本 {f.formalRevision} · {f.source === 'formal' ? '正式内容' : '学生草稿'}</p>
           <pre>{String(f.block.payload[f.field])}</pre><p>原选段：{f.quote}</p></div>)}</details>
       </>}

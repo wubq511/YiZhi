@@ -11,7 +11,8 @@ export interface QuestionSnapshot {
   text: string; target: QuestionTarget & { unitName: string; revision: string; blockVersion?: number };
   citations: Array<{ citation: SourceCitation; version: SourceVersion }>;
 }
-export type AgentTaskStatus = 'queued' | 'waiting' | 'running' | 'completed' | 'failed' | 'interrupted' | 'unknown' | 'partial' | 'pending';
+export type AgentTaskStatus = 'running' | 'queued' | 'waiting' | 'stopping' | 'stopped' | 'completed' | 'failed' | 'interrupted' | 'unknown' | 'partial' | 'pending';
+export interface AgentTaskRequest extends AgentSession { taskId: string }
 export interface AgentDelivery {
   id: string; operationId: string; kind: 'steer' | 'student-change';
   state: 'pending' | 'sending' | 'accepted' | 'failed' | 'unknown';
@@ -41,6 +42,8 @@ export interface AgentTask {
   progress?: { targetId: string; stage: 'read' | 'committed' | 'retained'; sequence: number };
   snapshot: QuestionSnapshot; status: AgentTaskStatus; threadId: string | null; turnId: string | null;
   model: string | null; error: string | null; createdAt: string; cursor: number;
+  stopRequested?: boolean; continuesTaskId?: string; continuedByTaskId?: string;
+  recovery?: { state: 'active' | 'resolved' | 'unknown'; checkedAt: string; detail: string };
 }
 export interface Conversation { id: string; title: string; updatedAt: string }
 export interface AgentMessage {
@@ -59,16 +62,19 @@ export interface AgentAPI {
   select(request: AgentSession & { conversationId: string }): Promise<void>;
   saveDraft(request: AgentSession & { conversationId: string; seq: number; text: string; intent?: import('./agent-mutation-api').AgentIntent; target?: QuestionTarget; citationIds?: string[] }): Promise<{ seq: number }>;
   submit(request: SubmitQuestion): Promise<AgentTask>;
+  stop(request: AgentTaskRequest): Promise<AgentTask>;
+  continue(request: AgentTaskRequest & { operationId: string }): Promise<AgentTask>;
 }
 export interface ExecutorStatus {
   available: boolean; path?: string; version?: string; error?: string;
   models: Array<{ id: string; model: string; displayName: string; isDefault: boolean; defaultReasoningEffort?: string }>;
 }
-export type AgentBridge = AgentAPI & { status(): Promise<ExecutorStatus>; retryDelivery(request: AgentSession & { taskId: string; deliveryId: string }): Promise<AgentTask> };
+export type AgentBridge = AgentAPI & { status(): Promise<ExecutorStatus>; reconcile(request: AgentTaskRequest): Promise<AgentTask>; retryDelivery(request: AgentSession & { taskId: string; deliveryId: string }): Promise<AgentTask> };
 export function agentClient(invoke: (method: string, request?: any) => Promise<any>): AgentAPI {
   return {
     list: r => invoke('agent:list', r), create: r => invoke('agent:create', r), get: r => invoke('agent:get', r),
     select: r => invoke('agent:select', r), saveDraft: r => invoke('agent:saveDraft', r), submit: r => invoke('agent:submit', r),
+    stop: r => invoke('agent:stop', r), continue: r => invoke('agent:continue', r),
   };
 }
 /** Host-only worker commands. No renderer may manufacture executor events or tool results. */
@@ -78,4 +84,6 @@ export interface AgentEvent extends AgentSession {
   kind: 'bind' | 'delta' | 'message' | 'finish' | 'tool'; itemId?: string; text?: string;
   status?: AgentTaskStatus; model?: string; error?: string;
   tool?: { name: string; input: unknown; output: unknown; references: string[] };
+  /** Host reconciliation only: original turn facts; never grants commit qualification. */
+  reconciliation?: boolean; recovery?: AgentTask['recovery'];
 }

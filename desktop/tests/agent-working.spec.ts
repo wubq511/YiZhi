@@ -63,3 +63,35 @@ test('working composer defaults to steer, shows failed delivery retry, and queue
     await expect(page.getByRole('status',{name:'回答状态'}).nth(1)).toContainText('正在回答');
   } finally { await app.close(); await rm(root,{recursive:true,force:true}); }
 });
+
+test('an active B annotation retains its actual selection and locates back to B after navigating elsewhere', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-active-b-note-'));
+  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: {
+    ...process.env, YIZHI_DATA_HOME: join(root, 'profile'), YIZHI_CODEX_PATH: join(root, 'no-model-needed') } });
+  try {
+    const page = await app.firstWindow(); await resizeBoardWindow(app, page);
+    const original = await page.evaluate(() => window.yizhi.open());
+    await page.getByRole('button', { name: '复用器与分配器', exact: true }).click();
+    await page.getByRole('button', { name: 'MUX 器件、级联与扩展', exact: true }).first().click();
+    const reader = page.locator('[data-agent-unit="KU-057"]'), editor = reader.getByRole('textbox', { name: '连续编辑正文', exact: true });
+    await expect(editor).toBeVisible();
+    const quote = await editor.evaluate((el: any) => {
+      let from = 0, to = 0, quote = '';
+      el.editor.state.doc.forEach((node: any, pos: number) => { if (!quote && node.type.name === 'paragraph') { from = pos + 1; to = from + 5; quote = node.textContent.slice(0, 5); } });
+      el.editor.commands.setTextSelection({ from, to }); el.editor.view.focus(); return quote;
+    });
+    const annotate = reader.getByRole('button', { name: '批注所选文字', exact: true });
+    await revealBoardControl(page, annotate); await annotate.click();
+    await page.getByRole('textbox', { name: '批注内容', exact: true }).fill('MUX 的个人理解');
+    await expect(page.getByRole('status', { name: '批注同步状态' })).toHaveText('已保存');
+    await page.getByRole('button', { name: '关闭批注', exact: true }).click();
+    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await page.getByRole('button', { name: '个人批注', exact: true }).click();
+    await page.getByRole('button', { name: '定位当前选段', exact: true }).click();
+    await expect.poll(() => page.evaluate(async () => window.yizhi.readingState((await window.yizhi.open()).sessionId).then(s => s?.unitId))).toBe('KU-057');
+    await expect.poll(async () => (await reader.locator('.annotation-highlight').allTextContents()).join('')).toBe(quote);
+    const c = await page.evaluate(() => window.yizhi.open()); expect(c.unit).toEqual(original.unit);
+    const notes = await page.evaluate(async () => window.yizhi.annotations.list({ sessionId: (await window.yizhi.open()).sessionId }));
+    expect(notes).toHaveLength(1); expect(notes[0].original.unitId).toBe('KU-057'); expect(notes[0].original.fragments[0].quote).toBe(quote);
+  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+});

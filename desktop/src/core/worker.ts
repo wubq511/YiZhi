@@ -1,3 +1,4 @@
+import { LearningViews } from './learning-views';
 import { AgentMutations } from './agent-mutations';
 import { CommandConsistency } from './command-consistency';
 import { Exchange } from './exchange';
@@ -31,6 +32,7 @@ import { initializeReviewState, reviewSnapshot, setReviewStatus, confirmReviewPr
 const EDITABLE = 'RB-TH-01-01-what-is-positional-notation';
 interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; courseId: string; graph: CourseGraph;
   // T03 constructs its observer on this same connection; both student save entry points call it in-transaction.
+  views: LearningViews;
   exchange: Exchange;
   search: Search;
   unit: (id: string) => import('../shared').CourseUnit | undefined;
@@ -148,7 +150,7 @@ function open(directory: string): OpenedCourse {
     const exchange = new Exchange(db, canonical, graph, () => relations.graph(), () => ({ sources: sources.relationCatalog(relationCatalog.sources), retiredUnitIds: relationCatalog.retiredUnitIds }));
     const readableUnitIds = [...new Set([...db.prepare('SELECT id FROM units').all().map(r => String(r.id)), ...(!db.prepare("SELECT 1 FROM metadata WHERE key='content-scope'").get() ? ['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-035', 'KU-055', 'KU-057', 'KU-062'] : [])])];
     const search = new Search(db, sourceUnit, readableUnitIds, graph.nodes.length, sources);
-    const course: Course = { exchange, db, owner, agent, mutations, search, unit: sourceUnit, annotations, drawings, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
+    const course: Course = { views:new LearningViews(db), exchange, db, owner, agent, mutations, search, unit: sourceUnit, annotations, drawings, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
 
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     const result = snapshot(course);
@@ -216,6 +218,8 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action === 'migration:convert') value = await convertLegacy(payload, workerData?.migrationScheduling);
     else if (action === 'migration:content') value = legacyContent(session(payload.sessionId).db);
     else if (action === 'migration:resource') { const c=session(payload.sessionId); const directory=[...courses.entries()].find(([,v])=>v===c)![0]; value=candidateResource(c.db,directory,payload.asset); }
+    else if(action.startsWith('learningView:')) {const c=session(payload.sessionId);if(action==='learningView:open')value=c.views.open(payload.viewId);else {value=c.views.release(payload.viewId,action==='learningView:confirm'||payload.saved);if(action==='learningView:release'){c.groups.dispatch('commands:releaseView',payload);c.groups.recheck(payload.sessionId);}}}
+    else if (action === 'agentShutdown') {for(const c of courses.values())c.agent.revokeForQuit();value=[...courses.values()].flatMap(c=>c.agent.prepareShutdown().map(task=>({sessionId:c.sessionId,task})));}
     else if (action === 'open') value = open(payload.directory);
     else if (action === 'read') value = snapshot(session(payload.sessionId), payload.unitId);
     else if (action === 'readingState') {
@@ -240,7 +244,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       if (!value) throw new Error('该单元不存在或正文尚未加入课程副本');
 
     }
-    else if (action === 'extensions:recoverRenderers') { for(const course of courses.values()) {course.experiments.pauseAll();course.extensions.recoverRenderer();} }
+    else if (action === 'extensions:recoverRenderers') { for(const course of payload?.sessionId?[session(payload.sessionId)]:courses.values()) {course.experiments.pauseAll();course.extensions.recoverRenderer();} }
     else if (action.startsWith('extensions:')) {
       const extension = session(payload.sessionId).extensions;
       if (action === 'extensions:open') value = await extension.open();

@@ -28,6 +28,8 @@ export class CourseService {
   applyAgentMutation(request: import('../agent-mutation-api').AgentIdentity & {input: import('../agent-mutation-api').AgentMutation}): Promise<import('../command-api').GroupResult> { return this.request('agentMutation:apply',request); }
   queryAgentMutation(request: import('../agent-mutation-api').AgentIdentity & {operationId:string}): Promise<import('../command-api').GroupResult|null> { return this.request('agentMutation:query',request); }
   recordAgent(event: AgentEvent): Promise<AgentTask> { return this.request('agent:record', event); }
+  agentTask(request: {sessionId:string;taskId:string}): Promise<AgentTask> { return this.request('agent:task',request); }
+  prepareAgentShutdown(): Promise<Array<{sessionId:string;task:AgentTask}>> { return this.request('agentShutdown'); }
   activeAgent(request: { sessionId: string; taskId: string; attemptId: string; generation: number }): Promise<AgentTask> { return this.request('agent:active', request); }
   updateAgentWork(request: import('../agent-api').AgentWorkRequest): Promise<AgentTask> { return this.request('agent:work', request); }
   queueAgentGuidance(request: import('../agent-mutation-api').AgentIdentity & { deliveryId: string }): Promise<AgentTask> { return this.request('agent:queueGuidance', request); }
@@ -68,8 +70,11 @@ export class CourseService {
     });
   }
   /** Host-only failure recovery; never exposed to generated frames or the preload. */
-  recoverExtensionRenderers(): Promise<void> {return this.request('extensions:recoverRenderers');}
+  recoverExtensionRenderers(sessionId?:string): Promise<void> {return this.request('extensions:recoverRenderers',{sessionId});}
   open(directory: string): Promise<OpenedCourse> { return this.request('open', { directory }); }
+  openLearningView(request:{sessionId:string;viewId:string}):Promise<{unconfirmedTail:boolean;detail:string}> {return this.request('learningView:open',request);}
+  confirmLearningView(request:{sessionId:string;viewId:string}):Promise<void> {return this.request('learningView:confirm',request);}
+  releaseLearningView(request:{sessionId:string;viewId:string;saved:boolean}):Promise<void> {return this.request('learningView:release',request);}
   read(sessionId: string, unitId?: string): Promise<OpenedCourse> { return this.request('read', { sessionId, unitId }); }
   graph(sessionId: string): Promise<CourseGraph> { return this.request('graph', { sessionId }); }
   readUnit(sessionId: string, unitId: string): Promise<CourseUnit> { return this.request('readUnit', { sessionId, unitId }); }

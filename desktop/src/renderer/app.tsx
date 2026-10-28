@@ -155,6 +155,7 @@ function App() {
   const [loadError, setLoadError] = useState<string>();
   const [state, setState] = useState<SaveState>({ status: 'saved' });
   const [closing, setClosing] = useState(false);
+  const [inputRecovery,setInputRecovery]=useState<OpenedCourse['inputRecovery']>();
   const [producerBusy, setProducerBusy] = useState(false);
   const [producerOpen, setProducerOpen] = useState(false);
   const producerRunning = useRef(false);
@@ -252,7 +253,7 @@ function App() {
       const opened = await window.yizhi.open();
       channel.current?.dispose();
       channel.current = new ParagraphSaveChannel(window.yizhi, opened, setState, { onSnapshot: setCourse });
-      setCourse(opened);
+      setCourse(opened);setInputRecovery(opened.inputRecovery);
       const [loadedGraph, savedReading, reviewSnapshot] = await Promise.all([window.yizhi.graph(opened.sessionId), window.yizhi.readingState(opened.sessionId), window.yizhi.reviewStates(opened.sessionId)]);
       if (savedReading?.pinnedUnitId === 'KU-001' || savedReading?.modification) setMounted([opened.unit]);
       if (savedReading?.modification) { workTarget.current = savedReading.modification.targetId; camera.restore(savedReading.modification.ended); }
@@ -260,7 +261,11 @@ function App() {
     } catch (error) { setLoadError((error as Error).message); }
   };
   useEffect(() => { void load(); return () => channel.current?.dispose(); }, []);
+  useEffect(()=>window.yizhi.onCloseCancelled(()=>{document.body.inert=false;setClosing(false);}),[]);
   useEffect(() => window.yizhi.onCloseRequested(async () => {
+    // Freeze all input surfaces, including portals, before taking any async tail snapshot.
+    document.body.inert=true;
+    const saveWindow=async()=>{
     if (producerRunning.current) return false;
     if (composing.current) {
       setState({ status: 'error', error: '请先完成中文候选输入，再关闭窗口。' });
@@ -293,6 +298,9 @@ function App() {
     if (saved && continuous.current && !await continuous.current.finish()) { setClosing(false); return false; }
     if (!saved) setClosing(false);
     return saved;
+    };
+    try {const saved=await saveWindow();if(!saved){document.body.inert=false;setClosing(false);}return saved;}
+    catch(error){document.body.inert=false;setClosing(false);setReadError((error as Error).message);return false;}
   }), []);
   useEffect(() => {
     if (course) setMounted(previous => previous.map(unit => unit.id === course.unit.id ? course.unit : unit));
@@ -451,12 +459,15 @@ function App() {
     <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen || sourcesOpen || agentOpen || notesOpen || searchOpen || exchangeOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
       {course && <SearchPanel sessionId={course.sessionId} narrow={narrow} beforeOpen={() => { searchOrigin.current = captureSearchScene(); }} onOpenChange={value => { setSearchOpen(value); if (value && narrow) setDirectory(false); }} locate={locateSearch} />}
       {searchReturn && <button onClick={() => void searchReturn().catch(e => setReadError(e.message))}>返回搜索前位置</button>}
-      {course && <AnnotationPanel ref={notesPanel} sessionId={course.sessionId} narrow={narrow} prepare={async () => !!await channel.current?.flush()} onOpenChange={value => { setNotesOpen(value); if (value && narrow) setDirectory(false); }} locate={async note => {
-        if (selected?.id !== 'KU-001') await go('KU-001');
-        const editor = continuous.current;
-        if (!editor) throw new Error('请先定位批注所属单元。');
-        if (!await channel.current?.flush() || !await editor.finish()) throw new Error('请先完成当前输入，再定位批注。');
-        editor.reconcile(await window.yizhi.open());
+      {course && <AnnotationPanel ref={notesPanel} sessionId={course.sessionId} narrow={narrow} prepare={async () => !!await channel.current?.flush() && await flushUnitInputs()} onOpenChange={value => { setNotesOpen(value); if (value && narrow) setDirectory(false); }} locate={async note => {
+        if (!await channel.current?.flush() || !await flushUnitInputs(true)) throw new Error('请先完成当前输入，再定位批注。');
+        const unitId = note.current.unitId ?? note.original.unitId;
+        if (selected?.id !== unitId) await go(unitId);
+        const currentEditor = () => unitId === 'KU-001' ? continuous.current : unitInputs.current.get(unitId)?.editor();
+        for (let frame = 0; frame < 60 && !currentEditor(); frame++) await paintFrame();
+        const editor = currentEditor();
+        if (!editor || !await editor.finish()) throw new Error('请先定位批注所属单元并完成当前输入。');
+        editor.reconcile(await window.yizhi.read(course.sessionId, unitId));
         const latest = (await window.yizhi.annotations.list({ sessionId: course.sessionId })).find(item => item.id === note.id);
         if (latest) await editor.revealAnnotation(latest);
       }} />}
@@ -502,6 +513,7 @@ function App() {
         {state.status === 'error' && <button onClick={() => void channel.current?.flush()}>重试保存</button>}
       </div>
     </header>
+    {inputRecovery?.unconfirmedTail && <div className="save-error" role="status">{inputRecovery.detail}</div>}
     {state.error && <div className="save-error" role="alert">{state.error}{!state.error.includes('冲突部分') && ' 输入仍保留，请重试保存。'}</div>}
     <div className="workspace board-workspace" inert={(!cameraReady && !loadError) || (narrow && (sourcesOpen || agentOpen || notesOpen || exchangeOpen || searchOpen))} aria-busy={!cameraReady && !loadError}>
       {directory && <nav ref={navRef} inert={sourceOpen || (narrow && (relationsOpen || producerOpen))} aria-label="课程目录" onKeyDown={event => trap(event, closeDirectory)}><h2>课程目录</h2>{narrow && <button onClick={closeDirectory}>关闭目录</button>}
@@ -548,7 +560,7 @@ function App() {
             <footer>来源：既有数字逻辑课程单元的独立副本。编辑保留原有知识身份。</footer>
           </ReadingSurface>
         </div>; })}</div>
-        {course && <div inert={sourceOpen||(narrow&&relationsOpen)}><Drawings ref={drawingPanel} sessionId={course.sessionId} viewport={viewport} takeover={()=>camera.takeover()} pan={(dx,dy)=>camera.pan(dx,dy)} prepare={async()=>!!await channel.current?.flush()} paint={notes=>{void continuous.current?.paintDrawings(notes);}} contentKey={`${course.revision}:${mounted.map(u=>u.id).join(',')}`} waitLayout={async()=>{await layoutWrites.current;return !layoutPending.current.length;}} restorePlacement={enqueuePlacement}  /></div>}
+        {course && <div inert={sourceOpen||(narrow&&relationsOpen)}><Drawings ref={drawingPanel} sessionId={course.sessionId} viewport={viewport} takeover={()=>camera.takeover()} pan={(dx,dy)=>camera.pan(dx,dy)} prepare={async()=>!!await channel.current?.flush() && await flushUnitInputs()} paint={notes=>{void continuous.current?.paintDrawings(notes);for(const input of unitInputs.current.values())void input.editor()?.paintDrawings(notes);}} contentKey={`${course.revision}:${mounted.map(u=>u.id).join(',')}`} waitLayout={async()=>{await layoutWrites.current;return !layoutPending.current.length;}} restorePlacement={enqueuePlacement}  /></div>}
         {followState !== 'idle' && <div className="follow-control"><span role="status" aria-label="修改跟随">{followState === 'following' ? '正在跟随修改' : followState === 'paused' ? '已由你控制视野' : '修改已结束'}</span>{followState !== 'following' && <button onClick={() => { camera.resume(); }}>{followState === 'finished' ? '查看修改结果' : '返回并继续跟随'}</button>}</div>}
 
         {relationsOpen && graph && course && <RelationsPanel graph={graph} sessionId={course.sessionId} view={relationView} narrow={narrow} panelRef={relationPanel} onClose={closeRelations} onKeyDown={event => trap(event, closeRelations)} onGraph={setGraph} focusId={relationFocus} />}

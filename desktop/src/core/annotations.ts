@@ -23,6 +23,7 @@ export function initializeAnnotations(db: DatabaseSync) {
     CREATE TABLE IF NOT EXISTS annotation_steps(seq INTEGER PRIMARY KEY, value TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS personal_notes(id TEXT PRIMARY KEY, value TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS annotation_operations(id TEXT PRIMARY KEY, digest TEXT NOT NULL, result TEXT NOT NULL);`);
+  if (!db.prepare("PRAGMA table_info(annotation_versions)").all().some(r => r.name === "unit_id")) db.exec("ALTER TABLE annotation_versions ADD COLUMN unit_id TEXT NOT NULL DEFAULT 'KU-001'");
   syncAnnotations(db);
 }
 function replaceRange(location: AnchorLocation, from: number, to: number, size: number): AnchorLocation {
@@ -119,13 +120,15 @@ function advance(stored: Stored, step: Step, all: Head[], intermediate = false) 
       (fragments.some(current => current.status === 'attached' && equal(current, l)) || step.proof?.restorations?.some(b => b.id === l.blockId && version(b) === l.version))));
     if (recovered) fragments = structuredClone(recovered);
   }
-  stored.note.current = { status: fragments.every(l => l.status === 'attached') ? 'attached' : 'orphan', fragments };
+  stored.note.current = { ...stored.note.current, status: fragments.every(l => l.status === 'attached') ? 'attached' : 'orphan', fragments };
 }
 /** Invoked on the SAME SQLite transaction as every formal write, including producer groups. */
 export function syncAnnotations(db: DatabaseSync, proof?: ContentPatch) {
-  const row = db.prepare("SELECT payload,revision FROM units WHERE id='KU-001'").get();
-  if (!row) return;
-  const all = heads(parse(row.payload));
+  const rows = db.prepare('SELECT id,payload,revision FROM units').all();
+  const ownership = new Map<string, { unitId: string; revision: number }>();
+  const all = rows.flatMap(row => heads(parse(row.payload)).map(head => {
+    ownership.set(head.block.id, { unitId: String(row.id), revision: Number(row.revision) }); return head;
+  }));
   const old: Head[] = db.prepare('SELECT value FROM annotation_heads').all().map(r => parse(r.value));
   if (equal(old.map(h => [h.block.id, h.version]).sort(), all.map(h => [h.block.id, h.version]).sort())) return;
   const step: Step = { before: old.filter(h => !all.some(n => n.block.id === h.block.id && n.version === h.version)),
@@ -136,8 +139,8 @@ export function syncAnnotations(db: DatabaseSync, proof?: ContentPatch) {
     step.before = old.filter(h => ids.has(h.block.id) || step.before.includes(h));
     step.after = all.filter(h => ids.has(h.block.id) || step.after.includes(h));
   }
-  const insert = db.prepare('INSERT OR IGNORE INTO annotation_versions VALUES(?,?,?,?)');
-  for (const h of all) insert.run(h.block.id, h.version, Number(row.revision), json(h.block));
+  const insert = db.prepare('INSERT OR IGNORE INTO annotation_versions(block_id,version,revision,block,unit_id) VALUES(?,?,?,?,?)');
+  for (const h of all) { const owner = ownership.get(h.block.id)!; insert.run(h.block.id, h.version, owner.revision, json(h.block), owner.unitId); }
   db.prepare('INSERT INTO annotation_steps(value) VALUES(?)').run(json(step));
   for (const r of db.prepare('SELECT * FROM personal_notes').all()) {
     const stored: Stored = parse(r.value); advance(stored, step, all);
@@ -153,18 +156,19 @@ export class Annotations {
     if (action.startsWith('annotations:') && (this.db.prepare('SELECT 1 FROM operations WHERE id=?').get(id) || this.db.prepare('SELECT 1 FROM cg_candidates WHERE id=?').get(id))) throw new Error('操作身份已用于正文');
   }
   private capture(selection: AnnotationSelection): { original: AnnotationSelection; locations: AnchorLocation[] } {
-    if (!selection || selection.unitId !== 'KU-001' || !Array.isArray(selection.fragments) || !selection.fragments.length || selection.fragments.length > 1000) throw new Error('请先选择文字或公式片段');
+    if (!selection || typeof selection.unitId !== 'string' || !this.db.prepare('SELECT 1 FROM units WHERE id=?').get(selection.unitId) || !Array.isArray(selection.fragments) || !selection.fragments.length || selection.fragments.length > 1000) throw new Error('请先选择文字或公式片段');
     const locations = selection.fragments.map(f => {
       const b = f.block, v = b && version(b);
       if (!b || f.blockId !== b.id || !['text', 'latex'].includes(f.field) || !Number.isSafeInteger(f.formalRevision) ||
         !Number.isSafeInteger(f.from) || !Number.isSafeInteger(f.to) || f.from < 0 || f.to <= f.from || typeof f.quote !== 'string' || !f.quote) throw new Error('无效的批注选区');
-      const basis = this.db.prepare('SELECT revision FROM annotation_versions WHERE block_id=? AND version=?').get(b.id, v);
+      const basis = this.db.prepare('SELECT revision,unit_id FROM annotation_versions WHERE block_id=? AND version=?').get(b.id, v);
       const sameShell = (base: ReadingBlock, field: string) => equal({ ...base, payload: { ...base.payload, [field]: b.payload[field] } }, b);
-      const draft = f.source === 'student-draft' && readDrafts(this.db).some(d =>
+      const draft = f.source === 'student-draft' && readDrafts(this.db).filter(d => (d.input.unitId ?? 'KU-001') === selection.unitId).some(d =>
         d.input.patch?.structure?.inserted.some(i => equal(i, b)) ||
         d.input.patch?.updates.some(u => u.blockId === b.id && equal(u.after, b.payload) && this.db.prepare('SELECT block FROM annotation_versions WHERE block_id=?').all(b.id).some(r => sameShell(parse(r.block), f.field))) ||
         d.input.changes.some(c => c.blockId === b.id && c.text === b.payload.text && this.db.prepare('SELECT block FROM annotation_versions WHERE block_id=?').all(b.id).some(r => sameShell(parse(r.block), 'text'))) ||
         d.input.formulaDrafts?.some(c => c.blockId === b.id && c.latex === b.payload.latex && this.db.prepare('SELECT block FROM annotation_versions WHERE block_id=?').all(b.id).some(r => sameShell(parse(r.block), 'latex'))));
+      if (basis && basis.unit_id !== selection.unitId) throw new Error('选区不属于指定单元');
       if ((!basis || (f.source === 'formal' && Number(basis.revision) > f.formalRevision) || !['formal', 'student-draft'].includes(f.source)) && !draft) throw new Error('选区版本无法核对，请保留选择并重试');
       if (f.field === 'text') {
         if (b.kind !== 'paragraph' || f.projection.encoding !== 'unicode-code-points' || f.projection.version !== 1 ||
@@ -180,7 +184,7 @@ export class Annotations {
   private createStored(selection: AnnotationSelection): Stored {
         const { original, locations } = this.capture(selection);
         const now = new Date().toISOString();
-        const stored: Stored = { note: { id: randomUUID(), text: '', version: 1, original, originalVersions: locations.map(l => l.version), current: { status: 'attached', fragments: locations }, createdAt: now, updatedAt: now }, lineage: [structuredClone(locations)] };
+        const stored: Stored = { note: { id: randomUUID(), text: '', version: 1, original, originalVersions: locations.map(l => l.version), current: { unitId: selection.unitId, status: 'attached', fragments: locations }, createdAt: now, updatedAt: now }, lineage: [structuredClone(locations)] };
         const all: Head[] = this.db.prepare('SELECT value FROM annotation_heads').all().map(r => parse(r.value));
         for (const step of this.db.prepare('SELECT value FROM annotation_steps ORDER BY seq').all()) advance(stored, parse(step.value), all);
         // A durable student projection that has not been formalized keeps its own original basis.
@@ -219,7 +223,7 @@ export class Annotations {
           const captured = this.capture(request.selection);
           const currentHeads: Head[] = this.db.prepare('SELECT value FROM annotation_heads').all().map(r => parse(r.value));
           if (!captured.locations.every(l => currentHeads.some(h => h.block.id === l.blockId && h.version === l.version))) throw new Error('重新关联的内容已变化，请重新选择');
-          stored.note.current = { status: 'attached', fragments: captured.locations }; stored.lineage = [];
+          stored.note.current = { unitId: request.selection.unitId, status: 'attached', fragments: captured.locations }; stored.lineage = [];
         }
       }
       if (action !== 'annotations:reassociate') {
