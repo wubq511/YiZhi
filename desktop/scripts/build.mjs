@@ -5,6 +5,7 @@ const entries = [
   ['src/core/course-service.ts', 'dist/course-service.cjs'],
   ['src/core/parsing-tool.ts', 'dist/parsing-tool.cjs'],
   ['src/core/worker.ts', 'dist/worker.cjs'],
+  ['src/core/course-service.ts', 'dist/course-service.cjs'],
   ['src/host/main.ts', 'dist/main.cjs'],
   ['src/host/preload.ts', 'dist/preload.cjs'],
   ...(await readdir('tests')).filter(file => file.endsWith('.ts') && !file.endsWith('.spec.ts'))

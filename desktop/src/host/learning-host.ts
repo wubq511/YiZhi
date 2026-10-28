@@ -51,7 +51,8 @@ export class LearningHost {
     const existing=this.views.get(directory);
     if(existing){if(existing.window.isMinimized())existing.window.restore();existing.window.show();existing.window.focus();return;}
     const window=new BrowserWindow({width:1280,height:900,...bounds,minWidth:660,minHeight:500,title:'绎知',backgroundColor:'#ffffff',
-      webPreferences:{preload:join(this.preloadDirectory,'preload.cjs'),contextIsolation:true,nodeIntegration:false,nodeIntegrationInSubFrames:false,sandbox:true}});
+      webPreferences:{preload:join(this.preloadDirectory,'preload.cjs'),contextIsolation:true,nodeIntegration:false,nodeIntegrationInSubFrames:false,sandbox:true,
+        additionalArguments:process.env.YIZHI_OBSERVE==='1'?['--yizhi-observe']:[]}});
     const view:View={directory,window,id:randomUUID(),saved:false,recovering:false};this.views.set(directory,view);
     window.on('focus',()=>{this.lastDirectory=directory;});
     window.webContents.on('unresponsive',()=>void this.recover(view));

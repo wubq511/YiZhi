@@ -23,3 +23,5 @@ YIZHI_PACKAGED_APP=/absolute/YiZhi.app npx playwright test tests/packaged-app.sp
 该检查将应用复制到仓库外的新安装位置，从空工作目录和最小 PATH 启动，阻断 HTTP(S)，明确使用缺失执行器，验证实际 Electron 运行时、离线 PDF 文字层、Core 原生图片解码、正文保存与重开。文件选择对话框只替换返回路径，后续导入和读取真实执行；不代替原生选择器与实体输入验收。未提供环境变量时明确跳过，不计作安装通过。
 
 完整迁移课程、约 500 单元增长负载、公平性与实体鼠标／触控板／中文输入法等组合验收仍由 T28 单列记录，不能从这条小范围安装回归推断。
+
+组合 harness、最终输入和被动实体观测工具见 [macOS 连续学习验收工具](macos-acceptance.md)。最终产物与证据应保存到 persistent scratch，不能只放在可能归档的实现工作树内。

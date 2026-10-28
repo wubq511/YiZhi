@@ -111,6 +111,7 @@ export function appendEvent(db: DatabaseSync, event: SaveEventData): number {
   const result = db.prepare('INSERT INTO save_events(event) VALUES (?)').run(JSON.stringify(event));
   const cursor = Number(result.lastInsertRowid);
   db.prepare('DELETE FROM save_events WHERE cursor <= ?').run(cursor - 256);
+  if (observation.active) observation.sample('notifications.retainedEvents', Number(db.prepare('SELECT COUNT(*) AS count FROM save_events').get()!.count));
   return cursor;
 }
 export function saveDraft(db: DatabaseSync, input: DraftInput): DraftReceipt {
@@ -291,10 +292,12 @@ export function readEvents(db: DatabaseSync, after: number, limit: number) {
     throw new Error('无效的事件游标或分页');
   const head = eventCursor(db);
   const oldest = Number(db.prepare('SELECT MIN(cursor) AS oldest FROM save_events').get()!.oldest ?? head + 1);
+  observation.sample('notifications.cursorLag', Math.max(0, head - after));
   if (after < oldest - 1 || after > head) return null;
   const events = db.prepare('SELECT cursor, event FROM save_events WHERE cursor>? ORDER BY cursor LIMIT ?')
     .all(after, limit).map(row => ({ ...JSON.parse(String(row.event)), cursor: Number(row.cursor) }));
   const cursor = events.at(-1)?.cursor ?? after;
+  observation.sample('notifications.deliveredBatch', events.length);
   return { kind: 'events', events, cursor, hasMore: cursor < head };
 }
 
@@ -341,3 +344,4 @@ export function draftReadVersions(db: DatabaseSync, objectIds: Iterable<string>)
   }
   return Object.fromEntries([...keys].map(id => [id, draftVersion(db, id)]));
 }
+import { observation } from '../acceptance-observation';

@@ -9,10 +9,12 @@ import type { RelationSource } from '../relation-api';
 import { appendEvent, transaction } from './save-store';
 import { hashFile, MAX_RESOURCE_READ, publishResource } from './immutable-resource';
 import { withPdf } from './source-pdf';
+import { observation } from '../acceptance-observation';
 
 const id = (value: unknown) => typeof value === 'string' && value.length > 0 && value.length <= 200;
 export class Sources {
   private verified = new Map<string, string>();
+  private verifiedObservation = observation.resource('sources.verifiedCacheEntries');
   constructor(private db: DatabaseSync, private directory: string, private unit?: (id: string) => CourseUnit | undefined) {
     db.exec(`CREATE TABLE IF NOT EXISTS source_versions(id TEXT PRIMARY KEY, source_id TEXT NOT NULL, payload TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS source_operations(id TEXT PRIMARY KEY, digest TEXT NOT NULL, receipt TEXT NOT NULL);
@@ -157,6 +159,7 @@ export class Sources {
       this.verified.delete(version.sha256); this.verified.set(version.sha256, signature);
       if (this.verified.size > 8) this.verified.delete(this.verified.keys().next().value!);
     }
+    this.verifiedObservation.set(this.verified.size);
     return path;
   }
   repairFile(command: SourceCommand & { versionId: string; path: string }) {

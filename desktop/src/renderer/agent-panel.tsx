@@ -3,7 +3,7 @@ import type { SearchHit } from '../search-api';
 import { paintFrame, highlightSearch, waitForSearchElement } from './search-location';
 
 import { AgentProse } from './agent-prose';
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useEffect, useLayoutEffect, useImperativeHandle, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { AgentTask, Conversation, ConversationView, ExecutorStatus, QuestionTarget, SubmitQuestion } from '../agent-api';
 import type { SourceCitation } from '../sources-api';
@@ -98,7 +98,8 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
     requestAnimationFrame(() => composer.current?.focus());
     return () => { cancelled = true; clearInterval(interval); };
   }, [open, sessionId]);
-  useEffect(() => { onOpenChange(open); }, [open]);
+  // Parent inert state must settle before close returns keyboard focus to its trigger.
+  useLayoutEffect(() => { onOpenChange(open); }, [open]);
   useEffect(()=>{setGeneratedTarget(null);setUpdateGenerated(false);setGenerationSource(null);},[sessionId,target.unitId]);
   useEffect(()=>{
     if(intent!=='generate')return;

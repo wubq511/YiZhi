@@ -19,7 +19,8 @@ import { projectLayout } from '../layout';
 import { Extensions } from './extensions';
 import { BuiltinExperiments } from './builtin-experiments';
 import { AgentStore } from './agent-store';
-import { parentPort, workerData } from 'node:worker_threads';
+import { parentPort, workerData, threadId } from 'node:worker_threads';
+import { observation } from '../acceptance-observation';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, realpathSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -36,6 +37,10 @@ import { resolveInput } from './save-store';
 import { initializeReviewState, reviewSnapshot, setReviewStatus, confirmReviewPrompt } from './review-state';
 
 registerRetentionResourceRoot('t30-generation-recovery',generationRetentionResourceRoot);
+if (workerData?.observe) observation.enable();
+const observedInstanceId = randomUUID();
+const queuedObservation = observation.resource('core.queued');
+let observedQueued = 0;
 
 const EDITABLE = 'RB-TH-01-01-what-is-positional-notation';
 interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; courseId: string; graph: CourseGraph;
@@ -196,6 +201,7 @@ let draining = false;
 parentPort!.on('message', message => {
   if (draining) { parentPort!.postMessage({ id: message.id, ok: false, error: '课程核心正在退出' }); return; }
   if (message.action === 'close') draining = true;
+  queuedObservation.set(++observedQueued);
   if (message.action === 'experiments:act') {
     const course = [...courses.values()].find(c => c.sessionId === message.payload?.sessionId);
     try { course?.experiments.stopIssuing(message.payload); } catch { /* Invalid input is rejected by the ordered dispatcher below. */ }
@@ -210,6 +216,9 @@ parentPort!.on('message', message => {
   } else queue = queue.then(() => dispatch(message));
 });
 async function dispatch({ id, action, payload }: { id: number; action: string; payload: any }) {
+  queuedObservation.set(--observedQueued);
+  const started = performance.now(), activeObservation = observation.resource('core.active');
+  activeObservation.set(1);
   try {
     if(workerData?.retentionScheduling?.clock)for(const course of courses.values())course.retention.synchronizeClock();
     if(action==='courseRestore:apply' && session(payload.sessionId,action).sessionId!==payload.sessionId && !session(payload.sessionId,action).courseRestore.query(payload.operationId))throw new Error('编辑会话已失效，未执行新的整课恢复，请重新打开核对');
@@ -244,6 +253,11 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action === 'migration:resource') { const c=session(payload.sessionId,action); const directory=[...courses.entries()].find(([,v])=>v===c)![0]; value=candidateResource(c.db,directory,payload.asset); }
     else if(action.startsWith('learningView:')) {const c=session(payload.sessionId,action);if(action==='learningView:open')value=c.views.open(payload.viewId);else {value=c.views.release(payload.viewId,action==='learningView:confirm'||payload.saved);if(action==='learningView:release'){c.groups.dispatch('commands:releaseView',payload);c.groups.recheck(payload.sessionId);}}}
     else if (action === 'agentShutdown') {for(const c of courses.values())c.agent.revokeForQuit();value=[...courses.values()].flatMap(c=>c.agent.prepareShutdown().map(task=>({sessionId:c.sessionId,task})));}
+    else if (action === 'acceptance:observe') {
+      if (!workerData?.observe) throw new Error('Acceptance observation is not enabled');
+      value = { instanceId: observedInstanceId, threadId, courseIds: [...courses.values()].map(c => c.courseId),
+        memory: process.memoryUsage(), counters: observation.snapshot() };
+    }
     else if (action === 'open') value = open(payload.directory);
     else if (action === 'read') value = snapshot(session(payload.sessionId,action), payload.unitId);
     else if (action === 'readingState') {
@@ -323,6 +337,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       courses.clear();
     } else throw new Error('未知课程命令');
     parentPort!.postMessage({ id, ok: true, value });
-    for(const course of courses.values())course.retention.onActivity(run=>{queue=queue.then(()=>{if(!draining)run();}).catch(error=>console.error('Retention maintenance:',error));});
+    if (action !== 'acceptance:observe') for(const course of courses.values())course.retention.onActivity(run=>{queue=queue.then(()=>{if(!draining)run();}).catch(error=>console.error('Retention maintenance:',error));});
   } catch (error) { parentPort!.postMessage({ id, ok: false, error: (error as Error).message }); }
+  finally { activeObservation.close(); observation.sample(`core.request.${action}.ms`, performance.now() - started); }
 }

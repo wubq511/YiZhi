@@ -1,3 +1,4 @@
+import { observation } from '../acceptance-observation';
 import { CourseRestorePanel } from './course-restore-panel';
 import { RetentionPanel } from './retention-panel';
 import { HistoryPanel,type HistoryPanelHandle } from './history-panel';
@@ -106,6 +107,10 @@ function App() {
   const [graph, setGraph] = useState<CourseGraph>();
   const [selected, setSelected] = useState<CourseUnit>();
   const [mounted, setMounted] = useState<CourseUnit[]>([]);
+  useEffect(() => { if (observation.active) {
+    observation.sample('reading.cachedUnits', mounted.length);
+    observation.sample('reading.cachedBodyCodeUnits', JSON.stringify(mounted).length);
+  } }, [mounted]);
   const [readError, setReadError] = useState<string>();
   const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 0.1 });
   const [directory, setDirectory] = useState(true);
@@ -639,3 +644,4 @@ function App() {
 }
 function GenerationBoundary(){const [epoch,setEpoch]=useState(0);useEffect(()=>window.yizhi.onGenerationChanged(()=>setEpoch(n=>n+1)),[]);return <ReactFlowProvider key={epoch}><App /></ReactFlowProvider>;}
 createRoot(document.getElementById('root')!).render(<GenerationBoundary/>);
+import './acceptance';
