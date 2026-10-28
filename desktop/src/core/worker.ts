@@ -1,5 +1,6 @@
 import { LearningViews } from './learning-views';
 import { AgentMutations } from './agent-mutations';
+import { Generation } from './generation';
 import { CommandConsistency } from './command-consistency';
 import { Exchange } from './exchange';
 
@@ -46,6 +47,7 @@ interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; cou
   relations: FormalRelations;
   agent: AgentStore;
   mutations: AgentMutations;
+  generation: Generation;
 }
 const courses = new Map<string, Course>();
 function session(id: string): Course {
@@ -150,7 +152,8 @@ function open(directory: string): OpenedCourse {
     const exchange = new Exchange(db, canonical, graph, () => relations.graph(), () => ({ sources: sources.relationCatalog(relationCatalog.sources), retiredUnitIds: relationCatalog.retiredUnitIds }));
     const readableUnitIds = [...new Set([...db.prepare('SELECT id FROM units').all().map(r => String(r.id)), ...(!db.prepare("SELECT 1 FROM metadata WHERE key='content-scope'").get() ? ['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-035', 'KU-055', 'KU-057', 'KU-062'] : [])])];
     const search = new Search(db, sourceUnit, readableUnitIds, graph.nodes.length, sources);
-    const course: Course = { views:new LearningViews(db), exchange, db, owner, agent, mutations, search, unit: sourceUnit, annotations, drawings, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
+    const generation = new Generation(db,graph,sources,parsing,agent,groups,search);
+    const course: Course = { views:new LearningViews(db), exchange, db, owner, agent, mutations, generation, search, unit: sourceUnit, annotations, drawings, sessionId: randomUUID(), graph, groups, relations, sources, experiments, extensions, parsing,
 
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     const result = snapshot(course);
@@ -283,6 +286,12 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action.startsWith('search:')) value = await session(payload.sessionId).search.dispatch(action, payload);
     else if (action.startsWith('annotations:')) value = session(payload.sessionId).annotations.dispatch(action, payload);
     else if (action.startsWith('agentMutation:')) { const m=session(payload.sessionId).mutations; value=action==='agentMutation:read'?m.read(payload):action==='agentMutation:apply'?m.apply(payload):m.query(payload); }
+    else if (action.startsWith('generation:')) { const g=session(payload.sessionId).generation;
+      if(action==='generation:read')value=g.read(payload);
+      else if(action==='generation:publish')value=g.publish(payload);
+      else if(action==='generation:query')value=g.query(payload);
+      else if(action==='generation:candidates')value=g.candidates(payload.taskId);
+      else throw new Error('未知生成接口'); }
     else if (action.startsWith('agent:')) value = session(payload.sessionId).agent.dispatch(action, payload);
     else if (action.startsWith('parsing:')) value = await session(payload.sessionId).parsing.dispatch(action, payload);
     else if (action.startsWith('sources:')) value = await session(payload.sessionId).sources.dispatch(action, payload);

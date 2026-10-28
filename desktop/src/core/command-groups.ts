@@ -406,7 +406,8 @@ export class CommandGroups {
   }
   candidates(attemptId?: string, limit = 50): import('../command-api').RetainedCandidate[] {
     return this.db.prepare(`SELECT command, result FROM cg_candidates
-      WHERE json_extract(result, '$.status')='retained' AND NOT EXISTS (SELECT 1 FROM cg_resolved WHERE candidate_id=cg_candidates.id)
+      WHERE json_extract(result, '$.status')='retained' AND COALESCE(json_extract(command,'$.domain'),'')<>'generation'
+        AND NOT EXISTS (SELECT 1 FROM cg_resolved WHERE candidate_id=cg_candidates.id)
         AND (? IS NULL OR json_extract(command, '$.attemptId')=?)
       ORDER BY rowid DESC LIMIT ?`).all(attemptId ?? null, attemptId ?? null, Math.min(100, Math.max(1, limit)))
       .map(row => ({ command: parse(row.command), result: parse(row.result) }));

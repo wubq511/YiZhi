@@ -5,11 +5,13 @@ export interface SubmitQuestion extends AgentSession {
   conversationId: string; operationId: string; generation: number; text: string;
   target: QuestionTarget; citationIds?: string[]; model?: string; intent?: import('./agent-mutation-api').AgentIntent;
   mode?: 'steer' | 'queue';
+  generationSpec?: import('./generation-api').GenerationSpec;
 }
 export interface QuestionSnapshot {
   intent?: import('./agent-mutation-api').AgentIntent;
   text: string; target: QuestionTarget & { unitName: string; revision: string; blockVersion?: number };
   citations: Array<{ citation: SourceCitation; version: SourceVersion }>;
+  generationSpec?: import('./generation-api').GenerationSpec;
 }
 export type AgentTaskStatus = 'running' | 'queued' | 'waiting' | 'stopping' | 'stopped' | 'completed' | 'failed' | 'interrupted' | 'unknown' | 'partial' | 'pending';
 export interface AgentTaskRequest extends AgentSession { taskId: string }
