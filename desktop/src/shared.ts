@@ -16,6 +16,7 @@ export interface CourseUnit {
   [key: string]: unknown;
 }
 export interface OpenedCourse {
+  inputRecovery?: {unconfirmedTail:boolean;detail:string};
   contentScope?: 'content-candidate';
   resourceAssets?: string[];
   courseId: string;
@@ -71,6 +72,7 @@ export interface DesktopBridge extends SaveBridge {
   setReviewStatus(sessionId: string, unitId: string, status: ReviewStatus): Promise<ReviewSnapshot>;
   confirmReviewPrompt(sessionId: string, promptId: string, adjust: boolean): Promise<ReviewPromptResult>;
   save(command: SaveParagraph): Promise<SaveReceipt>;
+  onCloseCancelled(listener: () => void): () => void;
   onCloseRequested(listener: () => Promise<boolean>): () => void;
 }
 export type ReviewStatus = 'pending' | 'weak' | 'mastered';

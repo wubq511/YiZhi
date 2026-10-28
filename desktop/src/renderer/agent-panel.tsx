@@ -10,7 +10,7 @@ import type { SourceCitation } from '../sources-api';
 import './agent-panel.css';
 export interface AgentScene { open: boolean; conversationId: string | null; scrollTop: number }
 export interface AgentPanelHandle { capture(): AgentScene; restore(scene: AgentScene): Promise<void>; openSearch(hit: SearchHit): Promise<void>; flush(): Promise<boolean>; attachCitation(citation: SourceCitation): void }
-const taskLabel: Record<AgentTask['status'], string> = { running: '正在回答', completed: '回答已完成', failed: '回答失败', interrupted: '回答已中断', unknown: '执行结果未知', partial: '部分完成 · 已提交组保留', pending: '待处理 · 候选尚未正式保存' };
+const taskLabel: Record<AgentTask['status'], string> = { running: '正在回答', queued: '排队等待前序任务', waiting: '等待当前编辑结束', stopping: '正在停止 · 已撤销后续提交资格', stopped: '已停止 · 已提交部分保留', completed: '回答已完成', failed: '回答失败', interrupted: '回答已中断', unknown: '执行结果未知', partial: '部分完成 · 已提交组保留', pending: '待处理 · 候选尚未正式保存' };
 
 export const AgentPanel = forwardRef<AgentPanelHandle, {
   sessionId: string; narrow: boolean; target: QuestionTarget; targetName: string; sourceOpen: boolean;
@@ -80,7 +80,7 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
         const latest = await api.get({sessionId,conversationId:seen.conversationId}), task = latest.tasks.find(t=>t.id===taskId);
         if (!task || stopped) continue;
         if ((task.progress?.sequence ?? 0) > seen.sequence) { seen.sequence = task.progress!.sequence; await callbacks.current.onMutation(task,'progress'); }
-        if (task.status !== 'running') { tracked.current.delete(task.id); await callbacks.current.onMutation(task,'finish'); }
+        if (!['running','stopping','queued','waiting'].includes(task.status)) { tracked.current.delete(task.id); await callbacks.current.onMutation(task,'finish'); }
       } } catch(error) { if(!stopped) setError((error as Error).message); } finally {working=false;}
     },200);
     return ()=>{stopped=true;clearInterval(interval);};
@@ -158,7 +158,16 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
             <button onClick={() => openCitation(citation)}>{version.title} · PDF 第 {citation.pdfPageIndex + 1} 页 · 印刷页 {citation.printedPage?.label ?? '未核对'}</button>
           </section>)}</div>}
         </section>; })}
-        {view?.tasks.map(task => <div className="agent-task" role="status" aria-label="回答状态" key={task.id}>{task.snapshot.intent && task.snapshot.intent !== 'question' && task.status === 'running' ? '正在修改 · 以正式回执为准' : task.snapshot.intent && task.snapshot.intent !== 'question' && task.status === 'completed' ? '修改已完成' : taskLabel[task.status]}{task.groups?.map(group => <section key={group.operationId}>{group.status === 'committed' ? `正式保存 · ${group.changedObjectIds.length} 个变化对象` : `草稿候选 · ${group.reason}`}<details><summary>保存回执</summary><p>{group.operationId}</p><p>{group.changedObjectIds.join('、')}</p></details></section>)}{task.groups?.some(g=>g.status==='committed' && g.changedObjectIds.length>0) && <button onClick={() => void guard(()=>onMutation(task,'view'))}>查看实际修改</button>}{task.status === 'completed' && view.messages.some(m => m.taskId === task.id && m.state === 'partial') ? ' · 部分消息未确认' : ''}{task.error && <p>{task.error}</p>}</div>)}
+        {view?.tasks.map(task => <div className="agent-task" key={task.id}><div role="status" aria-label="回答状态">{task.snapshot.intent && task.snapshot.intent !== 'question' && task.status === 'running' ? '正在修改 · 以正式回执为准' : task.snapshot.intent && task.snapshot.intent !== 'question' && task.status === 'completed' ? '修改已完成' : taskLabel[task.status]}{task.groups?.map(group => <section key={group.operationId}>{group.status === 'committed' ? `正式保存 · ${group.changedObjectIds.length} 个变化对象` : `草稿候选 · ${group.reason}`}<details><summary>保存回执</summary><p>{group.operationId}</p><p>{group.changedObjectIds.join('、')}</p></details></section>)}</div>{task.groups?.some(g=>g.status==='committed' && g.changedObjectIds.length>0) && <button onClick={() => void guard(()=>onMutation(task,'view'))}>查看实际修改</button>}{task.status === 'completed' && view.messages.some(m => m.taskId === task.id && m.state === 'partial') ? ' · 部分消息未确认' : ''}{task.recovery && <p>{task.recovery.detail}</p>}{task.error && <p>{task.error}</p>}
+          {(['running','queued','waiting'].includes(task.status)||task.status==='unknown'&&task.recovery?.state==='active') && <button disabled={busy} onClick={()=>void guard(async()=>{await api.stop({sessionId,taskId:task.id});await refresh();})}>停止任务</button>}
+          {['stopping','stopped','unknown','interrupted','partial','pending','failed'].includes(task.status) && <button disabled={busy} onClick={()=>void guard(async()=>{await api.reconcile({sessionId,taskId:task.id});await refresh();})}>核对原任务结果</button>}
+          {!task.continuedByTaskId && !view.tasks.some(t=>['running','stopping','queued','waiting'].includes(t.status)) && ['stopped','unknown','interrupted','partial','pending','failed'].includes(task.status) && <button disabled={busy||!executor?.available||task.recovery?.state==='active'} onClick={()=>void guard(async()=>{
+            if(!await flush())return;
+            if(task.snapshot.intent && task.snapshot.intent!=='question')await prepareMutation();
+            const next=await api.continue({sessionId,taskId:task.id,operationId:crypto.randomUUID()});
+            if(next.snapshot.intent && next.snapshot.intent!=='question'){tracked.current.set(next.id,{conversationId:next.conversationId,sequence:0});await onMutation(next,'start');}
+            await refresh();
+          })}>继续剩余工作</button>}</div>)}
       </div>
       <div className="agent-composer">
         <p className="agent-target">提问目标：{selection?.selectedText ? `${selection.unitId} · 已选正文` : attachments.at(-1)?.target ? `${attachments.at(-1)!.target!.unitId} · 来源关联单元` : targetName}</p>
@@ -168,7 +177,7 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
           draft.current = event.currentTarget.value; markDirty();
         }} />
         <div className="agent-send"><label>模型 <select aria-label="问答模型" value={model} onChange={e => setModel(e.target.value)} disabled={!executor?.available || busy}>{executor?.models.map(m => <option key={m.model} value={m.model}>{m.displayName || m.model}</option>)}</select></label>
-          <button className="primary" disabled={busy || !executor?.available || view?.tasks.some(t => t.status === 'running')} onClick={() => void guard(async () => { if (!current.current) await create(); await send(); })}>{intent === 'question' ? '发送问题' : '发送修改请求'}</button></div>
+          <button className="primary" disabled={busy || !executor?.available || view?.tasks.some(t => ['running','stopping','queued','waiting'].includes(t.status))} onClick={() => void guard(async () => { if (!current.current) await create(); await send(); })}>{intent === 'question' ? '发送问题' : '发送修改请求'}</button></div>
         <p role="status" aria-label="对话草稿保存">{draftState}</p>
         {!executor ? <p role="status">正在检测本机执行器…</p> : !executor.available ? <p role="status">生成暂不可用：{executor.error} 已保存对话仍可阅读。</p> : <details className="executor-details"><summary>本机 Codex CLI · 已连接</summary><p>{executor.version}</p><p>{executor.path}</p></details>}
         {error && <div role="alert" className="agent-error"><p>{error}</p>{failed.current && <button onClick={() => { failed.current = false; void flush(); }}>重试保存对话草稿</button>}{retrySubmit.current && <button onClick={() => void guard(send)}>核对并重试原问题</button>}</div>}

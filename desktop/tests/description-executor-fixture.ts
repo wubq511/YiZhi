@@ -21,6 +21,7 @@ async function receive(m: any) {
   const respond = (result: any) => send({ id: m.id, result });
   if (m.method === 'initialize') respond({ userAgent: 'description-fixture' });
   if (m.method === 'config/read') respond({ config: { mcp_servers: { fixture: {} } } });
+  if(m.method==='model/list'&&mode==='catalog-linger'){writeFileSync(process.env.YIZHI_CATALOG_MARKER!,'actual catalog child reached model/list');await new Promise(r=>setTimeout(r,300));}
   if (m.method === 'model/list') respond({ data: [{ id: 'fixture', model: 'fixture', displayName: 'Description fixture', isDefault: true }] });
   if (m.method === 'thread/start') {
     const p = m.params;

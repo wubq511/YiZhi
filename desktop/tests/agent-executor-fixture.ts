@@ -7,12 +7,13 @@ const args = process.argv.slice(2), mode = process.env.YIZHI_FIXTURE_MODE;
 if (args.includes('--version')) { console.log('codex-cli 0.163.0-fixture'); process.exit(0); }
 if (args.includes('generate-json-schema')) {
   const dir = args[args.indexOf('--out') + 1]; mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, 'codex_app_server_protocol.schemas.json'), JSON.stringify({ methods: ['thread/start', 'thread/resume', 'turn/start', 'model/list', 'config/read', 'item/tool/call', 'item/agentMessage/delta', 'turn/completed'], definitions: { v2: { DynamicToolSpec: { oneOf: mode === 'incapable' ? [] : [{ properties: { type: { enum: ['function'] } }, required: ['name', 'description', 'inputSchema', 'type'] }] } } } })); process.exit(0);
+  writeFileSync(join(dir, 'codex_app_server_protocol.schemas.json'), JSON.stringify({ methods: ['thread/start', 'thread/resume', 'thread/read', 'thread/turns/list', 'thread/items/list', 'turn/interrupt', 'turn/start', 'model/list', 'config/read', 'item/tool/call', 'item/agentMessage/delta', 'turn/completed'], definitions: { v2: { DynamicToolSpec: { oneOf: mode === 'incapable' ? [] : [{ properties: { type: { enum: ['function'] } }, required: ['name', 'description', 'inputSchema', 'type'] }] } } } })); process.exit(0);
 }
 const lines = createInterface({ input: process.stdin });
 const send = (message: unknown) => process.stdout.write(JSON.stringify(message) + '\n');
 const notify = (method: string, params: any) => send({ method, params });
 let threadSeq = 0, turnSeq = 0, toolSeq = 100, snapshot: any, active: any;
+const turns=new Map<string,any>();
 const toolResults = new Map<number, (value: any) => void>();
 function tool(tool: string, arguments_: unknown) {
   const id = ++toolSeq;
@@ -25,6 +26,14 @@ async function receive(m: any) {
   if (m.method === 'initialize') respond({ userAgent: 'protocol-fixture', platformFamily: 'unix', platformOs: 'macos' });
   if (m.method === 'config/read') respond({ config: { mcp_servers: { fixture: {} } } });
   if (m.method === 'model/list') respond({ data: [{ id: 'fixture', model: 'fixture', displayName: 'Protocol fixture', isDefault: true }], nextCursor: null });
+  if(m.method==='thread/read' && ['reconcile-missing','reconcile-unavailable'].includes(mode??''))return send({id:m.id,error:{code:-32602,message:'thread not loaded'}});
+  if(m.method==='thread/read')respond({thread:{id:m.params.threadId,status:{type:active && turns.get(active.turnId)?.status==='inProgress'?'active':'idle'},turns:[]}});
+  if(m.method==='thread/turns/list')respond({data:[...turns.values()].filter(t=>t.threadId===m.params.threadId),nextCursor:null});
+  if(m.method==='thread/items/list')respond({data:(turns.get(m.params.turnId)?.items??[]).map((item:any)=>({item})),nextCursor:null});
+  if(m.method==='turn/interrupt'){
+    respond({});const turn=turns.get(m.params.turnId);
+    if(turn){turn.status='interrupted';setTimeout(()=>notify('turn/completed',{threadId:m.params.threadId,turn:{id:turn.id,status:'interrupted'}}),mode==='linger'?650:100);}
+  }
   if (m.method === 'thread/resume') respond({ thread: { id: m.params.threadId } });
   if (m.method === 'thread/start') {
     if (m.params.ephemeral !== true || m.params.sandbox !== 'read-only' || m.params.approvalPolicy !== 'never' || !m.params.dynamicTools.every((t: any) => t.type === 'function') || m.params.config['mcp_servers.fixture.enabled'] !== false)
@@ -32,7 +41,8 @@ async function receive(m: any) {
     respond({ thread: { id: `fixture-thread-${++threadSeq}` } });
   }
   if (m.method === 'turn/start') {
-    const identity = { threadId: m.params.threadId, turnId: `fixture-turn-${++turnSeq}` }; active = identity;
+    const identity = { threadId: m.params.threadId, turnId: `fixture-turn-${++turnSeq}` }; active = identity; turns.set(identity.turnId,{id:identity.turnId,threadId:identity.threadId,status:'inProgress',items:[],itemsView:'full'});
+    if(mode==='late-turn'&&turnSeq===2){notify('item/agentMessage/delta',{threadId:identity.threadId,turnId:'fixture-turn-1',itemId:'old-tail',delta:'不得混入第二问'});notify('item/completed',{threadId:identity.threadId,turnId:'fixture-turn-1',item:{type:'agentMessage',id:'old-tail',text:'不得混入第二问'}});}
     snapshot = JSON.parse(m.params.input[0].text).submittedRequest;
     respond({ turn: { id: identity.turnId, status: 'inProgress' } });
     notify('turn/started', { threadId: identity.threadId, turn: { id: identity.turnId } });
@@ -61,6 +71,9 @@ async function receive(m: any) {
     if (mode === 'disconnect') { setTimeout(() => process.exit(17), 80); return; }
     if (mode === 'malformed') { process.stdout.write('not-json\n'); return; }
     setTimeout(() => {
+      if(turns.get(identity.turnId)?.status!=='inProgress')return;
+      turns.get(identity.turnId).status=mode==='failed'?'failed':'completed';turns.get(identity.turnId).items=[{type:'agentMessage',id:'answer',text:full}];
+      if(mode==='reconcile-completed')return;
       notify('item/completed', { ...identity, item: { type: 'agentMessage', id: 'answer', text: full } });
       notify('item/agentMessage/delta', { ...identity, itemId: 'answer', delta: 'LATE DUPLICATE' });
       notify('item/completed', { ...identity, item: { type: 'agentMessage', id: 'answer', text: full } });
