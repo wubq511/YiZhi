@@ -11,7 +11,7 @@ const valid = (s: unknown): s is string => typeof s === 'string' && s.length > 0
 const text = (s: unknown, max = 20_000): s is string => typeof s === 'string' && s.length <= max;
 
 export class AgentStore {
-  private generationState?: (task: AgentTask) => { pending: Array<'lesson'|'practice'>; retained: Array<{candidateId:string;reason:string}> };
+  private generationState?: (task: AgentTask) => { pending: Array<'lesson'|'practice'>; completed:Array<'lesson'|'practice'>;retained: Array<{candidateId:string;reason:string}> };
   attachGeneration(read: NonNullable<AgentStore['generationState']>) { this.generationState=read; }
   constructor(private db: DatabaseSync, private sources: Sources, private unit: (id: string) => CourseUnit | undefined, private groups: CommandGroups) {
     db.exec(`CREATE TABLE IF NOT EXISTS agent_conversations(id TEXT PRIMARY KEY, title TEXT NOT NULL, updated_at TEXT NOT NULL,
@@ -94,7 +94,14 @@ export class AgentStore {
     return { id, title: String(row.title), updatedAt: String(row.updated_at),
       toolFacts: this.db.prepare('SELECT r.* FROM agent_tool_recovery r JOIN agent_tasks t ON t.id=r.reference_id WHERE t.conversation_id=? ORDER BY r.rowid').all(id).map(r => ({ taskId: String(r.reference_id), name: String(r.name), purpose: String(r.purpose), referenceId: String(r.reference_id), digest: String(r.digest), references: parse(r.refs), hasRecoveryPayload: r.input !== null || r.output !== null })),
       draft: { text: String(row.draft), seq: row.draft_session === sessionId ? Number(row.draft_seq) : 0, citationIds: [], ...parse(row.draft_context) },
-      tasks: this.db.prepare('SELECT payload FROM agent_tasks WHERE conversation_id=? ORDER BY rowid').all(id).map(r => parse(r.payload)),
+      tasks: this.db.prepare('SELECT payload FROM agent_tasks WHERE conversation_id=? ORDER BY rowid').all(id).map(r => {
+        const task=parse(r.payload) as AgentTask;
+        if(task.snapshot.intent==='generate'){
+          const state=this.generationState?.(task);
+          task.generationProgress={completedStages:state?.completed??[],pendingStages:state?.pending??[]};
+        }
+        return task;
+      }),
       messages: this.db.prepare('SELECT m.payload FROM agent_messages m JOIN agent_tasks t ON t.id=m.task_id WHERE t.conversation_id=? ORDER BY m.rowid').all(id).map(r => parse(r.payload)) };
   }
   saveDraft(request: any) {

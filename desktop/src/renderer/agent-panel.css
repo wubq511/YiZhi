@@ -20,10 +20,27 @@
 .agent-evidence button { white-space: normal; text-align: left; }
 .agent-task { margin-block: 12px; padding: 8px; background: #f4f7fa; }
 .agent-task p { margin: 4px 0; }
-.agent-composer { flex: 0 0 auto; max-height: calc(100% - 180px); overflow-y: auto; margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e5eb; }
+.agent-composer { flex: 0 0 auto; max-height: min(50vh, calc(100% - 240px)); overflow-y: auto; margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e5eb; }
 .agent-composer label { display: block; }
 .agent-composer-options { display: flex; align-items: end; gap: 8px; }
 .agent-composer-options label { flex: 1; min-width: 0; }
+.agent-generation-source { min-width: 0; margin: 10px 0; padding: 8px 10px 10px; border: 1px solid #d9dce8; border-radius: 10px; }
+.agent-composer .agent-generation-update { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #38355b; }
+.agent-generation-update input { flex: 0 0 auto; accent-color: #6965db; }
+.agent-generation-source legend { padding-inline: 4px; font-size: 13px; font-weight: 650; color: #38355b; }
+.agent-generation-source p { margin: 0 0 8px; color: #4b5364; font-size: 12px; line-height: 1.55; }
+.agent-generation-source label + label { margin-top: 8px; }
+.agent-generation-source-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; color: #4b5364; font-size: 12px; }
+.agent-generation-source-footer span { flex: 1; }
+.agent-generation-task { margin-top: 8px; padding-top: 8px; border-top: 1px solid #d9dce8; }
+.agent-generation-task > p { margin: 3px 0; }
+.agent-generation-task summary { cursor: pointer; color: #38355b; }
+.agent-generation-candidate { margin-top: 8px; padding: 8px 0; border-top: 1px solid #d9dce8; }
+.agent-generation-candidate h3 { margin: 8px 0 4px; font-size: 14px; }
+.agent-generation-candidate p { margin: 6px 0; white-space: pre-wrap; }
+.agent-generation-candidate ul { padding-left: 18px; margin: 8px 0; }
+.agent-generation-candidate li + li { margin-top: 4px; }
+.agent-generation-candidate code { white-space: normal; overflow-wrap: anywhere; }
 .agent-composer textarea { width: 100%; min-height: 92px; height: 112px; max-height: 30vh; resize: vertical; margin: 8px 0; border: 1px solid #b6c3cf; border-radius: 8px; padding: 10px; font: 14px/1.75 "PingFang SC", system-ui, sans-serif; color: #27343e; background: #fffefa; caret-color: #6965db; }
 .agent-composer textarea::placeholder { color: #687080; }
 .agent-panel ::selection { color: #27343e; background: #eeedff; }

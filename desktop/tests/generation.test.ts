@@ -69,14 +69,15 @@ function lesson(basis: Awaited<ReturnType<CourseService['readAgentGeneration']>>
 }
 function practice(basis:Awaited<ReturnType<CourseService['readAgentGeneration']>>,operationId:string){
   return {operationId,basisId:basis.basisId,stage:'practice' as const,
-    exercise:{problem:'S1=1、S0=1、I3=0 时，单通道输出 Z 是多少？',hint:'11 选择 C3=I3。',answer:'Z=0，因为所选 I3=0。',inputs:{S1:1,S0:1,I0:1,I1:1,I2:1,I3:0},output:0},evidence:basis.evidenceIds};
+    exercise:{problem:'S1=1、S0=1、I3=0 时，单通道输出 Z 是多少？',hint:'11 选择 C3=I3。',answer:'Z=0，因为所选 I3=0。',inputs:{S1:1,S0:1,I0:1,I1:1,I2:1,I3:0},output:0},
+    evidence:{enable:[],selection:[],formula:[],example:[],exercise:basis.evidenceIds.exercise}};
 }
 
 test('invalid finite formula stays a recoverable candidate and never registers an invisible unit', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-generation-'));
   const core = new CourseService(resolve('dist/worker.cjs'));
   try {
-    const { sessionId, task, opened } = await prepared(core, root);
+    const { sessionId, task, opened,conversation } = await prepared(core, root);
     const identity = { sessionId, taskId: task.id, attemptId: task.attemptId, generation: task.generation };
     const basis = await core.readAgentGeneration(identity);
     const originalGraph = await core.graph(sessionId);
@@ -89,7 +90,43 @@ test('invalid finite formula stays a recoverable candidate and never registers a
     await assert.rejects(core.readUnit(sessionId, 'KU-GEN-MUX-01'), /不存在/);
     assert.deepEqual((await core.read(sessionId)).unit, opened.unit);
     assert.equal((await core.generationCandidates({ sessionId, taskId: task.id })).length, 1);
+    const corrected=await core.readAgentGeneration(identity);
+    assert.equal((await core.publishAgentGeneration({...identity,input:lesson(corrected,'corrected-lesson')})).status,'committed');
+    assert.deepEqual((await core.readAgentGeneration(identity)).pendingStages,['practice']);
+    assert.equal((await core.generationCandidates({sessionId,taskId:task.id})).length,0,'superseded failure is no longer pending');
+    const pending=await core.readAgentGeneration(identity);
+    assert.equal((await core.publishAgentGeneration({...identity,input:practice(pending,'corrected-practice')})).status,'committed');
+    await core.recordAgent({...identity,eventId:'actual-finish-after-correction',kind:'finish',status:'completed'});
+    const final=await core.agent.get({sessionId,conversationId:conversation.id});
+    assert.equal(final.tasks[0].status,'completed');
+    assert.deepEqual(final.tasks[0].generationProgress?.pendingStages,[]);
+    assert.equal((await core.queryAgentGeneration({...identity,operationId:'wrong-formula'}))?.status,'retained');
   } finally { await core.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('claim evidence accepts actual table cells and rejects unrelated page text',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'yizhi-generation-evidence-'));
+  const core=new CourseService(resolve('dist/worker.cjs'));
+  try{
+    const {sessionId,task}=await prepared(core,root);
+    const identity={sessionId,taskId:task.id,attemptId:task.attemptId,generation:task.generation};
+    const basis=await core.readAgentGeneration(identity);
+    const firstRow=basis.sourceTable[0].evidenceIds[0];
+    assert.ok(!Object.values(basis.evidenceIds).flat().includes(firstRow));
+    const supported=lesson(basis,'table-cell-evidence');
+    supported.evidence={...supported.evidence,exercise:[...supported.evidence.exercise,firstRow]};
+    const valid=await core.publishAgentGeneration({...identity,input:supported});
+    assert.equal(valid.status,'committed',valid.reason);
+    const next=await core.readAgentGeneration(identity);
+    const unrelated=next.sourceText.find(item=>!next.sourceTable.some(row=>row.evidenceIds.includes(item.id)) &&
+      !Object.values(next.evidenceIds).flat().includes(item.id));
+    assert.ok(unrelated);
+    const invalid=practice(next,'unrelated-page-text');
+    invalid.evidence.exercise=[...invalid.evidence.exercise,unrelated.id];
+    const result=await core.publishAgentGeneration({...identity,input:invalid});
+    assert.equal(result.status,'retained');
+    assert.equal(result.checks.find(check=>check.layer==='reference')?.status,'failed');
+  }finally{await core.close();await rm(root,{recursive:true,force:true});}
 });
 
 test('complete lesson publishes one graph-owned unit, stop and explicit continue add only remaining practice', async () => {
@@ -142,6 +179,10 @@ test('complete lesson publishes one graph-owned unit, stop and explicit continue
     const nextPractice=practice(next,'fresh-practice');
     const second=await core.publishAgentGeneration({...nextIdentity,input:nextPractice});
     assert.equal(second.status,'committed',second.reason);
+    const practiceHistory=(await core.commands.history({sessionId})).find(h=>h.operationId===second.operationId)!;
+    assert.ok(practiceHistory.changes.some(c=>c.objectId===`structure:${basis.spec.unitId}`));
+    assert.ok(practiceHistory.changes.every(c=>!['unit:','graph:','theme:','layout:','layout-theme:'].some(prefix=>c.objectId.startsWith(prefix))),
+      'an independent practice addition does not claim a new unit or graph lifecycle');
     assert.deepEqual((await core.readAgentGeneration(nextIdentity)).pendingStages,[]);
     assert.equal((await core.readUnit(sessionId,basis.spec.unitId)).reading.blocks.filter(b=>b.kind==='exercise').length,2);
     assert.equal((await core.graph(sessionId)).nodes.filter(n=>n.id===basis.spec.unitId).length,1);
@@ -189,5 +230,36 @@ test('new bytes of the same source invalidate only future dependent publication 
     assert.deepEqual(await core.readUnit(sessionId,unit.id),unit);
     assert.equal((unit.reading.blocks[0].sourceRefs as Array<{versionId:string}>)[0].versionId,initial.source.versionId);
     await assert.rejects(core.readAgentGeneration(identity),/来源已有内容不同的新版本/);
+  }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+
+test('explicit local regeneration keeps the unit and block IDs and preserves the student note',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'yizhi-generation-regenerate-'));
+  const core=new CourseService(resolve('dist/worker.cjs'));
+  try{
+    const {sessionId,task,conversation}=await prepared(core,root),identity={sessionId,taskId:task.id,attemptId:task.attemptId,generation:task.generation};
+    const firstBasis=await core.readAgentGeneration(identity);
+    assert.equal((await core.publishAgentGeneration({...identity,input:lesson(firstBasis,'initial-lesson')})).status,'committed');
+    const first=await core.readUnit(sessionId,firstBasis.spec.unitId),revision=(await core.read(sessionId,first.id)).revision;
+    const block=first.reading.blocks[0],text=String(block.payload.text),quote=Array.from(text).slice(0,2).join('');
+    const note=await core.annotations.create({sessionId,operationId:'student-note-on-generated',text:'我自己的理解',
+      selection:{unitId:first.id,fragments:[{blockId:block.id,block,field:'text',formalRevision:revision,source:'formal',
+        projection:{version:1,encoding:'unicode-code-points',text},from:0,to:2,quote}]}});
+    await core.agent.stop({sessionId,taskId:task.id});
+    await core.recordAgent({...identity,eventId:'finish-before-local-regeneration',kind:'finish',status:'interrupted',reconciliation:true});
+    const nextTask=await core.agent.submit({sessionId,conversationId:conversation.id,operationId:'regenerate-request',generation:1,
+      intent:'generate',text:'根据同一来源更新本主题说明，保留已有身份和笔记',target:{unitId:'KU-001'},generationSpec:firstBasis.spec});
+    const nextIdentity={sessionId,taskId:nextTask.id,attemptId:nextTask.attemptId,generation:nextTask.generation};
+    const basis=await core.readAgentGeneration(nextIdentity);
+    const revised=lesson(basis,'revised-lesson');revised.intro+=' 增补：本次只改写说明，保留原例练的稳定身份。';
+    assert.equal((await core.publishAgentGeneration({...nextIdentity,input:revised})).status,'committed');
+    const after=await core.readUnit(sessionId,first.id);
+    assert.equal(after.id,first.id);
+    assert.deepEqual(after.reading.blocks.map(b=>b.id),first.reading.blocks.map(b=>b.id));
+    assert.equal((await core.graph(sessionId)).nodes.filter(n=>n.id===first.id).length,1);
+    const notes=await core.annotations.list({sessionId});
+    assert.equal(notes.length,1);assert.equal(notes[0].id,note.id);
+    assert.deepEqual(notes[0].original,note.original);
+    assert.equal(notes[0].text,note.text);
   }finally{await core.close();await rm(root,{recursive:true,force:true});}
 });

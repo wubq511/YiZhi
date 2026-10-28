@@ -8,12 +8,14 @@ import { AgentRuntime } from '../src/agent/executor';
 
 const prepared=process.env.YIZHI_T30_PREPARED_COURSE;
 const runModel=process.env.YIZHI_T30_ACTUAL_MODEL==='1';
+const stopContinue=process.env.YIZHI_T30_STOP_CONTINUE==='1';
 
 test('real original parsed TI source drives the bounded Core read and, when requested, actual app-server generation',
   {skip:!prepared},async()=>{
     const root=await mkdtemp(join(tmpdir(),'yizhi-t30-actual-'));
     let core=new CourseService(resolve('dist/worker.cjs'));
     let runtime:AgentRuntime|undefined;
+    let releaseLesson:(()=>void)|undefined;
     try {
       const directory=join(root,'course');await cp(prepared!,directory,{recursive:true});
       const opened=await core.open(directory),sessionId=opened.sessionId;
@@ -40,11 +42,44 @@ test('real original parsed TI source drives the bounded Core read and, when requ
         runtime=new AgentRuntime(core,{directory:join(root,'agent'),cliPath:'/opt/homebrew/bin/codex'});
         const status=await runtime.status();assert.equal(status.available,true,status.error);
         assert.ok(status.models.some(m=>m.model===request.model),'selected actual model is listed by local app-server');
+        let firstLesson:Promise<void>|undefined;
+        if(stopContinue){
+          let observed!:()=>void;
+          firstLesson=new Promise<void>(resolve=>{observed=resolve;});
+          const held=new Promise<void>(resolve=>{releaseLesson=resolve;});
+          const publish=core.publishAgentGeneration.bind(core);
+          core.publishAgentGeneration=async input=>{
+            const result=await publish(input);
+            if(input.input.stage==='lesson'&&result.status==='committed'){
+              observed();
+              await held;
+            }
+            return result;
+          };
+        }
         const task=await runtime.submit(request);
+        let activeTaskId=task.id;
+        if(firstLesson){
+          await Promise.race([firstLesson,new Promise<never>((_,reject)=>setTimeout(()=>reject(new Error('actual model did not commit the first lesson')),120_000))]);
+          assert.equal((await core.agentTask({sessionId,taskId:task.id})).groups?.filter(g=>g.status==='committed').length,1);
+          await runtime.stop({sessionId,taskId:task.id});
+          releaseLesson?.();releaseLesson=undefined;
+          let stopped;
+          for(let i=0;i<120;i++){
+            stopped=await core.agentTask({sessionId,taskId:task.id});
+            if(['stopped','interrupted','partial','unknown'].includes(stopped.status))break;
+            await new Promise(done=>setTimeout(done,500));
+          }
+          assert.ok(stopped&&['stopped','interrupted','partial','unknown'].includes(stopped.status),`stop did not settle: ${stopped?.status}`);
+          assert.deepEqual(stopped.generationProgress?.pendingStages,['practice']);
+          const resumed=await runtime.continue({sessionId,taskId:task.id,operationId:'actual-explicit-continue'});
+          assert.notEqual(resumed.attemptId,task.attemptId);
+          activeTaskId=resumed.id;
+        }
         let last=task;
         let settledWaitingPolls=0;
         for(let i=0;i<300;i++){
-          last=await core.agentTask({sessionId,taskId:task.id});
+          last=await core.agentTask({sessionId,taskId:activeTaskId});
           if(['completed','partial','failed','interrupted','unknown','stopped'].includes(last.status) ||
             last.status==='waiting' && last.executorStatus==='completed' && ++settledWaitingPolls>=12)break;
           if(last.status!=='waiting'||last.executorStatus!=='completed')settledWaitingPolls=0;
@@ -52,11 +87,13 @@ test('real original parsed TI source drives the bounded Core read and, when requ
           await new Promise(done=>setTimeout(done,1000));
         }
         assert.equal(last.status,'completed',JSON.stringify({status:last.status,groups:last.groups,errors:last.toolErrors,error:last.error}));
-        assert.deepEqual(last.groups?.map(g=>g.status),['committed','committed']);
+        const taskChain=await core.agent.get({sessionId,conversationId:conversation.id});
+        const allCommitted=taskChain.tasks.flatMap(item=>item.groups??[]).filter(group=>group.status==='committed');
+        assert.equal(allCommitted.length,2,'lesson and practice each have one durable committed group across explicit continuation');
         const unit=await core.readUnit(sessionId,unitId);
         assert.equal(unit.reading.blocks.filter(b=>b.kind==='exercise').length,2);
         assert.equal((await core.graph(sessionId)).nodes.filter(n=>n.id===unitId).length,1);
-        assert.equal((await core.commands.history({sessionId})).filter(h=>h.taskId===task.id).length,2);
+        assert.equal((await core.commands.history({sessionId})).filter(h=>taskChain.tasks.some(item=>item.id===h.taskId)).length,2);
         await runtime.close();runtime=undefined;
         await core.close();core=new CourseService(resolve('dist/worker.cjs'));
         const reopened=await core.open(directory);
@@ -64,7 +101,8 @@ test('real original parsed TI source drives the bounded Core read and, when requ
         assert.equal((await core.graph(reopened.sessionId)).nodes.filter(n=>n.id===unitId).length,1);
         console.log(JSON.stringify({kind:'t30-actual-model',runtime:opened.runtime,courseId:opened.courseId,sourceVersionId:source.versionId,
           artifactId:page.artifactId,taskId:task.id,attemptId:task.attemptId,threadId:last.threadId,turnId:last.turnId,
-          unitId,operationIds:last.groups?.map(g=>g.operationId),status:last.status}));
+          unitId,operationIds:allCommitted.map(g=>g.operationId),retainedAttempts:taskChain.tasks.flatMap(item=>item.groups??[]).length-allCommitted.length,
+          stopContinue,attempts:taskChain.tasks.length,status:last.status}));
       }
-    } finally {await runtime?.close();await core.close();await rm(root,{recursive:true,force:true});}
+    } finally {releaseLesson?.();await runtime?.close();await core.close();await rm(root,{recursive:true,force:true});}
   });

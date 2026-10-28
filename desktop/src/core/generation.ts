@@ -31,6 +31,11 @@ const readingObjects=(blocks:ReadingBlock[],parentId:string):Map<string,unknown>
   }
   return objects;
 };
+const unitHeader=(unit:CourseUnit|undefined)=>{
+  if(!unit)return null;
+  const {reading,...header}=unit;
+  return header;
+};
 
 /** Product Core owner of a single bounded source-backed MUX generation path. */
 export class Generation {
@@ -62,17 +67,19 @@ export class Generation {
   }
   private pending(root:string) {const done=new Set(this.completed(root).map(r=>r.stage));return stages.filter(s=>!done.has(s));}
   state(task:AgentTask) {
-    const root=this.root(task),pending=this.pending(root),retained=this.db.prepare("SELECT id,result FROM generation_candidates WHERE attempt_id=? AND json_extract(result,'$.status')='retained' ORDER BY rowid").all(task.attemptId)
+    const root=this.root(task),pending=this.pending(root),retained=this.db.prepare("SELECT id,result,proposal FROM generation_candidates WHERE attempt_id=? AND json_extract(result,'$.status')='retained' ORDER BY rowid").all(task.attemptId)
+      .filter(row=>pending.includes(parse(row.proposal).stage))
       .map(row=>({candidateId:String(row.id),reason:String(parse(row.result).reason)}));
-    return {pending,retained};
+    return {pending,retained,completed:this.completed(root).map(r=>r.stage)};
   }
   candidates(taskId:string):GenerationCandidateView[] {
     const row=this.db.prepare('SELECT payload FROM agent_tasks WHERE id=?').get(taskId);
     if(!row)throw new Error('生成任务不存在');
-    const task=parse(row.payload) as AgentTask;this.spec(task);const root=this.root(task);
+    const task=parse(row.payload) as AgentTask;this.spec(task);const root=this.root(task),pending=this.pending(root);
     return this.db.prepare(`SELECT * FROM generation_candidates
       WHERE json_extract(result,'$.status')='retained' ORDER BY rowid`).all()
       .filter(r=>{
+        if(!pending.includes(parse(r.proposal).stage))return false;
         const t=this.db.prepare('SELECT payload FROM agent_tasks WHERE attempt_id=?').get(r.attempt_id);
         return t&&this.root(parse(t.payload))===root;
       }).map(r=>({operationId:String(r.id),attemptId:String(r.attempt_id),stage:parse(r.proposal).stage,
@@ -141,13 +148,17 @@ export class Generation {
       return '固定单元与主题身份，无既有语义覆盖';
     });
     check('reference',()=>{
-      const actual=new Set(Object.values(table.evidenceIds).flat());
-      for(const kind of ['enable','selection','formula','example','exercise'] as const){
+      const actual=new Set([...Object.values(table.evidenceIds).flat(),
+        ...table.table.flatMap(row=>row.evidenceIds),...table.disabledEvidenceIds]);
+      const claims=input.stage==='lesson'?(['enable','selection','formula','example','exercise'] as const):(['exercise'] as const);
+      for(const kind of claims){
         const ids=input.evidence[kind];if(!Array.isArray(ids)||!ids.length||ids.some(id=>!actual.has(id)))throw new Error(`${kind} 缺少该来源页的具体文本项依据`);
       }
-      const required={enable:table.evidenceIds.enable,selection:table.evidenceIds.selection,formula:table.evidenceIds.formula};
-      for(const kind of Object.keys(required) as Array<keyof typeof required>)if(required[kind].some(id=>!input.evidence[kind].includes(id)))
-        throw new Error(`${kind} 依据未覆盖必要表头／行值`);
+      if(input.stage==='lesson'){
+        const required={enable:table.evidenceIds.enable,selection:table.evidenceIds.selection,formula:table.evidenceIds.formula};
+        for(const kind of Object.keys(required) as Array<keyof typeof required>)if(required[kind].some(id=>!input.evidence[kind].includes(id)))
+          throw new Error(`${kind} 依据未覆盖必要表头／行值`);
+      }
       return '来源版本、原页坐标及逐论断文本项均可回查；原生表格标签未假设存在';
     });
     check('version',()=>{
@@ -317,13 +328,22 @@ export class Generation {
           [`layout-theme:${spec.themeId}`,beforeGraph.layout.groups.find(g=>g.themeId===spec.themeId),nextGraph.layout.groups.find(g=>g.themeId===spec.themeId)],
         ] as const).flatMap(([objectId,prior,after])=>json(prior??null)===json(after??null)?[]:[{objectId,before:prior??null,after:after??null,
           beforeVersion:prior?revision-1:0,afterVersion:revision}]);
-        const changes=[{objectId:`unit:${spec.unitId}`,before:old??null,after:unit,beforeVersion:Number(oldRow?.revision??0),afterVersion:revision},
-          ...objectChanges,...invalidated,...graphChanges];
+        const unitChanges=json(unitHeader(old))===json(unitHeader(unit))?[]:
+          [{objectId:`unit:${spec.unitId}`,before:old??null,after:unit,beforeVersion:Number(oldRow?.revision??0),afterVersion:revision}];
+        const changes=[...unitChanges,...objectChanges,...invalidated,...graphChanges];
         const receipt:GenerationResult={operationId,attemptId:task.attemptId,unitId:spec.unitId,stage:input.stage,status:'committed',revision,
           changedObjectIds:changes.map(c=>c.objectId),checks:checked,cursor:0};
         receipt.cursor=appendEvent(this.db,{type:'group.committed',operationId,revision,changedObjectIds:receipt.changedObjectIds});
         this.db.prepare('UPDATE generation_candidates SET result=?,checks=? WHERE id=?').run(json(receipt),json(checked),operationId);
         this.db.prepare('INSERT INTO generation_groups VALUES(?,?,?,?)').run(root,input.stage,operationId,json(receipt));
+        // Once a stage is formally published, earlier failed proposals for that stage
+        // are no longer a recovery draft. Keep their identities and result facts for
+        // idempotent queries, but release duplicate full candidate bodies.
+        for(const row of this.db.prepare("SELECT id,attempt_id,proposal FROM generation_candidates WHERE json_extract(result,'$.status')='retained'").all()){
+          const previousTask=this.db.prepare('SELECT payload FROM agent_tasks WHERE attempt_id=?').get(row.attempt_id);
+          if(previousTask&&this.root(parse(previousTask.payload))===root&&parse(row.proposal).stage===input.stage)
+            this.db.prepare('UPDATE generation_candidates SET proposal=?,checks=? WHERE id=?').run(json({stage:input.stage}),json([]),row.id);
+        }
         this.db.prepare('INSERT INTO cg_candidates VALUES(?,?,?,?)').run(operationId,digest,json({domain:'generation',attemptId:task.attemptId,operationId}),json(receipt));
         this.db.prepare('INSERT INTO cg_history VALUES(?,?)').run(operationId,json({operationId,taskId:task.id,attemptId:task.attemptId,actor:'agent',domain:'generation',
           unitIds:[spec.unitId],explanation:input.stage==='lesson'?'从新增来源发布小主题':'为已发布小主题追加练习',
