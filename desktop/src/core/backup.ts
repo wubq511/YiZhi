@@ -1,8 +1,8 @@
 import { DatabaseSync, backup } from 'node:sqlite';
 import { createHash } from 'node:crypto';
-import { constants, createReadStream, createWriteStream } from 'node:fs';
+import { constants, createWriteStream } from 'node:fs';
 import { mkdir, open, readFile, rename, rm, lstat, realpath } from 'node:fs/promises';
-import { join, resolve, relative } from 'node:path';
+import { join, resolve, relative,dirname,basename,sep } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import type { BackupManifest, BackupRequest, BackupScheduling, FileDigest } from '../backup-api';
 import { declaredResourceRoots } from './retention-resources';
@@ -48,9 +48,11 @@ export class CourseBackups {
   return m;
  }
  async create(request:BackupRequest,source:{directory:string;courseId:string;acquire:()=>void;release:()=>void},resume=false):Promise<BackupManifest>{
-  const directory=resolve(request.directory),origin=await realpath(source.directory);
+  const selected=resolve(request.directory),directory=join(await realpath(dirname(selected)),basename(selected)),origin=await realpath(source.directory);
   if(!request.backupId||!/^[\w-]{1,120}$/.test(request.backupId))throw new Error('备份身份无效');
-  if(directory===origin||!relative(origin,directory).startsWith('..')||!relative(directory,origin).startsWith('..'))throw new Error('备份必须使用课程外的独立新目录');
+  const outside=(path:string)=>path==='..'||path.startsWith('..'+sep);
+  if(directory===origin||!outside(relative(origin,directory))||!outside(relative(directory,origin)))throw new Error('备份必须使用课程外的独立新目录');
+  if(resume&&(await lstat(directory)).isSymbolicLink())throw new Error('备份目录不能是软链');
   if(this.running.has(directory))throw new Error('此备份正在进行');this.running.add(directory);
   let m:BackupManifest|undefined;
   try{
@@ -78,6 +80,8 @@ export class CourseBackups {
    }finally{rootDB.close();}
    m!.phase='copying';delete m!.diagnostic;await durableJSON(join(directory,MANIFEST),m);
    await gate(this.scheduling?.afterSnapshot);
+   const resourceFolder=await lstat(join(origin,'resources')).catch(e=>{if((e as NodeJS.ErrnoException).code==='ENOENT'&&!m!.resources.length)return undefined;throw e;});
+   if(resourceFolder&&(!resourceFolder.isDirectory()||resourceFolder.isSymbolicLink()))throw new Error('课程资源目录不是独立目录');
    await mkdir(join(directory,'resources'),{recursive:true});
    await gate(this.scheduling?.beforeCopy);
    for(const r of m!.resources){

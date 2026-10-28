@@ -40,6 +40,11 @@ test('a source and its portable backup cannot both gain writable course identity
   await core.close();assert.equal((await copy.open(join(root,'backup'))).courseId,c.courseId);
  }finally{await copy.close();await core.close();await rm(root,{recursive:true,force:true});}
 });
+test('a directory name beginning with two dots is still inside the live course and cannot become its backup',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-backup-path-')),core=new CourseService(resolve('dist/worker.cjs'));
+ try{const c=await core.open(root);await assert.rejects(core.backup.create({...c,directory:join(root,'..backup'),backupId:'nested'}),/独立|课程外/);}
+ finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
 test('real copy failure retains the fixed manifest; retry verifies and repairs corrupt destination bytes before completing',async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-backup-copy-fault-')),gate=new SharedArrayBuffer(4),core=new CourseService(resolve('dist/worker.cjs'),{backupScheduling:{beforeCopy:gate}});let pending:Promise<unknown>|undefined;
  try{

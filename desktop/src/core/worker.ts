@@ -2,8 +2,9 @@ import { FormalHistory } from './formal-history';
 import { CourseBackups } from './backup';
 import { assertWritableFormat,inspectFormat,readUnderstoodUnit } from './course-format';
 import { claimPortableIdentity } from './course-identity';
+import { validateCourseCopy } from './course-validation';
 import { registerRetentionResourceRoot } from './retention-resources';
-import { generationRetentionResourceRoot } from './generation-retention';
+import { generationRetentionResourceRoot,generationRetentionResourceRoots } from './generation-retention';
 import { HistoryRetention } from './retention';
 import { CourseRestore } from './course-restore';
 import { LearningViews } from './learning-views';
@@ -38,7 +39,7 @@ import { transaction } from './save-store';
 import { resolveInput } from './save-store';
 import { initializeReviewState, reviewSnapshot, setReviewStatus, confirmReviewPrompt } from './review-state';
 
-registerRetentionResourceRoot('t30-generation-recovery',generationRetentionResourceRoot);
+registerRetentionResourceRoot('t30-generation-recovery',generationRetentionResourceRoot,generationRetentionResourceRoots);
 
 const EDITABLE = 'RB-TH-01-01-what-is-positional-notation';
 interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; courseId: string; graph: CourseGraph;
@@ -240,6 +241,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     }
     let value: unknown;
     if(action==='format:inspect')value=inspectFormat(payload.directory);
+    else if(action==='format:validate')value=await validateCourseCopy(payload.directory);
     else if(action==='format:readUnit')value=readUnderstoodUnit(payload.directory,payload.unitId);
     else if(action.startsWith('backup:')) {
       if(action==='backup:status')value=await backups.status(payload.directory);
@@ -251,8 +253,8 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
           transaction(c.db,()=>{
             c.db.exec('CREATE TABLE IF NOT EXISTS backup_jobs(id TEXT PRIMARY KEY,directory TEXT NOT NULL)');
             const old=c.db.prepare('SELECT directory FROM backup_jobs WHERE id=?').get(payload.backupId);
-            if(old&&old.directory!==resolve(payload.directory))throw new Error('备份身份已用于另一目录，请使用原目录重试');
-            c.db.prepare('INSERT OR IGNORE INTO backup_jobs VALUES(?,?)').run(payload.backupId,resolve(payload.directory));
+            if(old&&old.directory!==realpathSync(payload.directory))throw new Error('备份身份已用于另一目录，请使用原目录重试');
+            c.db.prepare('INSERT OR IGNORE INTO backup_jobs VALUES(?,?)').run(payload.backupId,realpathSync(payload.directory));
             c.db.prepare("INSERT OR IGNORE INTO metadata VALUES('portable-identity','1')").run();
             c.retention.resources.lease('backup:'+payload.backupId,'acquire',new Date().toISOString());
           });

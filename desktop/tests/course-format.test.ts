@@ -19,6 +19,17 @@ test('unknown body payload refuses writable open before any database mutation wh
   await assert.rejects((core as any).format.readUnit({directory:root,unitId:'KU-001'}),/解释|版本/);
  }finally{await core.close();await rm(root,{recursive:true,force:true});}
 });
+test('offline work-copy validation rejects a dangling knowledge reference before any upgrade can publish it',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-upgrade-reference-'));let core=new CourseService(resolve('dist/worker.cjs'));
+ try{
+  const c=await core.open(root);await core.close();
+  const db=new DatabaseSync(join(root,'course.sqlite')),unit=JSON.parse(String(db.prepare("SELECT payload FROM units WHERE id='KU-001'").get()!.payload));
+  unit.reading.blocks.push({id:'broken-workcopy-ref',kind:'knowledge-reference',payload:{targetUnitId:'MISSING-UNIT'}});
+  db.prepare("UPDATE units SET payload=? WHERE id='KU-001'").run(JSON.stringify(unit));
+  db.prepare("INSERT INTO metadata VALUES('course-graph',?)").run(JSON.stringify({nodes:[{id:'KU-001',themeId:'TH-1'}],groups:[{id:'TH-1'}],edges:[],requirementGroups:[],layout:{nodes:[{unitId:'KU-001'}]}}));db.close();
+  core=new CourseService(resolve('dist/worker.cjs'));await assert.rejects((core as any).format.validate({directory:root}),/引用|目标/);
+ }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
 test('course format, minimum reader, body version and extension interface/input/state are independent admission decisions',async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-format-axes-'));
  try{

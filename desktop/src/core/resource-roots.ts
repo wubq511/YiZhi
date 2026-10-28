@@ -17,9 +17,10 @@ export function declaredResourceRoots(db:DatabaseSync):BackupResource[]{
   if(typeof v==='string'){const match=/^resources\/([a-f0-9]{64})$/.exec(v);if(match)add(match[1],undefined,where);return;}
   if(!v||typeof v!=='object')return;
   if(Array.isArray(v)){for(const x of v)walk(x,where);return;}
-  if(typeof v.sha256==='string'&&(v.byteLength!==undefined||v.relativePath!==undefined||typeof v.path==='string'&&v.path.startsWith('resources/')))add(v.sha256,v.byteLength,where);
-  // T30 trusted recovery basis carries a source content hash, independently of its opaque proposal digest.
-  if(typeof v.sourceSha==='string')add(v.sourceSha,undefined,where);
+  if(typeof v.sha256==='string'&&(v.byteLength!==undefined||v.relativePath!==undefined||typeof v.path==='string'&&v.path.startsWith('resources/'))){
+   if(v.relativePath!==undefined&&v.relativePath!=='resources/'+v.sha256||typeof v.path==='string'&&v.path.startsWith('resources/')&&v.path!=='resources/'+v.sha256)throw new Error('资源路径与固定摘要不符: '+where);
+   add(v.sha256,v.byteLength,where);
+  }
   for(const x of Object.values(v))walk(x,where);
  };
  // Actual schema, including producer recovery domains. No renderer supplies SQL/resolver code.
