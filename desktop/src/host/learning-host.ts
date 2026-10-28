@@ -9,6 +9,7 @@ import { extensionNavigation } from './extension-protocol';
 interface View {
   directory:string; window:BrowserWindow; id:string; sessionId?:string; recovery?:{unconfirmedTail:boolean;detail:string};
   opening?:Promise<void>; close?:Promise<boolean>; reply?:(saved:boolean)=>void; requestId?:number; saved:boolean; recovering:boolean; detached?:boolean; detaching?:Promise<void>;
+  upgradeFrozen?:boolean;
 }
 const canonical=(path:string)=>{try{return realpathSync(path);}catch{return resolve(path);}};
 /** One learning window per canonical course, one host/Core authority across all of them. */
@@ -45,15 +46,35 @@ export class LearningHost {
     return {...await this.core.read(view.sessionId!),inputRecovery:view.recovery};
   };
   async restored(event:Electron.IpcMainInvokeEvent){const view=this.sender(event);await this.open(event);view.window.webContents.send('course:generation-changed');}
+  async freezeForUpgrade(event:Electron.IpcMainInvokeEvent){
+    this.assertTaskAdmission();const view=this.sender(event);if(view.upgradeFrozen)throw new Error('此课程正在升级');
+    if(view.sessionId)await this.agent.courseRestored(view.sessionId);
+    if(!await this.barrier(view)){view.window.webContents.send('window:close-cancelled');throw new Error('最新输入尚未确认保存，升级未开始。请先重试保存。');}
+    view.upgradeFrozen=true;return {viewId:view.id,confirmedAt:new Date().toISOString()};
+  }
+  async resumeAfterUpgradeError(event:Electron.IpcMainInvokeEvent){
+    const view=this.sender(event),old=view.sessionId;view.upgradeFrozen=false;await this.open(event);
+    view.window.webContents.send('window:close-cancelled');if(old!==view.sessionId)view.window.webContents.send('course:generation-changed');
+  }
+  async enterUpgradedCourse(event:Electron.IpcMainInvokeEvent,directory:string){
+    const view=this.sender(event),old=view.directory;directory=canonical(directory);
+    const other=this.views.get(directory);
+    if(other&&other!==view){view.saved=true;view.window.destroy();other.opening=undefined;other.window.webContents.send('course:generation-changed');await this.show(directory);return;}
+    this.views.delete(old);view.directory=directory;view.opening=undefined;view.sessionId=undefined;view.id=randomUUID();view.upgradeFrozen=false;view.detached=false;
+    this.views.set(directory,view);this.lastDirectory=directory;await this.open(event);
+    view.window.webContents.send('window:close-cancelled');view.window.webContents.send('course:generation-changed');
+  }
   async show(directory=this.lastDirectory,bounds?:Electron.Rectangle) {
     if(this.quiescing||this.exiting)return;
-    mkdirSync(directory,{recursive:true});directory=canonical(directory);this.lastDirectory=directory;
+    mkdirSync(directory,{recursive:true});directory=canonical(directory);
+    try{directory=(await this.core.upgrade.recover({directory})).directory;}catch{/* The selected window reports unavailable/unpublished course facts through its normal open error. */}
+    this.lastDirectory=directory;
     const existing=this.views.get(directory);
     if(existing){if(existing.window.isMinimized())existing.window.restore();existing.window.show();existing.window.focus();return;}
     const window=new BrowserWindow({width:1280,height:900,...bounds,minWidth:660,minHeight:500,title:'绎知',backgroundColor:'#ffffff',
       webPreferences:{preload:join(this.preloadDirectory,'preload.cjs'),contextIsolation:true,nodeIntegration:false,nodeIntegrationInSubFrames:false,sandbox:true}});
     const view:View={directory,window,id:randomUUID(),saved:false,recovering:false};this.views.set(directory,view);
-    window.on('focus',()=>{this.lastDirectory=directory;});
+    window.on('focus',()=>{this.lastDirectory=view.directory;});
     window.webContents.on('unresponsive',()=>void this.recover(view));
     window.webContents.setWindowOpenHandler(()=>({action:'deny'}));
     window.webContents.on('will-navigate',event=>event.preventDefault());
@@ -61,7 +82,7 @@ export class LearningHost {
     window.webContents.on('render-process-gone',()=>{void this.detach(view,false).catch(()=>{});view.reply?.(false);});
     window.on('close',event=>{if(!this.exiting){event.preventDefault();if(!this.quiescing)void this.closeView(view);}});
     window.on('closed',()=>{
-      this.views.delete(directory);view.reply?.(false);void this.detach(view,view.saved).catch(()=>{});
+      this.views.delete(view.directory);view.reply?.(false);void this.detach(view,view.saved).catch(()=>{});
     });
     await window.loadURL('yizhi-app://app/index.html');
   }
@@ -71,6 +92,7 @@ export class LearningHost {
       .then(()=>{view.detached=true;}).finally(()=>{view.detaching=undefined;});
   }
   private barrier(view:View):Promise<boolean> {
+    if(view.upgradeFrozen)return Promise.resolve(true);
     if(view.close)return view.close;
     const pending=new Promise<boolean>(resolve=>{
       const requestId=++this.sequence;view.requestId=requestId;

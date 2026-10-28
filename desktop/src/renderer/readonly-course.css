@@ -1,0 +1,6 @@
+.readonly-course{box-sizing:border-box;position:fixed;inset:96px 24px 24px;z-index:20;overflow:auto;max-width:960px;padding:24px;background:#fff;color:#27343e;border:1px solid #e5e5eb;border-radius:8px;font:14px/1.6 "PingFang SC",system-ui,sans-serif;scrollbar-color:#b6b9c8 #f6f6f9}
+.readonly-course h2{font-size:21px;margin:0 0 12px}.readonly-course h3{font-size:17px;margin:24px 0 12px}.readonly-course>p{max-width:70ch;margin:8px 0 20px}
+.readonly-course pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;max-width:72ch}.readonly-course label{display:inline-flex;align-items:center;gap:8px;margin:0 16px 12px 0}
+.readonly-course [role="alert"]{color:#a13737}
+.readonly-course select,.readonly-course button{font:inherit;padding:6px 10px;border:1px solid #e5e5eb;border-radius:4px;background:#fff;color:inherit;max-width:100%}.readonly-course button{cursor:pointer}.readonly-course button:hover:not(:disabled){background:#f6f6f9}.readonly-course button:disabled{opacity:.55;cursor:default}.readonly-course :focus-visible{outline:2px solid #6965db;outline-offset:3px}.readonly-course ::selection{background:#eeedff;color:#27343e}
+@media(max-width:760px){.readonly-course{inset:96px 8px 8px;padding:16px;max-width:calc(100vw - 16px)}}

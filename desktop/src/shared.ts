@@ -16,6 +16,7 @@ export interface CourseUnit {
   [key: string]: unknown;
 }
 export interface OpenedCourse {
+  courseFormat?:number;
   generation: number;
   preservedDraftCount?: number;
   inputRecovery?: {unconfirmedTail:boolean;detail:string};
@@ -52,6 +53,9 @@ export interface SaveReceipt {
   basedOnRevision?: number;
 }
 export interface DesktopBridge extends SaveBridge {
+  upgrade: import('./upgrade-api').UpgradeBridge;
+  backup: import('./backup-api').BackupBridge;
+  courseFormat: import('./format-api').ReadonlyCourseBridge;
   migration: import('./migration-api').MigrationBridge;
   courseRestore: import('./course-restore-api').CourseRestoreAPI;
   retention: Omit<import('./retention-api').RetentionAPI,'resourceLease'|'resourceLeases'>;

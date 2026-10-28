@@ -546,3 +546,20 @@ test('explicit local regeneration keeps the unit and block IDs and preserves the
     assert.equal(notes[0].text,note.text);
   }finally{await core.close();await rm(root,{recursive:true,force:true});}
 });
+
+
+test('a full backup retains actual T30 waiting generation basis resources and never resumes an old task automatically',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-generation-backup-')),core=new CourseService(resolve('dist/worker.cjs'));let copy:CourseService|undefined;
+ try{
+  const {sessionId,task}=await prepared(core,root),identity={sessionId,taskId:task.id,attemptId:task.attemptId,generation:task.generation};
+  const basis=await core.readAgentGeneration(identity);
+  const rejected=lesson(basis,'backup-retained-proposal');rejected.formula='Z=I0';
+  assert.equal((await core.publishAgentGeneration({...identity,input:rejected})).status,'retained');
+  const manifest=await core.backup.create({sessionId,directory:join(root,'backup'),backupId:'t30-recovery'});
+  assert.ok(manifest.resources.some(r=>r.sha256===basis.source.sha256));
+  assert.ok(manifest.resources.some(r=>r.declaredBy.includes('t30-generation-recovery')));
+  await core.close();copy=new CourseService(resolve('dist/worker.cjs'));const c=await copy.open(join(root,'backup'));
+  const recovered=await copy.agentTask({sessionId:c.sessionId,taskId:task.id});assert.notEqual(recovered.status,'running');
+  assert.equal((await copy.generationCandidates({sessionId:c.sessionId,taskId:task.id})).length,1);
+ }finally{await copy?.close();await core.close();await rm(root,{recursive:true,force:true});}
+});
