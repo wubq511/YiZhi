@@ -1,5 +1,7 @@
 import { evidencePath } from './evidence-paths';
 import { DatabaseSync } from 'node:sqlite';
+import { once } from 'node:events';
+import { Worker } from 'node:worker_threads';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -269,11 +271,28 @@ test('layout persistence failure retains the visible placement and retry confirm
   const root = await mkdtemp(join(tmpdir(), 'yizhi-layout-ui-fault-'));
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   let fault: DatabaseSync | undefined;
+  let setupWriter: Worker | undefined;
   let completed=false;
   try {
     const page = await app.firstWindow();
     await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     fault = new DatabaseSync(join(root, 'course/course.sqlite'));
+    fault.exec('PRAGMA busy_timeout = 5000');
+    // Reproduce the real setup race: another connection may be committing when
+    // this test installs its fault. The independent thread releases the write lock.
+    setupWriter = new Worker(`
+      const { parentPort, workerData } = require('node:worker_threads');
+      const { DatabaseSync } = require('node:sqlite');
+      const db = new DatabaseSync(workerData);
+      db.exec('PRAGMA busy_timeout = 5000; BEGIN IMMEDIATE');
+      parentPort.postMessage('locked');
+      parentPort.once('message', () => setTimeout(() => {
+        db.exec('COMMIT'); db.close(); parentPort.close();
+      }, 150));
+    `, { eval: true, workerData: join(root, 'course/course.sqlite') });
+    const [ready] = await once(setupWriter, 'message');
+    expect(ready).toBe('locked');
+    setupWriter.postMessage('release');
     fault.exec("CREATE TRIGGER reject_ui_layout BEFORE INSERT ON layout_baseline BEGIN SELECT RAISE(ABORT, 'layout storage unavailable'); END");
     const width = page.getByRole('slider', { name: '调整位置记数法与权展开宽度' });
     await width.focus(); await page.keyboard.press('ArrowRight');
@@ -297,5 +316,5 @@ test('layout persistence failure retains the visible placement and retry confirm
     await expect(page.getByRole('status', { name: '布局状态' })).toHaveText('布局已保存');
     const saved = await page.evaluate(async () => { const b = (window as any).yizhi; const c = await b.open(); return (await b.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-001'); });
     expect(saved.width).toBe(674);completed=true;
-  } finally { fault?.exec('DROP TRIGGER IF EXISTS reject_ui_layout');fault?.close(); if(completed)await app.close();else app.process().kill('SIGKILL'); await rm(root, { recursive: true, force: true }); }
+  } finally { await setupWriter?.terminate();fault?.exec('DROP TRIGGER IF EXISTS reject_ui_layout');fault?.close(); if(completed)await app.close();else app.process().kill('SIGKILL'); await rm(root, { recursive: true, force: true }); }
 });
