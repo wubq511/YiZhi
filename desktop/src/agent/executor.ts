@@ -55,7 +55,7 @@ export async function executorEnv(path: string, env: NodeJS.ProcessEnv) {
   const resolved = await realpath(path);
   return { ...env, PATH: [...new Set([dirname(path), dirname(resolved), '/opt/homebrew/bin', '/usr/local/bin', ...(env.PATH ?? '').split(delimiter)])].join(delimiter) };
 }
-interface Running { sessionId: string; task: AgentTask; next: number; chain: Promise<void>; beginning?: Promise<void>; interrupting?: Promise<void> }
+interface Running { sessionId: string; task: AgentTask; next: number; chain: Promise<void>; beginning?: Promise<void>; interrupting?: Promise<void>; previousTurns?:Set<string> }
 
 /** Host-owned runtime. SQLite transactions and model work never share a call stack. */
 export class AgentRuntime {
@@ -231,8 +231,15 @@ export class AgentRuntime {
     await this.core.activeAgent({sessionId:running.sessionId,taskId:running.task.id,attemptId:running.task.attemptId,generation:running.task.generation});
     const task = running.task, model = task.model ?? this.statusValue!.models.find(m => m.isDefault)?.model ?? this.statusValue!.models[0].model;
     const history = await this.core.agent.get({ sessionId: running.sessionId, conversationId: task.conversationId });
+    // Core receipts may have repaired a projection after the original RPC callback failed.
+    // Refresh routing before reusing a conversation thread, so an old host entry cannot consume its next turn.
+    for(const fact of history.tasks) {
+      const cached=this.running.get(fact.id);if(!cached||fact.id===task.id)continue;cached.task=fact;
+      if(!['running','stopping','queued','waiting','unknown'].includes(fact.status))this.releaseRunning(fact.id);
+    }
     const mutation = !!task.snapshot.intent && task.snapshot.intent !== 'question', threadKey = `${task.conversationId}:${mutation ? 'mutation' : 'question'}:${task.continuesTaskId?task.id:'conversation'}`;
     let threadId = this.threads.get(threadKey);
+    if(threadId&&[...this.running.values()].some(r=>r.task.id!==task.id&&r.task.threadId===threadId&&r.task.status==='unknown'))threadId=undefined;
     if (!threadId) {
       const response = await this.rpc!.request('thread/start', {
         cwd: this.cwd, runtimeWorkspaceRoots: [], model, ephemeral: true, sandbox: 'read-only', approvalPolicy: 'never', environments: [],
@@ -244,6 +251,7 @@ export class AgentRuntime {
       if (!threadId) throw new Error('执行器未返回 thread 身份');
       this.threads.set(threadKey, threadId);
     }
+    running.previousTurns=new Set(history.tasks.filter(t=>t.id!==task.id&&t.threadId===threadId&&t.turnId).map(t=>t.turnId!));
     await this.record(running, { kind: 'bind', threadId, model });
     await this.core.activeAgent({sessionId:running.sessionId,taskId:task.id,attemptId:task.attemptId,generation:task.generation});
     const ancestors:AgentTask[]=[];let previousId=task.continuesTaskId;
@@ -260,12 +268,10 @@ export class AgentRuntime {
     if(event.kind==='bind'){running.task.threadId=event.threadId??running.task.threadId;running.task.turnId=event.turnId??running.task.turnId;}
     return this.core.recordAgent({ sessionId: running.sessionId, taskId: running.task.id, attemptId: running.task.attemptId,
       generation: running.task.generation, eventId: `rpc-${this.instance}-${++this.sequence}`, ...event } as AgentEvent).then(task => {
-      running.task = task; if (!['running','stopping'].includes(task.status)) {
-        this.running.delete(task.id);
-        for (const key of this.toolReplies.keys()) if (key.startsWith(task.id + ':')) this.toolReplies.delete(key);
-      }
+      running.task = task; if (!['running','queued','waiting','stopping'].includes(task.status)) this.releaseRunning(task.id);
     });
   }
+  private releaseRunning(taskId:string) {this.running.delete(taskId);for(const key of this.toolReplies.keys())if(key.startsWith(taskId+':'))this.toolReplies.delete(key);}
   private enqueue(running: Running, action: () => Promise<void>) {
     running.chain = running.chain.then(action).catch(error => {
       // A persisted receipt can repair the projection. Keep the original turn subscribed.
@@ -275,6 +281,8 @@ export class AgentRuntime {
   private notification(method: string, p: any) {
     const running = [...this.running.values()].find(r => r.task.threadId === p?.threadId);
     if (!running) return;
+    const incomingTurn=p.turnId??p.turn?.id;
+    if(!running.task.turnId&&incomingTurn&&running.previousTurns?.has(incomingTurn))return;
     if (p.turnId && running.task.turnId && p.turnId !== running.task.turnId) return;
     const identity = { threadId: p.threadId, turnId: p.turnId ?? p.turn?.id, ...(!['running','stopping'].includes(running.task.status)?{reconciliation:true}:{}) };
     if (method === 'turn/started') void this.enqueue(running, () => this.record(running, { kind: 'bind', ...identity }));
@@ -296,6 +304,7 @@ export class AgentRuntime {
     if (method !== 'item/tool/call') throw new Error('只读问答不提供此服务请求');
     const running = [...this.running.values()].find(r => r.task.threadId === p.threadId);
     if (!running) throw new Error('没有仍有效的问答任务');
+    if(!running.task.turnId&&running.previousTurns?.has(p.turnId))throw new Error('原 turn 已结束，不可将旧工具关联到新尝试');
     if (running.task.turnId && p.turnId !== running.task.turnId) throw new Error('工具 turn 身份不一致');
     await running.chain;
     await this.core.activeAgent({ sessionId: running.sessionId, taskId: running.task.id, attemptId: running.task.attemptId, generation: running.task.generation });

@@ -146,7 +146,7 @@ export class AgentStore {
       task.cursor = this.changed(request.conversationId, id);
       this.db.prepare('INSERT INTO agent_tasks VALUES(?,?,?,?)').run(id, request.conversationId, attemptId, JSON.stringify(task));
       this.message({ id: `${id}:user`, taskId: id, role: 'user', text: request.text, state: 'complete', itemId: null });
-      if (previous) { previous.continuedByTaskId=id; this.db.prepare('UPDATE agent_tasks SET payload=? WHERE id=?').run(JSON.stringify(previous),previous.id); }
+      if (previous) { this.db.prepare('UPDATE agent_conversations SET updated_at=? WHERE id=?').run(createdAt,request.conversationId); previous.continuedByTaskId=id; this.db.prepare('UPDATE agent_tasks SET payload=? WHERE id=?').run(JSON.stringify(previous),previous.id); }
       if (!previous) this.db.prepare('UPDATE agent_conversations SET title=?,updated_at=?,draft=\'\',draft_context=\'{}\' WHERE id=?').run(request.text.trim().slice(0, 40), createdAt, request.conversationId);
       this.select(request.conversationId); return task;
     });
@@ -200,14 +200,14 @@ export class AgentStore {
   }
   private message(message: AgentMessage) { this.db.prepare('INSERT INTO agent_messages VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload').run(message.id, message.taskId, JSON.stringify(message)); }
   private finish(task: AgentTask, status: AgentTask['status'], error?: string) {
-    const executorCompleted = status === 'completed';
+    const executorCompleted = status === 'completed', executorUnknown=status==='unknown';
     if (['completed','failed','interrupted','unknown'].includes(status)) task.executorStatus = status as AgentTask['executorStatus'];
     if (task.snapshot.intent && task.snapshot.intent !== 'question') {
       const committed = task.groups?.some(g => g.status === 'committed' && g.changedObjectIds.length);
       const unfinished = status !== 'completed' || task.mutationFailure || task.groups?.some(g => g.status === 'retained');
       status = committed ? unfinished ? 'partial' : 'completed' : 'pending';
     }
-    task.status = task.stopRequested && status !== 'unknown' ? 'stopped' : status; task.error = error ?? task.mutationFailure ?? null;
+    task.status = executorUnknown ? 'unknown' : task.stopRequested ? 'stopped' : status; task.error = error ?? task.mutationFailure ?? null;
     for (const row of this.db.prepare('SELECT payload FROM agent_messages WHERE task_id=?').all(task.id)) {
       const message = parse(row.payload) as AgentMessage;
       if (message.role === 'assistant') { message.state = executorCompleted && message.state === 'complete' ? 'complete' : 'partial'; this.message(message); }

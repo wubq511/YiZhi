@@ -24,7 +24,9 @@ test('stop revokes the shared commit gate before executor acknowledgement; origi
     await assert.rejects(core.activeAgent(identity),/停止|失效/);
     await assert.rejects(core.applyAgentMutation({...identity,input:{...input,operationId:'after-stop'}}),/停止|失效/);
     assert.deepEqual(await core.queryAgentMutation({...identity,operationId:'group-one'}),receipt);
-    await core.recordAgent({...identity,eventId:'interrupted',kind:'finish',threadId:'original-thread',turnId:'original-turn',status:'interrupted'});
+    await core.recordAgent({...identity,eventId:'unknown-stop',kind:'finish',status:'unknown'});
+    assert.equal((await core.agentTask({sessionId,taskId:task.id})).status,'unknown');
+    await core.recordAgent({...identity,eventId:'interrupted',reconciliation:true,kind:'finish',threadId:'original-thread',turnId:'original-turn',status:'interrupted'});
     const stopped=(await core.agent.get({sessionId,conversationId:conversation.id})).tasks[0];
     assert.equal(stopped.status,'stopped');assert.equal(stopped.executorStatus,'interrupted');assert.equal(stopped.groups?.length,1);
     const next=await core.agent.continue({sessionId,taskId:task.id,operationId:'continue-one'});
@@ -205,4 +207,20 @@ test('a malformed executor delivery is rejected before durable receipt admission
   await core.recordAgent({...id,eventId:'finished',kind:'finish',status:'completed'});
   const v=await core.agent.get({sessionId,conversationId:c.id});assert.equal(v.tasks[0].status,'completed');assert.equal(v.messages[1].text,'真实完整回答');
  }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+
+test('repairing real protocol deliveries also releases stale host routing before the next question reuses its conversation thread',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-runtime-link-repair-')),core=new CourseService(resolve('dist/worker.cjs'));
+ const runtime=new AgentRuntime(core,{cliPath:resolve('dist/tests/agent-executor-fixture.cjs'),directory:join(root,'runtime'),env:{...process.env,YIZHI_FIXTURE_MODE:'late-turn'}});let fault:DatabaseSync|undefined;
+ try {
+  const {sessionId}=await core.open(join(root,'course')),c=await core.agent.create({sessionId,operationId:'c'});
+  const first=await runtime.submit({sessionId,conversationId:c.id,operationId:'q1',generation:1,text:'第一问',target:{unitId:'KU-001'}});
+  await until(()=>core.agentTask({sessionId,taskId:first.id}),t=>!!t.turnId);
+  fault=new DatabaseSync(join(root,'course/course.sqlite'));fault.exec("CREATE TRIGGER link_after_binding BEFORE UPDATE ON agent_tasks BEGIN SELECT RAISE(ABORT,'runtime projection fault'); END");
+  await new Promise(r=>setTimeout(r,1000));fault.exec('DROP TRIGGER link_after_binding');
+  const repaired=await core.agentTask({sessionId,taskId:first.id});assert.equal(repaired.status,'completed');
+  const next=await runtime.submit({sessionId,conversationId:c.id,operationId:'q2',generation:1,text:'第二问',target:{unitId:'KU-001'}});
+  const done=await until(()=>core.agentTask({sessionId,taskId:next.id}),t=>t.status!=='running');assert.equal(done.status,'completed');assert.notEqual(done.turnId,repaired.turnId);
+  const view=await core.agent.get({sessionId,conversationId:c.id});assert.equal(view.messages.filter(m=>m.role==='assistant'&&m.state==='complete').length,2);
+ }finally{fault?.close();await runtime.close();await core.close();await rm(root,{recursive:true,force:true});}
 });

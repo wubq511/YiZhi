@@ -42,6 +42,7 @@ async function receive(m: any) {
   }
   if (m.method === 'turn/start') {
     const identity = { threadId: m.params.threadId, turnId: `fixture-turn-${++turnSeq}` }; active = identity; turns.set(identity.turnId,{id:identity.turnId,threadId:identity.threadId,status:'inProgress',items:[],itemsView:'full'});
+    if(mode==='late-turn'&&turnSeq===2){notify('item/agentMessage/delta',{threadId:identity.threadId,turnId:'fixture-turn-1',itemId:'old-tail',delta:'不得混入第二问'});notify('item/completed',{threadId:identity.threadId,turnId:'fixture-turn-1',item:{type:'agentMessage',id:'old-tail',text:'不得混入第二问'}});}
     snapshot = JSON.parse(m.params.input[0].text).submittedRequest;
     respond({ turn: { id: identity.turnId, status: 'inProgress' } });
     notify('turn/started', { threadId: identity.threadId, turn: { id: identity.turnId } });
