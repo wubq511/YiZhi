@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "YiZhi native canvas license provenance manifest",
+  "type": "object",
+  "required": [
+    "formatVersion",
+    "target",
+    "coverage",
+    "npmArchives",
+    "wrapper",
+    "skia",
+    "components",
+    "files"
+  ],
+  "properties": {
+    "formatVersion": {
+      "const": 1
+    },
+    "target": {
+      "type": "object",
+      "required": [
+        "npmWrapper",
+        "npmNative",
+        "os",
+        "arch",
+        "file",
+        "sha256",
+        "bytes"
+      ],
+      "properties": {
+        "os": {
+          "const": "darwin"
+        },
+        "arch": {
+          "const": "arm64"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "required": [
+        "sbomComponents",
+        "registryCrates",
+        "localCrates",
+        "skiaDependencies",
+        "nativeBinary",
+        "claim",
+        "remainingGaps"
+      ],
+      "properties": {
+        "sbomComponents": {
+          "const": 142
+        },
+        "registryCrates": {
+          "const": 127
+        },
+        "localCrates": {
+          "const": 2
+        },
+        "skiaDependencies": {
+          "const": 12
+        },
+        "nativeBinary": {
+          "const": 1
+        },
+        "remainingGaps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "detail"
+            ]
+          }
+        }
+      }
+    },
+    "components": {
+      "type": "array",
+      "minItems": 142,
+      "maxItems": 142,
+      "items": {
+        "type": "object",
+        "required": [
+          "bomRef",
+          "name",
+          "version",
+          "source",
+          "noticeFiles",
+          "coverage",
+          "scope"
+        ],
+        "properties": {
+          "bomRef": {
+            "type": "string"
+          },
+          "source": {
+            "type": "object",
+            "required": [
+              "url"
+            ]
+          },
+          "noticeFiles": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/path"
+            }
+          },
+          "coverage": {
+            "const": "inventory-notices-collected"
+          },
+          "scope": {
+            "type": "object",
+            "required": [
+              "classification",
+              "evidence"
+            ],
+            "properties": {
+              "classification": {
+                "enum": [
+                  "inventory-unresolved",
+                  "direct-build-dependency",
+                  "macos-target-dependency",
+                  "skia-build-args-inventory",
+                  "local-canvas-crate",
+                  "shipped-native-binary"
+                ]
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/path"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "upstreamPath",
+          "url",
+          "sha256",
+          "bytes",
+          "role"
+        ],
+        "properties": {
+          "path": {
+            "$ref": "#/$defs/path"
+          },
+          "upstreamPath": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "pattern": "^https://"
+          },
+          "sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "role": {
+            "enum": [
+              "upstream-original",
+              "source-license-evidence",
+              "source-provenance",
+              "registry-version-metadata",
+              "published-sbom"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "path": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    }
+  }
+}
