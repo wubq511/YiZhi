@@ -271,8 +271,18 @@ test('layout persistence failure retains the visible placement and retry confirm
     await width.focus(); await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('status', { name: '布局状态' })).toHaveText('布局未保存');
     await expect(width).toHaveAttribute('aria-valuenow', '674');
-    await app.evaluate(({ app, ipcMain }) => { (globalThis as any).layoutCloseResult=null; ipcMain.once('window:close-result',(_event,result)=>{(globalThis as any).layoutCloseResult=result.saved;}); app.quit(); });
+    await app.evaluate(({ app, ipcMain, dialog }) => {
+      (globalThis as any).layoutCloseResult=null;
+      (globalThis as any).layoutQuitError=null;
+      // Capture the real host failure dialog so its native modal does not block automation.
+      dialog.showErrorBox=(title,content)=>{(globalThis as any).layoutQuitError={title,content};};
+      ipcMain.once('window:close-result',(_event,result)=>{(globalThis as any).layoutCloseResult=result.saved;});
+      app.quit();
+    });
     await expect.poll(()=>app.evaluate(()=> (globalThis as any).layoutCloseResult)).toBe(false);
+    await expect.poll(()=>app.evaluate(()=> (globalThis as any).layoutQuitError?.title)).toBe('退出未完成');
+    expect(await app.evaluate(()=> (globalThis as any).layoutQuitError.content)).toContain('仍有窗口的最新输入未确认保存');
+    await expect.poll(()=>page.evaluate(()=>document.body.inert)).toBe(false);
     await expect(page.getByRole('status', { name: '布局状态' })).toHaveText('布局未保存');
     fault.exec('DROP TRIGGER reject_ui_layout');
     await page.getByRole('button', { name: '重试保存布局' }).click();

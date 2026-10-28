@@ -26,13 +26,19 @@ export class DescriptionRuntime implements DescriptionAPI {
   private works = new Map<string, Work>();
   private connections = new Set<Connection>();
   private closed = false;
+  private quiescing=false;
+  private connecting=new Set<Promise<Connection>>();
   private detection?: Promise<ExecutorStatus>;
   constructor(private core: CourseService, private options: { directory: string; cliPath?: string; env?: NodeJS.ProcessEnv; deadlineMs?: number }) {}
   private detect() { return this.detection ??= detectExecutor(this.options); }
-  private async connect(work?: Work): Promise<Connection> {
-    if (this.closed || work && work.view.state !== 'running') throw new Error('描述检索已停止');
+  private connect(work?:Work):Promise<Connection> {
+    const pending=this.openConnection(work);this.connecting.add(pending);
+    void pending.then(()=>this.connecting.delete(pending),()=>this.connecting.delete(pending));return pending;
+  }
+  private async openConnection(work?: Work): Promise<Connection> {
+    if (this.closed || this.quiescing || work && work.view.state !== 'running') throw new Error('描述检索已停止');
     const detected = await this.detect();
-    if (this.closed || work && work.view.state !== 'running') throw new Error('描述检索已停止');
+    if (this.closed || this.quiescing || work && work.view.state !== 'running') throw new Error('描述检索已停止');
     if (!detected.available || !detected.path) throw new Error(detected.error ?? '描述检索执行器不可用');
     await mkdir(this.options.directory, { recursive: true });
     const cwd = await mkdtemp(join(this.options.directory, 'search-'));
@@ -64,7 +70,7 @@ export class DescriptionRuntime implements DescriptionAPI {
     finally { await connection?.close(); }
   }
   async start(request: DescriptionRequest): Promise<DescriptionRun> {
-    if (this.closed) throw new Error('描述检索正在退出');
+    if (this.closed||this.quiescing) throw new Error('描述检索正在退出');
     if (!request || typeof request.id !== 'string' || !request.id || request.id.length > 200 ||
       typeof request.description !== 'string' || !request.description.trim() || Array.from(request.description).length > 2000 ||
       !Array.isArray(request.scopes) || !request.scopes.length || request.scopes.length > 4 || request.scopes.some(s => !searchScopes.includes(s)) ||
@@ -75,7 +81,7 @@ export class DescriptionRuntime implements DescriptionAPI {
       if (digest(previous.request) !== digest(request)) throw new Error('同一描述检索请求不能换用不同内容或课程');
       return structuredClone(previous.view);
     }
-    if (this.closed) throw new Error('描述检索正在退出');
+    if (this.closed||this.quiescing) throw new Error('描述检索正在退出');
     if ([...this.works.values()].some(w => w.request.sessionId === request.sessionId && w.view.state === 'running')) throw new Error('本课程仍在描述检索，请先停止后再发起新的请求');
     let bind!: () => void; const bound = new Promise<void>(resolve => { bind = resolve; });
     const work: Work = { request: structuredClone(request), view: { id: request.id, description: request.description, scopes: [...request.scopes], state: 'running', queries: [], hits: [], rejected: [], toolErrors: [] },
@@ -179,9 +185,12 @@ export class DescriptionRuntime implements DescriptionAPI {
     if (work.view.state === 'running') { work.view.state = 'cancelled'; work.view.hits = []; work.bind(); void work.connection?.close(); }
     return structuredClone(work.view);
   }
+  prepareQuit(){this.quiescing=true;}
+  cancelQuit(){if(!this.closed)this.quiescing=false;}
   async close() {
     if (this.closed) return; this.closed = true;
     for (const work of this.works.values()) if (work.view.state === 'running') { work.view.state = 'cancelled'; work.bind(); }
+    await Promise.allSettled([...this.connecting]);
     await Promise.allSettled([...this.connections].map(c => c.close()));
     await Promise.allSettled([...this.works.values()].map(w => w.job));
   }
