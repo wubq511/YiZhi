@@ -24,6 +24,7 @@ async function invoke(channel: string, argument?: unknown) {
   }
 }
 const bridge: DesktopBridge = {
+  courseFormat:{inspect:()=>invoke('courseFormat:inspect'),readUnit:r=>invoke('courseFormat:readUnit',r),exportText:r=>invoke('courseFormat:exportText',r)},
   backup:backupBridge(invoke),
   retention:(()=>{const {resourceLease:_,resourceLeases:__,...bridge}=retentionClient(invoke);return bridge;})(),
   courseRestore:courseRestoreClient(invoke),

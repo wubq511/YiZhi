@@ -19,6 +19,14 @@ test('unknown body payload refuses writable open before any database mutation wh
   await assert.rejects((core as any).format.readUnit({directory:root,unitId:'KU-001'}),/解释|版本/);
  }finally{await core.close();await rm(root,{recursive:true,force:true});}
 });
+test('a higher declared block payload version is refused even when the surrounding reading schema is known',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-future-block-'));let core=new CourseService(resolve('dist/worker.cjs'));
+ try{
+  await core.open(root);await core.close();const db=new DatabaseSync(join(root,'course.sqlite')),unit=JSON.parse(String(db.prepare("SELECT payload FROM units WHERE id='KU-001'").get()!.payload));
+  unit.reading.blocks[0].payload.schemaVersion='text-payload-999';unit.reading.blocks[0].payload.unknown={original:'preserve me'};db.prepare("UPDATE units SET payload=? WHERE id='KU-001'").run(JSON.stringify(unit));db.exec('PRAGMA wal_checkpoint(TRUNCATE)');db.close();
+  const before=await readFile(join(root,'course.sqlite'));core=new CourseService(resolve('dist/worker.cjs'));await assert.rejects(core.open(root),/载荷版本/);assert.deepEqual(await readFile(join(root,'course.sqlite')),before);
+ }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
 test('offline work-copy validation rejects a dangling knowledge reference before any upgrade can publish it',async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-upgrade-reference-'));let core=new CourseService(resolve('dist/worker.cjs'));
  try{
@@ -33,13 +41,14 @@ test('offline work-copy validation rejects a dangling knowledge reference before
 test('course format, minimum reader, body version and extension interface/input/state are independent admission decisions',async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-format-axes-'));
  try{
-  for(const axis of ['format','reader','interfaceVersion','inputVersion','stateVersion']){
+  for(const axis of ['format','reader','interfaceVersion','inputVersion','stateVersion','scene-interfaceVersion','scene-inputVersion','scene-stateVersion']){
    const directory=join(root,axis);let core=new CourseService(resolve('dist/worker.cjs'));
    try{
     const c=await core.open(directory);await core.extensions.open(c);await core.close();
     const db=new DatabaseSync(join(directory,'course.sqlite'));
     if(axis==='format')db.exec('PRAGMA user_version=999');
     else if(axis==='reader')db.prepare("INSERT INTO metadata VALUES('minimum-reader','999')").run();
+    else if(axis.startsWith('scene-')){const scene=JSON.parse(String(db.prepare('SELECT payload FROM extension_scene LIMIT 1').get()!.payload));scene.definition[axis.slice(6)]='future-999';db.prepare('UPDATE extension_scene SET payload=?').run(JSON.stringify(scene));}
     else {const m=JSON.parse(String(db.prepare('SELECT manifest FROM extension_packages LIMIT 1').get()!.manifest));m[axis]='future-999';db.prepare('UPDATE extension_packages SET manifest=?').run(JSON.stringify(m));}
     db.exec('PRAGMA wal_checkpoint(TRUNCATE)');db.close();
     const before=await readFile(join(directory,'course.sqlite'));core=new CourseService(resolve('dist/worker.cjs'));

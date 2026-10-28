@@ -1,4 +1,5 @@
 import { BackupPanel } from './backup-panel';
+import { ReadonlyCourse } from './readonly-course';
 import { CourseRestorePanel } from './course-restore-panel';
 import { RetentionPanel } from './retention-panel';
 import { HistoryPanel,type HistoryPanelHandle } from './history-panel';
@@ -100,6 +101,7 @@ function BlockContent({ block, onReference, reading, updateReading, onSource, ex
 }
 
 function App() {
+  const [readonlyReport,setReadonlyReport]=useState<import('../format-api').FormatCapabilities>();
   const flow = useReactFlow();
   const boardRef = useRef<HTMLElement>(null);
   const [nodesReady, setNodesReady] = useState(false);
@@ -266,6 +268,7 @@ function App() {
   const composing = useRef(false);
   const load = async () => {
     setLoadError(undefined);
+    setReadonlyReport(undefined);
     setCameraReady(false);
     try {
       const opened = await window.yizhi.open();
@@ -276,7 +279,7 @@ function App() {
       if (savedReading?.pinnedUnitId === 'KU-001' || savedReading?.modification) setMounted([opened.unit]);
       if (savedReading?.modification) { workTarget.current = savedReading.modification.targetId; camera.restore(savedReading.modification.ended); }
       setGraph(loadedGraph); setReview(reviewSnapshot); readingRef.current = savedReading; restored.current = false; setReading(savedReading);
-    } catch (error) { setLoadError((error as Error).message); }
+    } catch (error) { setLoadError((error as Error).message);try{const report=await window.yizhi.courseFormat.inspect();if(!report.writable)setReadonlyReport(report);}catch{/* The original open error remains visible. */} }
   };
   useEffect(() => { void load(); return () => channel.current?.dispose(); }, []);
   useEffect(()=>window.yizhi.onCloseCancelled(()=>{document.body.inert=false;setClosing(false);}),[]);
@@ -489,6 +492,7 @@ function App() {
         if(!await channel.current?.flush()||!await flushUnitInputs(true)||continuous.current&&!await continuous.current.finish())throw new Error('当前输入尚未持久保留，请先重试保存。');
   };
   const status = { draft: '草稿已保留', saved: '已保存', pending: '待保存', saving: '正在保存…', error: '未保存' }[state.status];
+  if(!course&&readonlyReport)return <><header className="app-header"><strong className="brand">绎知</strong><span>兼容范围只读 · 拒绝写入</span><button onClick={()=>void load()}>重新核对版本</button></header><ReadonlyCourse report={readonlyReport}/></>;
   return <>
     <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen || sourcesOpen || agentOpen || notesOpen || searchOpen || exchangeOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
       {course&&<BackupPanel sessionId={course.sessionId} prepare={prepareCourseSnapshot} onReturn={()=>{if(narrow)setDirectory(false);}}/>}
