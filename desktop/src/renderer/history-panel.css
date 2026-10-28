@@ -1,0 +1,24 @@
+.history-panel{box-sizing:border-box;width:min(1120px,calc(100vw - 40px));height:calc(100vh - 56px);max-height:900px;padding:20px 24px;border:1px solid #e5e5eb;border-radius:8px;background:#fff;color:#27343e;overflow:auto;font:14px/1.6 "PingFang SC",system-ui,sans-serif;scrollbar-color:#b6b9c8 #f6f6f9;}
+.history-panel::backdrop{background:rgb(39 52 62 / 26%)}
+.history-panel::selection,.history-panel ::selection{background:#eeedff;color:#27343e}
+.history-heading,.history-preview>header{display:flex;align-items:center;justify-content:space-between;gap:16px;}
+.history-heading h2{font-size:21px;margin:0 0 12px}.history-heading button{flex-shrink:0}
+.history-controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}.history-controls select{max-width:min(340px,55vw);padding:5px;background:#fff;border:1px solid #e5e5eb;border-radius:4px;color:inherit}
+.history-panel button{font:inherit;padding:5px 9px;border:1px solid #e5e5eb;border-radius:4px;background:#fff;color:#27343e;cursor:pointer;}
+.history-panel button:hover:not(:disabled){background:#f6f6f9}.history-panel button:disabled{opacity:.55;cursor:default}
+.history-panel :focus-visible{outline:2px solid #6965db;outline-offset:3px}
+.history-columns.has-preview{display:grid;grid-template-columns:minmax(300px,1fr) minmax(320px,1.1fr);gap:24px;align-items:start;}
+.history-activity{border-top:1px solid #e5e5eb;padding:14px 0}.history-activity>summary{cursor:pointer}.history-activity>summary strong{font-size:16px}.history-activity>summary span{display:block;color:#626b79;margin:3px 0 0 18px;font-size:12px;}
+.history-group{margin:18px 0 24px}.history-group h3{font-size:14px;margin:0}.history-scope{color:#626b79;font-size:12px;margin:4px 0 8px}.history-actions,.history-actions>span{display:flex;flex-wrap:wrap;gap:6px}.history-actions button{font-size:12px}
+.history-difference{margin-top:16px}.history-difference h4{overflow-wrap:anywhere;font-weight:500;font-size:12px;color:#626b79;margin:0 0 6px}.history-difference>div{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}.history-difference h5{margin:0 0 6px;font-size:12px;color:#626b79}
+.history-panel pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font:inherit;font-size:13px;max-width:75ch;}.history-difference pre{background:#f6f6f9;padding:10px;max-height:260px;overflow:auto;}
+.history-preview{min-width:0;border-top:2px solid #6965db;padding-top:12px}.history-preview h3{margin:0;font-size:17px}.history-preview>p{margin:10px 0}.history-preview details{margin:10px 0}.history-preview li{overflow-wrap:anywhere}.history-layout{display:block;margin:12px 0}.history-layout input{accent-color:#6965db;vertical-align:middle;margin-right:6px}
+.history-panel .history-confirm{background:#6965db;color:#fff;border-color:#6965db;margin:8px 0 18px}.history-panel .history-confirm:hover:not(:disabled){background:#5551b9}
+.history-old-unit{border-top:1px solid #e5e5eb;padding-top:20px}.history-old-block{margin:18px 0;max-width:72ch}.history-old-block h4{font-size:15px}.history-old-block p{margin:10px 0}.history-table{overflow:auto}.history-table th,.history-table td{padding:6px;border-bottom:1px solid #e5e5eb;text-align:left;}
+.history-result{background:#edf7f1;color:#286b58;padding:10px 14px;margin:12px 0}.history-result p{margin:4px 0}.history-error{background:#fdf0f0;color:#a13737;padding:10px 14px;margin:12px 0}
+@media(max-width:760px){.history-panel{width:calc(100vw - 16px);height:calc(100vh - 16px);max-height:none;padding:14px}.history-columns.has-preview{display:flex;flex-direction:column-reverse;gap:20px}.history-list,.history-preview{width:100%}.history-heading h2{font-size:19px}.history-difference>div{grid-template-columns:1fr}.history-controls select{max-width:60vw}}
+.history-old-block [role=math]{max-width:100%;overflow-x:auto;overflow-y:hidden;}
+.history-old-block .katex-display{margin:12px 0;text-align:left;}
+.history-old-unit{min-width:0;max-width:100%;}
+.history-heading{position:sticky;top:-20px;z-index:1;background:#fff;padding-top:8px;padding-bottom:8px;}
+@media(max-width:760px){.history-heading{top:-14px}}

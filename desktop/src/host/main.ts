@@ -72,7 +72,17 @@ else {
     ipcMain.handle('course:confirm-review-prompt', async (event, input) => { checkSender(event); return core.confirmReviewPrompt(input.sessionId, input.promptId, input.adjust); });
     ipcMain.handle('course:save', async (event, command: SaveParagraph) => { checkSender(event); return core.save(command); });
     ipcMain.handle('course:saveDraft', (event, input) => { checkSender(event); return core.saveDraft(input); });
-    ipcMain.handle('course:commitEdit', (event, command) => { checkSender(event); return core.commitEdit(command); });
+    for(const method of ['list','detail','preview','query'] as const)ipcMain.handle(`formalHistory:${method}`,(event,request)=>{checkSender(event);return core.formalHistory[method](request);});
+  ipcMain.handle('formalHistory:apply',async(event,request)=>{
+    checkSender(event);
+    const existing=await core.formalHistory.query({sessionId:request.sessionId,operationId:request.operationId});
+    if(!existing&&request.preview.kind==='undo') {
+      const current=await core.formalHistory.preview({sessionId:request.sessionId,selection:request.preview.selection});
+      for(const taskId of current.runningTaskIds)await agent.stop({sessionId:request.sessionId,taskId});
+    }
+    return core.formalHistory.apply(request);
+  });
+  ipcMain.handle('course:commitEdit', (event, command) => { checkSender(event); return core.commitEdit(command); });
     ipcMain.handle('course:queryOperation', (event, input) => { checkSender(event); return core.queryOperation(input.sessionId, input.operationId); });
     ipcMain.handle('course:readEvents', (event, input) => { checkSender(event); return core.readEvents(input.sessionId, input.after, input.limit); });
     ipcMain.handle('course:read', (event, input) => { checkSender(event); return core.read(input.sessionId, input.unitId); });

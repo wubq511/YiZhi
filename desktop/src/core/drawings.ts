@@ -58,8 +58,9 @@ export class Drawings {
       if(prior){if(prior.digest!==digest) throw new Error('同一操作不能换用不同布局');return parse(prior.result);}
       const current=layoutGraph(this.db,this.graph).layout.nodes.find(n=>n.unitId===request.before.unitId);
       if(!current||!['x','y','width'].every(key=>current[key as keyof typeof current]===request.before[key])) throw new Error('布局已变化，请重新读取后继续');
+      const beforeVersion=Number(this.db.prepare('SELECT version FROM layout_versions WHERE unit_id=?').get(request.before.unitId)?.version??0);
       saveLayout(this.db,this.graph,[request.after]);
-      const result={operationId:request.operationId,before:request.before,after:request.after,committedAt:new Date().toISOString(),actor:'student' as const};
+      const result={operationId:request.operationId,before:request.before,after:request.after,beforeVersion,afterVersion:Number(this.db.prepare('SELECT version FROM layout_versions WHERE unit_id=?').get(request.after.unitId)?.version??0),committedAt:new Date().toISOString(),actor:'student' as const};
       this.db.prepare('INSERT INTO placement_history(value) VALUES(?)').run(json(result));
       appendEvent(this.db,{type:'drawing.changed',drawingId:`layout:${request.after.unitId}`});
       this.db.prepare('INSERT INTO drawing_operations VALUES(?,?,?)').run(request.operationId,digest,json(result));

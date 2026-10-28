@@ -50,6 +50,7 @@ export interface SaveReceipt {
   basedOnRevision?: number;
 }
 export interface DesktopBridge extends SaveBridge {
+  formalHistory: import('./history-api').HistoryAPI;
   description: import('./description-api').DescriptionAPI;
   drawings: import('./drawing-api').DrawingAPI;
   exchange: import('./exchange-api').ExchangeBridge;
