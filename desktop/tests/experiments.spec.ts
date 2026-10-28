@@ -96,7 +96,7 @@ async function reveal(page: Page, target: Locator) {
 }
 
 
-test('actual built-in controls, diagram, offscreen stop and formula confirmation survive normal window reopen', async () => {
+test('actual built-in controls, diagram, offscreen stop and formula confirmation survive normal window reopen', async ({}, testInfo) => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-builtin-ui-'));
   const launch = () => electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   let app = await launch();
@@ -131,7 +131,7 @@ test('actual built-in controls, diagram, offscreen stop and formula confirmation
     const confirmed = await read(); expect(confirmed.definition.config.dataSignals).toEqual(['1', '1', '1', '1']);
     await reveal(page, lab.getByRole('button', { name: '完成公式编辑', exact: true, includeHidden: true }));
     await lab.getByRole('button', { name: '完成公式编辑', exact: true }).click();
-    await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t12-mux.png' });
+    await page.screenshot({ path: testInfo.outputPath('t12-mux.png') });
     await app.close(); app = await launch(); page = await smallExperimentWindow(app, 'reopened');
     lab = page.getByRole('region', { name: '交互 · 4 选 1 的选择语义', exact: true }); await reveal(page, lab.getByRole('checkbox', { name: 'I0', exact: true, includeHidden: true }));
     const reopened = await read(); expect(reopened.definition).toEqual(confirmed.definition); expect(reopened.state).toEqual(confirmed.state);
@@ -153,12 +153,12 @@ test('actual built-in controls, diagram, offscreen stop and formula confirmation
     await expect(kmap.locator('[data-highlighted="true"]')).toHaveCount(4);
     await expect(kmap.getByRole('status', { name: '卡诺图结论' })).toHaveText('四格跨边相邻，A、B 变化，C 恒为 0，所以 F = ¬C。');
     await reveal(page, kmap.getByRole('status', { name: '卡诺图结论', includeHidden: true }));
-    await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t12-kmap.png' });
+    await page.screenshot({ path: testInfo.outputPath('t12-kmap.png') });
   } finally { await app.close(); await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }); }
 });
 
 
-test('actual IPC pause failure shows incomplete and confirmed recovery can run again without reviving old input', async () => {
+test('actual IPC pause failure shows incomplete and confirmed recovery can run again without reviving old input', async ({}, testInfo) => {
   const { DatabaseSync } = await import('node:sqlite');
   const root = await mkdtemp(join(tmpdir(), 'yizhi-builtin-ui-fault-'));
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
@@ -181,7 +181,7 @@ test('actual IPC pause failure shows incomplete and confirmed recovery can run a
     await page.waitForTimeout(550); expect((await read()).state).toEqual(confirmed);
     fault.exec('DROP TRIGGER fail_pause_ui'); fault.close(); fault = undefined;
     const recovery = lab.getByRole('button', { name: '恢复最近确认现场', exact: true, includeHidden: true });
-    await reveal(page, recovery); await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t12-pause-incomplete.png' }); await recovery.click();
+    await reveal(page, recovery); await page.screenshot({ path: testInfo.outputPath('t12-pause-incomplete.png') }); await recovery.click();
     await expect(lab.getByRole('status', { name: '实验保存状态' })).toHaveText('现场已保存');
     expect((await read()).state).toEqual(confirmed);
     // Recovery removes the error section; locate the run control in the current read projection.

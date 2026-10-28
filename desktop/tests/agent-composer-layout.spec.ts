@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { resizeBoardWindow } from './board-test-helpers';
 
-test('persisted long conversation keeps the working composer usable at desktop and narrow window sizes', async () => {
+test('persisted long conversation keeps the working composer usable at desktop and narrow window sizes', async ({}, testInfo) => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-composer-layout-'));
   const fixture = resolve('dist/tests/agent-executor-fixture.cjs');
   await chmod(fixture, 0o755);
@@ -46,7 +46,9 @@ test('persisted long conversation keeps the working composer usable at desktop a
         };
       });
       console.log(`composer layout ${width}x${height}: ${JSON.stringify(layout)}`);
-      await page.screenshot({ path: `/tmp/yizhi-implement-gFFkA7/composer-scroll-${width}x${height}.png` });
+      const screenshotPath = testInfo.outputPath(`composer-scroll-${width}x${height}.png`);
+      await page.screenshot({ path: screenshotPath });
+      await testInfo.attach(`composer-scroll-${width}x${height}`, { path: screenshotPath, contentType: 'image/png' });
       observations.push(layout);
     }
     for (const layout of observations) {
