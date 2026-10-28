@@ -35,7 +35,7 @@
 .agent-generation-task { margin-top: 8px; padding-top: 8px; border-top: 1px solid #d9dce8; }
 .agent-generation-task > p { margin: 3px 0; }
 .agent-generation-task summary { cursor: pointer; color: #38355b; }
-.agent-generation-candidate { margin-top: 8px; padding: 8px 0; border-top: 1px solid #d9dce8; }
+.agent-generation-candidate { max-width: none; margin: 8px 0 0; padding: 8px 0; border-top: 1px solid #d9dce8; color: #27343e; font: 14px/1.75 "PingFang SC", system-ui, sans-serif; }
 .agent-generation-candidate h3 { margin: 8px 0 4px; font-size: 14px; }
 .agent-generation-candidate p { margin: 6px 0; white-space: pre-wrap; }
 .agent-generation-candidate ul { padding-left: 18px; margin: 8px 0; }

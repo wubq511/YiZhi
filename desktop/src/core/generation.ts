@@ -11,7 +11,7 @@ import type { AgentStore } from './agent-store';
 import type { CommandGroups } from './command-groups';
 import type { Search } from './search';
 import { assignments, formulaOutputs } from './builtin-model';
-import { readDrafts, transaction, appendEvent } from './save-store';
+import { readDrafts,draftReadVersions,draftVersion,transaction,appendEvent } from './save-store';
 import { selectorEvidence, exampleEvidence } from './generation-evidence';
 import { initializeGenerationLifecycle,graphRevision,layoutRevision,bumpLayoutRevision } from './generation-lifecycle';
 
@@ -110,21 +110,23 @@ export class Generation {
     const unitRow=this.db.prepare('SELECT payload,revision FROM units WHERE id=?').get(spec.unitId);
     const targetRev=unitRow?Number(unitRow.revision):null;
     const draftHash=hash(this.targetDrafts(spec.unitId));
+    const draftVersions=draftReadVersions(this.db,[`structure:${spec.unitId}`]);
+    const graphHash=hash([this.graph.nodes.filter(n=>n.id===spec.unitId),this.graph.groups.filter(g=>g.id===spec.themeId)]);
     const readset=[
       {kind:'source-version',id:version.versionId,version:version.sha256,purpose:'printed table provenance'},
       {kind:'parsed-page',id:ref.artifactId,version:ref.digest,purpose:'coordinate table rows and original raster'},
       {kind:'unit',id:spec.unitId,version:targetRev,purpose:'formal target and stable identities'},
-      {kind:'student-draft',id:spec.unitId,version:draftHash,purpose:'latest unconfirmed student input'},
-      {kind:'graph-target',id:spec.themeId,version:hash(this.graph.nodes.filter(n=>n.id===spec.unitId)),purpose:'structure ownership'},
+      {kind:'student-draft',id:spec.unitId,version:hash([draftHash,draftVersions]),purpose:'latest unconfirmed student input and monotonic revision'},
+      {kind:'graph-target',id:spec.themeId,version:graphHash,purpose:'unit and theme structure ownership'},
     ];
     const basisId=`generation:${hash([task.attemptId,Date.now(),Math.random()]).slice(0,32)}`;
-    const basis={generation:task.generation,spec,root,targetRev,draftHash,structureHash:unitRow?hash(parse(unitRow.payload).reading.blocks.map((b:ReadingBlock)=>b.id)):null,
+    const basis={generation:task.generation,spec,root,targetRev,draftHash,draftVersions,graphHash,structureHash:unitRow?hash(parse(unitRow.payload).reading.blocks.map((b:ReadingBlock)=>b.id)):null,
       sourceSha:version.sha256,artifactDigest:ref.digest,readset};
     this.db.prepare('INSERT INTO generation_bases VALUES(?,?,?)').run(basisId,task.attemptId,json(basis));
     this.agent.mutationProgress(task.id,spec.unitId,'read');
     return {basisId,spec,source:{sourceId:version.sourceId,versionId:version.versionId,sha256:version.sha256},
       artifact:{artifactId:ref.artifactId,digest:ref.digest,pdfPageIndex:ref.pdfPageIndex,coordinateSpace:page.coordinateSpace,
-        structureRole:page.structure?.role??null,view:page.view},target:{formalRevision:targetRev,studentDraftVersion:this.targetDrafts(spec.unitId).length,generation:task.generation},
+        structureRole:page.structure?.role??null,view:page.view},target:{formalRevision:targetRev,studentDraftVersion:draftVersion(this.db,`draft-under:${spec.unitId}`),generation:task.generation},
       sourceText:page.text.map(t=>({id:t.id,text:t.text,bounds:t.bounds})),sourceTable:table.table,evidenceIds:table.evidenceIds,
       completedStages:this.completed(root),pendingStages:this.pending(root),retained:this.candidates(task.id).map(({operationId,stage,reason,proposal,checks})=>({operationId,stage,reason,proposal,checks}))};
   }
@@ -171,7 +173,9 @@ export class Generation {
       const row=this.db.prepare('SELECT payload,revision FROM units WHERE id=?').get(spec.unitId);
       if(input.stage==='lesson'&&basis.targetRev!==(row?Number(row.revision):null))throw new Error('目标正式修订已变化，请重读并局部整合');
       if(input.stage==='practice'&&basis.structureHash!==(row?hash(parse(row.payload).reading.blocks.map((b:ReadingBlock)=>b.id)):null))throw new Error('目标结构已变化，追加材料需重读');
+      if(basis.graphHash!==hash([this.graph.nodes.filter(n=>n.id===spec.unitId),this.graph.groups.filter(g=>g.id===spec.themeId)]))throw new Error('目标图节点或主题已变化，请重读');
       if(basis.draftHash!==hash(this.targetDrafts(spec.unitId))||this.targetDrafts(spec.unitId).length)throw new Error('学生最新草稿尚待整合，不能覆盖或越过');
+      if(!basis.draftVersions||Object.entries(basis.draftVersions).some(([id,version])=>draftVersion(this.db,id)!==version))throw new Error('学生输入基线已变化，请重读后整合');
       if(this.groups.protectedWrites([`structure:${spec.unitId}`]))throw new Error('学生仍在编辑该主题，最新输入尚待确认；候选保留');
       return '同一代际、不可变原件/产物、实际目标与学生编辑基线';
     });

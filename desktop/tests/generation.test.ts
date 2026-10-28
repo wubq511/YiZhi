@@ -355,6 +355,28 @@ test('active target editor fences a generation group before its input tail becom
   }finally{await core.close();await rm(root,{recursive:true,force:true});}
 });
 
+test('a transient student draft returning to its original text still requires a fresh generation read',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'yizhi-generation-draft-aba-'));
+  const core=new CourseService(resolve('dist/worker.cjs'));
+  try{
+    const {sessionId,task}=await prepared(core,root),identity={sessionId,taskId:task.id,attemptId:task.attemptId,generation:task.generation};
+    const initial=await core.readAgentGeneration(identity);
+    await core.publishAgentGeneration({...identity,input:lesson(initial,'lesson-before-transient-draft')});
+    const basis=await core.readAgentGeneration(identity),unit=await core.readUnit(sessionId,basis.spec.unitId),block=unit.reading.blocks[0];
+    const input={sessionId,unitId:unit.id,baseRevision:1,complete:true};
+    await core.saveDraft({...input,inputSeq:1,changes:[{blockId:block.id,text:'学生尚未晋升的临时理解'}]});
+    const back={...input,inputSeq:2,changes:[{blockId:block.id,text:String(block.payload.text)}]};
+    await core.saveDraft(back);await core.commitEdit({...back,operationId:'return-student-input'});
+    assert.equal((await core.read(sessionId,unit.id)).drafts.length,0);
+    const result=await core.publishAgentGeneration({...identity,input:practice(basis,'practice-with-old-input-basis')});
+    assert.equal(result.status,'retained');assert.match(result.reason!,/输入|草稿/);
+    const fresh=await core.readAgentGeneration(identity);
+    assert.ok(fresh.target.studentDraftVersion>basis.target.studentDraftVersion);
+    assert.equal((await core.publishAgentGeneration({...identity,input:practice(fresh,'practice-with-fresh-input-basis')})).status,'committed');
+    assert.equal((await core.readUnit(sessionId,unit.id)).reading.blocks[0].payload.text,block.payload.text);
+  }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+
 test('new bytes of the same source invalidate only future dependent publication and retain old references',async()=>{
   const root=await mkdtemp(join(tmpdir(),'yizhi-generation-source-update-'));
   const core=new CourseService(resolve('dist/worker.cjs'));

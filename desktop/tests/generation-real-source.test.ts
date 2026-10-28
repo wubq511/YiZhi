@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { CourseService } from '../src/core/course-service';
 import { AgentRuntime } from '../src/agent/executor';
+import type { ExecutorStatus } from '../src/agent-api';
 
 const prepared=process.env.YIZHI_T30_PREPARED_COURSE;
 const runModel=process.env.YIZHI_T30_ACTUAL_MODEL==='1';
@@ -17,6 +18,7 @@ test('real original parsed TI source drives the bounded Core read and, when requ
     const root=await mkdtemp(join(evidenceDirectory??tmpdir(),'yizhi-t30-actual-'));
     let core=new CourseService(resolve('dist/worker.cjs'));
     let runtime:AgentRuntime|undefined;
+    let executor:ExecutorStatus|undefined;
     let releaseLesson:(()=>void)|undefined;
     let capture:(()=>Promise<void>)|undefined;
     try {
@@ -36,7 +38,7 @@ test('real original parsed TI source drives the bounded Core read and, when requ
       if(evidenceDirectory){
         capture=async()=>{
           const view=await core.agent.get({sessionId,conversationId:conversation.id});
-          await writeFile(join(root,'evidence.json'),JSON.stringify({capturedAt:new Date().toISOString(),request,view,
+          await writeFile(join(root,'evidence.json'),JSON.stringify({capturedAt:new Date().toISOString(),executor,request,view,
             candidates:await Promise.all(view.tasks.map(task=>core.generationCandidates({sessionId,taskId:task.id}))),
             formalHistory:await core.commands.history({sessionId}),graph:await core.graph(sessionId),
             unit:await core.readUnit(sessionId,unitId).catch(()=>null)},null,2));
@@ -53,7 +55,7 @@ test('real original parsed TI source drives the bounded Core read and, when requ
         assert.deepEqual((await core.read(sessionId)).unit,opened.unit);
       }else{
         runtime=new AgentRuntime(core,{directory:join(root,'agent'),cliPath:process.env.YIZHI_T30_CLI_PATH??'/opt/homebrew/bin/codex'});
-        const status=await runtime.status();assert.equal(status.available,true,status.error);
+        const status=await runtime.status();executor=status;assert.equal(status.available,true,status.error);
         assert.ok(status.models.some(m=>m.model===request.model),'selected actual model is listed by local app-server');
         let firstLesson:Promise<void>|undefined;
         if(stopContinue){
