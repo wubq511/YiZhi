@@ -57,7 +57,7 @@ npm run test:smoke
 
 `CourseService.annotations` 与 preload `annotations` 共用 `src/annotation-api.ts`：`create/list/update/reassociate/query`。笔记文字的 Undo／Redo、250ms 空闲／1000ms 最长等待自动保存与正常关闭屏障独立于正文。核心用原操作身份查询／重试，笔记版本检查与事件、回执原子提交；正文提交与命令组的批注迁移也在原事务内。`ContentPatch.textEdits/formulaEdits` 携带实际 PM 替换范围或 MathLive 前后模型与输入选区；它们是当前版本内的对应证明，不是跨公式重写的永久符号 ID。`x+x → 2x` 没有对应证明就保持待重新关联。原公式复制获得新身份，不带走原批注。`ContentPatch.restorations` 仅由实际 PM history 事务或 MathLive `undo-state-change` 形成，恢复时核对已记录目标版本；后来重新键入相同内容不构成 Undo 证明。
 
-当前正文并发与批注覆盖真实 KU-001 和可控外部修改；实际 Agent 修改运行器仍属后续票。内置实验、自含离线扩展与真实 Agent 只读问答见下文 T12／T13／T16。物理中文输入法、触控板和系统字号尚未实机验收；合成组合事件仅作回归，关窗保留未完成组合输入现场并要求完成输入。异常退出前尚未取得持久确认的输入不承诺恢复。整课迁移、Agent 正文修改、安装包和 Windows 交付仍属后续范围。
+当前正文并发与批注覆盖真实 KU-001 和可控外部修改；实际 Agent 修改运行器仍属后续票。内置实验、自含离线扩展与真实 Agent 只读问答见下文 T12／T13／T16。物理中文输入法、触控板和系统字号尚未实机验收；合成组合事件仅作回归，关窗保留未完成组合输入现场并要求完成输入。异常退出前尚未取得持久确认的输入不承诺恢复。本段记录早期批注切片边界；整课迁移、Agent 正文修改与安装包的当前入口见文后对应说明，Windows 不在本轮验证范围。
 
 T03 的 `CourseService.commands` 与 preload `commands` 共用 `src/command-api.ts`：`startAttempt`、`read`、`commit`、`stop`、`query`、`candidates`、`history`。`read` 返回核心保存的不可修改依据身份，包含所读块、祖先与顺序、引用和依赖闭包的版本；`commit` 按对象写入，独立块不因整单元 revision 变化而冲突。关系新增也使旧读取失效，内容改回原值不复活旧凭据。被拒候选保留原命令与原因；重读后的整合必须使用新操作身份。历史只保存实际变化对象的前后值与共同提交事实。正式块、必要顺序、引用、依赖状态、历史和回执在同一事务提交，存储故障整组回滚。
 
@@ -87,7 +87,11 @@ T29 在已导入的一个 PDF 版本上提供逐页解析、停止／明确继�
 T13 的一个自含离线扩展、版本／现场迁移与宿主恢复接口见 [extensions](docs/extensions.md)。测试使用一次性课程副本；原始个人课程不参与故障注入。
 
 T15 offline four-scope search: [contract and limits](docs/search.md). Open “搜索课程” for actual stored content, scope filters, background indexing, deep navigation and return to the prior reading scene. Search regressions are `tests/search.test.ts` and `tests/search.spec.ts`.
-T24 的[完整内容转换](docs/content-conversion.md)可从停止写入的一致副本生成并核对全部 84 单元、资料与图片。默认样例课程仍是独立开发切片；完整阅读请打开转换后的新候选目录。该候选只承诺内容范围，个人记录、任务、草稿、历史与最终权威切换由 T25 完成。
+T24 的[完整内容转换](docs/content-conversion.md)可从停止写入的一致副本生成并核对全部 84 单元、资料与图片。默认样例课程仍是独立开发切片；完整阅读请打开转换后的新候选目录。内容候选本身只承诺内容范围；个人记录与唯一目录切换通过下面的迁移入口完成。
+
+旧窗口先使用“保存并停止旧课程”：失败时保留输入并重试，成功后正常释放服务锁。新版顶栏“迁移旧课程”选择旧目录与全新目标，先核对逐类记录和缺口，再“发布并打开新课程”。原目录保留为迁移前副本，正常旧 Store、Service 和内容写入口均拒绝继续写。准备后若旧课程恢复过写入，可明确“放弃未发布准备”，再用新身份、新目标重新核对；已发布决定不能放弃。中断后从原目录接回权威，或选择已发布课程的当前位置。完整已发布课程可在兼容安装应用中独立打开，不依赖原绝对路径、旧 Python 服务或原执行器；任务先核对，再明确继续。
+
+“迁移记录”分页查询原身份、原时间、逐对象前后值、原收据和待核对草稿。完整且可核对的旧正文组接入“课程历史”；缺少完整旧正文或结构逆操作的整个组明确只读。旧对象级笔记保留原语境并等待重新关联，不猜精确选区；旧 checkpoint 未记录的时间保留未知。旧明细按本课保留窗口清理，当前个人记录和未处理草稿独立保留；没有旧期限设置时明确采用新版默认 140 天。
 
 T20 的[真实 Agent 描述检索](docs/description-search.md)在搜索面板中显式发起，只改写查询并选择已有命中；保留实际查询和排序依据，离线继续使用基础检索，不发送学习问答或修改未发草稿。
 

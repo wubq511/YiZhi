@@ -52,6 +52,7 @@ export interface SaveReceipt {
   basedOnRevision?: number;
 }
 export interface DesktopBridge extends SaveBridge {
+  migration: import('./migration-api').MigrationBridge;
   courseRestore: import('./course-restore-api').CourseRestoreAPI;
   retention: Omit<import('./retention-api').RetentionAPI,'resourceLease'|'resourceLeases'>;
   formalHistory: import('./history-api').HistoryAPI;

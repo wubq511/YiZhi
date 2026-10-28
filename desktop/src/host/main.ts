@@ -10,6 +10,7 @@ import { registerAgentIPC } from './agent-ipc';
 import { app, dialog, ipcMain, Menu, protocol } from 'electron';
 import { join, resolve } from 'node:path';
 import { mkdirSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { CourseService } from '../core/course-service';
 import type { SaveParagraph } from '../shared';
 import { registerSourceProtocols } from './source-protocol';
@@ -62,6 +63,17 @@ else {
     for (const method of annotationMethods) ipcMain.handle(`annotations:${method}`, (event, request) => { checkSender(event); return core.annotations[method](request); });
     for (const method of ['open','read','act'] as const) ipcMain.handle(`extensions:${method}`, (event,payload) => {checkSender(event);return core.extensions[method](payload);});
     ipcMain.handle('course:open',host.open);
+    for(const method of ['status','recover','publish','records','history','operation','pending','abandon','transition'] as const)ipcMain.handle(`migration:${method}`,(event,payload)=>{checkSender(event);return core.migration[method](payload);});
+    ipcMain.handle('migration:currentDirectory',event=>checkSender(event).directory);
+    ipcMain.handle('migration:openDirectory',async(event,directory)=>{checkSender(event);await core.migration.recover({directory});await host.show(directory);});
+    ipcMain.handle('migration:chooseDirectory',async(event,kind)=>{const view=checkSender(event);if(kind==='target'){const r=await dialog.showSaveDialog(view.window,{title:'选择新课程文件夹的位置',buttonLabel:'使用此新目录',nameFieldLabel:'新课程文件夹名称'});return r.canceled?null:r.filePath??null;}const r=await dialog.showOpenDialog(view.window,{title:'选择旧课程文件夹',properties:['openDirectory']});return r.canceled?null:r.filePaths[0]??null;});
+    ipcMain.handle('migration:stage',async(event,payload)=>{
+      checkSender(event);const status=await core.migration.status({directory:payload.sourceDirectory});
+      const candidate=payload.directory+'.content-'+payload.operationId;
+      if(status.decision&&!status.decision.abandonedAt)return core.migration.prepare({...payload,contentCandidateDirectory:candidate});
+      try{await core.migration.convert({sourceDirectory:payload.sourceDirectory,directory:candidate});return await core.migration.prepare({...payload,contentCandidateDirectory:candidate});}
+      finally{await rm(candidate,{recursive:true,force:true});}
+    });
     ipcMain.handle('course:graph', async (event, sessionId: string) => { checkSender(event); return core.graph(sessionId); });
     ipcMain.handle('course:read-unit', async (event, sessionId: string, unitId: string) => { checkSender(event); return core.readUnit(sessionId, unitId); });
     ipcMain.handle('course:set-layout', async (event, sessionId: string, updates) => { checkSender(event); return core.setLayout(sessionId, updates); });

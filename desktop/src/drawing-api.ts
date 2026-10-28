@@ -4,8 +4,8 @@ import type { ReadingBlock } from './shared';
 export type DrawingKind = 'rectangle' | 'ellipse' | 'arrow' | 'line' | 'wave' | 'highlighter';
 export interface DrawingGeometry { x: number; y: number; width: number; height: number }
 export type DrawingAnchor = { space: 'board' } | { space: 'object' | 'image'; unitId: string; blockId?: string; block?: ReadingBlock } | { space: 'text'; noteId: string };
-export interface DrawingValue { kind: DrawingKind; anchor: DrawingAnchor; geometry: DrawingGeometry }
-export interface PersonalDrawing { id: string; version: number; value: DrawingValue | null; original: DrawingValue; status: 'attached' | 'orphan' | 'deleted' }
+export interface DrawingValue { color?:string; kind: DrawingKind; anchor: DrawingAnchor; geometry: DrawingGeometry }
+export interface PersonalDrawing { legacy?:{[key:string]:any}; id: string; version: number; value: DrawingValue | null; original: DrawingValue; status: 'attached' | 'orphan' | 'deleted' }
 export interface DrawingHistory {
   committedAt: string; actor: 'student'; operationId: string; id: string; before: DrawingValue | null; after: DrawingValue | null; version: number }
 export interface DrawingApply { sessionId: string; operationId: string; id: string; expectedVersion: number; value: DrawingValue | null; selection?: AnnotationSelection }

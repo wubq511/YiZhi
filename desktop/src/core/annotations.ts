@@ -112,6 +112,7 @@ function intermediateSteps(step: Step): Step[] {
   return result;
 }
 function advance(stored: Stored, step: Step, all: Head[], intermediate = false) {
+  if(stored.note.legacy&&!stored.note.current.fragments.length)return; // A weak legacy object anchor cannot acquire a precise attachment by an unrelated edit.
   if (!intermediate) for (const phase of intermediateSteps(step)) advance(stored, phase, all, true);
   const previous = stored.note.current.fragments;
   let fragments = previous.flatMap(l => relocate(l, step));
