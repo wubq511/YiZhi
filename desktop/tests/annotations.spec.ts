@@ -1,6 +1,6 @@
 import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { CourseService } from '../src/core/course-service';
@@ -56,7 +56,7 @@ test('actual displayed Unicode selection creates one note; note Undo/autosave/re
   } finally { await app.close(); await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }); }
 });
 
-test('real MathLive nested selection uses a lazy reading field, proven independent edit, rewrite orphan, Undo and fresh copy identity', async () => {
+test('real MathLive nested selection uses a lazy reading field, proven independent edit, rewrite orphan, Undo and fresh copy identity', async ({}, testInfo) => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-formula-note-'));
   const service = new CourseService(resolve('dist/worker.cjs'));
   try {
@@ -67,8 +67,8 @@ test('real MathLive nested selection uses a lazy reading field, proven independe
   } finally { await service.close(); }
   const launch = () => electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   let app = await launch();
+  let page = await app.firstWindow();
   try {
-    let page = await app.firstWindow();
     await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     await expect(page.locator('math-field')).toHaveCount(0);
     const formula = page.locator('.editor-formula').first();
@@ -97,9 +97,24 @@ test('real MathLive nested selection uses a lazy reading field, proven independe
     expect((await getNotes())[1].original.fragments[0].quote).toBe('x+x');
     await page.getByRole('button', { name: '关闭批注', exact: true }).click();
 
+    await field.evaluate((el: any) => {
+      const events: unknown[] = [];
+      const record = (event: any) => {
+        events.push({ type: event.type, key: event.key, inputType: event.inputType, data: event.data,
+          value: el.getValue(), selection: el.selection, focused: el.hasFocus(), active: document.activeElement?.tagName });
+        if (events.length > 24) events.shift();
+      };
+      const types = ['focus', 'blur', 'keydown', 'beforeinput', 'input'];
+      for (const type of types) el.addEventListener(type, record, true);
+      (window as any).__yizhiFormulaNoteEvidence = { events, stop() { for (const type of types) el.removeEventListener(type, record, true); } };
+    });
+    await field.focus();
+    await expect.poll(() => field.evaluate((el: any) => el.hasFocus())).toBe(true);
     await field.evaluate((el: any) => { for (let i = 0; i < el.lastOffset; i++) if (el.getValue([i, i + 1]) === 'y') { el.selection = { ranges: [[i, i + 1]] }; return; } throw new Error('No denominator'); });
     await field.press('z');
-    const changedFormula = await field.evaluate((el: any) => el.getValue());
+    // Prove the intended native edit before using its value as the persistence oracle.
+    const changedFormula = '\\frac{x+x}{z}';
+    await expect.poll(() => field.evaluate((el: any) => el.getValue())).toBe(changedFormula);
     await expect.poll(() => page.evaluate(async () => (await (window as any).yizhi.open()).unit.reading.blocks.find((b: any) => b.kind === 'formula').payload.latex)).toBe(changedFormula);
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     await expect.poll(async () => (await getNotes())[0].current.status).toBe('attached');
@@ -107,6 +122,7 @@ test('real MathLive nested selection uses a lazy reading field, proven independe
     const beforeRewrite = await field.evaluate((el: any) => el.getValue());
     // Real navigation ends MathLive's current typing group before the next structural edit.
     await field.press('ArrowLeft');
+    await expect.poll(() => field.evaluate((el: any) => el.hasFocus())).toBe(true);
     await field.evaluate((el: any) => { for (let a = 0; a < el.lastOffset; a++) for (let b = a + 1; b <= el.lastOffset; b++) if (el.getValue([a, a + 1]) && el.getValue([b - 1, b]) && el.getValue([a, b]) === 'x+x') { el.selection = { ranges: [[a, b]] }; return; } throw new Error('No exact actual numerator range'); });
     await field.press('2'); await field.press('x');
     await expect.poll(() => field.evaluate((el: any) => el.getValue())).toBe('\\frac{2x}{z}');
@@ -143,7 +159,24 @@ test('real MathLive nested selection uses a lazy reading field, proven independe
     await page.getByRole('button', { name: '个人批注', exact: true }).click();
     await expect(page.getByRole('textbox', { name: '批注内容', exact: true })).toHaveValue('分子里的第二个 x');
     expect((await getNotes())[0].id).toBe(original.id); expect((await getNotes())[0].original).toEqual(original.original);
-  } finally { await app.close(); await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }); }
+  } catch (error) {
+    if (!page.isClosed()) {
+      const observed = await page.evaluate(async () => {
+        const api = window.yizhi, course = await api.open(), field = document.querySelector('math-field') as any;
+        return { events: (window as any).__yizhiFormulaNoteEvidence?.events ?? [],
+          current: field ? { value: field.getValue(), selection: field.selection, focused: field.hasFocus() } : null,
+          active: document.activeElement?.tagName, visibility: document.visibilityState,
+          formal: { revision: course.revision, formulas: course.unit.reading.blocks.filter(b => b.kind === 'formula').map(b => ({ id: b.id, latex: b.payload.latex })) },
+          notes: (await api.annotations.list({ sessionId: course.sessionId })).map(n => ({ id: n.id, status: n.current.status })) };
+      }).catch(captureError => ({ captureError: String(captureError) }));
+      await writeFile(testInfo.outputPath('formula-selection-failure.json'), JSON.stringify(observed, null, 2)).catch(() => {});
+      await page.screenshot({ path: testInfo.outputPath('formula-selection-failure.png') }).catch(() => {});
+    }
+    throw error;
+  } finally {
+    if (!page.isClosed()) await page.evaluate(() => { (window as any).__yizhiFormulaNoteEvidence?.stop(); delete (window as any).__yizhiFormulaNoteEvidence; }).catch(() => {});
+    await app.close(); await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+  }
 });
 
 test('held displayed selection creates an old-version orphan and explicit reassociation keeps its immutable original context', async () => {
