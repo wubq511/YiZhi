@@ -1,0 +1,56 @@
+[package]
+authors  = ["LongYinan <lynweklm@gmail.com>"]
+edition  = "2024"
+name     = "canvas"
+resolver = "3"
+version  = "0.1.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+anyhow           = "1"
+base64-simd      = "0.8"
+crc32fast        = "1"
+cssparser        = "0.38"
+gif              = "0.14"
+imagesize        = { version = "0.15", default-features = false, features = ["png", "jpeg", "gif", "webp", "heif"] }
+infer            = "0.22"
+libavif          = { version = "0.14", default-features = false, features = ["codec-aom"] }
+libavif-sys      = { version = "0.17", default-features = false, features = ["codec-aom"] }
+napi             = { version = "3.1", default-features = false, features = ["napi5", "web_stream", "serde-json"] }
+napi-derive      = { version = "3.1", default-features = false }
+num_cpus         = "1"
+precomputed-hash = "0.1"
+regex            = "1"
+roxmltree        = "0.21"
+selectors        = "0.41"
+serde            = "1"
+serde_derive     = "1"
+serde_json       = "1"
+thiserror        = "2"
+
+# Skia's Fontations font scaler (build.rs compiles its C++ half). build.rs
+# links the C++ runtime per target, so cxx's link-cplusplus links none.
+[target.'cfg(any(target_os = "macos", target_os = "linux"))'.dependencies]
+link-cplusplus  = { version = "1", features = ["nothing"] }
+skia-fontations = { path = "crates/skia-fontations" }
+
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+mimalloc-safe = { version = "0.1", features = ["skip_collect_on_exit"] }
+
+[target.'cfg(all(target_os = "linux", not(target_arch = "aarch64")))'.dependencies]
+mimalloc-safe = { version = "0.1", features = ["local_dynamic_tls", "skip_collect_on_exit"] }
+
+[target.'cfg(all(target_os = "linux", target_arch = "aarch64"))'.dependencies]
+mimalloc-safe = { version = "0.1", features = ["local_dynamic_tls", "no_opt_arch", "skip_collect_on_exit"] }
+
+[build-dependencies]
+cc         = "1"
+cxx-build  = "=1.0.205"
+napi-build = "2"
+
+[profile.release]
+codegen-units = 1
+lto           = true
+strip         = "symbols"
