@@ -215,10 +215,11 @@ test('repairing real protocol deliveries also releases stale host routing before
  try {
   const {sessionId}=await core.open(join(root,'course')),c=await core.agent.create({sessionId,operationId:'c'});
   const first=await runtime.submit({sessionId,conversationId:c.id,operationId:'q1',generation:1,text:'第一问',target:{unitId:'KU-001'}});
-  await until(()=>core.agentTask({sessionId,taskId:first.id}),t=>!!t.turnId);
+  await until(()=>core.agent.get({sessionId,conversationId:c.id}),v=>v.messages.some(m=>m.role==='assistant'));
+  // Keep tool admission successful; fail the later message/terminal projections.
   fault=new DatabaseSync(join(root,'course/course.sqlite'));fault.exec("CREATE TRIGGER link_after_binding BEFORE UPDATE ON agent_tasks BEGIN SELECT RAISE(ABORT,'runtime projection fault'); END");
   await new Promise(r=>setTimeout(r,1000));fault.exec('DROP TRIGGER link_after_binding');
-  const repaired=await core.agentTask({sessionId,taskId:first.id});assert.equal(repaired.status,'completed');
+  const repaired=await until(()=>core.agentTask({sessionId,taskId:first.id}),t=>t.status==='completed');assert.equal(repaired.status,'completed');
   const next=await runtime.submit({sessionId,conversationId:c.id,operationId:'q2',generation:1,text:'第二问',target:{unitId:'KU-001'}});
   const done=await until(()=>core.agentTask({sessionId,taskId:next.id}),t=>t.status!=='running');assert.equal(done.status,'completed');assert.notEqual(done.turnId,repaired.turnId);
   const view=await core.agent.get({sessionId,conversationId:c.id});assert.equal(view.messages.filter(m=>m.role==='assistant'&&m.state==='complete').length,2);
