@@ -99,14 +99,20 @@ test('abnormal view loss releases only temporary input protection and reopening 
 
 for(const mode of ['reconcile-completed','reconcile-missing'])test(`original turn ${mode} is reconciled without another turn or fabricated recovery`,async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-reconcile-')),core=new CourseService(resolve('dist/worker.cjs'));
- const runtime=new AgentRuntime(core,{cliPath:resolve('dist/tests/agent-executor-fixture.cjs'),directory:join(root,'runtime'),env:{...process.env,YIZHI_FIXTURE_MODE:mode}});
+ const cliPath=resolve('dist/tests/agent-executor-fixture.cjs');await chmod(cliPath,0o755);
+ const runtime=new AgentRuntime(core,{cliPath,directory:join(root,'runtime'),env:{...process.env,YIZHI_FIXTURE_MODE:mode,YIZHI_FIXTURE_COMPLETION_DELAY_MS:'1800'}});
  try {
   const {sessionId}=await core.open(join(root,'course')),c=await core.agent.create({sessionId,operationId:'c'});
   const task=await runtime.submit({sessionId,conversationId:c.id,operationId:'q',generation:1,text:'问题',target:{unitId:'KU-001'}});
   await until(()=>core.agent.get({sessionId,conversationId:c.id}),v=>v.messages.some(m=>m.role==='assistant'));
-  await new Promise(r=>setTimeout(r,850));
-  if(mode==='reconcile-missing')await runtime.stop({sessionId,taskId:task.id});
-  const checked=await runtime.reconcile({sessionId,taskId:task.id});
+  if(mode==='reconcile-missing'){
+   // This branch asserts that an actual durable terminal receipt outranks missing remote metadata.
+   await until(()=>core.agentTask({sessionId,taskId:task.id}),t=>t.executorStatus==='completed');
+   await runtime.stop({sessionId,taskId:task.id});
+  }
+  const checked=mode==='reconcile-completed'
+   ? await until(()=>runtime.reconcile({sessionId,taskId:task.id}),t=>t.status==='completed')
+   : await runtime.reconcile({sessionId,taskId:task.id});
   if(mode==='reconcile-completed'){assert.equal(checked.status,'completed');assert.equal(checked.recovery?.state,'resolved');const v=await core.agent.get({sessionId,conversationId:c.id});assert.match(v.messages[1].text,/补充解释/);assert.equal(v.messages[1].state,'complete');}
   else assert.equal(checked.recovery?.state,'resolved'); // local real terminal receipt outranks unavailable external metadata
   const v=await core.agent.get({sessionId,conversationId:c.id});assert.equal(v.tasks.length,1);assert.equal(v.tasks[0].turnId,'fixture-turn-1');

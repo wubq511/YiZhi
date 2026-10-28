@@ -95,8 +95,19 @@ test('normal legacy host acknowledges the latest durable input, freezes new admi
  let host:ReturnType<typeof spawn>|undefined;
  try{
   await legacyFixture(source);const made=spawnSync('python3',['-B',resolve('tests/personal-migration-fixture.py'),source],{encoding:'utf8'});assert.equal(made.status,0,made.stderr);await core.migration.convert({sourceDirectory:source,directory:candidate});
-  host=spawn('python3',['-B',resolve('../legacy/review-board/start.py'),'--course',source,'--port','0','--no-browser'],{stdio:['ignore','pipe','pipe']});let errors='';host.stderr!.on('data',b=>errors+=b);
-  const url=await new Promise<string>((yes,no)=>{let text='';const timer=setTimeout(()=>no(new Error('Legacy host timeout '+errors)),8000);host!.stdout!.on('data',b=>{text+=b;const match=/http:\/\/127\.0\.0\.1:\d+\//.exec(text);if(match){clearTimeout(timer);yes(match[0]);}});host!.once('exit',()=>{clearTimeout(timer);no(new Error('Legacy host exited '+errors));});});
+  host=spawn('python3',['-B',resolve('tests/legacy-host-start.py'),'--course',source,'--port','0','--no-browser'],{stdio:['ignore','pipe','pipe']});
+  const child=host;let output='',errors='';
+  child.stdout!.on('data',b=>output=(output+b).slice(-16384));
+  child.stderr!.on('data',b=>errors=(errors+b).slice(-16384));
+  const diagnostics=()=>JSON.stringify({pid:child.pid,exitCode:child.exitCode,signalCode:child.signalCode,stdout:output,stderr:errors});
+  const url=await new Promise<string>((yes,no)=>{
+   const finish=(error?:Error,url?:string)=>{clearTimeout(timer);child.stdout!.off('data',ready);child.off('close',exited);child.off('error',failed);if(error)no(error);else yes(url!);};
+   const ready=()=>{const match=/http:\/\/127\.0\.0\.1:\d+\//.exec(output);if(match)finish(undefined,match[0]);};
+   const exited=()=>finish(new Error('Legacy host exited '+diagnostics()));
+   const failed=(error:Error)=>finish(new Error('Legacy host spawn failed '+error.message+' '+diagnostics()));
+   const timer=setTimeout(()=>finish(new Error('Legacy host timeout '+diagnostics())),8000);
+   child.stdout!.on('data',ready);child.once('close',exited);child.once('error',failed);
+  });
   await assert.rejects(core.migration.prepare({sourceDirectory:source,contentCandidateDirectory:candidate,directory:target,operationId:'stop-gate'}),/活动写入|仍在写入/);
   const {DatabaseSync}=await import('node:sqlite');const blocker=new DatabaseSync(join(source,'.review-board/state.sqlite3'));blocker.exec('PRAGMA journal_mode=WAL; BEGIN IMMEDIATE');
   let saved:any,receipt:any;
@@ -105,7 +116,7 @@ test('normal legacy host acknowledges the latest durable input, freezes new admi
    let state:any;for(let i=0;i<100;i++){const r=await fetch(url+'api/v1/migration/state');assert.equal(r.status,200);state=await r.json();if(state.inflight)break;await new Promise(r=>setTimeout(r,10));}assert.equal(state.inflight,1);
    const exited=once(host,'exit'),stopping=fetch(url+'api/v1/migration/prepare',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({operationId:'LEGACY-BARRIER',confirmedSequence:JSON.parse(made.stdout).receipt.sequence})});
    for(let i=0;i<100;i++){state=await fetch(url+'api/v1/migration/state').then(r=>r.json());if(state.quiescing)break;await new Promise(r=>setTimeout(r,10));}assert.equal(state.quiescing,true);assert.equal(state.inflight,1);
-   blocker.exec('COMMIT');saved=await saving;assert.equal(saved.saved,true);const stop=await stopping;assert.equal(stop.status,200,await stop.clone().text());receipt=await stop.json();assert.equal(receipt.saved,true);assert.ok(receipt.sequence>=saved.sequence);await exited;
+   blocker.exec('COMMIT');saved=await saving;assert.equal(saved.saved,true);const stop=await stopping;assert.equal(stop.status,200,await stop.clone().text());receipt=await stop.json();assert.equal(receipt.saved,true);assert.ok(receipt.sequence>=saved.sequence);assert.deepEqual(await exited,[0,null],diagnostics());
   }finally{blocker.close();}
   const prepared=await core.migration.prepare({sourceDirectory:source,contentCandidateDirectory:candidate,directory:target,operationId:'stop-gate'});assert.equal(prepared.sourceVersion.sequence,receipt.sequence);
  }finally{if(host?.exitCode===null&&host.signalCode===null){host.kill('SIGTERM');await once(host,'exit');}await core.close();await rm(root,{recursive:true,force:true});}
