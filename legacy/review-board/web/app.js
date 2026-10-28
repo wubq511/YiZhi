@@ -295,7 +295,8 @@
     cancelAnimationFrame(animation);animation=0;setMode(nextMode);
     if(!animate||window.matchMedia('(prefers-reduced-motion: reduce)').matches){Object.assign(camera,target);paintCamera();return;}
     const start={...camera},at=performance.now();
-    const tick=now=>{const t=Math.min(1,(now-at)/180),ease=1-Math.pow(1-t,3);for(const k of ['x','y','scale'])camera[k]=start[k]+(target[k]-start[k])*ease;paintCamera();if(t<1)animation=requestAnimationFrame(tick);else animation=0;};
+    // A frame timestamp may precede this transition's performance.now() start.
+    const tick=now=>{const t=Math.max(0,Math.min(1,(now-at)/180)),ease=1-Math.pow(1-t,3);for(const k of ['x','y','scale'])camera[k]=start[k]+(target[k]-start[k])*ease;paintCamera();if(t<1)animation=requestAnimationFrame(tick);else animation=0;};
     animation=requestAnimationFrame(tick);
   }
   async function focusUnit(id,record=true,keyboard=false){
