@@ -26,13 +26,13 @@ async function receive(m: any) {
   if (m.method === 'initialize') respond({ userAgent: 'protocol-fixture', platformFamily: 'unix', platformOs: 'macos' });
   if (m.method === 'config/read') respond({ config: { mcp_servers: { fixture: {} } } });
   if (m.method === 'model/list') respond({ data: [{ id: 'fixture', model: 'fixture', displayName: 'Protocol fixture', isDefault: true }], nextCursor: null });
-  if(m.method==='thread/read' && mode==='reconcile-missing')return send({id:m.id,error:{code:-32602,message:'thread not loaded'}});
+  if(m.method==='thread/read' && ['reconcile-missing','reconcile-unavailable'].includes(mode??''))return send({id:m.id,error:{code:-32602,message:'thread not loaded'}});
   if(m.method==='thread/read')respond({thread:{id:m.params.threadId,status:{type:active && turns.get(active.turnId)?.status==='inProgress'?'active':'idle'},turns:[]}});
   if(m.method==='thread/turns/list')respond({data:[...turns.values()].filter(t=>t.threadId===m.params.threadId),nextCursor:null});
   if(m.method==='thread/items/list')respond({data:(turns.get(m.params.turnId)?.items??[]).map((item:any)=>({item})),nextCursor:null});
   if(m.method==='turn/interrupt'){
     respond({});const turn=turns.get(m.params.turnId);
-    if(turn){turn.status='interrupted';setTimeout(()=>notify('turn/completed',{threadId:m.params.threadId,turn:{id:turn.id,status:'interrupted'}}),100);}
+    if(turn){turn.status='interrupted';setTimeout(()=>notify('turn/completed',{threadId:m.params.threadId,turn:{id:turn.id,status:'interrupted'}}),mode==='linger'?650:100);}
   }
   if (m.method === 'thread/resume') respond({ thread: { id: m.params.threadId } });
   if (m.method === 'thread/start') {

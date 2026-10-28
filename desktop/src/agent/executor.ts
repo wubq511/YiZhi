@@ -20,9 +20,10 @@ export const COURSE_READ_TOOLS: DynamicToolSpec[] = [
   { type: 'function', name: 'yizhi_read_citation', description: 'Read one attached immutable citation, exact original quote and version/page identity.', inputSchema: { ...properties, properties: { citationId: string }, required: ['citationId'] } },
   { type: 'function', name: 'yizhi_read_source_page', description: 'Read a real registered source page. pdfPageIndex is zero-based; printed page is only an explicitly verified mapping. No OCR.', inputSchema: { ...properties, properties: { versionId: string, pdfPageIndex: { type: 'integer', minimum: 0 } }, required: ['versionId', 'pdfPageIndex'] } },
 ];
-const requiredCapabilities = ['thread/start', 'turn/start', 'model/list', 'config/read', 'item/tool/call', 'item/agentMessage/delta', 'turn/completed', 'turn/interrupt', 'thread/read', 'thread/turns/list', 'thread/items/list'];
+const requiredCapabilities = ['thread/start', 'turn/start', 'model/list', 'config/read', 'item/tool/call', 'item/agentMessage/delta', 'turn/completed'];
+const lifecycleCapabilities=['turn/interrupt','thread/read','thread/turns/list','thread/items/list'];
 
-export async function detectExecutor(options: { cliPath?: string; env?: NodeJS.ProcessEnv } = {}): Promise<ExecutorStatus> {
+export async function detectExecutor(options: { cliPath?: string; env?: NodeJS.ProcessEnv; requiredMethods?:string[] } = {}): Promise<ExecutorStatus> {
   const env = options.env ?? process.env;
   const candidates = options.cliPath ? [resolve(options.cliPath)] : [
     ...(env.PATH ?? '').split(delimiter).filter(Boolean).map(bin => join(bin, process.platform === 'win32' ? 'codex.exe' : 'codex')),
@@ -42,7 +43,7 @@ export async function detectExecutor(options: { cliPath?: string; env?: NodeJS.P
       await run(path, ['app-server', 'generate-json-schema', '--experimental', '--out', temp], { env: childEnv, timeout: 15_000, maxBuffer: 1_000_000 });
       const schema = await readFile(join(temp, 'codex_app_server_protocol.schemas.json'), 'utf8');
       const dynamic = JSON.parse(schema).definitions?.v2?.DynamicToolSpec?.oneOf?.find((variant: any) => variant.properties?.type?.enum?.includes('function'));
-      if (requiredCapabilities.some(name => !schema.includes(JSON.stringify(name))) || !dynamic || !['name', 'description', 'inputSchema', 'type'].every(key => dynamic.required?.includes(key)))
+      if ([...requiredCapabilities,...(options.requiredMethods??[])].some(name => !schema.includes(JSON.stringify(name))) || !dynamic || !['name', 'description', 'inputSchema', 'type'].every(key => dynamic.required?.includes(key)))
         throw new Error('缺少只读问答所需的 thread/turn、动态工具或增量协议能力');
       return { available: true, path, version, models: [] };
     } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') lastError = `${path}: ${(error as Error).message}`; }
@@ -77,26 +78,30 @@ export class AgentRuntime {
   private connections=new Set<AppServerRPC>();
   private blockedMcp: Record<string, any> = {};
   constructor(private core: CourseService, private options: { directory: string; cliPath?: string; env?: NodeJS.ProcessEnv } ) {}
-  detect() { return this.detection ??= detectExecutor(this.options).then(value => { this.statusValue = value; return value; }); }
+  detect() { return this.detection ??= detectExecutor({...this.options,requiredMethods:lifecycleCapabilities}).then(value => { this.statusValue = value; return value; }); }
   async status(): Promise<ExecutorStatus> {
+    if(this.quiescing||this.closed)return {...this.statusValue,available:false,models:this.statusValue?.models??[],error:'执行器正在退出'};
     try { await this.start(); return this.statusValue!; }
     catch (error) { return { ...this.statusValue, available: false, error: (error as Error).message, models: [] }; }
   }
-  private start(): Promise<void> { return this.startup ??= this.connect(); }
+  private start(): Promise<void> {
+    if(!this.startup){const pending=this.connect();this.startup=pending;void pending.catch(()=>{if(this.startup===pending)this.startup=undefined;});}
+    return this.startup;
+  }
   private async connect() {
-    if (this.closed) throw new Error('执行器正在退出');
+    if (this.closed||this.quiescing) throw new Error('执行器正在退出');
     const status = await this.detect();
     if (!status.available || !status.path) throw new Error(status.error);
     await mkdir(this.options.directory, { recursive: true });
     this.statusValue=status;
     this.cwd = await mkdtemp(join(this.options.directory, 'runtime-'));
-    if (this.closed) { await rm(this.cwd, { recursive: true, force: true }); throw new Error('执行器正在退出'); }
+    if (this.closed||this.quiescing) { await rm(this.cwd, { recursive: true, force: true }); throw new Error('执行器正在退出'); }
     this.directories.add(this.cwd);
     const rpc = new AppServerRPC(status.path, this.cwd, await executorEnv(status.path, this.options.env ?? process.env),
       (method, p) => {if(this.rpc===rpc)this.notification(method, p);}, (method, p, id) => this.rpc===rpc?this.tool(method, p, id):Promise.reject(new Error('旧执行器连接已失效')), error => this.disconnect(error,rpc));
     this.rpc=rpc;this.connections.add(rpc);
     await this.rpc.request('initialize', { clientInfo: { name: 'yizhi', title: '绎知只读学习问答', version: '0.1.0' }, capabilities: { experimentalApi: true } });
-    if (this.closed) throw new Error('执行器正在退出');
+    if (this.closed||this.quiescing) throw new Error('执行器正在退出');
     this.rpc.notify('initialized');
     const config = await this.rpc.request('config/read', { includeLayers: false });
     for (const name of Object.keys(config.config?.mcp_servers ?? {})) this.blockedMcp[`mcp_servers.${name}.enabled`] = false;
@@ -196,9 +201,9 @@ export class AgentRuntime {
         threadId:task.threadId,turnId:task.turnId,status:turn.status,error:turn.error?JSON.stringify(turn.error):undefined,reconciliation:true,
         recovery:{state:'resolved',checkedAt:new Date().toISOString(),detail:'已取回原 turn 的实际终态和消息；没有新推理。'}});
     } catch(error) {
-      if(running?.task.status==='running' && this.rpc && this.statusValue?.available)return this.recoveryFact(request,task,'active',`原连接仍在；结果核对未完成：${(error as Error).message}`);
-      return this.core.recordAgent({sessionId:request.sessionId,taskId:task.id,attemptId:task.attemptId,generation:task.generation,eventId:`reconcile-unknown:${this.instance}:${++this.sequence}`,kind:'finish',status:'unknown',
+      const result=await this.core.recordAgent({sessionId:request.sessionId,taskId:task.id,attemptId:task.attemptId,generation:task.generation,eventId:`reconcile-unknown:${this.instance}:${++this.sequence}`,kind:'finish',status:'unknown',
         error:(error as Error).message,reconciliation:true,recovery:{state:'unknown',checkedAt:new Date().toISOString(),detail:(error as Error).message}});
+      if(running)running.task=result;return result;
     }
   }
   private recoveryFact(request:AgentTaskRequest,task:AgentTask,state:'active'|'resolved',detail:string) {
@@ -264,11 +269,11 @@ export class AgentRuntime {
     if (p.turnId && running.task.turnId && p.turnId !== running.task.turnId) return;
     const identity = { threadId: p.threadId, turnId: p.turnId ?? p.turn?.id, ...(!['running','stopping'].includes(running.task.status)?{reconciliation:true}:{}) };
     if (method === 'turn/started') void this.enqueue(running, () => this.record(running, { kind: 'bind', ...identity }));
-    else if (method === 'item/agentMessage/delta') void this.enqueue(running, () => this.record(running, { kind: 'delta', ...identity, itemId: p.itemId, text: p.delta }));
+    else if (method === 'item/agentMessage/delta' && ['running','stopping'].includes(running.task.status)) void this.enqueue(running, () => this.record(running, { kind: 'delta', ...identity, itemId: p.itemId, text: p.delta }));
     else if (method === 'item/completed' && p.item?.type === 'agentMessage') void this.enqueue(running, () => this.record(running, { kind: 'message', ...identity, itemId: p.item.id, text: p.item.text }));
     else if (method === 'turn/completed') void this.enqueue(running, () => this.record(running, { kind: 'finish', ...identity,
       status: p.turn.status === 'completed' ? 'completed' : p.turn.status === 'interrupted' ? 'interrupted' : 'failed',
-      error: p.turn.error ? JSON.stringify(p.turn.error) : undefined }));
+      error: p.turn.error ? JSON.stringify(p.turn.error) : undefined, ...(identity.reconciliation?{recovery:{state:'resolved' as const,checkedAt:new Date().toISOString(),detail:'已收到原 turn 的迟到实际终态；未再次执行。'}}:{}) }));
   }
   private tool(method: string, p: any, rpcId: string | number): Promise<any> {
     const taskId = [...this.running.values()].find(r => r.task.threadId === p?.threadId)?.task.id ?? 'inactive';

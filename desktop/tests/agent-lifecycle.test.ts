@@ -119,3 +119,75 @@ test('a confirmed window unfreezes back to active and a later process loss canno
   assert.equal(view.unconfirmedTail,true);
  }finally{await core.close();await rm(root,{recursive:true,force:true});}
 });
+
+test('unverifiable original turn is unknown, revokes writes, then accepts only late original facts without a replacement turn',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-unknown-')),core=new CourseService(resolve('dist/worker.cjs'));
+ const runtime=new AgentRuntime(core,{cliPath:resolve('dist/tests/agent-executor-fixture.cjs'),directory:join(root,'runtime'),env:{...process.env,YIZHI_FIXTURE_MODE:'reconcile-unavailable'}});
+ try {
+  const {sessionId}=await core.open(join(root,'course')),c=await core.agent.create({sessionId,operationId:'c'});
+  const task=await runtime.submit({sessionId,conversationId:c.id,operationId:'q',generation:1,text:'问题',target:{unitId:'KU-001'}});
+  await until(()=>core.agent.get({sessionId,conversationId:c.id}),v=>v.messages.some(m=>m.role==='assistant'));
+  const checked=await runtime.reconcile({sessionId,taskId:task.id});assert.equal(checked.status,'unknown');assert.equal(checked.recovery?.state,'unknown');
+  await assert.rejects(core.activeAgent({sessionId,taskId:task.id,attemptId:task.attemptId,generation:1}),/停止|失效/);
+  const done=await until(()=>core.agentTask({sessionId,taskId:task.id}),t=>t.executorStatus==='completed');assert.equal(done.turnId,checked.turnId);
+  const v=await core.agent.get({sessionId,conversationId:c.id});assert.equal(v.tasks.length,1);assert.equal(v.messages.length,2);assert.equal(v.messages[1].state,'complete');
+ }finally{await runtime.close();await core.close();await rm(root,{recursive:true,force:true});}
+});
+
+test('a failed local stop projection cannot restore submission qualification and the durable stop receipt repairs after storage recovers',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-stop-fault-')),core=new CourseService(resolve('dist/worker.cjs'));let fault:DatabaseSync|undefined;
+ try {
+  const {sessionId}=await core.open(root),c=await core.agent.create({sessionId,operationId:'c'}),t=await core.agent.submit({sessionId,conversationId:c.id,operationId:'q',generation:1,text:'问题',target:{unitId:'KU-001'}});
+  fault=new DatabaseSync(join(root,'course.sqlite'));fault.exec("CREATE TRIGGER fail_stop_projection BEFORE UPDATE ON agent_tasks BEGIN SELECT RAISE(ABORT,'stop projection fault'); END");
+  await assert.rejects(core.agent.stop({sessionId,taskId:t.id}),/stop projection fault/);
+  await assert.rejects(core.activeAgent({sessionId,taskId:t.id,attemptId:t.attemptId,generation:1}),/停止|失效/);
+  fault.exec('DROP TRIGGER fail_stop_projection');const repaired=await core.agentTask({sessionId,taskId:t.id});assert.equal(repaired.status,'stopping');assert.equal(repaired.stopRequested,true);
+ }finally{fault?.close();await core.close();await rm(root,{recursive:true,force:true});}
+});
+
+test('recovering course A renderer leaves course B active experiment identity and confirmation token valid',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-course-recover-')),core=new CourseService(resolve('dist/worker.cjs'));
+ try {
+  const a=await core.open(join(root,'a')),b=await core.open(join(root,'b'));
+  async function active(sessionId:string){let v=await core.extensions.open({sessionId});for(const action of [{kind:'validate',version:'1.0.0',report:{outputs:'01101001',lifecycle:true,migration:true}},{kind:'visibility',visible:true},{kind:'run',running:true}] as any[]){v=await core.extensions.act({sessionId,instanceId:v.instanceId,generation:v.generation,operationId:crypto.randomUUID(),action});}return v;}
+  const av=await active(a.sessionId),bv=await active(b.sessionId);
+  const builtin=await core.experiments.open({sessionId:b.sessionId,unitId:'KU-057',blockId:'RB-TH-13-057-010-interactive'});
+  const beforeBuiltin=await core.experiments.act({sessionId:b.sessionId,instanceId:builtin.instanceId,generation:builtin.generation,operationId:'b-input',action:{kind:'inputs',inputs:{...builtin.state.inputs,I0:1}}});
+  await core.recoverExtensionRenderers(a.sessionId);
+  assert.deepEqual(await core.extensions.read({sessionId:b.sessionId}),bv);
+  assert.deepEqual(await core.experiments.read({sessionId:b.sessionId,instanceId:builtin.instanceId}),beforeBuiltin);
+  const result=await core.extensions.act({sessionId:b.sessionId,instanceId:bv.instanceId,generation:bv.generation,operationId:'b-still-valid',action:{kind:'confirm',mode:'step',baseRevision:bv.revision,definitionVersion:'1.0.0',state:{...bv.state,step:1,simulationTime:250}}});
+  assert.equal(result.state.step,1);
+  await assert.rejects(core.extensions.act({sessionId:a.sessionId,instanceId:av.instanceId,generation:av.generation,operationId:'a-late',action:{kind:'run',running:true}}),/实例|代际/);
+ }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+
+import { DescriptionRuntime } from '../src/agent/description-search';
+import { readdir,readFile } from 'node:fs/promises';
+test('quit blocks description admission and drains an already started catalog child before removing its runtime',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-catalog-drain-')),core=new CourseService(resolve('dist/worker.cjs')),directory=join(root,'runtime'),marker=join(root,'catalog-started');
+ const cliPath=resolve('dist/tests/description-executor-fixture.cjs');await chmod(cliPath,0o755);
+ const runtime=new DescriptionRuntime(core,{cliPath,directory,env:{...process.env,YIZHI_DESCRIPTION_FIXTURE:'catalog-linger',YIZHI_CATALOG_MARKER:marker}});
+ try {
+  const {sessionId}=await core.open(join(root,'course')),catalog=runtime.status();
+  await until(()=>readFile(marker,'utf8').catch(()=>''),s=>!!s);
+  runtime.prepareQuit();await assert.rejects(runtime.start({sessionId,id:'no-new',description:'不得接纳',scopes:['knowledge']}),/退出/);
+  assert.equal((await runtime.status()).available,false);
+  await runtime.close();await catalog;assert.deepEqual(await readdir(directory),[]);
+ }finally{await runtime.close();await core.close();await rm(root,{recursive:true,force:true});}
+});
+
+import { sourceFixture } from './source-fixture';
+test('Core shutdown drains admitted asynchronous source indexing and query before closing course databases',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-index-drain-'));let core=new CourseService(resolve('dist/worker.cjs'));
+ try {
+  let c=await core.open(join(root,'course'));const path=join(root,'source.pdf');await sourceFixture(path,'Read drain evidence');
+  await core.sources.importFile({sessionId:c.sessionId,operationId:'source',generation:1,path,title:'关闭排空验证'});
+  const indexing=core.search.rebuild({sessionId:c.sessionId,batchSize:8});
+  const query=core.search.query({sessionId:c.sessionId,query:'drain',scopes:['sources']});
+  const closing=core.close();const [status,results]=await Promise.all([indexing,query]);await closing;
+  assert.ok(status.indexed>0);assert.ok(results.hits.length>0);
+  core=new CourseService(resolve('dist/worker.cjs'));c=await core.open(join(root,'course'));
+  assert.ok((await core.search.query({sessionId:c.sessionId,query:'drain',scopes:['sources']})).hits.length);
+ }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});

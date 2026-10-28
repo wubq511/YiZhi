@@ -21,6 +21,7 @@ export class AgentStore {
       CREATE TABLE IF NOT EXISTS agent_deliveries(attempt_id TEXT NOT NULL, event_id TEXT NOT NULL, digest TEXT NOT NULL, PRIMARY KEY(attempt_id,event_id));
       CREATE TABLE IF NOT EXISTS agent_tool_recovery(id TEXT PRIMARY KEY, attempt_id TEXT NOT NULL REFERENCES cg_attempts(id),
         purpose TEXT NOT NULL, reference_id TEXT NOT NULL, name TEXT NOT NULL, input TEXT, output TEXT, digest TEXT NOT NULL, refs TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS agent_stop_requests(task_id TEXT PRIMARY KEY,attempt_id TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS agent_executor_receipts(attempt_id TEXT NOT NULL,event_id TEXT NOT NULL,digest TEXT NOT NULL,payload TEXT,applied INTEGER NOT NULL DEFAULT 0, purpose TEXT NOT NULL DEFAULT 'active-recovery',reference_id TEXT NOT NULL,PRIMARY KEY(attempt_id,event_id));`);
     if (!db.prepare('PRAGMA table_info(agent_conversations)').all().some(row => row.name === 'draft_context')) db.exec("ALTER TABLE agent_conversations ADD COLUMN draft_context TEXT NOT NULL DEFAULT '{}'");
     this.repair();
@@ -151,16 +152,15 @@ export class AgentStore {
     });
   }
   stop(request: { taskId: string }): AgentTask {
-    this.repair();
-    return transaction(this.db, () => {
-      const task=this.task(request.taskId);
-      if (!['running','queued','waiting'].includes(task.status)) return task;
+    const task=this.task(request.taskId);
+    if (!['running','queued','waiting','stopping'].includes(task.status)) return task;
+    // Qualification is durable even if the later business-task projection cannot be written.
+    transaction(this.db,()=>{
       this.db.prepare("UPDATE cg_attempts SET status='stopped' WHERE id=?").run(task.attemptId);
       this.db.prepare("UPDATE cg_bases SET read_values='[]',domain_basis=NULL WHERE attempt_id=?").run(task.attemptId);
-      task.stopRequested=true; task.status='stopping'; task.cursor=this.changed(task.conversationId,task.id);
-      this.db.prepare('UPDATE agent_tasks SET payload=? WHERE id=?').run(JSON.stringify(task),task.id);
-      return task;
+      this.db.prepare('INSERT OR IGNORE INTO agent_stop_requests VALUES(?,?)').run(task.id,task.attemptId);
     });
+    this.repair();return this.task(task.id);
   }
   continue(request: {sessionId:string;taskId:string;operationId:string}): AgentTask {
     this.repair();
@@ -228,8 +228,9 @@ export class AgentStore {
     if(!old) {
       const task=this.facts(event);
       const canReconcile=event.reconciliation && ['bind','message','finish'].includes(event.kind);
-      if(task.status!=='running' && !(task.status==='stopping'&&task.stopRequested) && !canReconcile)throw new Error('任务尝试已停止或失效');
-      if(task.status==='running')this.active(event);
+      const stopped=!!this.db.prepare('SELECT 1 FROM agent_stop_requests WHERE task_id=? AND attempt_id=?').get(task.id,task.attemptId);
+      if(task.status!=='running' && !(task.status==='stopping'&&task.stopRequested) && !canReconcile && !(stopped&&!task.stopRequested))throw new Error('任务尝试已停止或失效');
+      if(task.status==='running'&&!stopped)this.active(event);
       if(task.threadId&&event.threadId&&task.threadId!==event.threadId||task.turnId&&event.turnId&&task.turnId!==event.turnId)throw new Error('执行器 thread/turn 不匹配');
       if(JSON.stringify(event).length>500_000)throw new Error('执行器事件过大');
       transaction(this.db,()=>this.db.prepare('INSERT INTO agent_executor_receipts(attempt_id,event_id,digest,payload,reference_id) VALUES(?,?,?,?,?)').run(event.attemptId,event.eventId,digest,JSON.stringify(event),task.id));
@@ -237,6 +238,15 @@ export class AgentStore {
     this.repair(); return this.task(event.taskId);
   }
   private repair() {
+    for(const row of this.db.prepare('SELECT * FROM agent_stop_requests').all()) {
+      const task=this.task(String(row.task_id));if(task.stopRequested)continue;
+      transaction(this.db,()=>{
+        task.stopRequested=true;
+        task.status=['running','queued','waiting'].includes(task.status)?'stopping':task.executorStatus==='unknown'?'unknown':'stopped';
+        task.cursor=this.changed(task.conversationId,task.id);
+        this.db.prepare('UPDATE agent_tasks SET payload=? WHERE id=?').run(JSON.stringify(task),task.id);
+      });
+    }
     for(const row of this.db.prepare('SELECT * FROM agent_executor_receipts WHERE applied=0 ORDER BY rowid').all()) {
       transaction(this.db,()=>{
         this.applyReceipt(parse(row.payload));
@@ -302,14 +312,17 @@ export class AgentStore {
       this.mutationProgress(task.id, result.changedObjectIds.find(id=>!id.includes(':')) ?? task.snapshot.target.blockId ?? task.snapshot.target.unitId, result.status);
     });
   }
+  revokeForQuit() {
+    const tasks=this.db.prepare('SELECT payload FROM agent_tasks').all().map(r=>parse(r.payload) as AgentTask);
+    transaction(this.db,()=>{
+      for(const task of tasks)if(['running','queued','waiting','stopping'].includes(task.status))this.db.prepare('INSERT OR IGNORE INTO agent_stop_requests VALUES(?,?)').run(task.id,task.attemptId);
+      this.db.prepare("UPDATE cg_attempts SET status='stopped' WHERE status='running'").run();
+      this.db.prepare("UPDATE cg_bases SET read_values='[]',domain_basis=NULL WHERE attempt_id IN (SELECT id FROM cg_attempts WHERE status='stopped')").run();
+    });
+  }
   prepareShutdown() {
     this.repair();
-    return transaction(this.db,()=>{
-      const tasks=this.db.prepare('SELECT payload FROM agent_tasks').all().map(r=>parse(r.payload) as AgentTask);
-      const stopped=tasks.filter(t=>['running','queued','waiting','stopping'].includes(t.status)).map(t=>this.stop({taskId:t.id}));
-      this.db.prepare("UPDATE cg_attempts SET status='stopped' WHERE status='running'").run();
-      return stopped;
-    });
+    return this.db.prepare('SELECT payload FROM agent_tasks').all().map(r=>parse(r.payload) as AgentTask).filter(t=>t.status==='stopping');
   }
   dispatch(action: string, p: any) {
     if (action === 'agent:list') return this.list();

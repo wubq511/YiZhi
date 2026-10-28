@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import { randomUUID } from 'node:crypto';
-import { realpathSync } from 'node:fs';
+import { realpathSync,mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { CourseService } from '../core/course-service';
 import type { AgentRuntime } from '../agent/executor';
@@ -26,6 +26,7 @@ export class LearningHost {
       if(result?.requestId===view.requestId && typeof result.saved==='boolean')view.reply?.(result.saved);
     });
   }
+  assertTaskAdmission(){if(this.quiescing||this.exiting)throw new Error('应用正在退出，不再接纳新任务');}
   sender=(event:Electron.IpcMainInvokeEvent|Electron.IpcMainEvent):View=>{
     const view=[...this.views.values()].find(v=>v.window.webContents===event.sender);
     if(!view || event.senderFrame!==view.window.webContents.mainFrame)throw new Error('未知课程窗口');
@@ -42,7 +43,7 @@ export class LearningHost {
   };
   async show(directory=this.lastDirectory,bounds?:Electron.Rectangle) {
     if(this.quiescing||this.exiting)return;
-    directory=canonical(directory);this.lastDirectory=directory;
+    mkdirSync(directory,{recursive:true});directory=canonical(directory);this.lastDirectory=directory;
     const existing=this.views.get(directory);
     if(existing){if(existing.window.isMinimized())existing.window.restore();existing.window.show();existing.window.focus();return;}
     const window=new BrowserWindow({width:1280,height:900,...bounds,minWidth:660,minHeight:500,title:'绎知',backgroundColor:'#ffffff',
@@ -82,12 +83,12 @@ export class LearningHost {
   }
   private async unfreeze() {
     for(const view of this.views.values()) {
-      if(view.sessionId)await this.core.openLearningView({sessionId:view.sessionId,viewId:view.id});
+      if(view.sessionId)await this.core.openLearningView({sessionId:view.sessionId,viewId:view.id}).catch(()=>{});
       if(!view.window.isDestroyed())view.window.webContents.send('window:close-cancelled');
     }
   }
   private async closeView(view:View) {
-    try {if(await this.barrier(view)){view.saved=true;view.window.destroy();}else await this.unfreeze();}
+    try {if(await this.barrier(view)){if(!this.quiescing){view.saved=true;view.window.destroy();}}else if(!this.quiescing)await this.unfreeze();}
     catch(error){await this.unfreeze();dialog.showErrorBox('关窗未完成',String(error));}
   }
   quit() {
@@ -118,7 +119,7 @@ export class LearningHost {
     try {
       const {response}=await dialog.showMessageBox(view.window,{type:'warning',message:'学习窗口没有响应',detail:'从已保存的正文、草稿与实验确认现场恢复。未确认尾部无法保证找回。',buttons:['恢复窗口','暂不恢复'],defaultId:0,cancelId:1});
       if(response!==0||view.window.isDestroyed())return;
-      await this.core.recoverExtensionRenderers();view.reply?.(false);
+      await this.core.recoverExtensionRenderers(view.sessionId);view.reply?.(false);
       const bounds=view.window.getBounds();await this.detach(view,false);
       view.window.webContents.forcefullyCrashRenderer();view.window.destroy();
       await this.show(view.directory,bounds);

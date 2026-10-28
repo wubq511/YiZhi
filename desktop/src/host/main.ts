@@ -54,7 +54,7 @@ else {
     ipcMain.handle('description:status', event => { checkSender(event); return description.status(); });
     for (const method of ['start', 'get', 'cancel'] as const) ipcMain.handle(`description:${method}`, (event, request) => { checkSender(event); return description[method](request); });
     for (const method of ['start','continue','stop','get','list','artifact','artifacts','correct','query'] as const) {
-      ipcMain.handle(`parsing:${method}`, (event, request) => { checkSender(event); return core.parsing[method](request); });
+      ipcMain.handle(`parsing:${method}`, (event, request) => { checkSender(event);if(method==='start'||method==='continue')host.assertTaskAdmission(); return core.parsing[method](request); });
     }
     for (const method of drawingMethods) ipcMain.handle(`drawings:${method}`, (event, request) => { checkSender(event); return core.drawings[method](request); });
     for (const method of searchMethods) ipcMain.handle(`search:${method}`, (event, request) => { checkSender(event); return core.search[method](request); });
@@ -80,7 +80,7 @@ else {
       ipcMain.handle(`experiments:${method}`, (event, payload) => { checkSender(event); return core.experiments[method](payload); });
     }
     for (const method of ['protect', 'releaseView', 'recheck', 'resolveInput', 'resolveCandidate', 'startAttempt', 'read', 'commit', 'stop', 'query', 'candidates', 'history'] as const) {
-      ipcMain.handle(`commands:${method}`, (event, payload) => { checkSender(event); return core.commands[method](payload); });
+      ipcMain.handle(`commands:${method}`, (event, payload) => { checkSender(event);if(method==='startAttempt')host.assertTaskAdmission(); return core.commands[method](payload); });
     }
     for (const method of ['read', 'commit', 'query', 'prerequisites'] as const) {
       ipcMain.handle(`relations:${method}`, (event, payload) => { checkSender(event); return core.relations[method](payload); });

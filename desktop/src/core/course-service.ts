@@ -68,7 +68,7 @@ export class CourseService {
     });
   }
   /** Host-only failure recovery; never exposed to generated frames or the preload. */
-  recoverExtensionRenderers(): Promise<void> {return this.request('extensions:recoverRenderers');}
+  recoverExtensionRenderers(sessionId?:string): Promise<void> {return this.request('extensions:recoverRenderers',{sessionId});}
   open(directory: string): Promise<OpenedCourse> { return this.request('open', { directory }); }
   openLearningView(request:{sessionId:string;viewId:string}):Promise<{unconfirmedTail:boolean;detail:string}> {return this.request('learningView:open',request);}
   confirmLearningView(request:{sessionId:string;viewId:string}):Promise<void> {return this.request('learningView:confirm',request);}

@@ -15,6 +15,7 @@ test('lifecycle controls expose stopping, explicit continue and reopen the curre
   await composer.fill('解释位权');await page.getByRole('button',{name:'发送问题',exact:true}).click();
   await expect(page.locator('.agent-message.assistant')).toContainText('位置的权');
   await page.getByRole('button',{name:'停止任务',exact:true}).click();
+  await expect(page.getByRole('status',{name:'回答状态'})).toContainText('正在停止');
   await expect(page.getByRole('status',{name:'回答状态'})).toContainText('已停止');
   await composer.fill('关窗保存的最新尾部');
   await page.getByRole('button',{name:'继续剩余工作',exact:true}).click();

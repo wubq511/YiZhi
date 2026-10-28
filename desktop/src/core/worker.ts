@@ -208,7 +208,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action === 'migration:content') value = legacyContent(session(payload.sessionId).db);
     else if (action === 'migration:resource') { const c=session(payload.sessionId); const directory=[...courses.entries()].find(([,v])=>v===c)![0]; value=candidateResource(c.db,directory,payload.asset); }
     else if(action.startsWith('learningView:')) {const c=session(payload.sessionId);if(action==='learningView:open')value=c.views.open(payload.viewId);else {value=c.views.release(payload.viewId,action==='learningView:confirm'||payload.saved);if(action==='learningView:release'){c.groups.dispatch('commands:releaseView',payload);c.groups.recheck(payload.sessionId);}}}
-    else if (action === 'agentShutdown') value=[...courses.values()].flatMap(c=>c.agent.prepareShutdown().map(task=>({sessionId:c.sessionId,task})));
+    else if (action === 'agentShutdown') {for(const c of courses.values())c.agent.revokeForQuit();value=[...courses.values()].flatMap(c=>c.agent.prepareShutdown().map(task=>({sessionId:c.sessionId,task})));}
     else if (action === 'open') value = open(payload.directory);
     else if (action === 'read') value = snapshot(session(payload.sessionId));
     else if (action === 'readingState') {
@@ -233,7 +233,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       if (!value) throw new Error('该单元不存在或正文尚未加入课程副本');
 
     }
-    else if (action === 'extensions:recoverRenderers') { for(const course of courses.values()) {course.experiments.pauseAll();course.extensions.recoverRenderer();} }
+    else if (action === 'extensions:recoverRenderers') { for(const course of payload?.sessionId?[session(payload.sessionId)]:courses.values()) {course.experiments.pauseAll();course.extensions.recoverRenderer();} }
     else if (action.startsWith('extensions:')) {
       const extension = session(payload.sessionId).extensions;
       if (action === 'extensions:open') value = await extension.open();
