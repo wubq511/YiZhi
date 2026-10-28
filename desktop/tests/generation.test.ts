@@ -4,6 +4,7 @@ import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { createHash } from 'node:crypto';
 import { CourseService } from '../src/core/course-service';
 
 // An independent, untagged PDF at the public Sources -> Parsing seam. Its active-low
@@ -477,6 +478,92 @@ test('new bytes of the same source invalidate only future dependent publication 
     assert.deepEqual(await core.readUnit(sessionId,unit.id),unit);
     assert.equal((unit.reading.blocks[0].sourceRefs as Array<{versionId:string}>)[0].versionId,initial.source.versionId);
     await assert.rejects(core.readAgentGeneration(identity),/来源已有内容不同的新版本/);
+  }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+
+test('recoverable generation survives retention and a durable backup resource lease does not freeze publication',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'yizhi-generation-retention-'));
+  const clock=new SharedArrayBuffer(8),start=Date.parse('2030-01-01T00:00:00Z');
+  Atomics.store(new BigInt64Array(clock),0,BigInt(start));
+  let core=new CourseService(resolve('dist/worker.cjs'),{retentionScheduling:{clock,manual:true}});
+  try{
+    const {sessionId,task,opened}=await prepared(core,root),identity={sessionId,taskId:task.id,attemptId:task.attemptId,generation:task.generation};
+    const initial=await core.readAgentGeneration(identity),invalid={...lesson(initial,'retained-before-cleanup'),formula:'Z=I0+I1+I2+I3'};
+    const failed=await core.publishAgentGeneration({...identity,input:invalid});
+    assert.equal(failed.status,'retained');
+    const orphanBytes=Buffer.from('Unregistered immutable bytes from an interrupted unrelated publication');
+    const orphanHash=createHash('sha256').update(orphanBytes).digest('hex'),orphan=join(root,'course/resources',orphanHash);
+    await writeFile(orphan,orphanBytes);
+    await core.retention.resourceLease({sessionId,id:'backup-while-generation-pending',action:'acquire'});
+    await core.agent.stop({sessionId,taskId:task.id});
+    await core.recordAgent({...identity,eventId:'retention-stop',kind:'finish',status:'interrupted',reconciliation:true});
+    await core.close();core=new CourseService(resolve('dist/worker.cjs'),{retentionScheduling:{clock,manual:true}});
+    const current=(await core.open(join(root,'course'))).sessionId;
+    assert.equal((await core.retention.resourceLeases({sessionId:current})).find(lease=>lease.id==='backup-while-generation-pending')?.state,'active');
+    Atomics.store(new BigInt64Array(clock),0,BigInt(start+150*86_400_000));
+    const drain=async()=>{
+      for(let i=0;i<500;i++){
+        const result=await core.retention.run({sessionId:current,limit:64});
+        if(!result.pending)return result;
+      }
+      throw new Error('bounded retention did not settle');
+    };
+    assert.equal((await drain()).phase,'resources-pinned');
+    assert.deepEqual(await readFile(orphan),orphanBytes);
+    const candidates=await core.generationCandidates({sessionId:current,taskId:task.id});
+    assert.equal(candidates.length,1);assert.equal(candidates[0].proposal.formula,invalid.formula);
+    const resumed=await core.agent.continue({sessionId:current,taskId:task.id,operationId:'continue-after-retention'});
+    const active={sessionId:current,taskId:resumed.id,attemptId:resumed.attemptId,generation:resumed.generation};
+    const basis=await core.readAgentGeneration(active);
+    assert.deepEqual(basis.pendingStages,['lesson','practice']);
+    const published=await core.publishAgentGeneration({...active,input:lesson(basis,'correct-after-retention')});
+    assert.equal(published.status,'committed');
+    const next=await core.readAgentGeneration(active);
+    assert.equal((await core.publishAgentGeneration({...active,input:practice(next,'practice-after-retention')})).status,'committed');
+    await core.recordAgent({...active,eventId:'retention-completed',kind:'finish',status:'completed'});
+    await core.retention.resourceLease({sessionId:current,id:'backup-while-generation-pending',action:'release'});
+    assert.equal((await drain()).phase,'idle');
+    assert.equal((await core.formalHistory.detail({sessionId:current,operationId:published.operationId})).operationId,published.operationId,
+      'new publication uses the same course history clock as retention');
+    await assert.rejects(readFile(orphan),/ENOENT/);
+    const original=await core.sources.readResource({sessionId:current,versionId:basis.source.versionId,begin:0,end:4});
+    assert.equal(Buffer.from(original.bytes).toString(),'%PDF');
+    const page=await core.parsing.artifact({sessionId:current,artifactId:basis.artifact.artifactId});
+    const raster=page.resources.find(resource=>resource.mediaType==='image/png')!;
+    const image=await core.parsing.readResource({sessionId:current,artifactId:basis.artifact.artifactId,sha256:raster.sha256,begin:0,end:8});
+    assert.deepEqual([...image.bytes],[137,80,78,71,13,10,26,10]);
+    assert.equal((await core.readUnit(current,basis.spec.unitId)).reading.blocks.filter(block=>block.kind==='exercise').length,2);
+    assert.deepEqual((await core.read(current)).unit,opened.unit);
+    assert.deepEqual(await core.queryAgentGeneration({...identity,sessionId:current,operationId:'retained-before-cleanup'}),failed);
+  }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+
+test('retention expires a withdrawn generated creation without losing its result identity or reviving tombstones',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'yizhi-generation-retired-'));
+  const clock=new SharedArrayBuffer(8),start=Date.parse('2030-01-01T00:00:00Z');
+  Atomics.store(new BigInt64Array(clock),0,BigInt(start));
+  const core=new CourseService(resolve('dist/worker.cjs'),{retentionScheduling:{clock,manual:true}});
+  try{
+    const {sessionId,task,opened}=await prepared(core,root),identity={sessionId,taskId:task.id,attemptId:task.attemptId,generation:task.generation};
+    const basis=await core.readAgentGeneration(identity);
+    const published=await core.publishAgentGeneration({...identity,input:lesson(basis,'creation-before-retirement')});
+    assert.equal(published.status,'committed');
+    await core.recordAgent({...identity,eventId:'finished-before-retirement',kind:'finish',status:'completed'});
+    const withdrawn=await core.formalHistory.apply({sessionId,operationId:'retire-before-cleanup',
+      preview:await core.formalHistory.preview({sessionId,selection:{kind:'operations',operationIds:[published.operationId]}})});
+    assert.equal(withdrawn.status,'committed',JSON.stringify(withdrawn.conflicts));
+    Atomics.store(new BigInt64Array(clock),0,BigInt(start+150*86_400_000));
+    let result=await core.retention.run({sessionId,limit:64});
+    for(let i=0;result.pending&&i<500;i++)result=await core.retention.run({sessionId,limit:64});
+    assert.equal(result.phase,'idle',JSON.stringify(result));
+    await assert.rejects(core.formalHistory.detail({sessionId,operationId:published.operationId}),/过期/);
+    assert.deepEqual(await core.queryAgentGeneration({...identity,operationId:'creation-before-retirement'}),published);
+    assert.deepEqual(await core.formalHistory.query({sessionId,operationId:withdrawn.operationId}),withdrawn);
+    await assert.rejects(core.readUnit(sessionId,basis.spec.unitId),/不存在/);
+    assert.equal((await core.graph(sessionId)).nodes.some(node=>node.id===basis.spec.unitId),false);
+    assert.deepEqual((await core.read(sessionId)).unit,opened.unit);
+    const original=await core.sources.readResource({sessionId,versionId:basis.source.versionId,begin:0,end:4});
+    assert.equal(Buffer.from(original.bytes).toString(),'%PDF');
   }finally{await core.close();await rm(root,{recursive:true,force:true});}
 });
 

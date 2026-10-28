@@ -1,3 +1,4 @@
+import { historyTimestamp } from './history-clock';
 import { objectVersions, unitChanges } from './history-objects';
 import { changedCouplings } from './consistency-links';
 import type { ConsistencyPort } from './command-consistency';
@@ -58,6 +59,7 @@ export class CommandGroups {
     }
     this.protections.set(input.editorId, structuredClone(input));
   }
+  protectsBlock(id:string){return [...this.protections.values()].some(p=>p.blockIds.includes(id));}
   /** Shared Core publication fence; the renderer cannot call this query. */
   protectedWrites(ids: string[]) {
     for (const row of this.db.prepare('SELECT payload FROM units').all()) {
@@ -369,7 +371,7 @@ export class CommandGroups {
         const normalized = [...bodyChanges,...changes.filter(c=>!bodyIds.has(c.objectId))];
         const history: GroupHistory = { operationId: command.operationId, attemptId: command.attemptId,
           taskId: String(attempt.task_id), generation: this.generation(), revision: nextRevision,
-          committedAt: new Date().toISOString(), changes: normalized };
+          committedAt: historyTimestamp(), changes: normalized };
         this.db.prepare('INSERT INTO cg_history VALUES (?, ?)').run(command.operationId, json(history));
       }
       this.consistency?.committed?.(result);

@@ -1,3 +1,4 @@
+import { historyTimestamp } from './history-clock';
 import { initializeHistoryIndex } from './history-index';
 import type { BuiltinExperiments } from './builtin-experiments';
 import type { FormalRelations } from './formal-relations';
@@ -11,7 +12,7 @@ import { syncAnnotations } from './annotations';
 import { equal } from '../editor-api';
 import type { DatabaseSync } from 'node:sqlite';
 import type { CourseUnit, ReadingBlock } from '../shared';
-import { createHash } from 'node:crypto';
+import { createHash,randomUUID } from 'node:crypto';
 import { transaction, appendEvent, eventCursor, readDrafts } from './save-store';
 import type { CommandGroups } from './command-groups';
 import type { AgentStore } from './agent-store';
@@ -19,6 +20,10 @@ import type { HistoryPreview, HistoryResult, HistorySelection, HistoryGroup, His
 const parse=(v:unknown)=>JSON.parse(String(v));
 /** Adapts existing formal records; no second copy of historical content. */
 export class FormalHistory {
+  private pins=new Map<string,Set<string>>();
+  pinned(operationId:string){return [...this.pins.values()].some(ids=>ids.has(operationId));}
+  release(pinId:string){this.pins.delete(pinId);}
+  releaseGeneration(){this.pins.clear();}
   constructor(private db:DatabaseSync, private commands:CommandGroups, private agent:AgentStore, private graph:CourseGraph, private relations:FormalRelations, private experiments:BuiltinExperiments) {initializeHistoryIndex(db);}
   private hash(value:unknown) {return createHash('sha256').update(JSON.stringify(value)).digest('hex');}
   currentObject(id:string){return this.object(id);}
@@ -51,7 +56,11 @@ export class FormalHistory {
   }
   private unsupportedReason(ids:string[]) {return `尚不支持这些结构对象的完整恢复，整个一致组保留：${ids.join('、')}`;}
   private selected(selection:HistorySelection) {
-    if(selection.kind==='task')return this.groups().filter(g=>g.taskId===this.taskRoot(selection.taskId));
+    if(selection.kind==='task'){
+      const root=this.taskRoot(selection.taskId);
+      if(this.db.prepare('SELECT task_id FROM history_expired WHERE task_id IS NOT NULL').all().some(r=>this.taskRoot(String(r.task_id))===root))throw new Error('此任务部分明细已过期清理，不能声称撤回整个任务；请选择仍可恢复的修改');
+      return this.groups().filter(g=>g.taskId===root);
+    }
     if(!Array.isArray(selection.operationIds)||!selection.operationIds.length||selection.operationIds.length>1000)throw new Error('无效的撤回范围');
     return [...new Set(selection.operationIds)].map(id=>this.detail(id)).sort((a,b)=>a.order.localeCompare(b.order));
   }
@@ -75,7 +84,7 @@ export class FormalHistory {
   /** A projection from stored object differences; does not execute or replay old commands. */
   courseProjection(unitIds:string[],atOperationId:string,side:'before'|'after',includeLayout=false) {
     const anchor=this.detail(atOperationId),scope=new Set(unitIds),desired=new Map<string,Record<string,any>|null>();
-    const groups=this.groups(),later=groups.filter(g=>g.order>anchor.order||(side==='before'&&g.operationId===anchor.operationId)).reverse();
+    const groups=this.groups(true),later=groups.filter(g=>g.order>anchor.order||(side==='before'&&g.operationId===anchor.operationId)).reverse();
     const owned=new Set<string>(),children=new Map<string,Set<string>>();
     for(const id of unitIds){const row=this.db.prepare('SELECT payload FROM units WHERE id=?').get(id);if(row)for(const objectId of unitObjects(parse(row.payload)).keys())owned.add(objectId);owned.add(`structure:${id}`);owned.add(`unit:${id}`);owned.add(`graph:${id}`);}
     // Stable historical membership also covers blocks removed from today's projection.
@@ -112,6 +121,11 @@ export class FormalHistory {
     return {changes:actual,publish:()=>{for(const p of publications)p();}};
   }
   preview(p:any):HistoryPreview {
+    const preview=this.buildPreview(p),retentionPin=randomUUID();
+    this.pins.set(retentionPin,new Set(preview.kind==='restore'?this.groups(true).filter(g=>g.order>=preview.groups[0].order).map(g=>g.operationId):preview.groups.map(g=>g.operationId)));
+    return {...preview,retentionPin};
+  }
+  private buildPreview(p:any):HistoryPreview {
     let groups:HistoryGroup[],unit:CourseUnit|undefined,guardIds:string[]=[];
     const kind=p.selection?'undo':'restore';
     if(p.selection)groups=this.selected(p.selection);
@@ -123,7 +137,7 @@ export class FormalHistory {
       if(!row)throw new Error('单元不存在');
       const current:CourseUnit=parse(row.payload), desired=new Map<string,Record<string,any>|null>();
       const scope=new Set<string>([p.unitId]);
-      const later=this.groups().filter(g=>g.order>anchor.order||(p.side==='before'&&g.operationId===anchor.operationId)).reverse();
+      const later=this.groups(true).filter(g=>g.order>anchor.order||(p.side==='before'&&g.operationId===anchor.operationId)).reverse();
       // Retake only this unit's content plus complete necessary domains in its original aggregates.
       for(const g of later)if(g.unitIds.includes(p.unitId)) {
         const unsupported=this.unsupported(g.changes);
@@ -173,7 +187,7 @@ export class FormalHistory {
     }
     const publications:Array<()=>void>=[];
     const committed=transaction(this.db,()=>{
-      const fresh=this.preview(p.preview), result:HistoryResult={operationId:p.operationId,status:'conflict',applied:[],conflicts:[],changedObjectIds:[],cursor:eventCursor(this.db)};
+      const fresh=this.buildPreview(p.preview), result:HistoryResult={operationId:p.operationId,status:'conflict',applied:[],conflicts:[],changedObjectIds:[],cursor:eventCursor(this.db)};
       if(fresh.token!==p.preview.token) result.conflicts.push({operationId:p.operationId,objectIds:fresh.affectedObjectIds,reason:'预览后相关内容或草稿已变化，请重新预览'});
       else {
         const logical=new Map<string,number>(), combined=new Map<string,HistoryChange>();
@@ -209,7 +223,7 @@ export class FormalHistory {
           }
           result.cursor=appendEvent(this.db,{type:'group.committed',operationId:p.operationId,revision:Math.max(...fresh.unitIds.map(id=>Number(this.db.prepare('SELECT revision FROM units WHERE id=?').get(id)?.revision??1))),changedObjectIds:result.changedObjectIds});
           this.db.prepare('INSERT INTO cg_candidates VALUES(?,?,?,?)').run(p.operationId,digest,'{}',JSON.stringify({...result,domain:'history'}));
-          this.db.prepare('INSERT INTO cg_history VALUES(?,?)').run(p.operationId,JSON.stringify({operationId:p.operationId,actor:'student',unitIds:fresh.unitIds,explanation:fresh.kind==='undo'?'撤回所选修改':'恢复单元旧内容',generation:Number(this.db.prepare("SELECT value FROM metadata WHERE key='generation'").get()!.value),revision:Math.max(1,...fresh.unitIds.map(id=>Number(this.db.prepare('SELECT revision FROM units WHERE id=?').get(id)?.revision??1))),recovery:{kind:fresh.kind,sourceOperationIds:fresh.groups.map(g=>g.operationId),unitId:fresh.unitId,side:fresh.side,includeLayout:fresh.includeLayout},committedAt:new Date().toISOString(),changes:[...combined.values()]}));
+          this.db.prepare('INSERT INTO cg_history VALUES(?,?)').run(p.operationId,JSON.stringify({operationId:p.operationId,actor:'student',unitIds:fresh.unitIds,explanation:fresh.kind==='undo'?'撤回所选修改':'恢复单元旧内容',generation:Number(this.db.prepare("SELECT value FROM metadata WHERE key='generation'").get()!.value),revision:Math.max(1,...fresh.unitIds.map(id=>Number(this.db.prepare('SELECT revision FROM units WHERE id=?').get(id)?.revision??1))),recovery:{kind:fresh.kind,sourceOperationIds:fresh.groups.map(g=>g.operationId),unitId:fresh.unitId,side:fresh.side,includeLayout:fresh.includeLayout},committedAt:historyTimestamp(),changes:[...combined.values()]}));
         }
       }
       if(!this.db.prepare('SELECT 1 FROM cg_candidates WHERE id=?').get(p.operationId))this.db.prepare('INSERT INTO cg_candidates VALUES(?,?,?,?)').run(p.operationId,digest,'{}',JSON.stringify({...result,domain:'history'}));
@@ -335,7 +349,8 @@ export class FormalHistory {
     while(!seen.has(id)) { seen.add(id); const row=this.db.prepare('SELECT payload FROM agent_tasks WHERE id=?').get(id); const previous=row&&parse(row.payload).continuesTaskId; if(!previous)return id; id=previous; }
     throw new Error('任务继续链无效');
   }
-  private rawDetail(operationId:string):HistoryGroup {
+  private rawDetail(operationId:string,windowReference=false):HistoryGroup {
+    if(!windowReference&&this.db.prepare('SELECT 1 FROM history_expired WHERE operation_id=?').get(operationId))throw new Error('此修改明细已过期清理，不能恢复；请使用仍可恢复的时间范围');
     const index=this.db.prepare('SELECT * FROM history_index WHERE operation_id=?').get(operationId);
     const order=String(index?.seq??0).padStart(16,'0');
     if(index?.source==='placement') {
@@ -371,13 +386,13 @@ export class FormalHistory {
     return {operationId,activityId:`edit:${receipt.sessionId}:${Math.floor(Date.parse(committedAt)/300000)}`,actor:'student',committedAt,explanation:'学生编辑正文',unitIds:[String(row.unit_id)],changes,
       order,source:'student'};
   }
-  detail(operationId:string):HistoryGroup {
-    const group=this.rawDetail(operationId);
+  detail(operationId:string,windowReference=false):HistoryGroup {
+    const group=this.rawDetail(operationId,windowReference);
     if(group.changes.every(c=>c.afterVersion>0))return group;
     // Earlier student records did not store cg revisions. Walk only their affected object's
     // subsequent formal changes backwards from the live monotonic revision, checking every value.
     // Never use equality alone to declare an old write conflict-free (ABA still consumes revisions).
-    const later=this.db.prepare('SELECT operation_id FROM history_index WHERE seq>? ORDER BY seq DESC').all(Number(group.order)).map(r=>this.rawDetail(String(r.operation_id)));
+    const later=this.db.prepare('SELECT operation_id FROM history_index WHERE seq>? AND (operation_id NOT IN(SELECT operation_id FROM history_expired) OR operation_id IN(SELECT operation_id FROM history_window_refs)) ORDER BY seq DESC').all(Number(group.order)).map(r=>this.rawDetail(String(r.operation_id),true));
     const canonical=(v:any)=>v?.retired?null:v;
     for(const c of group.changes)if(!c.afterVersion) {
       let {value,version}=this.object(c.objectId),valid=true;
@@ -392,10 +407,10 @@ export class FormalHistory {
     }
     return group;
   }
-  private ids():string[] {
-    return this.db.prepare('SELECT operation_id AS id FROM history_index ORDER BY seq').all().map(r=>String(r.id));
+  private ids(windowReferences=false):string[] {
+    return this.db.prepare(`SELECT operation_id AS id FROM history_index WHERE operation_id NOT IN(SELECT operation_id FROM history_expired) ${windowReferences?'OR operation_id IN(SELECT operation_id FROM history_window_refs)':''} ORDER BY seq`).all().map(r=>String(r.id));
   }
-  groups():HistoryGroup[] {return this.ids().map(id=>this.detail(id)).sort((a,b)=>a.order.localeCompare(b.order));}
+  groups(windowReferences=false):HistoryGroup[] {return this.ids(windowReferences).map(id=>this.detail(id,windowReferences)).sort((a,b)=>a.order.localeCompare(b.order));}
   list(request:{unitId?:string;limit?:number;before?:string}) {
     const limit=request.limit??20;
     if(!Number.isSafeInteger(limit)||limit<1||limit>100||(request.before!==undefined&&!/^\d{16}$/.test(request.before)))throw new Error('无效的历史分页');
@@ -404,7 +419,7 @@ export class FormalHistory {
     for(const r of this.db.prepare('SELECT id FROM agent_tasks').all())roots.set(String(r.id),this.taskRoot(String(r.id)));
     const taskRoot=(id:string|null)=>id?roots.get(id)??id:null;
     const activities=new Map<string,HistoryActivity>();
-    const rows=this.db.prepare('SELECT * FROM history_index WHERE (? IS NULL OR EXISTS(SELECT 1 FROM json_each(unit_ids) WHERE value=?)) ORDER BY seq').all(request.unitId??null,request.unitId??null);
+    const rows=this.db.prepare('SELECT * FROM history_index WHERE operation_id NOT IN(SELECT operation_id FROM history_expired) AND (? IS NULL OR EXISTS(SELECT 1 FROM json_each(unit_ids) WHERE value=?)) ORDER BY seq').all(request.unitId??null,request.unitId??null);
     for(const row of rows) {
       const taskId=taskRoot(row.task_id as string|null)??undefined,id=taskId?`task:${taskId}`:String(row.activity_id),order=String(row.seq).padStart(16,'0');
       const a=activities.get(id)??{id,actor:row.actor as HistoryActivity['actor'],taskId,committedAt:String(row.committed_at),explanation:String(row.explanation),unitIds:[],operationIds:[],affectedObjectIds:[],order};
@@ -415,10 +430,11 @@ export class FormalHistory {
     const page=sorted.slice(0,limit);return {activities:page,...(sorted.length>limit?{next:page.at(-1)!.order}:{})};
   }
   dispatch(action:string,p:any):unknown {
+    if(action==='formalHistory:release')return this.release(p.pinId);
     if(action==='formalHistory:list')return this.list(p);
     if(action==='formalHistory:detail')return this.detail(p.operationId);
     if(action==='formalHistory:preview')return this.preview(p);
-    if(action==='formalHistory:apply')return this.apply(p);
+    if(action==='formalHistory:apply'){const result=this.apply(p);this.release(p.preview.retentionPin);return result;}
     if(action==='formalHistory:query')return this.query(p.operationId);
     throw new Error('未知历史操作');
   }

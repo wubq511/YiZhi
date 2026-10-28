@@ -1,3 +1,4 @@
+import { historyTimestamp } from './history-clock';
 import { Worker } from 'node:worker_threads';
 import type { DatabaseSync } from 'node:sqlite';
 import { createHash, randomUUID } from 'node:crypto';
@@ -12,7 +13,7 @@ import type { SourceCommand } from '../sources-api';
 const encode = JSON.stringify;
 const digest = (value: unknown) => createHash('sha256').update(encode(value)).digest('hex');
 const validId = (value: unknown): value is string => typeof value === 'string' && value.length > 0 && value.length <= 200;
-const now = () => new Date().toISOString();
+const now = () => historyTimestamp();
 
 /** SQLite authority in the one Core; page tools own no database and never hold its dispatch queue. */
 export class Parsing {

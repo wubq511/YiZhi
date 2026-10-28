@@ -14,6 +14,7 @@ import { assignments, formulaOutputs } from './builtin-model';
 import { readDrafts,draftReadVersions,draftVersion,transaction,appendEvent } from './save-store';
 import { selectorEvidence, exampleEvidence } from './generation-evidence';
 import { initializeGenerationLifecycle,graphObjectRevision,layoutRevision,bumpLayoutRevision } from './generation-lifecycle';
+import { historyTimestamp } from './history-clock';
 
 const json=(v:unknown)=>JSON.stringify(v);
 const hash=(v:unknown)=>createHash('sha256').update(json(v)).digest('hex');
@@ -366,7 +367,7 @@ export class Generation {
         this.db.prepare('INSERT INTO cg_candidates VALUES(?,?,?,?)').run(operationId,digest,json({domain:'generation',attemptId:task.attemptId,operationId}),json(receipt));
         this.db.prepare('INSERT INTO cg_history VALUES(?,?)').run(operationId,json({operationId,taskId:task.id,attemptId:task.attemptId,actor:'agent',domain:'generation',
           unitIds:[spec.unitId],explanation:input.stage==='lesson'?'从新增来源发布小主题':'为已发布小主题追加练习',
-          generation:task.generation,revision,committedAt:new Date().toISOString(),changes}));
+          generation:task.generation,revision,committedAt:historyTimestamp(),changes}));
         this.agent.group(receipt);
         return receipt;
       });

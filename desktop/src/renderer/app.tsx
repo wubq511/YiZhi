@@ -1,4 +1,5 @@
 import { CourseRestorePanel } from './course-restore-panel';
+import { RetentionPanel } from './retention-panel';
 import { HistoryPanel,type HistoryPanelHandle } from './history-panel';
 import { Drawings, type DrawingHandle } from './drawings';
 import { ExchangePanel } from './exchange-panel';
@@ -476,6 +477,12 @@ function App() {
   const status = { draft: '草稿已保留', saved: '已保存', pending: '待保存', saving: '正在保存…', error: '未保存' }[state.status];
   return <>
     <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen || sourcesOpen || agentOpen || notesOpen || searchOpen || exchangeOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
+      {course&&<RetentionPanel key={course.sessionId} sessionId={course.sessionId} prepare={async()=>{
+        if(composing.current)throw new Error('请先完成中文候选输入，再管理历史与空间。');
+        const saved=await channel.current?.flush(),progress=channel.current?.progress();
+        if(!saved&&(!progress||progress.durableInputSeq<progress.inputSeq))throw new Error('当前输入尚未保留，请先重试保存。');
+        if(continuous.current&&!await continuous.current.finish()||!await flushUnitInputs(true))throw new Error('当前单元输入尚未保留，请先重试保存。');
+      }}/>}
       {course&&graph&&<CourseRestorePanel sessionId={course.sessionId} courseId={course.courseId} units={graph.nodes.map(n=>({id:n.id,name:n.name}))} prepare={async()=>{
         if(composing.current)throw new Error('请先完成中文候选输入，再核对整课恢复。');
         await navigation.current;await writes.current;await layoutWrites.current;

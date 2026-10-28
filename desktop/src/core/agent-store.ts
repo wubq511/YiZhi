@@ -1,3 +1,4 @@
+import { historyTimestamp } from './history-clock';
 import type { DatabaseSync } from 'node:sqlite';
 import { createHash, randomUUID } from 'node:crypto';
 import type { AgentEvent, AgentTask, AgentMessage, ConversationView, QuestionSnapshot, SubmitQuestion } from '../agent-api';
@@ -82,7 +83,7 @@ export class AgentStore {
   }
   create(request: any) {
     return this.operation(request, 'agent:create', () => {
-      const conversation = { id: randomUUID(), title: '新学习对话', updatedAt: new Date().toISOString() };
+      const conversation = { id: randomUUID(), title: '新学习对话', updatedAt: historyTimestamp() };
       this.db.prepare('INSERT INTO agent_conversations(id,title,updated_at) VALUES(?,?,?)').run(conversation.id, conversation.title, conversation.updatedAt);
       this.select(conversation.id); this.changed(conversation.id); return conversation;
     });
@@ -171,10 +172,10 @@ export class AgentStore {
         current.integrationRounds = 0;
         this.message({ id: `${current.id}:${delivery.id}`, taskId: current.id, role: 'user', text: request.text,
           state: 'complete', itemId: null, deliveryId: delivery.id });
-        this.db.prepare("UPDATE agent_conversations SET draft='',draft_context='{}',updated_at=? WHERE id=?").run(new Date().toISOString(), current.conversationId);
+        this.db.prepare("UPDATE agent_conversations SET draft='',draft_context='{}',updated_at=? WHERE id=?").run(historyTimestamp(), current.conversationId);
         return this.saveTask(current);
       }
-      const id = randomUUID(), attemptId = randomUUID(), createdAt = new Date().toISOString();
+      const id = randomUUID(), attemptId = randomUUID(), createdAt = historyTimestamp();
       // Same shared qualification table and generation as all producer commits, created atomically with the task.
       this.db.prepare('INSERT INTO cg_attempts VALUES(?,?,?,?)').run(attemptId, id, request.generation, 'running');
       const task: AgentTask = { id, operationId: request.operationId, conversationId: request.conversationId, attemptId, generation: request.generation,
@@ -195,7 +196,7 @@ export class AgentStore {
       if (delivery.handledTaskId) return this.task(delivery.handledTaskId);
       const unfinished = this.db.prepare('SELECT payload FROM agent_tasks ORDER BY rowid').all().map(r => parse(r.payload) as AgentTask)
         .filter(t => ['running','waiting','queued','stopping'].includes(t.status));
-      const snapshot = structuredClone(delivery.snapshot), id = randomUUID(), attemptId = randomUUID(), createdAt = new Date().toISOString();
+      const snapshot = structuredClone(delivery.snapshot), id = randomUUID(), attemptId = randomUUID(), createdAt = historyTimestamp();
       const blockedBy = unfinished.filter(t => t.conversationId === parent.conversationId || snapshot.intent !== 'question' && t.snapshot.intent !== 'question').map(t => t.id);
       const child: AgentTask = { id, operationId: `guided:${delivery.id}`, conversationId: parent.conversationId, attemptId, generation: parent.generation,
         snapshot, status: 'queued', blockedBy, threadId: null, turnId: null, model: delivery.model ?? parent.model, error: null, createdAt, cursor: 0,
@@ -332,6 +333,9 @@ export class AgentStore {
       note: '当前正式内容与版本；提交时的对象、选文和版本在 submittedTarget 中固定。普通问答不修改画板。' };
   }
   private message(message: AgentMessage) { this.db.prepare('INSERT INTO agent_messages VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload').run(message.id, message.taskId, JSON.stringify(message)); }
+  private recoveryNeeded(task:AgentTask) {
+    return task.generation===this.generation()&&(['running','queued','waiting','stopping'].includes(task.status)||task.status==='unknown'&&task.recovery?.state!=='resolved');
+  }
   private finish(task: AgentTask, status: AgentTask['status'], error?: string) {
     const executorCompleted = status === 'completed', executorUnknown=status==='unknown';
     if (['completed','failed','interrupted','unknown'].includes(status)) task.executorStatus = status as AgentTask['executorStatus'];
@@ -350,10 +354,10 @@ export class AgentStore {
       const message = parse(row.payload) as AgentMessage;
       if (message.role === 'assistant') { message.state = executorCompleted && message.state === 'complete' ? 'complete' : 'partial'; this.message(message); }
     }
-    if (task.status !== 'waiting') {
-      this.db.prepare("UPDATE cg_attempts SET status='stopped' WHERE id=?").run(task.attemptId);
+    if (task.status !== 'waiting') this.db.prepare("UPDATE cg_attempts SET status='stopped' WHERE id=?").run(task.attemptId);
+    if (!this.recoveryNeeded(task)) {
       this.db.prepare("UPDATE cg_bases SET read_values='[]',domain_basis=NULL WHERE attempt_id=?").run(task.attemptId);
-      // Completed/unknown attempts never need a permanent duplicate of whole tool reads.
+      // Once business recovery ends, keep result identity rather than duplicate whole reads.
       this.db.prepare("UPDATE agent_tool_recovery SET input=NULL,output=NULL,purpose='result-fact' WHERE attempt_id=?").run(task.attemptId);
     }
     task.cursor = this.changed(task.conversationId, task.id);
@@ -398,7 +402,7 @@ export class AgentStore {
         this.applyReceipt(parse(row.payload));
         this.db.prepare("UPDATE agent_executor_receipts SET applied=1 WHERE attempt_id=? AND event_id=?").run(row.attempt_id,row.event_id);
         const task=this.task(String(row.reference_id));
-        if(!['running','stopping'].includes(task.status))this.db.prepare("UPDATE agent_executor_receipts SET payload=NULL,purpose='result-fact' WHERE attempt_id=? AND applied=1").run(task.attemptId);
+        if(!this.recoveryNeeded(task))this.db.prepare("UPDATE agent_executor_receipts SET payload=NULL,purpose='result-fact' WHERE attempt_id=? AND applied=1").run(task.attemptId);
       });
     }
   }
