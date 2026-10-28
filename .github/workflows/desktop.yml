@@ -16,9 +16,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  desktop:
+  desktop-tests:
+    name: desktop-tests (${{ matrix.core }}, UI ${{ matrix.shard }}/2)
     runs-on: macos-15
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - core: node
+            command: test:built
+            shard: 1
+          - core: electron
+            command: test:electron:built
+            shard: 2
     defaults:
       run:
         working-directory: desktop
@@ -30,15 +41,37 @@ jobs:
           cache: npm
           cache-dependency-path: desktop/package-lock.json
       - run: npm ci
+      - run: npm run test:runner
+        if: matrix.core == 'node'
+      - run: npm run test:ui:coverage
+        if: matrix.core == 'node'
+      - run: npm run build
+        id: build
       - run: npm run typecheck
-      - run: npm test
-      - run: npm run test:electron
-      - run: npm run test:smoke
+        if: matrix.core == 'node'
+      - name: Full ${{ matrix.core }} Core suite
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: npm run ${{ matrix.command }}
+      - name: UI shard ${{ matrix.shard }}/2 (one visible worker)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: npm run test:smoke:built -- --shard=${{ matrix.shard }}/2 --workers=1
       - name: Upload failed desktop UI evidence
         if: failure()
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: desktop-ui-failure-${{ github.run_attempt }}
+          name: desktop-ui-${{ matrix.core }}-shard-${{ matrix.shard }}-${{ github.run_attempt }}
           path: desktop/test-results/
           if-no-files-found: ignore
           retention-days: 7
+
+  # Preserve the required-check name. No failure/cancellation/skip may become green.
+  desktop:
+    if: ${{ always() }}
+    needs: desktop-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require both Core runtimes and both UI shards
+        env:
+          CHECK_RESULT: ${{ needs.desktop-tests.result }}
+        run: test "$CHECK_RESULT" = success

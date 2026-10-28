@@ -17,11 +17,19 @@ npm start
 ## 验证
 
 ```sh
-npm run typecheck
-npm test
-npm run test:electron
-npm run test:smoke
+npm run verify
+npm run test:smoke:built
 ```
+
+`verify` 先独占构建一次，然后按可用 CPU 预算并行执行运行器回归、typecheck、完整 Node Core 和完整 Electron Core。为前两项预留预算，两套 Core 共同分配剩余文件并发度；小于 4 CPU 时分阶段执行，1 CPU 时全部串行。日志标记检查名称，任一失败或信号退出均返回非零，并等待其他检查完成。可用 `npm run verify -- --cpus=4` 限制预算，或 `--sequential` 比较串行耗时。一个 checkout 的 `dist` 同时只交给一个构建／验证命令。
+
+`test:built`、`test:electron:built`、`test:smoke:built` 消费当前已完成的构建，不自动重建；修改源代码后先重新 `build` 或 `verify`。原 `npm test`、`test:electron`、`test:smoke` 仍会自动构建，可独立使用。`test:runner` 通过独立临时工作目录检查运行器的完整发现、并发预算、构建先后与失败退出。
+
+CI 将完整 UI 分为两片，各使用一台独立 macOS runner 和一个 Playwright worker，同时分别覆盖 Node／Electron Core，每台只构建一次；`desktop` 汇总检查只有两片都成功才成功。`npm run test:ui:coverage` 用 Playwright 实际发现结果检查两片并集恰为完整套件且无重复，`-- --json` 可输出逐用例归属。所有既有真实模型／安装包等 opt-in 条件保持不变。
+
+本机 UI 保持 `workers: 1`：39 个现有 spec 文件都启动真实 Electron 并取得原生窗口。编辑／保护／批注用例依赖焦点、选区、公式输入与 composition；`editor.spec.ts` 还读写和恢复系统剪贴板。`learning-lifecycle.spec.ts` 主动前置多个窗口，窗口／来源／打包用例覆盖宿主生命周期或原生 chooser 归属。扩展和实验依赖实际可见性、离屏暂停与计时；画板用例依赖窗口几何和真实 wheel。独立课程目录和 profile 能隔离数据，不能隔离这些桌面资源。
+
+当前没有可直接并发且值得单独调度的无桌面 UI 子集。最接近的 `camera-observation.spec.ts` 虽只读取 CSS Typed OM，仍启动完整可见应用并等待 rAF；把它改为隐藏窗口或另一浏览器会改变该回归的运行前提，而仅拆这一小例的收益不足以抵消额外启动／调度。纯计算和 Worker／SQLite 检查已经位于可并行的 Core 套件。共享本机的 UI／物理输入验收继续串行；UI 的并行收益来自独立 hosted runner，而非本机增加 worker。这里是现有源码边界评估，未声称做过本机多 GUI 并发性能验证。
 
 `test:electron` 在锁定 Electron 的内置 Node 中运行同一组真实 Worker／SQLite 测试；`test:smoke` 自动发现 `**/*.spec.ts`，使用 Playwright 驱动真实 Electron、公开 preload IPC 和编辑区，验证连续输入／拆合／复制与移动、公式内外撤销、独立外部更新后撤销、完整结构重开、失败保留／重试、关闭保存屏障、强杀后的草稿恢复、应用单实例与跨应用课程锁。Node 测试仍只发现 `*.test.ts`。所有写入和故障注入均使用临时课程副本。测试截图和构建产物不进入 Git。
 
