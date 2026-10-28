@@ -5,6 +5,7 @@ import { cp } from 'node:fs/promises';
 import { join,resolve,dirname,basename } from 'node:path';
 import { acquireLegacyLease,coursePath,legacySaveBarrier } from './migration';
 import { hashFile } from './immutable-resource';
+import { declaredResourceRoots } from './retention-resources';
 const schema='yizhi-directory-transition-1',sourceMarker=(root:string)=>existsSync(join(root,'课程.json'))?join(root,'.review-board','directory-transition.json'):join(root,'directory-transition.json'),targetMarker=(root:string)=>join(root,'directory-authority.json');
 const parse=(p:string)=>JSON.parse(readFileSync(p,'utf8'));
 const equal=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
@@ -31,14 +32,7 @@ export function sealDirectory(root:string){
  const proof={databaseSha256:hashFile(join(root,'course.sqlite')).sha256,resources:[] as Array<{path:string;sha256:string;byteLength:number}>};
  const db=new DatabaseSync(join(root,'course.sqlite'),{readOnly:true});
  try{
-  const required=new Map<string,number|undefined>();
-  const add=(r:any)=>{if(!r||typeof r.sha256!=='string'||!/^[a-f0-9]{64}$/.test(r.sha256))throw new Error('登记资源缺少可核对摘要');const size=r.byteLength??r.size,previous=required.get(r.sha256);if(previous!==undefined&&size!==undefined&&previous!==size)throw new Error('同一登记资源的长度事实不一致');required.set(r.sha256,size??previous);};
-  const read=(table:string,column:string)=>db.prepare("SELECT 1 FROM sqlite_master WHERE name=?").get(table)?db.prepare(`SELECT ${column} payload FROM ${table}`).all().map(r=>JSON.parse(String(r.payload))):[];
-  for(const v of read('source_versions','payload'))add(v);
-  for(const v of read('parse_artifacts','payload')){add(v.resource);for(const r of v.resources??[])add(r);}
-  for(const v of read('exchange_resources','payload'))add(v);
-  for(const v of read('extension_packages','manifest'))for(const r of v.resources??[])add(r);
-  const legacy=db.prepare("SELECT value FROM metadata WHERE key='legacy-content'").get();if(legacy)for(const r of JSON.parse(String(legacy.value)).report.resources)add(r);
+  const required=new Map(declaredResourceRoots(db).map(r=>[r.sha256,r.byteLength??undefined]));
   for(const [sha,size] of required){const file=join(root,'resources',sha);if(!existsSync(file))throw new Error('登记资源缺失：'+sha);const actual=hashFile(file);if(actual.sha256!==sha||size!==undefined&&actual.byteLength!==size)throw new Error('登记资源摘要或长度不符：'+sha);}
  }finally{db.close();}
  const folder=join(root,'resources');if(existsSync(folder))for(const name of readdirSync(folder).sort()){
@@ -129,6 +123,30 @@ export async function prepareDirectory(request:{sourceDirectory:string;contentCa
 async function gate(buffer?:SharedArrayBuffer){if(!buffer)return;const flag=new Int32Array(buffer);Atomics.store(flag,0,1);Atomics.notify(flag,0);while(Atomics.load(flag,0)===1)await new Promise(r=>setTimeout(r,10));}
 /** T26 supplies its own quiesced-source lease and verified upgrade stage; no legacy conversion is required. */
 export interface DirectoryPublicationLease {assertHeld():void|Promise<void>;close():Promise<void>}
+/** New-format consumers use the SAME source/target facts and sealing protocol as legacy migration. */
+export async function beginVerifiedDirectory(decision:Omit<DirectoryDecision,'proof'>,lease:DirectoryPublicationLease){
+ await lease.assertHeld();
+ if(decision.kind!=='format-upgrade'||decision.phase!=='verified'||decision.abandonedAt||!decision.id||!decision.operationId||decision.sourceDirectory===decision.targetDirectory)throw new Error('升级准备身份无效');
+ if(existsSync(archivePath(decision.sourceDirectory,decision.operationId)))throw new Error('此升级身份已放弃，不能重新绑定');
+ if(existsSync(sourceMarker(decision.sourceDirectory))&&!checked(sourceMarker(decision.sourceDirectory)).abandonedAt)throw new Error('原目录已有切换准备，请先核对或放弃原准备');
+ if(existsSync(decision.targetDirectory))throw new Error('升级工作副本必须使用全新目录');
+ mkdirSync(decision.targetDirectory);
+ durableDecision(targetMarker(decision.targetDirectory),{...decision,proof:{databaseSha256:'',resources:[]}});
+}
+export async function prepareVerifiedDirectory(decision:Omit<DirectoryDecision,'proof'>,lease:DirectoryPublicationLease){
+ await lease.assertHeld();const preparing=checked(targetMarker(decision.targetDirectory));
+ if(preparing.id!==decision.id||preparing.operationId!==decision.operationId||preparing.phase!=='verified'||preparing.abandonedAt)throw new Error('升级工作副本准备身份变化');
+ const verified:DirectoryDecision={...decision,proof:sealDirectory(decision.targetDirectory)};
+ await lease.assertHeld();durableDecision(targetMarker(verified.targetDirectory),verified);durableDecision(sourceMarker(verified.sourceDirectory),verified);return verified;
+}
+export async function abandonVerifiedDirectory(request:{sourceDirectory:string;operationId:string},lease:DirectoryPublicationLease){
+ try{
+  await lease.assertHeld();const path=sourceMarker(request.sourceDirectory);if(!existsSync(path))return null;
+  const current=checked(path);if(current.operationId!==request.operationId||current.phase==='published')throw new Error('只能放弃匹配的未发布升级准备');
+  if(current.abandonedAt)return current;
+  const abandoned={...current,abandonedAt:new Date().toISOString()};durableDecision(archivePath(request.sourceDirectory,current.operationId),abandoned);durableDecision(path,abandoned);return abandoned;
+ }finally{await lease.close();}
+}
 export async function publishVerifiedDirectory(decision:DirectoryDecision,lease:DirectoryPublicationLease,scheduling?:CutoverScheduling){
  try{
   if(decision.phase!=='verified'||decision.abandonedAt||!decision.operationId||!decision.id||decision.sourceDirectory===decision.targetDirectory)throw new Error('只能发布具有独立源与目标的已核验切换，已放弃身份不可复用');

@@ -4,6 +4,7 @@ import { prepareDirectory,publishDirectory,directoryStatus,recoverDirectory,admi
 import { importPersonal,importPersonalRecords } from './migration-personal';
 import { FormalHistory } from './formal-history';
 import { CourseBackups } from './backup';
+import { CourseUpgrades,type UpgradeSource } from './upgrade';
 import { assertWritableFormat,inspectFormat,readUnderstoodUnit } from './course-format';
 import { claimPortableIdentity } from './course-identity';
 import { validateCourseCopy } from './course-validation';
@@ -48,6 +49,7 @@ registerRetentionResourceRoot('t30-generation-recovery',generationRetentionResou
 const EDITABLE = 'RB-TH-01-01-what-is-positional-notation';
 interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; courseId: string; graph: CourseGraph;
   identityOwner?:DatabaseSync;
+  upgradeFrozen?:boolean;
   retention:HistoryRetention;
   // T03 constructs its observer on this same connection; both student save entry points call it in-transaction.
   formalHistory: FormalHistory;
@@ -70,10 +72,12 @@ interface Course { db: DatabaseSync; owner: DatabaseSync; sessionId: string; cou
 }
 const courses = new Map<string, Course>();
 const backups=new CourseBackups(workerData?.backupScheduling);
+const upgrades=new CourseUpgrades(backups,workerData?.upgradeScheduling,workerData?.cutoverScheduling);
 const historicalRoutes=new Set(['courseRestore:apply','courseRestore:query','queryOperation','commands:query','commands:history','formalHistory:query','formalHistory:release','formalHistory:detail','formalHistory:list','relations:query','annotations:query','drawings:query','drawings:queryPlacement','sources:query','parsing:query','agent:record','agent:task','agent:facts','agent:stop','agent:get','agent:list','agent:events','agent:work','agentMutation:query','generation:query','generation:candidates']);
 function session(id: string,action?:string): Course {
   const course = [...courses.values()].find(course => course.sessionId === id || action&&historicalRoutes.has(action)&&!!course.db.prepare('SELECT 1 FROM course_sessions WHERE id=?').get(id));
   if (!course) throw new Error('编辑会话已失效，请重新打开课程');
+  if(course.upgradeFrozen&&!action?.startsWith('upgrade:'))throw new Error('该课程正在升级，已停止写入和新任务；其他课程可继续使用');
   return course;
 }
 function snapshot(course: Course, unitId = 'KU-001'): OpenedCourse {
@@ -85,7 +89,7 @@ function snapshot(course: Course, unitId = 'KU-001'): OpenedCourse {
     course.groups.observe();
     row = course.db.prepare('SELECT payload, revision FROM units WHERE id = ?').get(unitId)!;
   }
-  return { resourceAssets: course.db.prepare('SELECT asset FROM exchange_resources ORDER BY asset').all().map(r => String(r.asset)), contentScope: course.db.prepare("SELECT value FROM metadata WHERE key='content-scope'").get()?.value === 'content-candidate' ? 'content-candidate' : undefined, courseId: course.courseId, sessionId: course.sessionId, generation:Number(course.db.prepare("SELECT value FROM metadata WHERE key='generation'").get()!.value), preservedDraftCount:course.courseRestore.drafts().length, revision: Number(row.revision),
+  return { courseFormat:Number(course.db.prepare('PRAGMA user_version').get()!.user_version),resourceAssets: course.db.prepare('SELECT asset FROM exchange_resources ORDER BY asset').all().map(r => String(r.asset)), contentScope: course.db.prepare("SELECT value FROM metadata WHERE key='content-scope'").get()?.value === 'content-candidate' ? 'content-candidate' : undefined, courseId: course.courseId, sessionId: course.sessionId, generation:Number(course.db.prepare("SELECT value FROM metadata WHERE key='generation'").get()!.value), preservedDraftCount:course.courseRestore.drafts().length, revision: Number(row.revision),
     blockVersions: Object.fromEntries(course.db.prepare("SELECT id, version FROM cg_objects WHERE kind='block'").all().map(r => [String(r.id), Number(r.version)])),
     drafts: readDrafts(course.db).filter(d => (d.input.unitId ?? 'KU-001') === unitId), eventCursor: eventCursor(course.db),
     confirmedInputSeq: confirmedInput(course.db, course.sessionId, unitId), editableBlockId: JSON.parse(String(row.payload)).reading.blocks.find((b: any) => b.kind === 'paragraph')?.id ?? unitId, unit: JSON.parse(String(row.payload)),
@@ -105,7 +109,7 @@ function open(directory: string,preparing=false): OpenedCourse {
   const canonical = realpathSync(directory);
   if(!preparing)admitDirectory(canonical);
   const existing = courses.get(canonical);
-  if (existing) return snapshot(existing);
+  if (existing) {if(existing.upgradeFrozen)throw new Error('该课程正在升级，已停写');return snapshot(existing);}
   if(existsSync(join(canonical,'course.sqlite')))assertWritableFormat(canonical);
   // A separate DB holds an OS-backed exclusive transaction for the entire session.
   // It survives window closure and is released by SQLite on process death; no stale PID lock.
@@ -208,6 +212,33 @@ function save(command: SaveParagraph): SaveReceipt {
     inputSeq: command.inputSeq, baseRevision: command.baseRevision, operationId: command.operationId,
     complete: true, changes: [{ blockId: command.blockId, text: command.text }] });
 }
+function acquireBackup(c:Course,id:string,directory:string){
+ c.identityOwner??=claimPortableIdentity(c.courseId);
+ transaction(c.db,()=>{
+  c.db.exec('CREATE TABLE IF NOT EXISTS backup_jobs(id TEXT PRIMARY KEY,directory TEXT NOT NULL)');
+  const old=c.db.prepare('SELECT directory FROM backup_jobs WHERE id=?').get(id),canonical=realpathSync(directory);
+  if(old&&old.directory!==canonical)throw new Error('备份身份已用于另一目录，请使用原目录重试');
+  c.db.prepare('INSERT OR IGNORE INTO backup_jobs VALUES(?,?)').run(id,canonical);
+  c.db.prepare("INSERT OR IGNORE INTO metadata VALUES('portable-identity','1')").run();
+  c.retention.resources.lease('backup:'+id,'acquire',new Date().toISOString());
+ });
+}
+function releaseBackup(c:Course,id:string){c.retention.resources.lease('backup:'+id,'release',new Date().toISOString());}
+async function releaseCourse(directory:string,c:Course){
+ c.retention.stop();c.experiments.dispose();await c.parsing.close();c.db.close();c.owner.close();c.identityOwner?.close();courses.delete(directory);
+}
+function upgradeSource(c:Course,directory:string):UpgradeSource{
+ const preceding=[...sourceReads];
+ return {directory,courseId:c.courseId,
+  async pause(){
+   c.upgradeFrozen=true;c.retention.stop();c.experiments.pauseAll();c.experiments.dispose();c.agent.revokeForQuit();c.agent.prepareShutdown();
+   await Promise.all(preceding);await c.parsing.close();await queue;
+  },
+  async release(){await releaseCourse(directory,c);},
+  async resume(){await releaseCourse(directory,c);open(directory);},
+  acquireBackup:(id,target)=>acquireBackup(c,id,target),releaseBackup:id=>releaseBackup(c,id),
+ };
+}
 // Async validation/import shares the SAME ordered command boundary with saves, stop and close.
 let queue = Promise.resolve();
 const sourceReads = new Set<Promise<void>>();
@@ -219,7 +250,7 @@ parentPort!.on('message', message => {
     const course = [...courses.values()].find(c => c.sessionId === message.payload?.sessionId);
     try { course?.experiments.stopIssuing(message.payload); } catch { /* Invalid input is rejected by the ordered dispatcher below. */ }
   }
-  if (message.action === 'sources:page' || message.action.startsWith('search:') || message.action.startsWith('backup:') || message.action.startsWith('format:') || message.action==='migration:prepare' || message.action==='migration:publish' || message.action==='migration:convert' || message.action==='migration:snapshot') {
+  if (message.action === 'sources:page' || message.action.startsWith('search:') || message.action.startsWith('backup:') || message.action.startsWith('format:') || message.action.startsWith('upgrade:') || message.action==='migration:prepare' || message.action==='migration:publish' || message.action==='migration:convert' || message.action==='migration:snapshot') {
     // Independent file staging and immutable parsing yield while other courses save.
     // Start after prior ordered writes; close drains every pending stage/lease.
     queue = queue.then(() => {
@@ -230,7 +261,7 @@ parentPort!.on('message', message => {
 });
 async function dispatch({ id, action, payload }: { id: number; action: string; payload: any }) {
   try {
-    if(workerData?.retentionScheduling?.clock)for(const course of courses.values())course.retention.synchronizeClock();
+    if(workerData?.retentionScheduling?.clock)for(const course of courses.values())if(!course.upgradeFrozen)course.retention.synchronizeClock();
     if(action==='courseRestore:apply' && session(payload.sessionId,action).sessionId!==payload.sessionId && !session(payload.sessionId,action).courseRestore.query(payload.operationId))throw new Error('编辑会话已失效，未执行新的整课恢复，请重新打开核对');
     if (payload?.operationId && payload.sessionId) {
       const course = session(payload.sessionId,action);
@@ -247,7 +278,20 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       course.extensions.fence(fencedAction, payload.operationId);
     }
     let value: unknown;
-    if(action==='format:inspect')value=inspectFormat(payload.directory);
+    if(action==='upgrade:status')value=upgrades.status(payload.directory);
+    else if(action==='upgrade:recover')value=await upgrades.recover(payload.directory);
+    else if(action==='upgrade:publish'){
+      const c=payload.sessionId?[...courses.values()].find(c=>c.sessionId===payload.sessionId):undefined;
+      const directory=c?[...courses.entries()].find(([,v])=>v===c)![0]:payload.sourceDirectory;
+      if(!directory)throw new Error('请重新打开原课程核对升级资格');value=await upgrades.publish(directory,payload.upgradeId,c?upgradeSource(c,directory):undefined);
+    }
+    else if(action==='upgrade:cancel'){
+      const c=session(payload.sessionId,action),directory=[...courses.entries()].find(([,v])=>v===c)![0];value=await upgrades.cancel(directory,payload.upgradeId,upgradeSource(c,directory));
+    }
+    else if(action==='upgrade:prepare'){
+      const c=session(payload.sessionId,action),directory=[...courses.entries()].find(([,v])=>v===c)![0];value=await upgrades.prepare(payload,upgradeSource(c,directory));
+    }
+    else if(action==='format:inspect')value=inspectFormat(payload.directory);
     else if(action==='format:validate')value=await validateCourseCopy(payload.directory);
     else if(action==='format:readUnit')value=readUnderstoodUnit(payload.directory,payload.unitId);
     else if(action.startsWith('backup:')) {
@@ -255,17 +299,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       else if(action==='backup:verify')value=await backups.verify(payload.directory);
       else if(action==='backup:create'||action==='backup:resume'){
         const c=session(payload.sessionId,action),directory=[...courses.entries()].find(([,v])=>v===c)![0];
-        value=await backups.create(payload,{directory,courseId:c.courseId,acquire:()=>{
-          c.identityOwner??=claimPortableIdentity(c.courseId);
-          transaction(c.db,()=>{
-            c.db.exec('CREATE TABLE IF NOT EXISTS backup_jobs(id TEXT PRIMARY KEY,directory TEXT NOT NULL)');
-            const old=c.db.prepare('SELECT directory FROM backup_jobs WHERE id=?').get(payload.backupId);
-            if(old&&old.directory!==realpathSync(payload.directory))throw new Error('备份身份已用于另一目录，请使用原目录重试');
-            c.db.prepare('INSERT OR IGNORE INTO backup_jobs VALUES(?,?)').run(payload.backupId,realpathSync(payload.directory));
-            c.db.prepare("INSERT OR IGNORE INTO metadata VALUES('portable-identity','1')").run();
-            c.retention.resources.lease('backup:'+payload.backupId,'acquire',new Date().toISOString());
-          });
-        },release:()=>{c.retention.resources.lease('backup:'+payload.backupId,'release',new Date().toISOString());}},action==='backup:resume');
+        value=await backups.create(payload,{directory,courseId:c.courseId,acquire:()=>acquireBackup(c,payload.backupId,payload.directory),release:()=>releaseBackup(c,payload.backupId)},action==='backup:resume');
       }else throw new Error('未知备份接口');
     }
     else if(action.startsWith('retention:')) {const retention=session(payload.sessionId,action).retention;if(action==='retention:get')value=retention.get();else if(action==='retention:set')value=retention.set(payload.days);else if(action==='retention:run')value=retention.run(payload.limit);else if(action==='retention:resourceLease')value=retention.resources.lease(payload.id,payload.action,new Date().toISOString());else if(action==='retention:resourceLeases')value=retention.resources.leases();else if(action==='retention:space')value=retention.storage.space();else if(action==='retention:clearCache')value=retention.storage.clearCache(payload.limit);else throw new Error('未知历史保留接口');}

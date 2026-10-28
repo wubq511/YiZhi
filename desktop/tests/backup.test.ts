@@ -6,14 +6,36 @@ import { tmpdir } from 'node:os';
 import { CourseService } from '../src/core/course-service';
 import { sourceFixture } from './source-fixture';
 import { parsingFixture } from './parsing-fixture';
-import { fork } from 'node:child_process';
+import { fork,spawnSync } from 'node:child_process';
 import { once } from 'node:events';
 import { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
+import { legacyFixture } from './migration-fixture';
 
 const A='RB-TH-01-01-what-is-positional-notation';
 async function until<T>(read:()=>Promise<T>,done:(v:T)=>boolean){const end=Date.now()+20000;for(;;){const v=await read();if(done(v))return v;if(Date.now()>end)throw new Error('等待真实备份/解析阶段超时');await new Promise(r=>setTimeout(r,5));}}
 function release(gate:SharedArrayBuffer){Atomics.store(new Int32Array(gate),0,2);}
+test('ordinary body text that looks like a resource path remains plain text through backup, verify and independent reopen',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-backup-plain-path-')),core=new CourseService(resolve('dist/worker.cjs'));let copy:CourseService|undefined;
+ try{
+  const c=await core.open(join(root,'live')),text='resources/'+'9'.repeat(64);
+  await core.save({...c,operationId:'literal-resource-shaped-text',inputSeq:1,baseRevision:1,blockId:A,text});
+  const conversation=await core.agent.create({...c,operationId:'literal-conversation'});await core.agent.submit({...c,conversationId:conversation.id,operationId:'literal-question',text,target:{unitId:'KU-001'}});
+  const request={...c,directory:join(root,'backup'),backupId:'literal-text'},result=await core.backup.create(request);
+  assert.equal(result.resources.length,0);await core.backup.verify(request);await core.close();copy=new CourseService(resolve('dist/worker.cjs'));
+  const opened=await copy.open(request.directory);assert.equal(opened.unit.reading.blocks[0].payload.text,text);
+  assert.ok((await copy.agent.get({...opened,conversationId:conversation.id})).messages.some(m=>m.role==='user'&&m.text===text));
+ }finally{await copy?.close();await core.close();await rm(root,{recursive:true,force:true});}
+});
+test('a real bare figure asset remains a declaration and a missing blob cannot be omitted from the snapshot manifest',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-backup-bare-figure-')),core=new CourseService(resolve('dist/worker.cjs'));
+ try{
+  const c=await core.open(join(root,'live')),sha='8'.repeat(64),ids=c.unit.reading.blocks.map(b=>b.id),figure={id:'missing-bare-figure',kind:'figure',payload:{asset:'resources/'+sha,alt:'Declared image'}};
+  await core.commitEdit({...c,inputSeq:1,baseRevision:1,operationId:'missing-figure',changes:[],complete:true,patch:{updates:[],correspondence:[],structure:{parentId:c.unit.id,before:ids,after:[...ids,figure.id],inserted:[figure]}}});
+  const request={...c,directory:join(root,'backup'),backupId:'missing-bare-image'};await assert.rejects(core.backup.create(request),/ENOENT/);
+  assert.ok((await core.backup.status(request)).resources.some(r=>r.sha256===sha));
+ }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
 test('a complete local backup opens independently with the saved body, acknowledged draft, identity and history',async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-backup-')),core=new CourseService(resolve('dist/worker.cjs'));
  let copy:CourseService|undefined;
@@ -42,6 +64,26 @@ test('a source and its portable backup cannot both gain writable course identity
   await core.close();assert.equal((await copy.open(join(root,'backup'))).courseId,c.courseId);
  }finally{await copy.close();await core.close();await rm(root,{recursive:true,force:true});}
 });
+test('T25 actual migrated tables enumerate their declared resource closure and reject a missing pending ref without mistaking origin digests for files',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-backup-t25-roots-')),core=new CourseService(resolve('dist/worker.cjs'));
+ try{
+  const source=join(root,'legacy'),directory=join(root,'live');await legacyFixture(source);
+  const made=spawnSync('python3',['-B',resolve('tests/personal-migration-fixture.py'),source,'state'],{encoding:'utf8'});assert.equal(made.status,0,made.stderr);
+  await core.migration.convert({sourceDirectory:source,directory});const c=await core.open(directory);await core.migration.personal({...c,sourceDirectory:source});
+  const refs:Array<{sha256:string;byteLength:number;relativePath:string}>=[];for(const kind of ['value','pending','origin','timeline']){const bytes=Buffer.from('Only T25 '+kind),sha256=createHash('sha256').update(bytes).digest('hex');await writeFile(join(directory,'resources',sha256),bytes);refs.push({sha256,byteLength:bytes.length,relativePath:'resources/'+sha256});}
+  const db=new DatabaseSync(join(directory,'course.sqlite'));db.exec('PRAGMA busy_timeout=1000');const time=new Date().toISOString(),opaque=createHash('sha256').update('Opaque origin identity, not a file').digest('hex');
+  db.prepare('INSERT INTO migration_values VALUES(?,?,?)').run('backup-value-only',JSON.stringify({resource:refs[0]}),time);
+  db.prepare('INSERT INTO migration_pending VALUES(?,?,?,?,?,?,?)').run('backup-pending-only','editingDrafts','pending','recovery','unresolved',JSON.stringify({resource:refs[1]}),time);
+  db.prepare('INSERT INTO migration_origins VALUES(?,?,?,?,?,?)').run('backup-context','original-only',1,0,opaque,JSON.stringify({resource:refs[2]}));
+  db.prepare("INSERT INTO restore_timeline(kind,reference,domain,object_id,before_value,after_value,committed_at) VALUES('legacy',?,'personal','root',?,?,?)").run('backup-timeline-only',JSON.stringify({resource:refs[3]}),JSON.stringify({resource:refs[3]}),time);db.close();
+  const full=await core.backup.create({...c,directory:join(root,'backup'),backupId:'t25-all-roots'});
+  for(const ref of refs)assert.ok(full.resources.some(r=>r.sha256===ref.sha256&&r.declaredBy.includes('t25-origin-and-imported-history')));
+  assert.ok(!full.resources.some(r=>r.sha256===opaque));
+  await rm(join(directory,'resources',refs[1].sha256));
+  await assert.rejects(core.backup.create({...c,directory:join(root,'missing-backup'),backupId:'t25-missing-pending'}),/ENOENT/);
+  const unfinished=await core.backup.status({directory:join(root,'missing-backup')});assert.equal(unfinished.phase,'unfinished');assert.ok(unfinished.resources.some(r=>r.sha256===refs[1].sha256));
+ }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
 test('a directory name beginning with two dots is still inside the live course and cannot become its backup',async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-backup-path-')),core=new CourseService(resolve('dist/worker.cjs'));
  try{const c=await core.open(root);await assert.rejects(core.backup.create({...c,directory:join(root,'..backup'),backupId:'nested'}),/独立|课程外/);}
@@ -64,7 +106,8 @@ test('failure writing the final marker retries a verified bare resource declarat
  try{
   const c=await core.open(join(root,'live')),bytes=Buffer.from('Immutable draft resource'),sha=createHash('sha256').update(bytes).digest('hex');
   await mkdir(join(root,'live','resources'));await writeFile(join(root,'live','resources',sha),bytes);
-  await core.saveDraft({...c,inputSeq:1,baseRevision:1,changes:[{blockId:A,text:'resources/'+sha}],complete:false});
+  const ids=c.unit.reading.blocks.map(b=>b.id),figure={id:'bare-figure-resource',kind:'figure',payload:{asset:'resources/'+sha,alt:'Fixed bare resource'}};
+  await core.commitEdit({...c,inputSeq:1,baseRevision:1,operationId:'declare-bare-figure',changes:[],complete:true,patch:{updates:[],correspondence:[],structure:{parentId:c.unit.id,before:ids,after:[...ids,figure.id],inserted:[figure]}}});
   const request={...c,directory:join(root,'backup'),backupId:'marker-fault'};pending=core.backup.create(request);pending.catch(()=>{});
   await until(async()=>Atomics.load(new Int32Array(gate),0),v=>v===1);await mkdir(join(request.directory,'backup-complete.json.partial'));
   release(gate);await assert.rejects(pending,/EISDIR/);assert.equal((await core.backup.status(request)).phase,'unfinished');

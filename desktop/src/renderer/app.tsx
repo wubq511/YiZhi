@@ -496,6 +496,7 @@ function App() {
   if(!course&&readonlyReport)return <><header className="app-header"><strong className="brand">绎知</strong><span>兼容范围只读 · 拒绝写入</span><button onClick={()=>void load()}>重新核对版本</button></header><ReadonlyCourse report={readonlyReport}/></>;
   return <>
     <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen || sourcesOpen || agentOpen || notesOpen || searchOpen || exchangeOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
+      {course?.courseFormat===2&&<span role="status" aria-label="课程格式">课程已升级</span>}
       <MigrationPanel sessionId={course?.sessionId}/>
       {course&&<BackupPanel sessionId={course.sessionId} prepare={prepareCourseSnapshot} onReturn={()=>{if(narrow)setDirectory(false);}}/>}
       {course&&<RetentionPanel key={course.sessionId} sessionId={course.sessionId} onReturn={()=>{if(narrow)setDirectory(false);}} prepare={async()=>{

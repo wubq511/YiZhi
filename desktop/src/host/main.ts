@@ -1,6 +1,7 @@
 import { LearningHost } from './learning-host';
 import { registerBackupIPC } from './backup-ipc';
 import { registerCourseFormatIPC } from './course-format-ipc';
+import { registerUpgradeIPC } from './upgrade-ipc';
 import { DescriptionRuntime } from '../agent/description-search';
 import { drawingMethods } from '../drawing-api';
 import { registerExchangeIPC } from './exchange-ipc';
@@ -51,6 +52,7 @@ else {
     const checkSender=host.sender;
     registerBackupIPC(core,checkSender);
     registerCourseFormatIPC(core,checkSender);
+    registerUpgradeIPC(core,host);
     registerExtensionProtocol(core);
     registerSourceProtocols(core, join(__dirname, 'renderer'));
     registerSourceIPC(core, checkSender);
