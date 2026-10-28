@@ -211,13 +211,21 @@ class CourseHTTPTests(unittest.TestCase):
         invalid_status["changes"][1]["value"]["status"] = "done"
         invalid_anchor = self.edit("invalid-anchor")
         invalid_anchor["changes"][0]["value"]["anchor"]["objectId"] = "KU-missing"
+        invalid_camera = self.edit("invalid-camera")
+        invalid_camera["changes"][2]["value"]["camera"]["scale"] = -0.004
         for command, status, code in (
             (unknown_namespace, 501, "capability_unavailable"),
             (invalid_status, 400, "invalid_content"),
             (invalid_anchor, 400, "invalid_content"),
+            (invalid_camera, 400, "invalid_content"),
         ):
             with self.subTest(operation=command["operationId"]):
-                self.assert_error(self.post(command), status, code)
+                result = self.post(command)
+                self.assert_error(result, status, code)
+                if command is invalid_camera:
+                    self.assertEqual(result[1]["error"]["details"], {
+                        "namespace": "reading", "key": "default", "field": "camera",
+                        "operationId": "invalid-camera", "rejectedBeforeCommit": True})
         self.assert_error(self.request("/api/v1/not-a-route", command=self.edit()), 404, "not_found")
         self.assert_error(self.request("/api/v1/commands", body=b'{"operationId":'),
                           400, "invalid_parameter")

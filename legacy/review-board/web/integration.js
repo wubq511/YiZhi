@@ -149,8 +149,8 @@
         await board.editing?.flush();await board.agent?.flush();
         const deadline=Date.now()+15000;
         while(persistence.busy){if(Date.now()>deadline)throw new Error('在途保存尚未确认');await new Promise(r=>setTimeout(r,20));}
-        if(persistence.problem&&!await persistence.retry())throw new Error('最新输入尚未确认：'+(persistence.problem?.message||'请先处理保存问题'));
         await board.flush();
+        if(persistence.problem&&!await persistence.retry())throw new Error('最新输入尚未确认：'+(persistence.problem?.message||'请先处理保存问题'));
         while(persistence.busy||persistence.hasPending()){
           if(persistence.problem||Date.now()>deadline)throw new Error('最新输入尚未确认，请重试保存');
           if(!persistence.busy)await persistence.flush();else await new Promise(r=>setTimeout(r,20));
