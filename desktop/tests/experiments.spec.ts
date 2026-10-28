@@ -1,3 +1,5 @@
+import type { DatabaseSync } from 'node:sqlite';
+import { openFaultDatabase } from './fault-database';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -159,11 +161,11 @@ test('actual built-in controls, diagram, offscreen stop and formula confirmation
 
 
 test('actual IPC pause failure shows incomplete and confirmed recovery can run again without reviving old input', async ({}, testInfo) => {
-  const { DatabaseSync } = await import('node:sqlite');
+
   const root = await mkdtemp(join(tmpdir(), 'yizhi-builtin-ui-fault-'));
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   const appProcess = app.process();
-  let fault: InstanceType<typeof DatabaseSync> | undefined;
+  let fault: DatabaseSync | undefined;
   try {
     const page = await smallExperimentWindow(app);
     await page.getByRole('button', { name: '复用器与分配器', exact: true }).click();
@@ -173,7 +175,7 @@ test('actual IPC pause failure shows incomplete and confirmed recovery can run a
     await lab.getByRole('button', { name: '开始遍历输入', exact: true }).click();
     const read = () => page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return b.experiments.read({ sessionId: c.sessionId, instanceId: 'KU-057/RB-TH-13-057-010-interactive' }); });
     await expect.poll(async () => (await read()).state.step).toBeGreaterThan(0);
-    fault = new DatabaseSync(join(root, 'course/course.sqlite'));
+    fault = openFaultDatabase(join(root, 'course/course.sqlite'));
     fault.exec("CREATE TRIGGER fail_pause_ui BEFORE UPDATE ON builtin_experiments BEGIN SELECT RAISE(ABORT,'actual UI pause fault'); END");
     await unit.click();
     await expect.poll(async () => (await read()).phase).toBe('pause-incomplete');

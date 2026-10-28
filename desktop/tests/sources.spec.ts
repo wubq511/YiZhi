@@ -1,3 +1,5 @@
+import type { DatabaseSync } from 'node:sqlite';
+import { openFaultDatabase } from './fault-database';
 import { evidencePath } from './evidence-paths';
 import { resizeBoardWindow, revealBoardControl } from './board-test-helpers';
 import { test, expect, _electron as electron } from '@playwright/test';
@@ -6,7 +8,6 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { sourceFixture } from './source-fixture';
 import type { ElectronApplication } from '@playwright/test';
-import { DatabaseSync } from 'node:sqlite';
 
 test('local PDF.js renders a real text layer, cites actual selection, preserves old source and the live board editor', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-source-ui-'));
@@ -146,7 +147,7 @@ test('host IPC denies paths and unregistered routes; real storage faults retain 
     const page = await app.firstWindow();
     await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     await app.evaluate(({ dialog }, path) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] }); }, path);
-    fault = new DatabaseSync(join(root, 'course/course.sqlite'));
+    fault = openFaultDatabase(join(root, 'course/course.sqlite'));
     fault.exec("CREATE TRIGGER source_failure BEFORE INSERT ON source_versions BEGIN SELECT RAISE(ABORT,'source registry unavailable'); END");
     await page.getByRole('button', { name: '原文资料', exact: true }).click();
     await page.getByRole('button', { name: '导入资料', exact: true }).click();

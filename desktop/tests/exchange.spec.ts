@@ -1,3 +1,4 @@
+import { openFaultDatabase } from './fault-database';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, mkdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -54,8 +55,8 @@ test('explicit exchange scope, failed real registration, retry and independent o
     );
     await page.getByRole('button', { name: '选择交换包并检查' }).click();
     await expect(page.getByRole('region', { name: '内容交换包' })).toContainText('2 个单元');
-    const { DatabaseSync } = await import('node:sqlite');
-    const fault = new DatabaseSync(join(root, 'dest/course.sqlite'));
+
+    const fault = openFaultDatabase(join(root, 'dest/course.sqlite'));
     fault.exec(
       "CREATE TRIGGER reject_ui_exchange BEFORE INSERT ON exchange_operations BEGIN SELECT RAISE(ABORT,'交换登记写入失败');END",
     );
