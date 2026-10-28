@@ -6,7 +6,7 @@ import { layoutGraph,saveLayout } from './local-layout';
 import { changedCouplings,unitBlocks,linkedExperiment,isBuiltin } from './consistency-links';
 import { assignments,evaluate,formulaOutputs,convertFormula } from './builtin-model';
 import { unitObjects } from './history-objects';
-import { graphRevision,layoutRevision,bumpLayoutRevision } from './generation-lifecycle';
+import { graphObjectRevision,layoutRevision,bumpLayoutRevision } from './generation-lifecycle';
 import { syncAnnotations } from './annotations';
 import { equal } from '../editor-api';
 import type { DatabaseSync } from 'node:sqlite';
@@ -30,9 +30,9 @@ export class FormalHistory {
     if(id.startsWith('review:')){const unitId=id.slice(7),r=this.db.prepare('SELECT status,version FROM review_states WHERE unit_id=?').get(unitId);return {value:{unitId,status:r?String(r.status):'pending'},version:Number(r?.version??0),kind:'review'};}
     if(id.startsWith('unit:')) {const row=this.db.prepare('SELECT payload FROM units WHERE id=?').get(id.slice(5));
       return {value:row?parse(row.payload):null,version:Number(this.db.prepare('SELECT version FROM cg_objects WHERE id=?').get(id)?.version??0),kind:'unit'};}
-    if(id.startsWith('graph:'))return {value:this.currentGraph().nodes.find(n=>n.id===id.slice(6))??null,version:graphRevision(this.db),kind:'graph'};
-    if(id.startsWith('theme:'))return {value:this.currentGraph().groups.find(g=>g.id===id.slice(6))??null,version:graphRevision(this.db),kind:'theme'};
-    if(id.startsWith('layout-theme:'))return {value:this.currentGraph().layout.groups.find(g=>g.themeId===id.slice(13))??null,version:graphRevision(this.db),kind:'layout-theme'};
+    if(id.startsWith('graph:'))return {value:this.currentGraph().nodes.find(n=>n.id===id.slice(6))??null,version:graphObjectRevision(this.db,id),kind:'graph'};
+    if(id.startsWith('theme:'))return {value:this.currentGraph().groups.find(g=>g.id===id.slice(6))??null,version:graphObjectRevision(this.db,id),kind:'theme'};
+    if(id.startsWith('layout-theme:'))return {value:this.currentGraph().layout.groups.find(g=>g.themeId===id.slice(13))??null,version:graphObjectRevision(this.db,id),kind:'layout-theme'};
     if(id.startsWith('layout:')) {const unitId=id.slice(7),n=layoutGraph(this.db,this.currentGraph()).layout.nodes.find(n=>n.unitId===unitId);return {value:n??null,version:layoutRevision(this.db,unitId),kind:'layout'};}
     if(id.startsWith('experiment:')) {const [unitId,blockId]=id.slice(11).split('/');const value=this.experiments.formalDefinition(unitId,blockId);return {value,version:value.revision,kind:'experiment'};}
     if(id.startsWith('REL-')||/^G[A-Za-z0-9]/.test(id))return this.relations.historyObject(id);
@@ -237,7 +237,7 @@ export class FormalHistory {
             if(!replacements.has(id)||(next?!equal(target,value):!cleared))
               throw new Error('新建单元的正文与结构必须作为完整一致组恢复');
           }
-        }else if(!equal(this.projectUnit(unit,replacements),next))throw new Error('单元版本与正文变化不一致');
+        }else if(!equal(this.projectUnit(unit,replacements).reading,next.reading))throw new Error('单元版本与正文变化不一致');
       }
       if(!next){
         if(!lifecycle||!replacements.has(`graph:${unitId}`)||replacements.get(`graph:${unitId}`)!==null||

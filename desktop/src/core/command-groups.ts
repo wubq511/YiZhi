@@ -133,6 +133,7 @@ export class CommandGroups {
       if (kind === 'reference' || kind === 'dependency') return { id, kind, version: 0, value: {} };
       throw new Error(`读取对象不存在：${id}`);
     }
+    if(!['block','structure','reference','dependency'].includes(String(row.kind)))throw new Error(`读取对象不属于正文命令域：${id}`);
     return { id, kind: String(row.kind) as CommandObject['kind'], version: Number(row.version), value: parse(row.value) };
   }
   startAttempt(request: AttemptRequest): Attempt {

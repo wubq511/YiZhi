@@ -265,6 +265,89 @@ test('generated lifecycle rollback publishes no graph heap and equal placement a
   }finally{await core.close();await rm(root,{recursive:true,force:true});}
 });
 
+test('an independent generated topic does not block withdrawing and restoring an earlier creation group',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'yizhi-generation-independent-history-'));
+  let core=new CourseService(resolve('dist/worker.cjs'));
+  try{
+    const {sessionId,task,conversation}=await prepared(core,root),identity={sessionId,taskId:task.id,attemptId:task.attemptId,generation:task.generation};
+    const firstBasis=await core.readAgentGeneration(identity);
+    const first=await core.publishAgentGeneration({...identity,input:lesson(firstBasis,'first-independent-topic')});
+    assert.equal(first.status,'committed');
+    await core.agent.stop({sessionId,taskId:task.id});
+    await core.recordAgent({...identity,eventId:'first-topic-stop',kind:'finish',status:'interrupted',reconciliation:true});
+    const secondTask=await core.agent.submit({sessionId,conversationId:conversation.id,operationId:'second-independent-request',generation:1,
+      intent:'generate',target:{unitId:'KU-001'},text:'从相同来源建立另一个独立主题，保留已有主题。',
+      generationSpec:{...firstBasis.spec,unitId:'KU-GEN-INDEPENDENT-02',themeId:'TH-GEN-INDEPENDENT-02',themeName:'独立四选一主题'}});
+    const secondIdentity={sessionId,taskId:secondTask.id,attemptId:secondTask.attemptId,generation:secondTask.generation};
+    const secondBasis=await core.readAgentGeneration(secondIdentity);
+    assert.equal((await core.publishAgentGeneration({...secondIdentity,input:lesson(secondBasis,'second-independent-topic')})).status,'committed');
+    const secondUnit=await core.readUnit(sessionId,secondBasis.spec.unitId),before=await core.graph(sessionId);
+    await core.close();core=new CourseService(resolve('dist/worker.cjs'));
+    const currentSession=(await core.open(join(root,'course'))).sessionId;
+    const withdrawn=await core.formalHistory.apply({sessionId:currentSession,operationId:'withdraw-first-independent-topic',
+      preview:await core.formalHistory.preview({sessionId:currentSession,selection:{kind:'operations',operationIds:[first.operationId]}})});
+    assert.equal(withdrawn.status,'committed',JSON.stringify(withdrawn.conflicts));
+    const graph=await core.graph(currentSession);
+    assert.equal(graph.nodes.some(node=>node.id===firstBasis.spec.unitId),false);
+    assert.deepEqual(graph.nodes.find(node=>node.id===secondUnit.id),before.nodes.find(node=>node.id===secondUnit.id));
+    assert.deepEqual(graph.layout.nodes.find(node=>node.unitId===secondUnit.id),before.layout.nodes.find(node=>node.unitId===secondUnit.id));
+    assert.deepEqual(await core.readUnit(currentSession,secondUnit.id),secondUnit);
+    const restored=await core.formalHistory.apply({sessionId:currentSession,operationId:'restore-first-independent-topic',
+      preview:await core.formalHistory.preview({sessionId:currentSession,selection:{kind:'operations',operationIds:[withdrawn.operationId]}})});
+    assert.equal(restored.status,'committed',JSON.stringify(restored.conflicts));
+    assert.equal((await core.graph(currentSession)).nodes.filter(node=>[firstBasis.spec.unitId,secondUnit.id].includes(node.id)).length,2);
+    assert.deepEqual(await core.readUnit(currentSession,secondUnit.id),secondUnit);
+    const recovered=await core.courseRestore.apply({sessionId:currentSession,operationId:'recover-only-first-topic',
+      preview:await core.courseRestore.preview({sessionId:currentSession,atOperationId:first.operationId,side:'before',unitIds:[firstBasis.spec.unitId],userState:{layout:false,review:false}})});
+    const finalGraph=await core.graph(recovered.sessionId);
+    assert.equal(finalGraph.nodes.some(node=>node.id===firstBasis.spec.unitId),false);
+    assert.deepEqual(finalGraph.nodes.find(node=>node.id===secondUnit.id),before.nodes.find(node=>node.id===secondUnit.id));
+    assert.deepEqual(await core.readUnit(recovered.sessionId,secondUnit.id),secondUnit);
+  }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+
+test('generated title correction has a checked inverse and graph A-to-B-to-A cannot revive an older creation',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'yizhi-generation-title-history-'));
+  const core=new CourseService(resolve('dist/worker.cjs'));
+  try{
+    const {sessionId,task,conversation}=await prepared(core,root),identity={sessionId,taskId:task.id,attemptId:task.attemptId,generation:task.generation};
+    const initial=await core.readAgentGeneration(identity);
+    const first=await core.publishAgentGeneration({...identity,input:lesson(initial,'original-title')});
+    const original=await core.readUnit(sessionId,initial.spec.unitId);
+    await core.agent.stop({sessionId,taskId:task.id});
+    await core.recordAgent({...identity,eventId:'stop-before-title-correction',kind:'finish',status:'interrupted',reconciliation:true});
+    const correction=await core.agent.submit({sessionId,conversationId:conversation.id,operationId:'title-correction-request',generation:1,
+      intent:'generate',target:{unitId:'KU-001'},text:'只为当前小主题更新标题，保留现有身份和学习材料。',generationSpec:initial.spec});
+    const nextIdentity={sessionId,taskId:correction.id,attemptId:correction.attemptId,generation:correction.generation};
+    const basis=await core.readAgentGeneration(nextIdentity),proposal=lesson(basis,'corrected-title');
+    proposal.title='单通道四选一选择原理';
+    const changed=await core.publishAgentGeneration({...nextIdentity,input:proposal});
+    assert.equal(changed.status,'committed');
+    const reverted=await core.formalHistory.apply({sessionId,operationId:'withdraw-title-correction',
+      preview:await core.formalHistory.preview({sessionId,selection:{kind:'operations',operationIds:[changed.operationId]}})});
+    assert.equal(reverted.status,'committed',JSON.stringify(reverted.conflicts));
+    assert.deepEqual(await core.readUnit(sessionId,original.id),original);
+    const blocked=await core.formalHistory.apply({sessionId,operationId:'withdraw-before-title-aba',
+      preview:await core.formalHistory.preview({sessionId,selection:{kind:'operations',operationIds:[first.operationId]}})});
+    assert.equal(blocked.status,'conflict');
+    assert.ok(blocked.conflicts.some(conflict=>conflict.objectIds.includes(`graph:${original.id}`)));
+  }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+
+test('ordinary body commands cannot acquire generated lifecycle projection objects',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'yizhi-generation-domain-boundary-'));
+  const core=new CourseService(resolve('dist/worker.cjs'));
+  try{
+    const {sessionId,task}=await prepared(core,root),identity={sessionId,taskId:task.id,attemptId:task.attemptId,generation:task.generation};
+    const basis=await core.readAgentGeneration(identity);
+    await core.publishAgentGeneration({...identity,input:lesson(basis,'lifecycle-domain-boundary')});
+    const attempt=await core.commands.startAttempt({sessionId,taskId:'ordinary-body-producer'});
+    for(const objectId of [`unit:${basis.spec.unitId}`,`graph:${basis.spec.unitId}`,`theme:${basis.spec.themeId}`,`layout-theme:${basis.spec.themeId}`])
+      await assert.rejects(core.commands.read({sessionId,attemptId:attempt.attemptId,unitId:basis.spec.unitId,objectIds:[objectId]}),/正文命令域/);
+    assert.equal((await core.graph(sessionId)).nodes.filter(node=>node.id===basis.spec.unitId).length,1);
+  }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+
 test('course recovery can withdraw a newly generated identity and continue from fresh generation without trusting old stage receipts',async()=>{
   const root=await mkdtemp(join(tmpdir(),'yizhi-generation-course-recovery-'));
   const core=new CourseService(resolve('dist/worker.cjs'));

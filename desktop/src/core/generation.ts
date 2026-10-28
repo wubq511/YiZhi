@@ -13,7 +13,7 @@ import type { Search } from './search';
 import { assignments, formulaOutputs } from './builtin-model';
 import { readDrafts,draftReadVersions,draftVersion,transaction,appendEvent } from './save-store';
 import { selectorEvidence, exampleEvidence } from './generation-evidence';
-import { initializeGenerationLifecycle,graphRevision,layoutRevision,bumpLayoutRevision } from './generation-lifecycle';
+import { initializeGenerationLifecycle,graphObjectRevision,layoutRevision,bumpLayoutRevision } from './generation-lifecycle';
 
 const json=(v:unknown)=>JSON.stringify(v);
 const hash=(v:unknown)=>createHash('sha256').update(json(v)).digest('hex');
@@ -112,15 +112,16 @@ export class Generation {
     const draftHash=hash(this.targetDrafts(spec.unitId));
     const draftVersions=draftReadVersions(this.db,[`structure:${spec.unitId}`]);
     const graphHash=hash([this.graph.nodes.filter(n=>n.id===spec.unitId),this.graph.groups.filter(g=>g.id===spec.themeId)]);
+    const graphVersions=Object.fromEntries([`graph:${spec.unitId}`,`theme:${spec.themeId}`].map(id=>[id,graphObjectRevision(this.db,id)]));
     const readset=[
       {kind:'source-version',id:version.versionId,version:version.sha256,purpose:'printed table provenance'},
       {kind:'parsed-page',id:ref.artifactId,version:ref.digest,purpose:'coordinate table rows and original raster'},
       {kind:'unit',id:spec.unitId,version:targetRev,purpose:'formal target and stable identities'},
       {kind:'student-draft',id:spec.unitId,version:hash([draftHash,draftVersions]),purpose:'latest unconfirmed student input and monotonic revision'},
-      {kind:'graph-target',id:spec.themeId,version:graphHash,purpose:'unit and theme structure ownership'},
+      {kind:'graph-target',id:spec.themeId,version:hash([graphHash,graphVersions]),purpose:'unit and theme structure ownership and monotonic revisions'},
     ];
     const basisId=`generation:${hash([task.attemptId,Date.now(),Math.random()]).slice(0,32)}`;
-    const basis={generation:task.generation,spec,root,targetRev,draftHash,draftVersions,graphHash,structureHash:unitRow?hash(parse(unitRow.payload).reading.blocks.map((b:ReadingBlock)=>b.id)):null,
+    const basis={generation:task.generation,spec,root,targetRev,draftHash,draftVersions,graphHash,graphVersions,structureHash:unitRow?hash(parse(unitRow.payload).reading.blocks.map((b:ReadingBlock)=>b.id)):null,
       sourceSha:version.sha256,artifactDigest:ref.digest,readset};
     this.db.prepare('INSERT INTO generation_bases VALUES(?,?,?)').run(basisId,task.attemptId,json(basis));
     this.agent.mutationProgress(task.id,spec.unitId,'read');
@@ -174,6 +175,7 @@ export class Generation {
       if(input.stage==='lesson'&&basis.targetRev!==(row?Number(row.revision):null))throw new Error('目标正式修订已变化，请重读并局部整合');
       if(input.stage==='practice'&&basis.structureHash!==(row?hash(parse(row.payload).reading.blocks.map((b:ReadingBlock)=>b.id)):null))throw new Error('目标结构已变化，追加材料需重读');
       if(basis.graphHash!==hash([this.graph.nodes.filter(n=>n.id===spec.unitId),this.graph.groups.filter(g=>g.id===spec.themeId)]))throw new Error('目标图节点或主题已变化，请重读');
+      if(!basis.graphVersions||Object.entries(basis.graphVersions).some(([id,version])=>graphObjectRevision(this.db,id)!==version))throw new Error('目标图节点或主题修订已变化，请重读');
       if(basis.draftHash!==hash(this.targetDrafts(spec.unitId))||this.targetDrafts(spec.unitId).length)throw new Error('学生最新草稿尚待整合，不能覆盖或越过');
       if(!basis.draftVersions||Object.entries(basis.draftVersions).some(([id,version])=>draftVersion(this.db,id)!==version))throw new Error('学生输入基线已变化，请重读后整合');
       if(this.groups.protectedWrites([`structure:${spec.unitId}`]))throw new Error('学生仍在编辑该主题，最新输入尚待确认；候选保留');
@@ -319,14 +321,17 @@ export class Generation {
         const afterObjects=readingObjects(unit.reading.blocks,spec.unitId);
         const objectIds=[...new Set([...beforeObjects.keys(),...afterObjects.keys()])];
         const beforeVersions=new Map(objectIds.map(id=>[id,Number(this.db.prepare('SELECT version FROM cg_objects WHERE id=?').get(id)?.version??0)]));
-        const beforeGraph=structuredClone(this.graph),beforeGraphVersion=graphRevision(this.db);
+        const beforeGraph=structuredClone(this.graph);
+        const graphObjectIds=[`graph:${spec.unitId}`,`theme:${spec.themeId}`,`layout-theme:${spec.themeId}`];
+        const beforeGraphVersions=new Map(graphObjectIds.map(id=>[id,graphObjectRevision(this.db,id)]));
         const beforeLayoutVersion=layoutRevision(this.db,spec.unitId);
         const beforeUnitVersion=Number(this.db.prepare('SELECT version FROM cg_objects WHERE id=?').get(`unit:${spec.unitId}`)?.version??0);
         this.db.prepare('INSERT INTO units(id,payload,revision) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,revision=excluded.revision').run(spec.unitId,json(unit),revision);
         nextGraph=this.nextGraph(spec,unit.name,unit);
         if(json(nextGraph)!==json(beforeGraph))this.db.prepare("INSERT INTO metadata VALUES('course-graph',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(json(nextGraph));
         if(!beforeGraph.layout.nodes.some(n=>n.unitId===spec.unitId)&&nextGraph.layout.nodes.some(n=>n.unitId===spec.unitId))bumpLayoutRevision(this.db,spec.unitId);
-        const afterGraphVersion=graphRevision(this.db),afterLayoutVersion=layoutRevision(this.db,spec.unitId);
+        const afterGraphVersions=new Map(graphObjectIds.map(id=>[id,graphObjectRevision(this.db,id)]));
+        const afterLayoutVersion=layoutRevision(this.db,spec.unitId);
         const afterUnitVersion=Number(this.db.prepare('SELECT version FROM cg_objects WHERE id=?').get(`unit:${spec.unitId}`)?.version??0);
         const invalidated=this.groups.observe();
         const objectChanges=objectIds.flatMap(id=>{
@@ -335,10 +340,10 @@ export class Generation {
             afterVersion:Number(this.db.prepare('SELECT version FROM cg_objects WHERE id=?').get(id)?.version??0)}];
         });
         const graphChanges=([
-          [`graph:${spec.unitId}`,beforeGraph.nodes.find(n=>n.id===spec.unitId),nextGraph.nodes.find(n=>n.id===spec.unitId),beforeGraphVersion,afterGraphVersion],
-          [`theme:${spec.themeId}`,beforeGraph.groups.find(g=>g.id===spec.themeId),nextGraph.groups.find(g=>g.id===spec.themeId),beforeGraphVersion,afterGraphVersion],
+          [`graph:${spec.unitId}`,beforeGraph.nodes.find(n=>n.id===spec.unitId),nextGraph.nodes.find(n=>n.id===spec.unitId),beforeGraphVersions.get(`graph:${spec.unitId}`)!,afterGraphVersions.get(`graph:${spec.unitId}`)!],
+          [`theme:${spec.themeId}`,beforeGraph.groups.find(g=>g.id===spec.themeId),nextGraph.groups.find(g=>g.id===spec.themeId),beforeGraphVersions.get(`theme:${spec.themeId}`)!,afterGraphVersions.get(`theme:${spec.themeId}`)!],
           [`layout:${spec.unitId}`,beforeGraph.layout.nodes.find(n=>n.unitId===spec.unitId),nextGraph.layout.nodes.find(n=>n.unitId===spec.unitId),beforeLayoutVersion,afterLayoutVersion],
-          [`layout-theme:${spec.themeId}`,beforeGraph.layout.groups.find(g=>g.themeId===spec.themeId),nextGraph.layout.groups.find(g=>g.themeId===spec.themeId),beforeGraphVersion,afterGraphVersion],
+          [`layout-theme:${spec.themeId}`,beforeGraph.layout.groups.find(g=>g.themeId===spec.themeId),nextGraph.layout.groups.find(g=>g.themeId===spec.themeId),beforeGraphVersions.get(`layout-theme:${spec.themeId}`)!,afterGraphVersions.get(`layout-theme:${spec.themeId}`)!],
         ] as const).flatMap(([objectId,prior,after,beforeVersion,afterVersion])=>json(prior??null)===json(after??null)?[]:[{objectId,before:prior??null,after:after??null,beforeVersion,afterVersion}]);
         const unitChanges=[{objectId:`unit:${spec.unitId}`,before:old??null,after:unit,beforeVersion:beforeUnitVersion,afterVersion:afterUnitVersion}];
         const changes=[...unitChanges,...objectChanges,...invalidated,...graphChanges];
