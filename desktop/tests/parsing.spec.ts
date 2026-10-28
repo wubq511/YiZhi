@@ -1,3 +1,4 @@
+import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -33,7 +34,7 @@ test('actual host parsing UI shows immutable artifacts, correction, original-pag
     await expect(page.locator('.parse-table th').first()).toHaveText('Input');
     await expect(page.locator('.parse-table td').first()).toHaveText('0');
     await page.locator('.parse-table').evaluate(el=>el.scrollIntoView({block:'start'}));
-    await page.screenshot({path:'/tmp/yizhi-implement-gFFkA7/t29-structured-artifact.png'});
+    await page.screenshot({path:evidencePath('t29-structured-artifact.png')});
     await page.getByLabel('修正文字',{exact:true}).fill('Corrected logic notes');
     await page.getByLabel('修正依据').fill('Compared with original page');
     await page.getByRole('button',{name:'保留为新产物版本',exact:true}).click();
@@ -41,11 +42,11 @@ test('actual host parsing UI shows immutable artifacts, correction, original-pag
     await expect(page.getByLabel('结构化页面产物')).toContainText('Corrected logic notes');
     await page.getByRole('button',{name:'核对产物原页',exact:true}).click();
     await expect(page.locator('.source-pdf .textLayer')).toContainText('Logic notes');
-    await page.screenshot({path:'/tmp/yizhi-implement-gFFkA7/t29-parsing-desktop.png'});
+    await page.screenshot({path:evidencePath('t29-parsing-desktop.png')});
     await page.setViewportSize({width:700,height:600});
     await page.getByRole('button',{name:'查看第 2 页产物',exact:true}).click();
     await expect(page.getByLabel('结构化页面产物')).toContainText('需要 OCR');
-    await page.screenshot({path:'/tmp/yizhi-implement-gFFkA7/t29-parsing-narrow.png'});
+    await page.screenshot({path:evidencePath('t29-parsing-narrow.png')});
     await page.getByRole('button',{name:'返回画板',exact:true}).click();
     expect(await editorHandle!.evaluate(node=>node.isConnected)).toBe(true);
     await page.setViewportSize({width:1280,height:900});

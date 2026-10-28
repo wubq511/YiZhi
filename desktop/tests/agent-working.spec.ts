@@ -1,3 +1,4 @@
+import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, chmod } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -58,7 +59,7 @@ test('working composer defaults to steer, shows failed delivery retry, and queue
     const view = await page.evaluate(async()=>{const b=window.yizhi,c=await b.open(),l=await b.agent.list({sessionId:c.sessionId});return b.agent.get({sessionId:c.sessionId,conversationId:l.selectedId!});});
     expect(view.tasks).toHaveLength(2); expect(view.tasks[1].turnId).toBeNull();
     expect(view.tasks[0].deliveries).toHaveLength(1); expect(view.messages.filter(m=>m.role==='user')).toHaveLength(3);
-    await page.screenshot({path:'/tmp/yizhi-implement-gFFkA7/t18-working-composer.png'});
+    await page.screenshot({path:evidencePath('t18-working-composer.png')});
     await expect(page.getByRole('status',{name:'回答状态'}).first()).toContainText('回答已完成',{timeout:15000});
     await expect(page.getByRole('status',{name:'回答状态'}).nth(1)).toContainText('正在回答');
   } finally { await app.close(); await rm(root,{recursive:true,force:true}); }

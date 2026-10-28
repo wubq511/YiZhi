@@ -1,3 +1,4 @@
+import { evidencePath } from './evidence-paths';
 import { resizeBoardWindow, revealBoardControl } from './board-test-helpers';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -82,7 +83,7 @@ test('real persisted overlapping versions expose only the conflict and the stude
     await expect(closeDirectory).toBeVisible();
     await closeDirectory.click();
     await conflict.scrollIntoViewIfNeeded();
-    await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t06-conflict-narrow.png' });
+    await page.screenshot({ path: evidencePath('t06-conflict-narrow.png') });
     await conflict.getByRole('button', { name: '冲突处保留学生草稿', exact: true }).click();
     await expect(editor.locator('p[data-block-id]').first()).toHaveText('学生的真实已保存草稿');
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
@@ -126,7 +127,7 @@ test('synthetic composition regression uses real IPC: independent range renders,
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     await page.getByRole('button', { name: '收起目录', exact: true }).click();
     await expect.poll(() => page.evaluate(async () => { const api = (window as any).yizhi, c = await api.open(); return c.unit.reading.blocks.map((b: any) => b.id); })).toEqual(update.blockIds);
-    await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t06-composition-regression.png' });
+    await page.screenshot({ path: evidencePath('t06-composition-regression.png') });
     await app.close(); closed = true;
     const service = new CourseService(resolve('dist/worker.cjs'));
     try {

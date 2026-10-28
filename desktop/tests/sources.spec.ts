@@ -1,3 +1,4 @@
+import { evidencePath } from './evidence-paths';
 import { resizeBoardWindow, revealBoardControl } from './board-test-helpers';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -64,7 +65,7 @@ test('local PDF.js renders a real text layer, cites actual selection, preserves 
     await expect(page.locator('.source-pdf .textLayer')).toContainText('Original course evidence');
     await expect(page.locator('.source-citation-marker')).toBeVisible();
     await expect(page.getByRole('status', { name: '原文位置保存' })).toHaveText('原文位置已保存');
-    await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t14-source.png' });
+    await page.screenshot({ path: evidencePath('t14-source.png') });
     await page.getByRole('button', { name: '返回画板', exact: true }).click();
     await page.getByRole('button', { name: '查看关系', exact: true }).click();
     const relation = page.getByLabel('关系详情');
@@ -129,7 +130,7 @@ test('graphic-only page carries a real region without fabricated quote; offline 
     await page.setViewportSize({ width: 680, height: 650 });
     await expect(page.getByRole('dialog', { name: '原文资料' })).toBeVisible();
     expect(await page.locator('.board-workspace').evaluate(element => (element as HTMLElement).inert)).toBe(true);
-    await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t14-source-narrow.png' });
+    await page.screenshot({ path: evidencePath('t14-source-narrow.png') });
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog', { name: '原文资料' })).toHaveCount(0);
   } finally { await app?.close(); await rm(root, { recursive: true, force: true }); }

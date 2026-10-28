@@ -1,3 +1,4 @@
+import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { cp, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -54,10 +55,10 @@ test('actual installed CLI rewrites one memory description into existing hits, p
       expect(actual).toEqual(selected.hit);
     }
     await region.getByText('查询与排序依据', { exact: true }).first().click();
-    await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t20-actual-description-results.png' });
+    await page.screenshot({ path: evidencePath('t20-actual-description-results.png') });
     await region.getByRole('button', { name: '定位命中', exact: true }).first().click();
     await expect(page.locator('[data-search-current="true"]')).toBeVisible();
-    await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t20-actual-description-location.png' });
+    await page.screenshot({ path: evidencePath('t20-actual-description-location.png') });
     await page.getByRole('button', { name: '返回搜索前位置', exact: true }).click();
     await expect(page.locator('.reading-layer[data-unit-id="KU-001"]')).toHaveAttribute('style', camera!);
     expect(await snapshot()).toEqual(before);
@@ -79,7 +80,7 @@ test('actual installed CLI rewrites one memory description into existing hits, p
     await expect(reopened.getByRole('region', { name: '搜索结果', exact: true })).toContainText('已有内容');
     evidence.assertions.actualMissingCLIAfterReopenKeepsLiteralSearch = true;
   } finally {
-    await writeFile('/tmp/yizhi-implement-gFFkA7/t20-actual-description.json', JSON.stringify(evidence, null, 2));
+    await writeFile(evidencePath('t20-actual-description.json'), JSON.stringify(evidence, null, 2));
     await app.close(); await rm(root, { recursive: true, force: true });
   }
 });

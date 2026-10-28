@@ -1,3 +1,4 @@
+import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import type { Page } from '@playwright/test';
@@ -32,7 +33,7 @@ test('offline real IPC search reveals a delivered deep answer and restores the o
     await page.getByRole('searchbox', { name: '查找已有内容' }).fill('Nibble');
     await results.getByRole('button', { name: '定位命中' }).first().click();
     await expect(page.locator('[data-search-current="true"]')).toContainText('Nibble');
-    await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t15-knowledge-hit.png' });
+    await page.screenshot({ path: evidencePath('t15-knowledge-hit.png') });
     await app.close(); app = await launch();
     const reopened = await app.firstWindow(); await resizeBoardWindow(app, reopened);
     await reopened.context().setOffline(true);
@@ -78,7 +79,7 @@ test('real saved note and durable message results open their own objects, preser
     await expect(page.locator('.workspace')).toHaveAttribute('inert', '');
     await page.getByRole('searchbox').fill('不存在的真实查找词');
     await expect(page.getByRole('region', { name: '搜索结果' })).toContainText('无命中');
-    await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t15-search-narrow.png' });
+    await page.screenshot({ path: evidencePath('t15-search-narrow.png') });
     await page.keyboard.press('Escape');
     await expect(page.getByRole('button', { name: '搜索课程', exact: true })).toBeFocused();
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
@@ -104,7 +105,7 @@ test('source result opens the fixed original page without creating an annotation
     await expect(page.locator('.source-panel [data-search-current="true"]')).toContainText('original evidence');
     const facts = await page.evaluate(async () => { const c = await window.yizhi.open(); return { citations: await window.yizhi.sources.citations({ sessionId: c.sessionId }), context: await window.yizhi.sources.context({ sessionId: c.sessionId }) }; });
     expect(facts.citations).toEqual([]);
-    await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t15-source-hit.png' });
+    await page.screenshot({ path: evidencePath('t15-source-hit.png') });
     await page.getByRole('button', { name: '返回搜索前位置' }).click();
     await page.getByRole('button', { name: '原文资料', exact: true }).click();
     await expect(page.locator('.source-panel canvas')).toHaveAttribute('aria-label', '固定版本测试资料 · PDF 第 2 页');

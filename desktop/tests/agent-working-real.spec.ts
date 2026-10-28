@@ -1,3 +1,4 @@
+import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron, type Page } from '@playwright/test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -46,11 +47,11 @@ test('installed CLI integrates student typing, correction and new same-target ma
     expect(done.tasks[0].deliveries!.some(d=>d.kind==='student-change'&&d.reviewedBasisId)).toBe(true);
     expect(done.tasks[0].groups!.some(g=>g.resolvedCandidateIds?.length)).toBe(true);
     expect(done.messages.filter(m=>m.taskId===queued.id&&m.role==='assistant').map(m=>m.text).join('\n')).toContain('三进制');
-    await page.screenshot({path:'/tmp/yizhi-implement-gFFkA7/t18-real-complete.png'});
+    await page.screenshot({path:evidencePath('t18-real-complete.png')});
     await app.close();app=await launch();page=await app.firstWindow();await resizeBoardWindow(app,page);
     expect((await page.evaluate(()=>window.yizhi.open())).unit).toEqual(final.unit);evidence.reopened=await view(page);evidence.passed=true;
   } catch(error) {evidence.error=String(error);const p=await app.firstWindow();evidence.failure=await view(p).catch(()=>null);throw error;}
-  finally {await writeFile('/tmp/yizhi-implement-gFFkA7/t18-actual-working.json',JSON.stringify(evidence,null,2));await app.close();await rm(root,{recursive:true,force:true});}
+  finally {await writeFile(evidencePath('t18-actual-working.json'),JSON.stringify(evidence,null,2));await app.close();await rm(root,{recursive:true,force:true});}
 });
 
 test('installed CLI interprets a new-target guidance and schedules its own fixed-authority task without retargeting the question', async()=>{
@@ -74,5 +75,5 @@ test('installed CLI interprets a new-target guidance and schedules its own fixed
     const after=await page.evaluate(async()=>{const b=window.yizhi,c=await b.open();return{c,other:await b.readUnit(c.sessionId,'KU-057')};});
     expect(after.c.unit).toEqual(before.c.unit);expect(after.other.reading.blocks.find(b=>b.id===paragraph.id)!.payload.text).toBe(paragraph.payload.text+'新事项补充：先确定选择位顺序。');evidence.passed=true;
   }catch(error){evidence.error=String(error);evidence.failure=await view(await app.firstWindow()).catch(()=>null);throw error;}
-  finally{await writeFile('/tmp/yizhi-implement-gFFkA7/t18-actual-new-matter.json',JSON.stringify(evidence,null,2));await app.close();await rm(root,{recursive:true,force:true});}
+  finally{await writeFile(evidencePath('t18-actual-new-matter.json'),JSON.stringify(evidence,null,2));await app.close();await rm(root,{recursive:true,force:true});}
 });
