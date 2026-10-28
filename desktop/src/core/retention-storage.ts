@@ -16,8 +16,8 @@ export class RetentionStorage {
    category('current','当前正文与课程对象',[['units',['payload']],['cg_objects',['value']]]),
    category('personal','当前个人记录与可见对话',[['personal_notes',['value']],['personal_drawings',['value']],['agent_messages',['payload']],['agent_conversations',['draft','draft_context']],['reading_state',['payload']]]),
    category('history','正式历史与窗口边界',[['operations',['before_text','after_text']],['cg_history',['payload']],['history_boundary',['value']],['restore_timeline',['before_value','after_value']],['placement_history',['value']],['drawing_history',['value']],['annotation_steps',['value']],['builtin_definition_history',['before_value','after_value']]]),
-   category('recovery','草稿、原语境与任务恢复材料',[['drafts',['input','receipt']],['annotation_versions',['block']],['cg_bases',['read_values','domain_basis']],['cg_candidates',['command']],['agent_tool_recovery',['input','output']],['agent_executor_receipts',['payload']]]),
-   category('receipts','操作身份与持久结果',[['operations',['receipt','digest']],['cg_candidates',['result','digest']],['annotation_operations',['result','digest']],['drawing_operations',['result','digest']],['agent_operations',['receipt','digest']]]),
+   category('recovery','草稿、原语境与任务恢复材料',[['drafts',['input','receipt']],['annotation_versions',['block']],['cg_bases',['read_values','domain_basis']],['cg_candidates',['command']],['agent_tool_recovery',['input','output']],['agent_executor_receipts',['payload']],['generation_bases',['payload']],['generation_candidates',['proposal','checks']]]),
+   category('receipts','操作身份与持久结果',[['operations',['receipt','digest']],['cg_candidates',['result','digest']],['annotation_operations',['result','digest']],['drawing_operations',['result','digest']],['agent_operations',['receipt','digest']],['generation_candidates',['result','digest']],['generation_groups',['receipt']]]),
    category('cache','可重建搜索缓存',[['search_documents',['payload']],['search_fts',['text']]]),
   ];
   const resources=join(this.directory,'resources');let resourceBytes=0,resourceCount=0;

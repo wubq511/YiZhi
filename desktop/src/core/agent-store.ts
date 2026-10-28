@@ -12,6 +12,8 @@ const valid = (s: unknown): s is string => typeof s === 'string' && s.length > 0
 const text = (s: unknown, max = 20_000): s is string => typeof s === 'string' && s.length <= max;
 
 export class AgentStore {
+  private generationState?: (task: AgentTask) => { pending: Array<'lesson'|'practice'>; completed:Array<'lesson'|'practice'>;retained: Array<{candidateId:string;reason:string}> };
+  attachGeneration(read: NonNullable<AgentStore['generationState']>) { this.generationState=read; }
   constructor(private db: DatabaseSync, private sources: Sources, private unit: (id: string) => CourseUnit | undefined, private groups: CommandGroups) {
     db.exec(`CREATE TABLE IF NOT EXISTS agent_conversations(id TEXT PRIMARY KEY, title TEXT NOT NULL, updated_at TEXT NOT NULL,
         draft TEXT NOT NULL DEFAULT '', draft_session TEXT NOT NULL DEFAULT '', draft_seq INTEGER NOT NULL DEFAULT 0, thread_id TEXT, draft_context TEXT NOT NULL DEFAULT '{}');
@@ -93,13 +95,20 @@ export class AgentStore {
     return { id, title: String(row.title), updatedAt: String(row.updated_at),
       toolFacts: this.db.prepare('SELECT r.* FROM agent_tool_recovery r JOIN agent_tasks t ON t.id=r.reference_id WHERE t.conversation_id=? ORDER BY r.rowid').all(id).map(r => ({ taskId: String(r.reference_id), name: String(r.name), purpose: String(r.purpose), referenceId: String(r.reference_id), digest: String(r.digest), references: parse(r.refs), hasRecoveryPayload: r.input !== null || r.output !== null })),
       draft: { text: String(row.draft), seq: row.draft_session === sessionId ? Number(row.draft_seq) : 0, citationIds: [], ...parse(row.draft_context) },
-      tasks: this.db.prepare('SELECT payload FROM agent_tasks WHERE conversation_id=? ORDER BY rowid').all(id).map(r => parse(r.payload)),
+      tasks: this.db.prepare('SELECT payload FROM agent_tasks WHERE conversation_id=? ORDER BY rowid').all(id).map(r => {
+        const task=parse(r.payload) as AgentTask;
+        if(task.snapshot.intent==='generate'){
+          const state=this.generationState?.(task);
+          task.generationProgress={completedStages:state?.completed??[],pendingStages:state?.pending??[]};
+        }
+        return task;
+      }),
       messages: this.db.prepare('SELECT m.payload FROM agent_messages m JOIN agent_tasks t ON t.id=m.task_id WHERE t.conversation_id=? ORDER BY m.rowid').all(id).map(r => parse(r.payload)) };
   }
   saveDraft(request: any) {
     if (!text(request.text) || !Number.isSafeInteger(request.seq) || request.seq < 1) throw new Error('输入草稿无效');
     const context = { ...(request.intent ? {intent: request.intent} : {}), ...(request.target ? { target: request.target } : {}), citationIds: request.citationIds ?? [] };
-    if (request.intent !== undefined && !['question','modify','add-to-board'].includes(request.intent)) throw new Error('请求意图无效');
+    if (request.intent !== undefined && !['question','modify','add-to-board','generate'].includes(request.intent)) throw new Error('请求意图无效');
     if (!Array.isArray(context.citationIds) || context.citationIds.length > 8 || context.citationIds.some((id: unknown) => !valid(id) || !this.sources.citations().some(c => c.id === id)) ||
       context.target && (!valid(context.target.unitId) || context.target.blockId !== undefined && !valid(context.target.blockId) || context.target.selectedText !== undefined && !text(context.target.selectedText, 10_000))) throw new Error('提问草稿目标或出处无效');
     return transaction(this.db, () => {
@@ -122,7 +131,15 @@ export class AgentStore {
     return this.operation(operationRequest, previous ? 'agent:continue' : 'agent:submit', () => {
       this.conversation(request.conversationId);
       if (request.generation !== this.generation()) throw new Error('课程代际已变化');
-      if (request.intent !== undefined && !['question','modify','add-to-board'].includes(request.intent)) throw new Error('请求意图无效');
+      if (request.intent !== undefined && !['question','modify','add-to-board','generate'].includes(request.intent)) throw new Error('请求意图无效');
+      if (request.intent === 'generate') {
+        const spec=request.generationSpec;
+        if(!spec||!valid(spec.unitId)||!valid(spec.themeId)||!valid(spec.themeName)||!valid(spec.sourceVersionId)||!valid(spec.artifactId)||
+          !Number.isSafeInteger(spec.pdfPageIndex)||spec.pdfPageIndex<0||request.target.unitId===spec.unitId||request.target.blockId)
+          throw new Error('新增主题缺少固定来源产物、独立单元身份或明确范围');
+        const version=this.sources.version(spec.sourceVersionId);
+        if(spec.pdfPageIndex>=version.pdfPages)throw new Error('新增主题来源页不存在');
+      } else if(request.generationSpec) throw new Error('只有新增主题请求可指定生成范围');
       if (request.mode !== undefined && !['steer','queue'].includes(request.mode)) throw new Error('消息送达方式无效');
       if (!text(request.text) || !request.text.trim() || !valid(request.target?.unitId) ||
         (request.model !== undefined && !valid(request.model)) || !Array.isArray(request.citationIds ?? []) || (request.citationIds?.length ?? 0) > 8) throw new Error('问题或目标无效');
@@ -148,6 +165,7 @@ export class AgentStore {
       });
       const snapshot: QuestionSnapshot = { intent: request.intent ?? 'question', text: request.text, target: { ...request.target, unitName: unit.name, revision: String(revision),
         ...(block ? { blockVersion: Number(this.db.prepare('SELECT version FROM cg_objects WHERE id=?').get(block.id)?.version ?? 1) } : {}) }, citations };
+      if(request.generationSpec)snapshot.generationSpec=structuredClone(request.generationSpec);
       if (!previous && current && request.mode !== 'queue') {
         const delivery = { id: randomUUID(), operationId: request.operationId, kind: 'steer' as const, state: 'pending' as const, target: request.target, snapshot, model: request.model ?? current.model };
         current.deliveries = [...(current.deliveries ?? []), delivery];
@@ -212,7 +230,8 @@ export class AgentStore {
     const contains=(blocks:ReadingBlock[]):boolean=>blocks.some(b=>b.id===previous.snapshot.target.blockId||contains(b.children??[]));
     const target={unitId:previous.snapshot.target.unitId,...(unit && previous.snapshot.target.blockId && contains(unit.reading.blocks)?{blockId:previous.snapshot.target.blockId}:{})};
     return this.submit({sessionId:request.sessionId,operationId:request.operationId,conversationId:previous.conversationId,generation:this.generation(),
-      text:previous.snapshot.text,target,intent:previous.snapshot.intent,citationIds:previous.snapshot.citations.map(c=>c.citation.id),...(previous.model?{model:previous.model}:{})},previous,request);
+      text:previous.snapshot.text,target,intent:previous.snapshot.intent,generationSpec:previous.snapshot.generationSpec,
+      citationIds:previous.snapshot.citations.map(c=>c.citation.id),...(previous.model?{model:previous.model}:{})},previous,request);
   }
   facts(request: {taskId:string;attemptId:string;generation:number}) {
     const task=this.task(request.taskId);
@@ -263,7 +282,12 @@ export class AgentStore {
       } else if (request.action === 'inspect' || request.action === 'integrate') {
         if (!['running','waiting'].includes(task.status)) return task;
         this.active(request);
-        task.integrationChecks = this.groups.recheck(request.sessionId, task.attemptId);
+        task.integrationChecks = task.snapshot.intent==='generate' ? [] : this.groups.recheck(request.sessionId, task.attemptId);
+        if(task.snapshot.intent==='generate') {
+          const state=this.generationState?.(task);
+          task.integrationChecks=[...(state?.retained??[]).map(c=>({candidateId:c.candidateId,status:'conflict' as const,reason:c.reason,objectIds:[task.snapshot.generationSpec!.unitId]})),
+            ...(state?.pending??[]).map(stage=>({candidateId:`stage:${stage}`,status:'needs-reread' as const,reason:`${stage} 尚未发布，需要实际读取并校验`,objectIds:[task.snapshot.generationSpec!.unitId]}))];
+        }
         const blocked = task.integrationChecks.find(c => ['waiting','conflict','ineligible'].includes(c.status));
         task.waitingReason = blocked?.reason ?? (task.integrationChecks.length ? '正在基于最新学生输入重新整合' : undefined);
         if (task.status === 'waiting' && !task.integrationChecks.length &&
@@ -317,11 +341,12 @@ export class AgentStore {
     if (['completed','failed','interrupted','unknown'].includes(status)) task.executorStatus = status as AgentTask['executorStatus'];
     if (task.snapshot.intent && task.snapshot.intent !== 'question') {
       const committed = task.groups?.some(g => g.status === 'committed' && g.changedObjectIds.length);
-      const retained = this.db.prepare(`SELECT 1 FROM cg_candidates c WHERE json_extract(c.command,'$.attemptId')=?
+      const retained = task.snapshot.intent==='generate' ? this.generationState?.(task).retained.length : this.db.prepare(`SELECT 1 FROM cg_candidates c WHERE json_extract(c.command,'$.attemptId')=?
         AND json_extract(c.result,'$.status')='retained' AND NOT EXISTS(SELECT 1 FROM cg_resolved r WHERE r.candidate_id=c.id) LIMIT 1`).get(task.attemptId);
+      const missing=task.snapshot.intent==='generate' ? this.generationState?.(task).pending.length : 0;
       const unfinished = status !== 'completed' || task.mutationFailure || retained;
       const unreadInput = task.deliveries?.some(d => d.kind === 'student-change' && !d.reviewedBasisId);
-      status = executorCompleted && (retained || unreadInput) ? 'waiting' : committed ? unfinished ? 'partial' : 'completed' : 'pending';
+      status = executorCompleted && (retained || unreadInput || missing) ? 'waiting' : committed ? unfinished ? 'partial' : 'completed' : 'pending';
     }
     if (executorCompleted && task.deliveries?.some(d => d.kind === 'steer' && !d.handledTaskId && d.state !== 'accepted')) status = 'waiting';
     task.status = executorUnknown ? 'unknown' : task.stopRequested ? 'stopped' : status; task.error = error ?? task.mutationFailure ?? null;

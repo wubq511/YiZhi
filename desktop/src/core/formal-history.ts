@@ -7,6 +7,8 @@ import { layoutGraph,saveLayout } from './local-layout';
 import { changedCouplings,unitBlocks,linkedExperiment,isBuiltin } from './consistency-links';
 import { assignments,evaluate,formulaOutputs,convertFormula } from './builtin-model';
 import { unitObjects } from './history-objects';
+import { graphObjectRevision,layoutRevision,bumpLayoutRevision } from './generation-lifecycle';
+import { syncAnnotations } from './annotations';
 import { equal } from '../editor-api';
 import type { DatabaseSync } from 'node:sqlite';
 import type { CourseUnit, ReadingBlock } from '../shared';
@@ -25,9 +27,18 @@ export class FormalHistory {
   constructor(private db:DatabaseSync, private commands:CommandGroups, private agent:AgentStore, private graph:CourseGraph, private relations:FormalRelations, private experiments:BuiltinExperiments) {initializeHistoryIndex(db);}
   private hash(value:unknown) {return createHash('sha256').update(JSON.stringify(value)).digest('hex');}
   currentObject(id:string){return this.object(id);}
+  private currentGraph():CourseGraph {
+    const row=this.db.prepare("SELECT value FROM metadata WHERE key='course-graph'").get();
+    return row?parse(row.value):this.graph;
+  }
   private object(id:string):{value:Record<string,any>|null;version:number;kind:string} {
     if(id.startsWith('review:')){const unitId=id.slice(7),r=this.db.prepare('SELECT status,version FROM review_states WHERE unit_id=?').get(unitId);return {value:{unitId,status:r?String(r.status):'pending'},version:Number(r?.version??0),kind:'review'};}
-    if(id.startsWith('layout:')) {const unitId=id.slice(7),n=layoutGraph(this.db,this.graph).layout.nodes.find(n=>n.unitId===unitId);return {value:n?{unitId:n.unitId,x:n.x,y:n.y,width:n.width}:null,version:Number(this.db.prepare('SELECT version FROM layout_versions WHERE unit_id=?').get(unitId)?.version??0),kind:'layout'};}
+    if(id.startsWith('unit:')) {const row=this.db.prepare('SELECT payload FROM units WHERE id=?').get(id.slice(5));
+      return {value:row?parse(row.payload):null,version:Number(this.db.prepare('SELECT version FROM cg_objects WHERE id=?').get(id)?.version??0),kind:'unit'};}
+    if(id.startsWith('graph:'))return {value:this.currentGraph().nodes.find(n=>n.id===id.slice(6))??null,version:graphObjectRevision(this.db,id),kind:'graph'};
+    if(id.startsWith('theme:'))return {value:this.currentGraph().groups.find(g=>g.id===id.slice(6))??null,version:graphObjectRevision(this.db,id),kind:'theme'};
+    if(id.startsWith('layout-theme:'))return {value:this.currentGraph().layout.groups.find(g=>g.themeId===id.slice(13))??null,version:graphObjectRevision(this.db,id),kind:'layout-theme'};
+    if(id.startsWith('layout:')) {const unitId=id.slice(7),n=layoutGraph(this.db,this.currentGraph()).layout.nodes.find(n=>n.unitId===unitId);return {value:n??null,version:layoutRevision(this.db,unitId),kind:'layout'};}
     if(id.startsWith('experiment:')) {const [unitId,blockId]=id.slice(11).split('/');const value=this.experiments.formalDefinition(unitId,blockId);return {value,version:value.revision,kind:'experiment'};}
     if(id.startsWith('REL-')||/^G[A-Za-z0-9]/.test(id))return this.relations.historyObject(id);
     const row=this.db.prepare('SELECT * FROM cg_objects WHERE id=?').get(id);
@@ -35,8 +46,13 @@ export class FormalHistory {
   }
   /** Later producer domains must provide a checked inverse, never fall through as body objects. */
   private unsupported(changes:HistoryChange[]):string[] {
-    return changes.filter(c=>/^(unit|graph|theme):/.test(c.objectId)||
-      !['block','structure','reference','dependency','layout','experiment','formal-relation','review'].includes(this.object(c.objectId).kind)).map(c=>c.objectId);
+    return changes.filter(c=>{
+      const kind=this.object(c.objectId).kind;
+      if(!['block','structure','reference','dependency','layout','layout-theme','unit','graph','theme','experiment','formal-relation','review'].includes(kind))return true;
+      if(kind==='unit')return [c.before,c.after].some(v=>v&&(v.id!==c.objectId.slice(5)||!Array.isArray(v.reading?.blocks)||!v.theme?.id));
+      if(['graph','theme','layout-theme'].includes(kind))return !changes.some(change=>change.objectId.startsWith('unit:'));
+      return false;
+    }).map(c=>c.objectId);
   }
   private unsupportedReason(ids:string[]) {return `尚不支持这些结构对象的完整恢复，整个一致组保留：${ids.join('、')}`;}
   private selected(selection:HistorySelection) {
@@ -70,7 +86,7 @@ export class FormalHistory {
     const anchor=this.detail(atOperationId),scope=new Set(unitIds),desired=new Map<string,Record<string,any>|null>();
     const groups=this.groups(true),later=groups.filter(g=>g.order>anchor.order||(side==='before'&&g.operationId===anchor.operationId)).reverse();
     const owned=new Set<string>(),children=new Map<string,Set<string>>();
-    for(const id of unitIds){const row=this.db.prepare('SELECT payload FROM units WHERE id=?').get(id);if(row)for(const objectId of unitObjects(parse(row.payload)).keys())owned.add(objectId);owned.add(`structure:${id}`);}
+    for(const id of unitIds){const row=this.db.prepare('SELECT payload FROM units WHERE id=?').get(id);if(row)for(const objectId of unitObjects(parse(row.payload)).keys())owned.add(objectId);owned.add(`structure:${id}`);owned.add(`unit:${id}`);owned.add(`graph:${id}`);}
     // Stable historical membership also covers blocks removed from today's projection.
     for(const g of groups)for(const c of g.changes)if(c.objectId.startsWith('structure:'))for(const value of [c.before,c.after]) {
       const ids=children.get(c.objectId)??new Set<string>();for(const id of value?.blockIds??[])ids.add(id);children.set(c.objectId,ids);
@@ -84,14 +100,19 @@ export class FormalHistory {
     // does not select that neighbor's independent later body/history.
     for(const g of later)if(g.unitIds.some(id=>unitIds.includes(id))) {
       const ids=this.unsupported(g.changes);if(ids.length)throw new Error(this.unsupportedReason(ids));
-      const included=g.changes.filter(c=>(includeLayout||!c.objectId.startsWith('layout:'))&&!c.objectId.startsWith('review:'));
+      const lifecycle=g.changes.some(c=>c.objectId.startsWith('unit:')&&(!c.before||!c.after));
+      const included=g.changes.filter(c=>(includeLayout||lifecycle||!c.objectId.startsWith('layout:'))&&!c.objectId.startsWith('review:'));
       if(!included.some(c=>owned.has(c.objectId)||c.objectId.startsWith('experiment:')&&unitIds.includes(c.objectId.slice(11).split('/')[0])||touches(c.before)||touches(c.after)))continue;
       if(included.length)for(const id of g.unitIds)scope.add(id);
       for(const c of included)desired.set(c.objectId,c.before);
     }
     const changes:HistoryChange[]=[];
     for(const [id,after] of desired){const now=this.object(id);if(!equal(now.value,after))changes.push({objectId:id,before:now.value,after,beforeVersion:now.version,afterVersion:now.version});}
-    const units=[...scope].flatMap(id=>{const row=this.db.prepare('SELECT payload FROM units WHERE id=?').get(id);return row?[this.projectUnit(parse(row.payload),desired)]:[];});
+    const units=[...scope].flatMap(id=>{
+      const row=this.db.prepare('SELECT payload FROM units WHERE id=?').get(id);
+      const unit=desired.has(`unit:${id}`)?desired.get(`unit:${id}`):row?parse(row.payload):null;
+      return unit?[this.projectUnit(unit as CourseUnit,desired)]:[];
+    });
     return {anchor,unitIds:[...scope],changes,units};
   }
   restoreInTransaction(changes:HistoryChange[],unitIds:string[]) {
@@ -128,7 +149,8 @@ export class FormalHistory {
           for(const id of g.unitIds)scope.add(id);
         }
       }
-      unit=this.projectUnit(current,desired);guardIds=[...unitObjects(current).keys()];
+      if(desired.has(`unit:${p.unitId}`)&&desired.get(`unit:${p.unitId}`)===null)throw new Error('所选版本尚无该单元；请撤回完整创建一致组');
+      unit=this.projectUnit((desired.get(`unit:${p.unitId}`)??current) as CourseUnit,desired);guardIds=[...unitObjects(current).keys()];
       const changes:HistoryChange[]=[];
       for(const [id,value] of desired) {const now=this.object(id);if(!equal(value,now.value))changes.push({objectId:id,before:value,after:now.value,beforeVersion:now.version,afterVersion:now.version});}
       groups=[{...anchor,unitIds:[...scope],changes,explanation:'恢复单元旧内容'}];
@@ -172,7 +194,15 @@ export class FormalHistory {
         for(const group of [...fresh.groups].reverse()) {
           const unsupported=this.unsupported(group.changes);
           if(unsupported.length) {result.conflicts.push({operationId:group.operationId,objectIds:unsupported,reason:this.unsupportedReason(unsupported)});continue;}
-          const conflicts=group.changes.filter(c=>(logical.get(c.objectId)??this.object(c.objectId).version)!==c.afterVersion).map(c=>c.objectId);
+          const canonical=(id:string,v:any)=>{
+            if(v?.retired)return null;
+            if(id.startsWith('layout:')&&v)return {unitId:v.unitId,x:v.x,y:v.y,width:v.width};
+            return v;
+          };
+          const conflicts=group.changes.filter(c=>{
+            const current=this.object(c.objectId);
+            return (logical.get(c.objectId)??current.version)!==c.afterVersion||!equal(canonical(c.objectId,current.value),canonical(c.objectId,c.after));
+          }).map(c=>c.objectId);
           if(conflicts.length) {result.conflicts.push({operationId:group.operationId,objectIds:conflicts,reason:'同处修订已变化，整个一致组保留'});continue;}
           this.db.exec('SAVEPOINT history_group');
           let actual:HistoryChange[];const publicationStart=publications.length;
@@ -207,12 +237,36 @@ export class FormalHistory {
     const replacements=new Map(changes.map(c=>[c.objectId,c.after]));
     const units=new Map<string,CourseUnit>();
     for(const unitId of unitIds) {
-      const row=this.db.prepare('SELECT payload FROM units WHERE id=?').get(unitId);if(!row)continue;
-      const unit:CourseUnit=parse(row.payload);
-      const next=this.projectUnit(unit,replacements);units.set(unitId,next);
+      const row=this.db.prepare('SELECT payload FROM units WHERE id=?').get(unitId);
+      const unit:CourseUnit|undefined=row?parse(row.payload):undefined;
+      const lifecycle=replacements.has(`unit:${unitId}`);
+      if(!unit&&!lifecycle)continue;
+      const next=lifecycle?replacements.get(`unit:${unitId}`) as CourseUnit|null:this.projectUnit(unit!,replacements);
+      if(lifecycle){
+        if(next&&next.id!==unitId)throw new Error('历史单元身份不一致');
+        if(!unit||!next){
+          for(const [id,value] of unitObjects(unit??next!)){
+            const target=replacements.get(id);
+            const cleared=target===null||target?.retired||id.startsWith('structure:')&&equal(target,{blockIds:[]});
+            if(!replacements.has(id)||(next?!equal(target,value):!cleared))
+              throw new Error('新建单元的正文与结构必须作为完整一致组恢复');
+          }
+        }else if(!equal(this.projectUnit(unit,replacements).reading,next.reading))throw new Error('单元版本与正文变化不一致');
+      }
+      if(!next){
+        if(!lifecycle||!replacements.has(`graph:${unitId}`)||replacements.get(`graph:${unitId}`)!==null||
+          !replacements.has(`layout:${unitId}`)||replacements.get(`layout:${unitId}`)!==null)
+          throw new Error('删除新建单元须同时撤销图节点与布局');
+        if(this.relations.graph().edges.some(edge=>(edge.fromUnitId===unitId||edge.toUnitId===unitId)&&replacements.get(edge.id)!==null))
+          throw new Error('后来的正式关系仍引用该单元，整个一致组保留');
+        this.db.prepare('DELETE FROM units WHERE id=?').run(unitId);
+        this.db.prepare('UPDATE cg_objects SET value=?,version=version+1 WHERE id=?').run(JSON.stringify({blockIds:[]}),`structure:${unitId}`);
+        continue;
+      }
+      units.set(unitId,next);
       const bodyChanged=!equal(unit,next);
       if(!bodyChanged&&!changes.some(c=>c.objectId.startsWith(`experiment:${unitId}/`)))continue;
-      const couplings=changedCouplings(unit,next);
+      const couplings=unit?changedCouplings(unit,next):new Set<string>();
       for(const c of changes)if(c.objectId.startsWith(`experiment:${unitId}/`))couplings.add(c.objectId.split('/')[1]);
       for(const id of couplings)if(!replacements.has(`experiment:${unitId}/${id}`))throw new Error('不能拆开历史公式与实验一致组');
       for(const f of unitBlocks(next).filter(b=>couplings.has(linkedExperiment(b)??''))) {
@@ -222,18 +276,52 @@ export class FormalHistory {
         if(checked.check!=='verified'||checked.outputName!==definition.outputName)throw new Error('历史公式与实验定义不能共同成立');
         if(definition.kind==='mux'&&!equal(formulaOutputs(f.payload.latex,Object.keys(definition.initialInputs)),assignments(Object.keys(definition.initialInputs)).map(bits=>evaluate(definition as any,bits).output)))throw new Error('历史公式与实验计算不一致');
       }
-      if(bodyChanged)this.db.prepare('UPDATE units SET payload=?,revision=revision+1 WHERE id=?').run(JSON.stringify(next),unit.id);
+      if(bodyChanged){
+        if(unit)this.db.prepare('UPDATE units SET payload=?,revision=revision+1 WHERE id=?').run(JSON.stringify(next),unit.id);
+        else this.db.prepare('INSERT INTO units VALUES(?,?,1)').run(unitId,JSON.stringify(next));
+      }
     }
     for(const c of changes)if(['reference','dependency'].includes(before.get(c.objectId)!.kind))this.db.prepare('UPDATE cg_objects SET value=?,version=version+1 WHERE id=?').run(JSON.stringify(c.after??{}),c.objectId);
     const overrides=new Map<string,HistoryChange>();
     const relationChanges=changes.filter(c=>before.get(c.objectId)!.kind==='formal-relation');
     if(relationChanges.length)for(const c of this.relations.restoreInTransaction(relationChanges))overrides.set(c.objectId,c);
+    const graphChanges=changes.filter(c=>['graph','theme','layout-theme'].includes(before.get(c.objectId)!.kind));
+    if(graphChanges.length){
+      const next=structuredClone(this.currentGraph());
+      const replace=(items:any[],key:string,identity:string,value:any)=>{
+        const index=items.findIndex(item=>item[key]===identity);
+        if(value===null){if(index>=0)items.splice(index,1);}
+        else if(value[key]!==identity)throw new Error('历史图对象身份不一致');
+        else if(index>=0)items[index]=value;
+        else items.push(value);
+      };
+      for(const c of changes){
+        const kind=before.get(c.objectId)!.kind;
+        if(kind==='graph')replace(next.nodes,'id',c.objectId.slice(6),c.after);
+        if(kind==='theme')replace(next.groups,'id',c.objectId.slice(6),c.after);
+        if(kind==='layout-theme')replace(next.layout.groups,'themeId',c.objectId.slice(13),c.after);
+        if(kind==='layout'){
+          const unitId=c.objectId.slice(7);
+          replace(next.layout.nodes,'unitId',unitId,c.after);
+          if(c.after===null)this.db.prepare('DELETE FROM layout_baseline WHERE unit_id=?').run(unitId);
+          bumpLayoutRevision(this.db,unitId);
+        }
+      }
+      if(next.nodes.some(node=>!next.groups.some(group=>group.id===node.themeId)))throw new Error('历史主题仍有其他单元依赖，整个一致组保留');
+      for(const unitId of unitIds){
+        const unit=units.get(unitId),node=next.nodes.find(n=>n.id===unitId),layout=next.layout.nodes.find(n=>n.unitId===unitId);
+        if(unit&&(!node||node.themeId!==unit.theme.id||!layout))throw new Error('恢复后的单元、主题、图节点与布局不一致');
+        if(!unit&&(node||layout))throw new Error('撤销单元后图节点或布局仍悬空');
+      }
+      this.db.prepare("INSERT INTO metadata VALUES('course-graph',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(JSON.stringify(next));
+      publications.push(()=>Object.assign(this.graph,next));
+    }
     for(const c of changes) {
       if(c.objectId.startsWith('review:')) {
         if(!c.after||!['pending','weak','mastered'].includes(c.after.status))throw new Error('历史掌握状态无效');
         this.db.prepare('INSERT INTO review_states VALUES(?,?,1) ON CONFLICT(unit_id) DO UPDATE SET status=excluded.status,version=version+1').run(c.objectId.slice(7),c.after.status);
       }
-      if(c.objectId.startsWith('layout:')) {if(!c.after)throw new Error('历史布局缺少位置');saveLayout(this.db,this.graph,[c.after as any]);}
+      if(c.objectId.startsWith('layout:')&&!graphChanges.length) {if(!c.after)throw new Error('历史布局缺少位置');saveLayout(this.db,this.graph,[c.after as any]);}
       if(c.objectId.startsWith('experiment:')) {
         const [unitId,blockId]=c.objectId.slice(11).split('/'),block=unitBlocks(units.get(unitId)).find(b=>b.id===blockId);
         if(!block||!c.after)throw new Error('历史实验定义缺少必要正文');
@@ -250,6 +338,9 @@ export class FormalHistory {
         if((replacements.has(id)&&(!replacement||replacement.retired))||(!active.has(id)&&object?.retired))throw new Error('后来的引用或依赖仍使用该块，整个一致组保留');
       }
     }
+    // A history inverse is an exact restoration proof, unlike an unrelated equal string.
+    const restorations=[...units.values()].flatMap(unit=>unitBlocks(unit)).filter(block=>replacements.has(block.id));
+    syncAnnotations(this.db,{updates:[],correspondence:[],restorations});
     const effects=this.commands.observe(new Set(changes.filter(c=>c.objectId.startsWith('dependency:')).map(c=>c.objectId)));
     return [...effects.filter(c=>!replacements.has(c.objectId)),...changes.map(c=>overrides.get(c.objectId)??({objectId:c.objectId,before:before.get(c.objectId)!.value,after:this.object(c.objectId).value,beforeVersion:before.get(c.objectId)!.version,afterVersion:this.object(c.objectId).version}))];
   }

@@ -7,4 +7,5 @@ export function registerAgentIPC(core: CourseService, runtime: AgentRuntime, che
     ipcMain.handle(`agent:${method}`, (event, request) => { checkSender(event); return core.agent[method](request); });
   for(const method of ['submit','stop','continue','reconcile'] as const)ipcMain.handle(`agent:${method}`,(event,request)=>{checkSender(event);return runtime[method](request);});
   ipcMain.handle('agent:retryDelivery', (event, request) => { checkSender(event); return runtime.retryDelivery(request); });
+  ipcMain.handle('agent:generationCandidates', (event, request) => { checkSender(event); return core.generationCandidates(request); });
 }
