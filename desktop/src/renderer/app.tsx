@@ -389,10 +389,18 @@ function App() {
       const current = flow.getViewport();
       if (event.ctrlKey || event.metaKey) {
         const rect = board.getBoundingClientRect(); const px = event.clientX - rect.left, py = event.clientY - rect.top;
-        const zoom = Math.max(.04, Math.min(2, current.zoom * Math.exp(-event.deltaY * .001)));
+        // The custom content-layer handler bypasses React Flow's macOS pinch
+        // normalization. Restore its pixel-mode pinch gain; keep command-wheel gain.
+        const macPinch = event.ctrlKey && !event.metaKey && event.deltaMode === WheelEvent.DOM_DELTA_PIXEL && /Mac/.test(navigator.userAgent);
+        const factor = macPinch ? Math.pow(2, -event.deltaY * .02) : Math.exp(-event.deltaY * .001);
+        const zoom = Math.max(.04, Math.min(2, current.zoom * factor));
         const ratio = zoom / current.zoom;
         void flow.setViewport({ x: px - (px - current.x) * ratio, y: py - (py - current.y) * ratio, zoom });
-      } else camera.pan(-(event.shiftKey ? event.deltaY : event.deltaX), -(event.shiftKey ? 0 : event.deltaY));
+      } else {
+        // Some platforms already deliver Shift+wheel on X. Keep that axis;
+        // otherwise translate the vertical wheel delta to horizontal once.
+        camera.pan(-(event.shiftKey ? event.deltaX || event.deltaY : event.deltaX), -(event.shiftKey ? 0 : event.deltaY));
+      }
     };
     board.addEventListener('wheel', wheel, { passive: false, capture: true });
     board.addEventListener('scroll', nativeScroll, { passive: true });

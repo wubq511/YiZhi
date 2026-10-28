@@ -53,3 +53,9 @@ python3 /absolute/run-ui-serial.py \
 ```
 
 工具只被动观测；`sample LABEL` 取样，`mark CATEGORY pass|fail|unverified NOTE` 保存操作者声明，`quit` 收尾。`background` 仅在实际检测到 live composition 且目标是合成单元时，通过正式提交路径更新独立段落；它不发送 composition 或键盘事件。通过父任务向 PTY 发送命令，避免切换到终端打断候选。未记录实体结果的项目始终保持未验。
+
+`wheel-start LABEL`／`wheel-stop` 收集最多 512 条原始 wheel 事件（delta、mode、修饰键、目标区域及事件阻止状态），记录丢弃数与前后精确相机；监听器不改写事件。`isTrusted` 也不能单独证明实体输入，需关联实际操作者和设备说明。复验捏合前通过正常目录导航进入中间倍率，先排除上下限截断；硬边界与指针锚点仍由受影响回归检查。
+
+`arm-background` 提前布置一次独立更新，在下一次真实 trusted compositionstart 后执行，避免操作者切回聊天打断候选；`disarm-background` 取消。正式回执和 composition 前后状态均保存，候选已结束或焦点不在应用时不计重叠通过。此命令不生成输入，也不是模型调用。
+
+实体发现导致手势修正后，`YIZHI_GESTURE_INPUT=/persistent/corrected-input.json` 可选择 `tests/acceptance-gestures-installed.spec.ts` 做受影响安装检查。输入沿用 final schema，另包含实际 `courseDirectory`、`profileDirectory`、`evidenceDirectory`、`editableUnitId`；绑定 corrected clean source／真实包清单。它复用原 500 隔离课程，只检查修正手势、正文/草稿保全与重开，不重复 500 连续导航。旧完整负载证据和新受影响证据需同时保留；实体仍由操作者复验。
