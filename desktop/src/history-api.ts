@@ -4,7 +4,7 @@ export type HistoryChange = GroupHistory['changes'][number];
 export interface HistoryGroup {
   operationId: string; activityId: string; taskId?: string; actor: 'agent' | 'student';
   committedAt: string; explanation: string; unitIds: string[]; changes: HistoryChange[];
-  order: string; source: 'group' | 'student' | 'placement';
+  order: string; source: 'group' | 'student' | 'placement' | 'legacy';
 }
 export interface HistoryActivity {
   id: string; actor: 'agent' | 'student'; taskId?: string; committedAt: string; explanation: string;

@@ -349,7 +349,7 @@ export class AgentRuntime {
     const ancestors:AgentTask[]=[];let previousId=task.continuesTaskId;
     while(previousId&&!ancestors.some(t=>t.id===previousId)){const previous=history.tasks.find(t=>t.id===previousId);if(!previous)break;ancestors.push(previous);previousId=previous.continuesTaskId;}
     const settled = new Set(history.tasks.filter(t => !['queued','waiting','running','stopping'].includes(t.status)).map(t => t.id));
-    const prior = history.messages.filter(m => m.taskId !== task.id && settled.has(m.taskId) && m.state === 'complete').slice(-12).map(m => ({ role: m.role, text: m.text.slice(0, 3000) }));
+    const prior = history.messages.filter(m => m.taskId !== task.id && (m.taskId===null||settled.has(m.taskId)) && m.state === 'complete').slice(-12).map(m => ({ role: m.role, text: m.text.slice(0, 3000) }));
     const response = await this.rpc!.request('turn/start', { threadId, model, environments: [],
       input: [{ type: 'text', text: JSON.stringify({ previousVisibleMessages: prior, submittedRequest: task.snapshot, continuation: task.continuesTaskId ? {previousTaskId:task.continuesTaskId,originalSubmittedRequest:ancestors[0]?.snapshot,completedGroups:ancestors.flatMap(t=>(t.groups??[]).filter(g=>g.status==='committed')),rule:'必须先重读最新内容，仅处理剩余事项；不得重新生成或应用已提交组。保留当前学生内容。'} : undefined,
         ...(task.guidedFrom ? { independentGuidanceTask: { ...task.guidedFrom, taskId: task.id, instruction: '这已经是原 Agent 为学生新事项建立的独立业务任务。现在直接读取本次固定目标并执行 submittedRequest 的实际意图，不要再次安排同一事项，不复用父任务的 deliveryId 调度。' } } : {}),

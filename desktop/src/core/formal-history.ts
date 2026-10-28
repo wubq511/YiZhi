@@ -1,3 +1,4 @@
+import { legacyBodyGroup } from './migration-history';
 import { historyTimestamp } from './history-clock';
 import { initializeHistoryIndex } from './history-index';
 import type { BuiltinExperiments } from './builtin-experiments';
@@ -353,6 +354,7 @@ export class FormalHistory {
     if(!windowReference&&this.db.prepare('SELECT 1 FROM history_expired WHERE operation_id=?').get(operationId))throw new Error('此修改明细已过期清理，不能恢复；请使用仍可恢复的时间范围');
     const index=this.db.prepare('SELECT * FROM history_index WHERE operation_id=?').get(operationId);
     const order=String(index?.seq??0).padStart(16,'0');
+    if(index?.source==='legacy'){const group=legacyBodyGroup(this.db,operationId);return {operationId,activityId:String(index.activity_id),actor:'student',committedAt:String(index.committed_at),explanation:String(index.explanation),...group,order,source:'legacy'};}
     if(index?.source==='placement') {
       const row=this.db.prepare("SELECT value FROM placement_history WHERE json_extract(value,'$.operationId')=?").get(operationId)!;
       const value=parse(row.value),objectId=`layout:${value.after.unitId}`;

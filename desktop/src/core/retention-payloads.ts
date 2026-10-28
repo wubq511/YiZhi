@@ -3,6 +3,7 @@ import { transaction } from './save-store';
 import { equal } from '../editor-api';
 const parse=(v:unknown)=>JSON.parse(String(v));
 const targets=[
+ ['migration_values','id'],['migration_receipts','id'],['migration_pending','id'],
  ['cg_objects','id'],
  ['cg_bases','id'],['cg_candidates','id'],['agent_tool_recovery','id'],['agent_executor_receipts','json_array(attempt_id,event_id)'],
  ['generation_candidates','id'],
@@ -58,6 +59,13 @@ export class RetentionPayloads {
   return false;
  }
  private crop(table:string,key:string,row:Record<string,any>):boolean {
+  if(table==='migration_values'){
+   const reference='"$value":"'+String(row.id)+'"';
+   if(this.db.prepare("SELECT 1 FROM restore_timeline WHERE kind='legacy' AND (instr(before_value,?)>0 OR instr(after_value,?)>0) LIMIT 1").get(reference,reference)||this.db.prepare('SELECT 1 FROM migration_receipts WHERE expired=0 AND instr(receipt,?)>0 LIMIT 1').get(reference))return false;
+   this.db.prepare('DELETE FROM migration_values WHERE id=?').run(row.id);return true;
+  }
+  if(table==='migration_receipts'){this.db.prepare("UPDATE migration_receipts SET expired=1,receipt='{}' WHERE id=?").run(row.id);return true;}
+  if(table==='migration_pending'){if(row.state==='unresolved')return false;this.db.prepare('UPDATE migration_pending SET payload=NULL WHERE id=?').run(row.id);return true;}
   if(table==='cg_objects'){
    const value=parse(row.value);
    // Checked unit/graph lifecycle tombstones are already minimal. Preserve null
@@ -99,6 +107,7 @@ export class RetentionPayloads {
   }
   if(table==='restore_timeline'){
    if(row.kind==='formal')return false;
+   if(row.kind==='legacy'){if(this.db.prepare('SELECT 1 FROM history_index WHERE operation_id=? AND (operation_id NOT IN(SELECT operation_id FROM history_expired) OR operation_id IN(SELECT operation_id FROM history_window_refs))').get(row.reference))return false;this.db.prepare("DELETE FROM restore_timeline WHERE kind='legacy' AND reference=?").run(row.reference);return true;}
    const first=this.db.prepare("SELECT min(seq) n FROM restore_timeline WHERE kind='formal'").get()!.n;
    if(first!==null&&Number(row.seq)>=Number(first))return false;
   }
@@ -131,7 +140,7 @@ export class RetentionPayloads {
     if(!row||this.crop(target[0],String(item.record_key),row)){
      removed++;this.db.prepare('DELETE FROM retention_payloads WHERE domain=? AND record_key=?').run(item.domain!,item.record_key!);
      // Keep a timestamp marker for minimized immutable receipts so they are not re-indexed.
-     if(row&&['cg_bases','cg_candidates','generation_candidates','agent_tool_recovery','agent_executor_receipts','annotation_operations','drawing_operations','builtin_experiment_operations','extension_operations'].includes(target[0]))this.db.prepare('INSERT OR REPLACE INTO retention_payloads VALUES(?,?,?)').run(item.domain!,item.record_key!,'9999-12-31T00:00:00.000Z');
+     if(row&&['migration_receipts','migration_pending','cg_bases','cg_candidates','generation_candidates','agent_tool_recovery','agent_executor_receipts','annotation_operations','drawing_operations','builtin_experiment_operations','extension_operations'].includes(target[0]))this.db.prepare('INSERT OR REPLACE INTO retention_payloads VALUES(?,?,?)').run(item.domain!,item.record_key!,'9999-12-31T00:00:00.000Z');
     }
    }
    this.db.prepare("INSERT OR REPLACE INTO metadata VALUES('retention-payload-cursor',?)").run(String(rows.at(-1)!.rowid));

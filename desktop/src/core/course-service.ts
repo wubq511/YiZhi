@@ -57,7 +57,7 @@ export class CourseService {
   private stopped = false;
   private closing?: Promise<void>;
   private failure?: Error;
-  constructor(workerPath: string, options?: { backupScheduling?:import('../backup-api').BackupScheduling; retentionScheduling?:import('../retention-api').RetentionScheduling; parseScheduling?: ParseScheduling; migrationScheduling?: import('../migration-api').MigrationScheduling; restoreScheduling?:import('../course-restore-api').CourseRestoreScheduling }) {
+  constructor(workerPath: string, options?: { cutoverScheduling?:import('./directory-authority').CutoverScheduling; backupScheduling?:import('../backup-api').BackupScheduling; retentionScheduling?:import('../retention-api').RetentionScheduling; parseScheduling?: ParseScheduling; migrationScheduling?: import('../migration-api').MigrationScheduling; restoreScheduling?:import('../course-restore-api').CourseRestoreScheduling }) {
     this.worker = new Worker(workerPath, { workerData: options });
     this.worker.on('message', message => {
       const waiter = this.pending.get(message.id);

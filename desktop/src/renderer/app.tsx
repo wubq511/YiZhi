@@ -1,6 +1,7 @@
 import { BackupPanel } from './backup-panel';
 import { ReadonlyCourse } from './readonly-course';
 import { CourseRestorePanel } from './course-restore-panel';
+import { MigrationPanel } from './migration-panel';
 import { RetentionPanel } from './retention-panel';
 import { HistoryPanel,type HistoryPanelHandle } from './history-panel';
 import { Drawings, type DrawingHandle } from './drawings';
@@ -495,6 +496,7 @@ function App() {
   if(!course&&readonlyReport)return <><header className="app-header"><strong className="brand">绎知</strong><span>兼容范围只读 · 拒绝写入</span><button onClick={()=>void load()}>重新核对版本</button></header><ReadonlyCourse report={readonlyReport}/></>;
   return <>
     <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen || sourcesOpen || agentOpen || notesOpen || searchOpen || exchangeOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
+      <MigrationPanel sessionId={course?.sessionId}/>
       {course&&<BackupPanel sessionId={course.sessionId} prepare={prepareCourseSnapshot} onReturn={()=>{if(narrow)setDirectory(false);}}/>}
       {course&&<RetentionPanel key={course.sessionId} sessionId={course.sessionId} onReturn={()=>{if(narrow)setDirectory(false);}} prepare={async()=>{
         if(composing.current)throw new Error('请先完成中文候选输入，再管理历史与空间。');

@@ -23,7 +23,7 @@ export async function legacyFixture(root: string) {
   const knowledge = { schemaVersion: 'midterm-map-1', course: { id: 'legacy-content-id', title: '课程标题差异' },
     themes: [{ id: 'TH-01', name: '数制与数制转换', rating: { stars: 5 } }, { id: 'TH-20', name: '末主题', rating: { stars: 3 } }], units: [first, last],
     questions: [{ id: 'Q-ROOT', label: '父题' }, { id: 'Q-LEAF', parentId: 'Q-ROOT', stem: '真实小问', solution: '原解', answerNature: 'derived-solution' }],
-    mappings: [{ id: 'MAP-ONE', unitId: 'KU-086', questionId: 'Q-LEAF', role: 'direct' }], relations: [], requirementGroups: [], retiredUnits: [{ id: 'KU-049', mergedInto: 'KU-046' }],
+    referenceItems: [], questionCoverage: [], mappings: [{ id: 'MAP-ONE', unitId: 'KU-086', questionId: 'Q-LEAF', role: 'direct' }], relations: [], requirementGroups: [], retiredUnits: [{ id: 'KU-049', mergedInto: 'KU-046' }],
     sources: [{ id: 'SRC-TEST', title: '固定原件', path: '原始 资料.pdf', totalPages: 99, versions: [{ id: 'VER-TEST', sha256, path: '原始 资料.pdf', totalPages: 99 }] }], extra: { untouched: true } };
   const layout = { schemaVersion: 'midterm-layout-1', groups: [], edges: [], nodes: [
     { unitId: 'KU-001', x: 104, y: 168, width: 650, height: 86 }, { unitId: 'KU-086', x: 900, y: 168, width: 650, height: 86 }] };

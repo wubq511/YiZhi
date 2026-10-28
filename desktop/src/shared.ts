@@ -54,6 +54,7 @@ export interface SaveReceipt {
 export interface DesktopBridge extends SaveBridge {
   backup: import('./backup-api').BackupBridge;
   courseFormat: import('./format-api').ReadonlyCourseBridge;
+  migration: import('./migration-api').MigrationBridge;
   courseRestore: import('./course-restore-api').CourseRestoreAPI;
   retention: Omit<import('./retention-api').RetentionAPI,'resourceLease'|'resourceLeases'>;
   formalHistory: import('./history-api').HistoryAPI;

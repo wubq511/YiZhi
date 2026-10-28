@@ -63,6 +63,7 @@ export class HistoryRetention {
  private crop(id:string,source:string){
   if(source==='student')this.db.prepare("UPDATE operations SET before_text='[]',after_text='{}' WHERE id=?").run(id);
   else if(source==='group'){this.db.prepare('DELETE FROM cg_history WHERE operation_id=?').run(id);this.db.prepare("UPDATE cg_candidates SET command='{}' WHERE id=?").run(id);}
+  else if(source==='legacy')this.db.prepare("DELETE FROM restore_timeline WHERE kind='legacy' AND reference=?").run(id);
   else this.db.prepare("DELETE FROM placement_history WHERE json_extract(value,'$.operationId')=?").run(id);
  }
  private batch(limit:number):{pending:boolean;removed:number;phase:string;blocked?:string} {
