@@ -5,7 +5,7 @@ import './history-panel.css';
 import './retention-panel.css';
 const bytes=(n:number)=>n<1024?`${n} B`:n<1048576?`${(n/1024).toFixed(1)} KB`:`${(n/1048576).toFixed(1)} MB`;
 const date=(s:string)=>new Date(s).toLocaleString('zh-CN',{hour12:false});
-export function RetentionPanel({sessionId,prepare}:{sessionId:string;prepare():Promise<void>}) {
+export function RetentionPanel({sessionId,prepare,onReturn}:{sessionId:string;prepare():Promise<void>;onReturn():void}) {
  const [open,setOpen]=useState(false),[status,setStatus]=useState<RetentionStatus>(),[space,setSpace]=useState<RetentionSpace>();
  const [days,setDays]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[result,setResult]=useState('');
  const trigger=useRef<HTMLButtonElement>(null),alive=useRef(true);
@@ -13,7 +13,7 @@ export function RetentionPanel({sessionId,prepare}:{sessionId:string;prepare():P
  const work=async(run:()=>Promise<void>)=>{setBusy(true);setError('');try{await run();}catch(e){if(alive.current)setError((e as Error).message);}finally{if(alive.current)setBusy(false);}};
  const refresh=async()=>{const [s,p]=await Promise.all([window.yizhi.retention.get({sessionId}),window.yizhi.retention.space({sessionId})]);if(alive.current){setStatus(s);setSpace(p);}return s;};
  const show=()=>{setOpen(true);setResult('');void work(async()=>{await prepare();const s=await refresh();setDays(String(s.days));});};
- const close=()=>{if(busy)return;setOpen(false);requestAnimationFrame(()=>trigger.current?.focus());};
+ const close=()=>{if(busy)return;setOpen(false);onReturn();requestAnimationFrame(()=>trigger.current?.focus());};
  useEffect(()=>{
   if(!open)return;
   let cancelled=false;

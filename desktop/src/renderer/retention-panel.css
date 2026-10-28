@@ -7,9 +7,10 @@
 .retention-field .history-confirm{margin:10px 0;}
 .retention-range{margin:16px 0;padding:12px 0;border-block:1px solid #e5e5eb;}
 .retention-range strong{font-weight:600;}
-.retention-panel table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;}
+.retention-panel table{border-collapse:collapse;width:100%;font:inherit;font-variant-numeric:tabular-nums;}
 .retention-panel caption{text-align:left;color:#626b79;margin:0 0 8px;}
-.retention-panel th,.retention-panel td{padding:8px 6px;border-bottom:1px solid #e5e5eb;text-align:right;}
+.retention-panel th,.retention-panel td{padding:8px 6px;border:0;border-bottom:1px solid #e5e5eb;text-align:right;min-width:0;font-size:inherit;background:transparent;}
+.retention-panel td{white-space:nowrap;}
 .retention-panel th:first-child{text-align:left;font-weight:400;}
 .retention-panel thead th:first-child{font-weight:600;}
 .retention-space-heading{justify-content:space-between;margin-bottom:12px;}

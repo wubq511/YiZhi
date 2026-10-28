@@ -25,11 +25,12 @@ test('actual course settings validate days, report the real shrinking recovery w
   const facts=await page.evaluate(async()=>{const c=await window.yizhi.open();let expired=false;try{await window.yizhi.formalHistory.detail({...c,operationId:'ui-old-window'});}catch(e){expired=/过期/.test(String(e));}return {expired,receipt:await window.yizhi.queryOperation(c.sessionId,'ui-old-window'),c};});
   expect(facts.expired).toBe(true);expect(facts.receipt).toEqual(old);expect(facts.c.unit.reading.blocks[0].payload.text).toBe('Current UI recovery body');
   await dialog.getByRole('button',{name:'清除搜索缓存',exact:true}).click();await expect(dialog.getByRole('status',{name:'空间操作结果'})).toContainText('缓存已清除');
-  await resizeBoardWindow(app,page,700,700);expect(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);await page.screenshot({path:test.info().outputPath('retention-narrow.png')});
+  await resizeBoardWindow(app,page,700,700);expect(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);await page.screenshot({path:test.info().outputPath('retention-space.png')});await dialog.evaluate(el=>{el.scrollTop=0;});await page.screenshot({path:test.info().outputPath('retention-narrow.png')});
+  const render=await dialog.evaluate(el=>({viewport:[innerWidth,innerHeight],dialog:{width:el.clientWidth,scrollWidth:el.scrollWidth},samples:[...el.querySelectorAll('h2,p,input,button,caption,th,td')].slice(0,30).map(node=>{const s=getComputedStyle(node);return {tag:node.tagName,text:node.textContent?.slice(0,40),font:s.fontSize,lineHeight:s.lineHeight,color:s.color,background:s.backgroundColor,padding:s.padding};})}));await test.info().attach('retention-render-facts',{body:JSON.stringify(render,null,2),contentType:'application/json'});
   await dialog.getByRole('button',{name:'返回课程',exact:true}).click();await expect(page.getByRole('button',{name:'历史与空间',exact:true})).toBeFocused();
   await app.close();app=await launch();page=await app.firstWindow();await resizeBoardWindow(app,page);
   await page.getByRole('button',{name:'历史与空间',exact:true}).click();dialog=page.getByRole('dialog',{name:'历史与空间',exact:true});await expect(dialog.getByLabel('历史保留天数')).toHaveValue('30');
-  await expect(dialog).toContainText('最早保留提交');await page.screenshot({path:test.info().outputPath('retention-reopened.png')});
+  await expect(dialog).toContainText('最早保留提交');await expect(dialog).toContainText('保留 30 天');await page.screenshot({path:test.info().outputPath('retention-reopened.png')});
  }finally{await app.close();await rm(root,{recursive:true,force:true});}
 });
 
