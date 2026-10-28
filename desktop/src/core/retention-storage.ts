@@ -41,7 +41,9 @@ export class RetentionStorage {
   });
  }
  staleCache(limit:number){
-  const rows=this.db.prepare('SELECT d.id FROM search_documents d JOIN search_entities e ON e.scope=d.scope AND e.id=d.entity_id WHERE e.dirty=1 OR e.epoch<>d.epoch ORDER BY d.id LIMIT ?').all(limit);
+  // A dirty source may already contain current-epoch pages from earlier batches.
+  // Only superseded epochs are stale; deleting current pages loses them on completion.
+  const rows=this.db.prepare('SELECT d.id FROM search_documents d JOIN search_entities e ON e.scope=d.scope AND e.id=d.entity_id WHERE e.epoch<>d.epoch ORDER BY d.id LIMIT ?').all(limit);
   if(rows.length)transaction(this.db,()=>{for(const r of rows)this.db.prepare('DELETE FROM search_documents WHERE id=?').run(r.id!);});
   return {phase:'cache',pending:rows.length>0,removed:rows.length};
  }
