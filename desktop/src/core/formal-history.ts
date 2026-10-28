@@ -60,11 +60,13 @@ export class FormalHistory {
   courseProjection(unitIds:string[],atOperationId:string,side:'before'|'after',includeLayout=false) {
     const anchor=this.detail(atOperationId),scope=new Set(unitIds),desired=new Map<string,Record<string,any>|null>();
     const later=this.groups().filter(g=>g.order>anchor.order||(side==='before'&&g.operationId===anchor.operationId)).reverse();
-    // Necessary aggregates may widen a selected content range; expose that scope before applying.
-    let added=true;while(added){added=false;for(const g of later)if(g.unitIds.some(id=>scope.has(id)))for(const id of g.unitIds)if(!scope.has(id)){scope.add(id);added=true;}}
-    for(const g of later)if(g.unitIds.some(id=>scope.has(id))) {
+    // Include complete aggregates touching the explicit selection. A layout neighbor
+    // does not select that neighbor's independent later body/history.
+    for(const g of later)if(g.unitIds.some(id=>unitIds.includes(id))) {
       const ids=this.unsupported(g.changes);if(ids.length)throw new Error(this.unsupportedReason(ids));
-      for(const c of g.changes)if((includeLayout||!c.objectId.startsWith('layout:'))&&!c.objectId.startsWith('review:'))desired.set(c.objectId,c.before);
+      const included=g.changes.filter(c=>(includeLayout||!c.objectId.startsWith('layout:'))&&!c.objectId.startsWith('review:'));
+      if(included.length)for(const id of g.unitIds)scope.add(id);
+      for(const c of included)desired.set(c.objectId,c.before);
     }
     const changes:HistoryChange[]=[];
     for(const [id,after] of desired){const now=this.object(id);if(!equal(now.value,after))changes.push({objectId:id,before:now.value,after,beforeVersion:now.version,afterVersion:now.version});}

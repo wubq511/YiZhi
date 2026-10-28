@@ -16,6 +16,7 @@ export class CourseRestore {
  constructor(private db:DatabaseSync,private history:FormalHistory,private graph:CourseGraph,private agent:AgentStore,
   private experiments:BuiltinExperiments,private extensions:Extensions,private publishSession:(sessionId:string)=>void,private scheduling?:import('../course-restore-api').CourseRestoreScheduling) {
   db.exec(`CREATE TABLE IF NOT EXISTS course_sessions(id TEXT PRIMARY KEY,generation INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS course_restore_requests(id TEXT PRIMARY KEY,digest TEXT NOT NULL,generation INTEGER NOT NULL,created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS retired_drafts(session_id TEXT PRIMARY KEY,generation INTEGER NOT NULL,restore_operation_id TEXT NOT NULL);`);
   this.state=new RestoreState(db,graph);
  }
@@ -25,7 +26,7 @@ export class CourseRestore {
   if(!p||!['before','after'].includes(p.side)||!Array.isArray(p.unitIds)||!p.unitIds.length||p.unitIds.length>this.graph.nodes.length||new Set(p.unitIds).size!==p.unitIds.length||p.unitIds.some(id=>!this.graph.nodes.some(n=>n.id===id))||typeof p.userState?.layout!=='boolean'||typeof p.userState?.review!=='boolean')throw new Error('整课恢复范围无效');
   const selection={atOperationId:p.atOperationId,side:p.side,unitIds:p.unitIds,userState:p.userState};
   const plan=this.history.courseProjection(p.unitIds,p.atOperationId,p.side,false),drafts=readDrafts(this.db);
-  plan.changes.push(...this.state.changes(p,plan.unitIds,id=>this.history.currentObject(id)));
+  plan.changes.push(...this.state.changes(p,p.unitIds,id=>this.history.currentObject(id)));
   const versions=this.db.prepare('SELECT id,revision FROM units ORDER BY id').all();
   const sourceVersions=new Set<string>();
   const collect=(v:any):void=>{if(!v||typeof v!=='object')return;if(typeof v.versionId==='string')sourceVersions.add(v.versionId);if(typeof v.sourceCitationId==='string'){const r=this.db.prepare('SELECT version_id FROM source_citations WHERE id=?').get(v.sourceCitationId);if(r)sourceVersions.add(String(r.version_id));}for(const x of Object.values(v))if(x&&typeof x==='object')collect(x);};collect(plan.changes);
@@ -37,12 +38,22 @@ export class CourseRestore {
  drafts():PreservedDraft[]{return this.db.prepare('SELECT d.input,d.receipt,r.generation,r.restore_operation_id FROM drafts d JOIN retired_drafts r ON r.session_id=d.session_id ORDER BY d.rowid').all().map(r=>({input:parse(r.input),receipt:parse(r.receipt),generation:Number(r.generation),restoreOperationId:String(r.restore_operation_id)}));}
  apply(p:{sessionId:string;operationId:string;preview:CourseRestorePermit}):CourseRestoreResult {
   if(typeof p.operationId!=='string'||!p.operationId.length||p.operationId.length>160)throw new Error('整课恢复操作身份无效');
+  if(!p.preview||!Number.isSafeInteger(p.preview.generation)||typeof p.preview.token!=='string')throw new Error('整课恢复依据无效');
   const {atOperationId,side,unitIds,userState,token,generation}=p.preview;
   const digest='course-restore:'+hash({atOperationId,side,unitIds,userState,token,generation}),old=this.db.prepare('SELECT digest FROM cg_candidates WHERE id=?').get(p.operationId);
   if(old){if(old.digest!==digest)throw new Error('同一恢复操作不能更换范围或依据');const result=this.query(p.operationId);if(!result)throw new Error('操作身份已用于其他修改');return result;}
+  if(this.db.prepare('SELECT 1 FROM operations WHERE id=?').get(p.operationId))throw new Error('操作身份已用于正文修改');
+  const requested=this.db.prepare('SELECT digest FROM course_restore_requests WHERE id=?').get(p.operationId);
+  if(requested&&requested.digest!==digest)throw new Error('同一恢复操作不能更换范围或依据');
+  if(!requested){
+   const fresh=this.preview(p.preview);
+   if(generation!==fresh.generation||token!==fresh.token)throw new Error('预览后课程或草稿已变化，请重新核对整课范围和代际');
+   // Reserve only identity, never content: survives a later rollback or process death.
+   this.db.prepare('INSERT INTO course_restore_requests VALUES(?,?,?,?)').run(p.operationId,digest,generation,new Date().toISOString());
+  }
   const publications:Array<()=>void>=[];
   const result=transaction(this.db,()=>{
-   const fresh=this.preview(p.preview);if(fresh.token!==p.preview.token)throw new Error('预览后课程或草稿已变化，请重新核对整课范围');
+   const fresh=this.preview(p.preview);if(fresh.generation!==generation||fresh.token!==token)throw new Error('预览后课程或草稿已变化，请重新核对整课范围和代际');
    const previousGeneration=this.generation(),nextGeneration=previousGeneration+1,nextSession=randomUUID();
    const revisions=new Map(this.db.prepare('SELECT id,revision FROM units').all().map(r=>[String(r.id),Number(r.revision)]));
    const restored=this.history.restoreInTransaction(fresh.changes,fresh.affectedUnitIds);publications.push(restored.publish);

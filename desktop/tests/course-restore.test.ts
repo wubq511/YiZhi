@@ -17,12 +17,17 @@ test('whole-course selected recovery atomically restores two units, rotates writ
  const result=await api.apply({sessionId,operationId:'restore-course',preview});
  assert.equal(result.status,'committed');assert.equal(result.generation,2);
  const current=await s.open(d);assert.notEqual(current.sessionId,sessionId);assert.equal(current.generation,2);
+ assert.ok(current.revision>3);assert.ok(current.eventCursor>opened.eventCursor);
+ assert.equal(result.cursor,current.eventCursor);
  assert.equal(current.unit.reading.blocks[0].payload.text,'Historical first explanation');
  assert.equal((await s.readUnit(current.sessionId,'KU-002')).reading.blocks.find(p=>p.id===b.id)!.payload.text,b.payload.text);
  assert.equal((await s.reviewStates(current.sessionId)).units['KU-001'].status,'mastered');
  await assert.rejects(s.save({sessionId,operationId:'late-old-input',inputSeq:3,baseRevision:current.revision,blockId:A,text:'Forbidden old renderer'}),/会话|代际/);
  assert.deepEqual(await api.query({sessionId,operationId:'restore-course'}),result);
  assert.deepEqual(await api.apply({sessionId,operationId:'restore-course',preview}),result);
+ const replaced=await api.preview({sessionId:current.sessionId,atOperationId:'restore-course',side:'before',unitIds:['KU-001','KU-002'],userState:{layout:false,review:false}});
+ assert.equal(replaced.changes.find((c:any)=>c.objectId===A).after.payload.text,'Current first explanation');
+ assert.equal(replaced.changes.find((c:any)=>c.objectId===b.id).after.payload.text,'Current second explanation');
 }));
 test('explicit user-state range restores recorded layout and mastery while default recovery does not rewind them',async()=>fixture(async(s,d)=>{
  const o=await s.open(d),sessionId=o.sessionId,n=(await s.graph(sessionId)).layout.nodes.find(n=>n.unitId==='KU-001')!;
@@ -88,6 +93,23 @@ test('old public writes are fenced across body, drafts, personal, layout, source
  assert.deepEqual((await s.graph(sid)).layout,before.layout);
 }));
 const awaitNever=undefined;
+test('stale and wrong-generation permits are rejected, and unintegrated producer structure is explicitly unsupported',async()=>fixture(async(s,d)=>{
+ const {sessionId}=await s.open(d);
+ await s.save({sessionId,operationId:'guard-anchor',inputSeq:1,baseRevision:1,blockId:A,text:'Guard old body'});
+ const selection={sessionId,atOperationId:'guard-anchor',side:'after' as const,unitIds:['KU-001'],userState:{layout:false,review:false}};
+ const permit=await s.courseRestore.preview(selection);
+ await assert.rejects(s.courseRestore.apply({sessionId,operationId:'wrong-epoch',preview:{...permit,generation:99}}),/代际/);
+ await s.saveDraft({sessionId,inputSeq:2,baseRevision:2,complete:false,changes:[],formulaDrafts:[{blockId:A,latex:'x_'}]});
+ await assert.rejects(s.courseRestore.apply({sessionId,operationId:'stale-permit',preview:permit}),/预览后/);
+ const fault=new DatabaseSync(join(d,'course.sqlite'));
+ try{
+  fault.prepare('INSERT INTO cg_candidates VALUES(?,?,?,?)').run('producer-structure','producer','{}',JSON.stringify({unitId:'KU-001'}));
+  fault.prepare('INSERT INTO cg_history VALUES(?,?)').run('producer-structure',JSON.stringify({operationId:'producer-structure',unitIds:['KU-001'],committedAt:new Date().toISOString(),changes:[{objectId:'unit:NEW-UNIT',before:null,after:{id:'NEW-UNIT'},beforeVersion:0,afterVersion:1}]}));
+  await assert.rejects(s.courseRestore.preview(selection),/尚不支持.*unit:NEW-UNIT/);
+  assert.equal((await s.read(sessionId)).unit.reading.blocks[0].payload.text,'Guard old body');
+  assert.equal((await s.read(sessionId)).drafts.length,1);
+ }finally{fault.close();}
+}));
 test('old task qualification expires while exact committed tool receipts and late executor facts survive; explicit continue rereads the new generation',async()=>fixture(async(s,d)=>{
  const o=await s.open(d),sessionId=o.sessionId;
  await s.save({sessionId,operationId:'task-anchor',inputSeq:1,baseRevision:1,blockId:A,text:'Historical explanation'});
@@ -97,14 +119,19 @@ test('old task qualification expires while exact committed tool receipts and lat
  await s.recordAgent({...identity,eventId:'bind',kind:'bind',threadId:'old-thread',turnId:'old-turn'});
  const context=await s.readAgentMutation(identity),receipt=await s.applyAgentMutation({...identity,input:{operationId:'actual-group',basisId:context.basisId,conclusionOrMethodChanged:false,updates:[{blockId:A,text:'Committed old task explanation'}]}});
  assert.equal(receipt.status,'committed');
+ await s.save({sessionId,operationId:'student-before-epoch',inputSeq:2,baseRevision:(await s.read(sessionId)).revision,blockId:A,text:'Student current explanation'});
+ const delivery=(await s.agentTask({sessionId,taskId:task.id})).deliveries!.find(d=>d.kind==='student-change')!;
+ await s.updateAgentWork({...identity,action:'delivery',deliveryId:delivery.id,state:'sending',threadId:'old-thread',turnId:'old-turn'});
  const preview=await s.courseRestore.preview({sessionId,atOperationId:'task-anchor',side:'after',unitIds:['KU-001'],userState:{layout:false,review:false}});
  await s.courseRestore.apply({sessionId,operationId:'task-recovery',preview});
  await assert.rejects(s.applyAgentMutation({...identity,input:{operationId:'late-new-group',basisId:context.basisId,conclusionOrMethodChanged:false,updates:[{blockId:A,text:'Must not return'}]}}),/会话|失效/);
  assert.deepEqual(await s.queryAgentMutation({...identity,operationId:'actual-group'}),receipt);
+ await s.updateAgentWork({...identity,action:'delivery',deliveryId:delivery.id,state:'accepted',threadId:'old-thread',turnId:'old-turn'});
  await s.recordAgent({...identity,eventId:'old-finish',kind:'finish',status:'completed',threadId:'old-thread',turnId:'old-turn'});
  await s.recordAgent({...identity,eventId:'late-known-tool',kind:'tool',threadId:'old-thread',turnId:'old-turn',tool:{name:'yizhi_apply_group',input:{operationId:'actual-group'},output:receipt,references:[]}});
  const current=await s.open(d),view=await s.agent.get({sessionId:current.sessionId,conversationId:conversation.id});
  assert.equal(view.tasks[0].executorStatus,'completed');assert.equal(view.tasks[0].status,'stopped');
+ assert.equal(view.tasks[0].deliveries!.find(d=>d.id===delivery.id)!.state,'accepted');
  assert.ok(view.tasks[0].groups!.some(g=>g.operationId===receipt.operationId));
  assert.ok(view.toolFacts.some(f=>f.name==='yizhi_apply_group'));assert.equal(view.toolFacts.find(f=>f.name==='yizhi_apply_group')!.hasRecoveryPayload,false);
  const continued=await s.agent.continue({sessionId:current.sessionId,taskId:task.id,operationId:'continue-in-new-generation'});
@@ -127,6 +154,8 @@ test('a real final-history SQLite fault rolls back all units, epoch, drafts and 
   assert.equal((await s.agentTask({sessionId,taskId:task.id})).status,'running');
   assert.equal(await s.courseRestore.query({sessionId,operationId:'atomic-recovery'}),null);
   fault.exec('DROP TRIGGER fail_course_recovery');
+  const different=await s.courseRestore.preview({sessionId,atOperationId:'fault-anchor',side:'after',unitIds:['KU-001'],userState:{layout:false,review:false}});
+  await assert.rejects(s.courseRestore.apply({sessionId,operationId:'atomic-recovery',preview:different}),/同一.*恢复.*范围|操作身份/);
   const result=await s.courseRestore.apply({sessionId,operationId:'atomic-recovery',preview});
   assert.equal(result.generation,2);assert.deepEqual(await s.courseRestore.apply({sessionId,operationId:'atomic-recovery',preview}),result);
   assert.deepEqual((await s.courseRestore.drafts({sessionId:result.sessionId}))[0].input,draft);
@@ -154,6 +183,9 @@ for(const boundary of ['beforeCommit','afterCommit'] as const)test(`SIGKILL at $
    assert.equal(current.unit.reading.blocks[0].payload.text,isCommitted?'Historical first':'Current first');
    assert.equal((await reopened.readUnit(current.sessionId,'KU-002')).reading.blocks.find(p=>p.id===b.id)!.payload.text,isCommitted?b.payload.text:'Current second');
    const receipt=await reopened.courseRestore.query({sessionId:reached.sessionId,operationId:request.operationId});assert.equal(!!receipt,isCommitted);
+   const different=await reopened.courseRestore.preview({sessionId:current.sessionId,atOperationId:'process-anchor',side:'after',unitIds:['KU-001'],userState:{layout:false,review:false}});
+   await assert.rejects(reopened.courseRestore.apply({sessionId:current.sessionId,operationId:request.operationId,preview:different}),/同一恢复操作/);
+   await assert.rejects(reopened.agent.create({sessionId:current.sessionId,operationId:request.operationId}),/操作身份/);
    const recovered=await reopened.courseRestore.apply({...request,sessionId:isCommitted?reached.sessionId:current.sessionId});
    assert.equal(recovered.generation,2);assert.deepEqual(await reopened.courseRestore.apply({...request,sessionId:current.sessionId}),recovered);
    assert.equal((await reopened.open(d)).generation,2);
@@ -186,3 +218,20 @@ test('held real parser output and old experiment/extension callbacks cannot publ
   assert.ok((await s.sources.list({sessionId:sid})).versions.some(v=>v.versionId===source.versionId));
  }finally{Atomics.store(new Int32Array(gate),1,1);Atomics.notify(new Int32Array(gate),1);await s.close();await rm(d,{recursive:true,force:true});}
 });
+test('a layout consistency neighbor keeps its unrelated newer body and unselected mastery',async()=>fixture(async(s,d)=>{
+ const {sessionId}=await s.open(d),other=await s.read(sessionId,'KU-002'),b=other.unit.reading.blocks.find(b=>b.kind==='paragraph')!;
+ const origin=(await s.graph(sessionId)).layout.nodes.find(n=>n.unitId==='KU-001')!;
+ await s.setLayout(sessionId,[{unitId:'KU-002',x:origin.x+1,y:origin.y+1,width:origin.width}]);
+ await s.save({sessionId,operationId:'scope-anchor',inputSeq:1,baseRevision:1,blockId:A,text:'Selected old body'});
+ const task=await s.commands.startAttempt({sessionId,taskId:'scope-task'}),basis=await s.commands.read({sessionId,attemptId:task.attemptId,objectIds:[A],context:true});
+ const nodes=(await s.graph(sessionId)).layout.nodes.filter(n=>['KU-001','KU-002'].includes(n.unitId));
+ const coupled=await s.commands.commit({sessionId,operationId:'scope-coupling',attemptId:task.attemptId,basisId:basis.basisId,changes:[{objectId:A,value:{...basis.objects.find(o=>o.id===A)!.value,payload:{text:'Selected new body'}}}],bundle:{layout:nodes.map(n=>({unitId:n.unitId,x:n.x+30,y:n.y,width:n.width}))}});assert.equal(coupled.status,'committed',coupled.reason);
+ await s.commitEdit({sessionId,unitId:'KU-002',operationId:'neighbor-later',inputSeq:1,baseRevision:other.revision,complete:true,changes:[{blockId:b.id,text:'Unselected independent new body'}]});
+ await s.setReviewStatus(sessionId,'KU-002','mastered');
+ const preview=await s.courseRestore.preview({sessionId,atOperationId:'scope-anchor',side:'after',unitIds:['KU-001'],userState:{layout:false,review:true}});
+ assert.ok(!preview.changes.some(c=>c.objectId===b.id));
+ const result=await s.courseRestore.apply({sessionId,operationId:'scope-restore',preview});
+ assert.equal((await s.read(result.sessionId,'KU-002')).unit.reading.blocks.find(p=>p.id===b.id)!.payload.text,'Unselected independent new body');
+ assert.equal((await s.reviewStates(result.sessionId)).units['KU-002'].status,'mastered');
+ assert.equal((await s.read(result.sessionId)).unit.reading.blocks[0].payload.text,'Selected old body');
+}));

@@ -204,6 +204,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     if(action==='courseRestore:apply' && session(payload.sessionId,action).sessionId!==payload.sessionId && !session(payload.sessionId,action).courseRestore.query(payload.operationId))throw new Error('编辑会话已失效，未执行新的整课恢复，请重新打开核对');
     if (payload?.operationId) {
       const course = session(payload.sessionId,action);
+      if(action!=='courseRestore:apply'&&!action.endsWith(':query')&&action!=='queryOperation'&&action!=='formalHistory:detail'&&course.db.prepare('SELECT 1 FROM course_restore_requests WHERE id=?').get(payload.operationId))throw new Error('操作身份已用于整课恢复');
       const fencedAction = action === 'commands:resolveInput' ? 'commitEdit' : (action === 'formalHistory:apply'||action === 'courseRestore:apply') ? 'commands:commit' : action;
       course.exchange.fence(fencedAction, payload.operationId);
       course.annotations.fence(fencedAction, payload.operationId);

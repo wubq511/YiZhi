@@ -4,6 +4,15 @@ import type { CourseRestorePermit,CourseRestorePreview,CourseRestoreResult,Prese
 import type { HistoryActivity } from '../history-api';
 import './course-restore-panel.css';
 type Request={sessionId:string;operationId:string;preview:CourseRestorePermit};
+function PreservedInput({draft}:{draft:PreservedDraft}) {
+ const input=draft.input,values=[...input.changes.map(c=>c.text),...(input.patch?.updates??[]).flatMap(u=>typeof u.after.text==='string'?[u.after.text]:typeof u.after.latex==='string'?[u.after.latex]:[])];
+ return <>
+  {values.length>0&&<section aria-label="恢复前正文草稿"><h4>正文草稿</h4>{values.map((text,i)=><pre key={i}>{text}</pre>)}</section>}
+  {(input.formulaDrafts??[]).map((formula,i)=><section key={formula.blockId} aria-label="未完成公式草稿"><h4>未完成公式{(input.formulaDrafts?.length??0)>1?` ${i+1}`:''}</h4><pre>{formula.latex}</pre></section>)}
+  {input.patch?.structure&&<p>正文结构变化也已保留，可展开原始输入核对。</p>}
+  <details><summary>原始输入与版本依据</summary><pre>{JSON.stringify(input,null,2)}</pre></details>
+ </>;
+}
 export function CourseRestorePanel({sessionId,courseId,units,prepare}:{sessionId:string;courseId:string;units:Array<{id:string;name:string}>;prepare():Promise<void>}) {
  const key=`yizhi-course-restore:${courseId}`;
  const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[activities,setActivities]=useState<HistoryActivity[]>([]),[next,setNext]=useState<string>();
@@ -18,7 +27,7 @@ export function CourseRestorePanel({sessionId,courseId,units,prepare}:{sessionId
   setOpen(true);setPending(request);
   void work(async()=>{const receipt=await window.yizhi.courseRestore.query({sessionId:request.sessionId,operationId:request.operationId});if(receipt){setResult(receipt);setPending(undefined);localStorage.removeItem(key);}else setError('上次整课恢复尚无完整结果。请核对并重试原操作；不会自动执行。');setDrafts(await window.yizhi.courseRestore.drafts({sessionId}));});
  },[key,sessionId]);
- const show=()=>{setOpen(true);void work(async()=>{await prepare();await load();setDrafts(await window.yizhi.courseRestore.drafts({sessionId}));});};
+ const show=()=>{setOpen(true);if(!pending){setResult(undefined);setPreview(undefined);setShowDrafts(false);}void work(async()=>{await prepare();await load();setDrafts(await window.yizhi.courseRestore.drafts({sessionId}));});};
  const close=()=>{if(busy)return;setOpen(false);requestAnimationFrame(()=>trigger.current?.focus());};
  const invalidate=()=>{setPreview(undefined);setResult(undefined);};
  const inspect=()=>void work(async()=>{await prepare();setResult(undefined);setPreview(await window.yizhi.courseRestore.preview({sessionId,atOperationId:point,side,unitIds:selected,userState:{layout,review}}));});
@@ -49,6 +58,6 @@ export function CourseRestorePanel({sessionId,courseId,units,prepare}:{sessionId
    {preview.sourceVersions.length>0&&<details><summary>旧内容使用的固定来源版本</summary>{preview.sourceVersions.map(v=><p key={v}>{v}</p>)}</details>}
    {!pending&&<button className="history-confirm" disabled={busy} onClick={apply}>确认恢复并隔离旧任务</button>}
   </section>}
-  {drafts.length>0&&<><button disabled={busy} onClick={()=>setShowDrafts(v=>!v)}>查看恢复前草稿</button>{showDrafts&&<section aria-label="恢复前草稿（只读）"><h3>恢复前草稿（只读）</h3><p>原输入与依据保留在原代际；请对照当前课程后重新编辑，不会自动提交旧输入。</p>{drafts.map((d,i)=><details key={`${d.restoreOperationId}:${i}`} open><summary>{d.input.unitId??'KU-001'} · 输入 {d.input.inputSeq}</summary><pre>{JSON.stringify(d.input,null,2)}</pre></details>)}</section>}</>}
+  {drafts.length>0&&<><button disabled={busy} onClick={()=>setShowDrafts(v=>!v)}>查看恢复前草稿</button>{showDrafts&&<section aria-label="恢复前草稿（只读）"><h3>恢复前草稿（只读）</h3><p>原输入与依据保留在原代际；请对照当前课程后重新编辑，不会自动提交旧输入。</p>{drafts.map((d,i)=><details key={`${d.restoreOperationId}:${i}`} open><summary>{units.find(u=>u.id===(d.input.unitId??'KU-001'))?.name??d.input.unitId??'KU-001'} · 输入 {d.input.inputSeq}</summary><PreservedInput draft={d}/></details>)}</section>}</>}
  </dialog>,document.body)}</>;
 }
