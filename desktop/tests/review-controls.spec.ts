@@ -1,3 +1,4 @@
+import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -40,6 +41,6 @@ test('review controls persist, answer reveal does not promote, and a substantive
     await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     const reopenedChoices = window.getByRole('group', { name: '设置复习状态' });
     await expect(reopenedChoices.getByRole('button', { name: '薄弱' })).toHaveAttribute('aria-pressed', 'true');
-    await window.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t10-review.png', fullPage: true });
+    await window.screenshot({ path: evidencePath('t10-review.png'), fullPage: true });
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });

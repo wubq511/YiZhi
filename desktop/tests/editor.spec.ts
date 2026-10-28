@@ -1,3 +1,4 @@
+import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -228,7 +229,7 @@ test('MathLive owns inner Undo once, incomplete input survives host death separa
     await revealBoardControl(page, page.locator('.editor-formula').first().getByRole('button', { name: '返回正文', exact: true }));
     await page.locator('.editor-formula').first().getByRole('button', { name: '返回正文', exact: true }).click();
     const confirmed = await page.evaluate(() => (window as any).yizhi.open());
-    await page.screenshot({ path: '/tmp/yizhi-implement-gFFkA7/t05-editor.png' });
+    await page.screenshot({ path: evidencePath('t05-editor.png') });
     await app.close(); app = await launch(); page = await app.firstWindow();
     await resizeBoardWindow(app, page);
     await expect(page.getByRole('textbox', { name: '编辑首段正文', exact: true })).toBeVisible();
