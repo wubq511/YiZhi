@@ -725,7 +725,7 @@
   persistence.addEventListener('remote',event=>{if(event.detail.some(c=>c.namespace==='notes'||c.namespace==='review'))applyPersonal();});
   persistence.addEventListener('committed',()=>{if(!persistence.hasPending())applyPersonal();});
   persistence.addEventListener('reload',event=>{applyPersonal();if(!event.detail.keepMine||event.detail.recoverDraft)restoreReading(persistence.value('reading','default'));});
-  $('#retry-save').addEventListener('click',()=>persistence.retry());
+  $('#retry-save').addEventListener('click',()=>{persistence.put('reading','default',captureReading());persistence.retry();});
   $('#recover-draft').addEventListener('click',()=>persistence.recoverDraft());
   $('#dismiss-drafts').addEventListener('click',()=>{persistence.recoveryDismissed=true;persistence.notify();});
   $('#save-indicator').addEventListener('click',()=>{if(persistence.problem||persistence.recoverable.length){persistence.recoveryDismissed=false;persistence.notify();}});
