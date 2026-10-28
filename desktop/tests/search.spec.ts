@@ -6,18 +6,50 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { resizeBoardWindow, revealBoardControl } from './board-test-helpers';
 
+async function captureSearchFailure(page: Page, name: string, error: unknown) {
+  try {
+    const scene = await page.evaluate(async () => {
+      const b = window.yizhi, c = await b.open(), query = document.querySelector<HTMLInputElement>('input[type="search"]')?.value;
+      return { viewport: [innerWidth, innerHeight], camera: (document.querySelector('.react-flow__viewport') as HTMLElement)?.style.transform,
+        query, focus: document.activeElement?.outerHTML.slice(0, 400), reading: await b.readingState(c.sessionId),
+        alerts: [...document.querySelectorAll('[role="alert"]')].map(el => el.textContent), results: document.querySelector('.search-results')?.outerHTML,
+        index: await b.search.status({ sessionId: c.sessionId }), rawQuery: query ? await b.search.query({ sessionId: c.sessionId, query }) : undefined,
+        editors: [...document.querySelectorAll('.reading-layer')].map(el => ({ unitId: el.getAttribute('data-unit-id'), editor: !!el.querySelector('[contenteditable="true"]'), loading: el.textContent?.includes('正在读取当前正文与输入') })) };
+    });
+    const json = test.info().outputPath(`${name}-scene.json`), dom = test.info().outputPath(`${name}-dom.html`), png = test.info().outputPath(`${name}.png`);
+    await writeFile(json, JSON.stringify({ error: String(error), scene }, null, 2)); await writeFile(dom, await page.content()); await page.screenshot({ path: png });
+    for (const [label, path, contentType] of [[`${name}-scene`, json, 'application/json'], [`${name}-dom`, dom, 'text/html'], [name, png, 'image/png']])
+      await test.info().attach(label, { path, contentType });
+  } catch (captureError) { console.error('Search location failure evidence:', captureError); }
+}
+
 test('offline real IPC search reveals a delivered deep answer and restores the original camera and disclosures', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-search-ui-'));
   const launch = () => electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   let app = await launch();
+  let current: Page | undefined;
   try {
-    const page = await app.firstWindow(); await resizeBoardWindow(app, page);
+    const page = await app.firstWindow(); current = page; await resizeBoardWindow(app, page);
     await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     const first = page.getByRole('textbox', { name: '编辑首段正文' });
     await revealBoardControl(page, first); await first.click();
     await first.evaluate(el => { const range = document.createRange(); range.setStart(el.firstChild!, 0); range.setEnd(el.firstChild!, 3); const selection = getSelection()!; selection.removeAllRanges(); selection.addRange(range); document.dispatchEvent(new Event('selectionchange')); });
     const selectedText = await page.evaluate(() => getSelection()!.toString());
     const before = await page.locator('.reading-layer[data-unit-id="KU-001"]').getAttribute('style');
+    // Delay one real Worker read so locating must await the destination editor.
+    await app.evaluate(() => {
+      const { Worker } = process.getBuiltinModule('node:worker_threads')!, original = Worker.prototype.postMessage;
+      (globalThis as any).searchReadDelay = [];
+      Worker.prototype.postMessage = function(message: any, transfer: any) {
+        if (message.action === 'read' && message.payload?.unitId === 'KU-002') {
+          Worker.prototype.postMessage = original;
+          (globalThis as any).searchReadDelay.push('held');
+          setTimeout(() => { (globalThis as any).searchReadDelay.push('sent'); original.call(this, message, transfer); }, 250);
+          return;
+        }
+        original.call(this, message, transfer);
+      };
+    });
     await page.context().setOffline(true);
     await page.getByRole('button', { name: '搜索课程', exact: true }).click();
     await page.getByRole('searchbox', { name: '查找已有内容' }).fill('0.40625×16');
@@ -25,6 +57,7 @@ test('offline real IPC search reveals a delivered deep answer and restores the o
     await expect(results.getByRole('button', { name: '定位命中' }).first()).toBeVisible();
     await results.getByRole('button', { name: '定位命中' }).first().click();
     await expect(page.locator('[data-search-current="true"]')).toContainText('0.40625×16');
+    expect(await app.evaluate(() => (globalThis as any).searchReadDelay)).toEqual(['held', 'sent']);
     await expect(page.locator('[data-unit-id="KU-002"] details.answer')).toHaveAttribute('open', '');
     await page.getByRole('button', { name: '返回搜索前位置', exact: true }).click();
     await expect(page.locator('.reading-layer[data-unit-id="KU-001"]')).toHaveAttribute('style', before!);
@@ -35,13 +68,14 @@ test('offline real IPC search reveals a delivered deep answer and restores the o
     await expect(page.locator('[data-search-current="true"]')).toContainText('Nibble');
     await page.screenshot({ path: evidencePath('t15-knowledge-hit.png') });
     await app.close(); app = await launch();
-    const reopened = await app.firstWindow(); await resizeBoardWindow(app, reopened);
+    const reopened = await app.firstWindow(); current = reopened; await resizeBoardWindow(app, reopened);
     await reopened.context().setOffline(true);
     await reopened.getByRole('button', { name: '搜索课程', exact: true }).click();
     await reopened.getByRole('searchbox').fill('Nibble');
     await reopened.getByRole('button', { name: '定位命中' }).first().click();
     await expect(reopened.locator('[data-search-current="true"]')).toContainText('Nibble');
-  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+  } catch (error) { if (current) await captureSearchFailure(current, 'deep-search-location', error); throw error; }
+  finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
 test('real saved note and durable message results open their own objects, preserve composer text and work at narrow width', async () => {
@@ -95,8 +129,9 @@ test('source result opens the fixed original page without creating an annotation
   await core.sources.saveContext({ sessionId: c.sessionId, generation: 1, seq: 1, state: { open: false, versionId: version.versionId, pdfPageIndex: 1, scale: 1.4, scrollTop: 10, scrollLeft: 0 } });
   await core.close();
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  let sourcePage: Page | undefined;
   try {
-    const page = await app.firstWindow(); await resizeBoardWindow(app, page);
+    const page = await app.firstWindow(); sourcePage = page; await resizeBoardWindow(app, page);
     await page.context().setOffline(true);
     await page.getByRole('button', { name: '搜索课程', exact: true }).click();
     await page.getByRole('searchbox').fill('original evidence');
@@ -106,10 +141,26 @@ test('source result opens the fixed original page without creating an annotation
     const facts = await page.evaluate(async () => { const c = await window.yizhi.open(); return { citations: await window.yizhi.sources.citations({ sessionId: c.sessionId }), context: await window.yizhi.sources.context({ sessionId: c.sessionId }) }; });
     expect(facts.citations).toEqual([]);
     await page.screenshot({ path: evidencePath('t15-source-hit.png') });
+    const returnScene = () => page.evaluate(() => {
+      const button = [...document.querySelectorAll('button')].find(el => el.textContent === '返回搜索前位置')!;
+      const box = button.getBoundingClientRect(), hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+      return { viewport: [innerWidth, innerHeight], camera: (document.querySelector('.react-flow__viewport') as HTMLElement).style.transform,
+        focused: document.activeElement?.outerHTML.slice(0, 280), box: box.toJSON(), clear: hit === button || button.contains(hit), hit: hit?.outerHTML.slice(0, 280) };
+    });
+    const beforeClose = await returnScene();
+    // Leave the original-page overlay before using the independent search return action.
+    await page.getByRole('button', { name: '返回画板', exact: true }).click();
+    await expect(page.getByRole('complementary', { name: '原文资料', exact: true })).toHaveCount(0);
+    const afterClose = await returnScene();
+    expect(afterClose.camera).toBe(beforeClose.camera); expect(afterClose.clear).toBe(true);
+    const scenePath = test.info().outputPath('source-return-scenes.json');
+    await writeFile(scenePath, JSON.stringify({ beforeClose, afterClose }, null, 2));
+    await test.info().attach('source-return-scenes', { path: scenePath, contentType: 'application/json' });
     await page.getByRole('button', { name: '返回搜索前位置' }).click();
     await page.getByRole('button', { name: '原文资料', exact: true }).click();
     await expect(page.locator('.source-panel canvas')).toHaveAttribute('aria-label', '固定版本测试资料 · PDF 第 2 页');
-  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+  } catch (error) { if (sourcePage) await captureSearchFailure(sourcePage, 'source-search-return', error); throw error; }
+  finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
 test('a changed or unreadable result is rejected, and exact original repair restores searchable source pages', async () => {

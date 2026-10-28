@@ -164,6 +164,19 @@ function App() {
   const channel = useRef<ParagraphSaveChannel | undefined>(undefined);
   const continuous = useRef<ContinuousEditor | null>(null);
   const unitInputs = useRef(new Map<string, UnitInputHandle>());
+  const unitInputWaiters = useRef(new Map<string, Array<{ resolve(input: UnitInputHandle): void; reject(error: Error): void }>>());
+  const readyUnitInput = async (unitId: string) => {
+    const existing = unitInputs.current.get(unitId);
+    const input = existing ?? await new Promise<UnitInputHandle>((resolve, reject) => {
+      const waiting = unitInputWaiters.current.get(unitId) ?? [];
+      waiting.push({ resolve, reject }); unitInputWaiters.current.set(unitId, waiting);
+    });
+    return input.ready();
+  };
+  useEffect(() => () => {
+    for (const waiting of unitInputWaiters.current.values()) for (const request of waiting) request.reject(new Error('学习窗口已关闭'));
+    unitInputWaiters.current.clear();
+  }, []);
   const flushUnitInputs = async (endEditing = false) => {
     for (const input of unitInputs.current.values()) if (!await input.flush(endEditing)) return false;
     return true;
@@ -413,6 +426,7 @@ function App() {
     const sourceScene = sourcesPanel.current?.capture(), noteScene = notesPanel.current?.capture(), agentScene = agentPanel.current?.capture();
     const restore = async () => {
       continuous.current?.clearSearch();
+      for (const input of unitInputs.current.values()) input.editor()?.clearSearch();
       if (sourceScene) await sourcesPanel.current?.restore(sourceScene);
       if (noteScene) await notesPanel.current?.restore(noteScene);
       if (agentScene) await agentPanel.current?.restore(agentScene);
@@ -429,9 +443,10 @@ function App() {
   };
   const locateSearch = async (hit: SearchHit) => {
     if (!course) return;
-    if (composing.current || !await channel.current?.flush() || (continuous.current && !await continuous.current.finish())) throw new Error('请先完成当前输入，再定位。');
+    if (composing.current || !await channel.current?.flush() || !await flushUnitInputs(true) || (continuous.current && !await continuous.current.finish())) throw new Error('请先完成当前输入，再定位。');
     hit = await window.yizhi.search.locate({ sessionId: course.sessionId, hit });
     continuous.current?.clearSearch();
+    for (const input of unitInputs.current.values()) input.editor()?.clearSearch();
     const restore = searchOrigin.current ?? captureSearchScene();
     if (hit.scope === 'notes') await notesPanel.current?.openSearch(hit);
     else if (hit.scope === 'messages') await agentPanel.current?.openSearch(hit);
@@ -439,6 +454,7 @@ function App() {
     else {
       const next = { ...(readingRef.current ?? { expanded: {}, returnStack: [], scrollTop: 0 }), unitId: hit.unitId!, expanded: { ...readingRef.current?.expanded, ...Object.fromEntries(hit.disclosure.map(key => [key, true])) } };
       await go(hit.unitId!, next); await paintFrame();
+      const currentEditor = hit.unitId === course.unit.id ? continuous.current : await readyUnitInput(hit.unitId!);
       await local.waitForMeasurements([hit.unitId!]);
       if (hit.unitId === course.unit.id) { const latest = await window.yizhi.open(); continuous.current?.reconcile(latest); }
       await paintFrame();
@@ -450,7 +466,7 @@ function App() {
       await paintFrame();
       const shown = hit.field === 'latex' ? field.getAttribute('aria-label') ?? field.querySelector('[role="math"]')?.getAttribute('aria-label') : hit.field === 'alt' && field instanceof HTMLImageElement ? field.alt : field.textContent;
       if (shown !== hit.text) throw new Error('当前显示版本不同，请重新搜索');
-      if (!(hit.unitId === course.unit.id && continuous.current?.revealSearch(hit))) highlightSearch(field, hit);
+      if (!currentEditor?.revealSearch(hit)) highlightSearch(field, hit);
       const board = boardRef.current!.getBoundingClientRect(), rect = field.getBoundingClientRect();
       camera.pan(board.left + 40 - rect.left, board.top + 110 - rect.top);
     }
@@ -568,7 +584,13 @@ function App() {
                 onSource={button => { sourceTrigger.current = button; if ((course.contentScope || button.dataset.sourceRegistered) && button.dataset.sourceVersion) sourcesPanel.current?.openVersion(button.dataset.sourceVersion, Number(button.dataset.sourcePage ?? 1) - 1); else setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;
                   void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} /></ReadingBoundary>} />
               : selected?.id === unit.id ? <ActiveUnitEditor sessionId={course.sessionId} unitId={unit.id} disabled={closing || !cameraReady}
-                register={(id, handle) => { if (handle) unitInputs.current.set(id, handle); else unitInputs.current.delete(id); }}
+                register={(id, handle) => {
+                  if (handle) {
+                    unitInputs.current.set(id, handle);
+                    for (const waiting of unitInputWaiters.current.get(id) ?? []) waiting.resolve(handle);
+                    unitInputWaiters.current.delete(id);
+                  } else unitInputs.current.delete(id);
+                }}
                 updated={snapshot => setMounted(previous => previous.map(item => item.id === snapshot.unit.id ? snapshot.unit : item))}
                 composition={active => { composing.current = active; }}
                 highlight={selection => { void drawingPanel.current?.highlight(selection); }}
