@@ -6,11 +6,15 @@ import { exerciseDirtyIndex, exerciseHistoryPreview, exerciseParserPreparation, 
 import { parsingFixture } from './parsing-fixture';
 import { revealBoardControl } from './board-test-helpers';
 
-export function studyAPI(page: Page): StudyAPI {
-  const call = (path: string[], args: unknown[]) => page.evaluate(async ({ path, args }) => {
+export function studyAPI(page: Page, other?: { page: Page; sessionId: string }): StudyAPI {
+  const call = (path: string[], args: unknown[]) => {
+    const sessionId = typeof args[0] === 'string' ? args[0] : (args[0] as { sessionId?: string })?.sessionId;
+    const target = other && sessionId === other.sessionId ? other.page : page;
+    return target.evaluate(async ({ path, args }) => {
     let owner = (window as any).yizhi; for (const name of path.slice(0, -1)) owner = owner[name];
     return owner[path.at(-1)!](...args);
-  }, { path, args });
+    }, { path, args });
+  };
   const branch = (name: string, methods: string[]) => Object.fromEntries(methods.map(method => [method, (request: unknown) => call([name, method], [request])]));
   return { read: (sessionId: string, unitId?: string) => call(['read'], [sessionId, unitId]), commitEdit: (request: import('../src/shared').EditCommand) => call(['commitEdit'], [request]),
     search: branch('search', ['rebuild', 'status', 'query', 'locate']),
@@ -38,9 +42,9 @@ export async function navigateUnit(page: Page, graph: CourseGraph, id: string) {
 
 /** Identical public/UI scenarios in a small preparation run and the gated final installed run. */
 export async function runStudyAcceptance(app: ElectronApplication, page: Page, metrics: AcceptanceMetrics, options: {
-  runDirectory: string; secondCourseDirectory: string; final: boolean; historyGroups: number;
+  runDirectory: string; evidenceDirectory: string; secondCourseDirectory: string; final: boolean; historyGroups: number;
 }) {
-  const api = studyAPI(page);
+  let api = studyAPI(page);
   const opened: OpenedCourse = await page.evaluate(() => (window as any).yizhi.open());
   const graph: CourseGraph = await page.evaluate(sessionId => (window as any).yizhi.graph(sessionId), opened.sessionId);
   if (options.final) expect(graph.nodes).toHaveLength(500);
@@ -50,6 +54,9 @@ export async function runStudyAcceptance(app: ElectronApplication, page: Page, m
   const second = await chooseSecondCourse(app, options.secondCourseDirectory);
   await metrics.attach(second, 'B');
   const b: OpenedCourse = await second.evaluate(() => (window as any).yizhi.open());
+  const secondGraph = await second.evaluate(sessionId => (window as any).yizhi.graph(sessionId), b.sessionId);
+  await navigateUnit(second, secondGraph, b.unit.id);
+  api = studyAPI(page, { page: second, sessionId: b.sessionId });
   expect(b.courseId).not.toBe(opened.courseId);
   const sharedCore = await app.evaluate(() => (globalThis as any).__yizhiAcceptance.core());
   expect(sharedCore.instanceId).toBe(beforeCore.instanceId); expect(sharedCore.threadId).toBe(beforeCore.threadId);
@@ -68,8 +75,10 @@ export async function runStudyAcceptance(app: ElectronApplication, page: Page, m
   let a = await api.read(opened.sessionId, editableId);
   const history = await prepareLongHistory(api, a, options.historyGroups);
   const historyOverlap = await exerciseHistoryPreview(api, a, b, history.anchorOperationId);
+  await expect(second.getByRole('textbox', { name: '编辑首段正文', exact: true })).toHaveText(historyOverlap.progress.savedText);
   await metrics.sample('history-preview-and-B-save');
   const indexOverlap = await exerciseDirtyIndex(api, a, b);
+  await expect(second.getByRole('textbox', { name: '编辑首段正文', exact: true })).toHaveText(indexOverlap.progress.savedText);
   await metrics.sample('dirty-index-and-B-save');
   const sourcePath = join(options.runDirectory, 'synthetic-parser-overlap.pdf'); await parsingFixture(sourcePath, 1);
   await app.evaluate(({ dialog }, path) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] }); }, sourcePath);
@@ -93,6 +102,7 @@ export async function runStudyAcceptance(app: ElectronApplication, page: Page, m
   await metrics.sample('pdf-next-page');
   await page.getByRole('button', { name: '返回画板', exact: true }).click();
   const parserOverlap = await exerciseParserPreparation(api, a, b, syntheticSource.versionId);
+  await expect(second.getByRole('textbox', { name: '编辑首段正文', exact: true })).toHaveText(parserOverlap.progress.savedText);
   await metrics.sample('parser-preparation-and-B-save');
   // Actual running/pause/resume uses the copied course's own experiment, with no replacement runtime.
   const experimentUnit = graph.nodes.find(node => node.id === 'KU-055');
@@ -117,6 +127,27 @@ export async function runStudyAcceptance(app: ElectronApplication, page: Page, m
   await expect.poll(async () => (await experimentState()).state.step).toBeGreaterThan(pausedExperiment.state.step);
   const resumedExperiment = await experimentState();
   await region.getByRole('button', { name: '暂停遍历', exact: true }).click();
+  await navigateUnit(page, graph, 'KU-001');
+  const extensionButton = page.locator('article[data-unit-id="KU-001"]').getByRole('button', { name: '奇偶校验扩展实验', exact: true });
+  await revealBoardControl(page, extensionButton); await extensionButton.click();
+  const extension = page.getByRole('region', { name: '奇偶校验扩展实验', exact: true });
+  await expect(extension.getByRole('status', { name: '扩展保存状态', exact: true })).toHaveText('现场已保存');
+  const extensionState = () => page.evaluate(sessionId => (window as any).yizhi.extensions.read({ sessionId }), opened.sessionId);
+  const startExtension = extension.getByRole('button', { name: '开始模拟', exact: true });
+  await revealBoardControl(page, startExtension); await startExtension.click();
+  await expect.poll(async () => (await extensionState()).state.step).toBeGreaterThan(0);
+  const extensionRunning = await extensionState(); await metrics.sample('extension-worker-running');
+  // KU-001 is the normal pinned reading object; the extension stays mounted but must actually pause.
+  await navigateUnit(page, graph, editableId);
+  if (editableId === 'KU-001') await navigateUnit(page, graph, 'KU-002');
+  await expect.poll(async () => (await extensionState()).phase).toBe('paused');
+  const extensionPaused = await extensionState(); await metrics.sample('extension-paused-offscreen');
+  await navigateUnit(page, graph, 'KU-001');
+  await revealBoardControl(page, extension.getByRole('status', { name: '扩展保存状态', exact: true }));
+  await expect.poll(async () => (await extensionState()).state.step).toBeGreaterThan(extensionPaused.state.step);
+  const extensionResumed = await extensionState();
+  const stopExtension = extension.getByRole('button', { name: '暂停模拟', exact: true }); await revealBoardControl(page, stopExtension); await stopExtension.click();
+  await revealBoardControl(page, extensionButton); await extensionButton.click();
   await navigateUnit(page, graph, editableId);
   // Actual trusted editor input/selection plus an independent formal update; no synthetic IME events.
   const editor = page.locator(`article[data-unit-id="${editableId}"] .tiptap.ProseMirror`);
@@ -171,6 +202,8 @@ export async function runStudyAcceptance(app: ElectronApplication, page: Page, m
   await navigateUnit(page, graph, editableId);
   expect((await api.read(opened.sessionId, editableId)).drafts.some(draft => draft.input.formulaDrafts?.length)).toBe(true);
   await metrics.sample('draft-returned');
+  const wideDirectoryClose = page.getByRole('button', { name: '收起目录', exact: true });
+  if (await wideDirectoryClose.count()) await wideDirectoryClose.click();
   const windowHandle = await app.browserWindow(page);
   const narrowSize = await windowHandle.evaluate(window => { window.setSize(700, 700); return window.getContentSize(); });
   await expect.poll(() => page.evaluate(() => [innerWidth, innerHeight])).toEqual(narrowSize);
@@ -178,19 +211,24 @@ export async function runStudyAcceptance(app: ElectronApplication, page: Page, m
   if (await directoryModalClose.count()) await directoryModalClose.click();
   await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(page.getByRole('status', { name: '阅读状态', exact: true })).toHaveText('阅读位置已保存');
   const readingBeforePanels = await page.evaluate(sessionId => (window as any).yizhi.readingState(sessionId), opened.sessionId);
   const agentButton = page.getByRole('button', { name: 'Agent · 学习对话', exact: true });
   await agentButton.focus(); await expect(agentButton).toBeFocused(); await page.keyboard.press('Enter');
   await expect(page.getByRole('textbox', { name: '学习对话草稿', exact: true })).toBeFocused();
   await expect(page.getByText(/生成暂不可用/)).toBeVisible();
   await expect(page.getByRole('button', { name: '发送问题', exact: true })).toBeDisabled();
-  const closeAgent = page.getByRole('button', { name: '收起对话', exact: true }); await closeAgent.focus(); await page.keyboard.press('Enter');
+  const closeAgent = page.getByRole('button', { name: '收起对话', exact: true });
+  await closeAgent.focus(); await page.keyboard.press('Shift+Tab');
+  expect(await page.getByRole('dialog', { name: 'Agent 学习对话', exact: true }).evaluate(element => element.contains(document.activeElement))).toBe(true);
+  await closeAgent.focus(); await page.keyboard.press('Enter');
   await expect(agentButton).toBeFocused();
   const sourceButton = page.getByRole('button', { name: '原文资料', exact: true }); await sourceButton.focus(); await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog', { name: '原文资料', exact: true })).toBeVisible();
   await page.keyboard.press('Escape'); await expect(sourceButton).toBeFocused();
+  await expect(page.getByRole('status', { name: '阅读状态', exact: true })).toHaveText('阅读位置已保存');
   const readingAfterPanels = await page.evaluate(sessionId => (window as any).yizhi.readingState(sessionId), opened.sessionId);
-  expect(readingAfterPanels.unitId).toBe(readingBeforePanels.unitId); expect(readingAfterPanels.expanded).toEqual(readingBeforePanels.expanded);
+  expect(readingAfterPanels).toEqual(readingBeforePanels);
   const accessibility = await page.evaluate(() => ({ viewport: [innerWidth, innerHeight], dpr: devicePixelRatio,
     reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches, emulatedReducedMotion: true,
     transition: getComputedStyle(document.querySelector('button')!).transitionDuration, fonts: getComputedStyle(document.body).fontFamily,
@@ -198,11 +236,13 @@ export async function runStudyAcceptance(app: ElectronApplication, page: Page, m
     fontResources: performance.getEntriesByType('resource').filter(entry => /\.(woff2?|ttf)(\?|$)/.test(entry.name)).map(entry => entry.name) }));
   expect(accessibility.reducedMotion).toBe(true);
   await metrics.sample('narrow-keyboard-reduced-motion');
-  await page.screenshot({ path: join(options.runDirectory, 'narrow-keyboard-reduced-motion.png') });
+  await page.screenshot({ path: join(options.evidenceDirectory, 'narrow-keyboard-reduced-motion.png') });
   return { graphUnits: graph.nodes.length, navigated: ids.length, disclosures, editableId, courseId: opened.courseId, secondCourseId: b.courseId,
     sharedCore: { instanceId: sharedCore.instanceId, threadId: sharedCore.threadId }, history, historyOverlap, indexOverlap, parserOverlap,
     originalPages, update, textMarker, savedDraftInputSeq: savedDraft.drafts.at(-1)?.input.inputSeq,
     experiment: { running: runningExperiment, paused: pausedExperiment, resumed: resumedExperiment },
+    extension: { running: extensionRunning, paused: extensionPaused, resumed: extensionResumed },
     programmaticUndo: { formula: true, body: true, independentUpdatePreserved: true }, accessibility,
+    panelReadingState: { before: readingBeforePanels, after: readingAfterPanels },
     physical: { mouse: 'pending', trackpad: 'pending', doubaoIME: 'pending' }, limitations: ['Controlled producer update is not an actual model call.'] };
 }

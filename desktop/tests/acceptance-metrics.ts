@@ -1,4 +1,4 @@
-import type { CDPSession, ElectronApplication, Page } from '@playwright/test';
+import type { CDPSession, ElectronApplication, Page, Worker as BrowserWorker } from '@playwright/test';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -14,6 +14,7 @@ interface RendererSample { label: string; viewport: number[]; dpr: number; inter
 export class AcceptanceMetrics {
   private pages = new Map<Page, string>();
   private heaps = new Map<Page, CDPSession>();
+  private workers = new Map<Page, { active: Set<BrowserWorker>; peak: number; total: number }>();
   private started = new Date().toISOString();
   private checkpoints: Array<{ label: string; at: string; core: CoreObservation; renderers: RendererSample[]; processes: unknown }> = [];
   private timings: Array<{ label: string; start: number; end: number; durationMs: number; outcome: string }> = [];
@@ -21,6 +22,10 @@ export class AcceptanceMetrics {
   async attach(page: Page, label: string) {
     this.pages.set(page, label);
     this.heaps.set(page, await page.context().newCDPSession(page));
+    const workers = { active: new Set<BrowserWorker>(), peak: 0, total: 0 }; this.workers.set(page, workers);
+    const trackWorker = (worker: BrowserWorker) => { if (workers.active.has(worker)) return;
+      workers.active.add(worker); workers.total++; workers.peak = Math.max(workers.peak, workers.active.size); worker.once('close', () => workers.active.delete(worker)); };
+    page.workers().forEach(trackWorker); page.on('worker', trackWorker);
     await page.evaluate(() => {
       if (!(window as any).__yizhiObservation) throw new Error('App was not launched with YIZHI_OBSERVE=1');
       const state = { raf: { count: 0, sum: 0, min: Infinity, max: 0, bins: Array(2002).fill(0) },
@@ -60,6 +65,10 @@ export class AcceptanceMetrics {
       state.frame = requestAnimationFrame(frame);
       (window as any).__t28Metrics = { snapshot: () => { dom(); return { viewport: [innerWidth, innerHeight], dpr: devicePixelRatio,
         screen: [screen.width, screen.height, screen.availWidth, screen.availHeight], visibility: document.visibilityState,
+        focus: { documentFocused: document.hasFocus(), tag: document.activeElement?.tagName,
+          label: document.activeElement?.getAttribute('aria-label'), text: document.activeElement?.textContent?.slice(0, 120),
+          headerInert: !!document.querySelector('header')?.hasAttribute('inert'), bodyInert: document.body.inert,
+          rootInert: !!document.getElementById('root')?.hasAttribute('inert'), modalDialogs: [...document.querySelectorAll('dialog[open]')].map(node => node.getAttribute('aria-label')) },
         reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
         heap: (performance as any).memory ? { usedJSHeapSize: (performance as any).memory.usedJSHeapSize, totalJSHeapSize: (performance as any).memory.totalJSHeapSize } : null,
         raf: state.raf, longtask: state.longtask, composition: state.composition, input: state.input,
@@ -80,7 +89,8 @@ export class AcceptanceMetrics {
         display: screen.getDisplayMatching(window.getBounds()), rendererPid: window.webContents.getOSProcessId() })) }));
     const renderers: RendererSample[] = [];
     for (const [page, name] of this.pages) if (!page.isClosed()) renderers.push({ label: name, ...await page.evaluate(() => (window as any).__t28Metrics.snapshot()),
-      v8Heap: await this.heaps.get(page)!.send('Runtime.getHeapUsage') });
+      v8Heap: await this.heaps.get(page)!.send('Runtime.getHeapUsage'), browserWorkers: { current: this.workers.get(page)!.active.size,
+        peak: this.workers.get(page)!.peak, total: this.workers.get(page)!.total, urls: [...this.workers.get(page)!.active].map(worker => worker.url()) } });
     this.checkpoints.push({ label, at: new Date().toISOString(), core, processes, renderers });
   }
   async write(filename: string, extra: Record<string, unknown> = {}) {

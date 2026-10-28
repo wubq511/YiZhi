@@ -41,6 +41,8 @@ python3 /absolute/run-ui-serial.py npx playwright test tests/acceptance.spec.ts 
 
 `YIZHI_OBSERVE=1` 启用宿主只读 Core 观测与 renderer 聚合器。计数覆盖阅读／编辑／MathLive／实验实例、PDF 文档和 range cache、正文缓存、测量元数据／待处理项／布局批次、事件保留／游标落后／消费批次与 Core 排队。JSON 还记录设备、macOS、runtime、viewport/DPR、RSS/heap、程序输入／保存／导航时序、rAF 直方图和 longtask。观测不设新的 FPS、内存或时延验收阈值；DOM 峰值采用 mutation／100ms 采样，资源生命周期计数另列，Core RSS 与宿主是同一进程，不能相加。
 
+可从原始 JSON 生成带缺口说明的只读指标表：`node scripts/report-t28.mjs --input /persistent/measurement.json --output /persistent/new-report.md`。报告保留 preparation／最终自动检查／实体未验的区别；输出已存在时拒绝覆盖。
+
 实体工具可以脱离工作树保存，先 build，再执行：
 
 ```sh
