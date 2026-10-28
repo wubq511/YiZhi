@@ -10,6 +10,7 @@ const extraEnumerators=new Map<string,(db:DatabaseSync)=>BackupResource[]>();
 export function registerRetentionResourceRoot(name:string,check:RootCheck,enumerate?:(db:DatabaseSync)=>BackupResource[]){extraRoots.set(name,check);if(enumerate)extraEnumerators.set(name,enumerate);}
 /** Same trusted producer registry, with enumeration for backup instead of on-disk membership queries. */
 export function declaredResourceRoots(db:DatabaseSync){
+ for(const name of extraRoots.keys())if(!extraEnumerators.has(name))throw new Error('可信资源根尚无备份声明枚举器: '+name);
  const refs=enumerateDeclared(db);
  for(const [name,enumerate] of extraEnumerators)for(const ref of enumerate(db)){
   const old=refs.find(r=>r.sha256===ref.sha256);

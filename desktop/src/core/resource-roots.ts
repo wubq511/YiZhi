@@ -23,6 +23,20 @@ export function declaredResourceRoots(db:DatabaseSync):BackupResource[]{
   }
   for(const x of Object.values(v))walk(x,where);
  };
+ const has=(table:string)=>!!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table);
+ const required=(v:any,where:string)=>{
+  if(!v||typeof v.sha256!=='string'||v.byteLength===undefined)throw new Error('资源声明缺少摘要或长度: '+where);
+  add(v.sha256,v.byteLength,where);walk(v,where);
+ };
+ const list=(v:any,where:string)=>{if(!Array.isArray(v))throw new Error('资源声明清单无效: '+where);for(const r of v)required(r,where);};
+ // Required declarations are validated by their actual schema even when a redundant payload
+ // elsewhere still happens to contain the same hash. Never silently omit a malformed root.
+ for(const table of ['source_versions','exchange_resources'])if(has(table))for(const row of db.prepare(`SELECT payload FROM ${table}`).all())required(JSON.parse(String(row.payload)),table+'.payload');
+ if(has('parse_artifacts'))for(const row of db.prepare('SELECT payload FROM parse_artifacts').all()){
+  const ref=JSON.parse(String(row.payload));required(ref.resource,'parse_artifacts.payload');list(ref.resources,'parse_artifacts.payload');
+ }
+ if(has('extension_packages'))for(const row of db.prepare('SELECT manifest FROM extension_packages').all())list(JSON.parse(String(row.manifest)).resources,'extension_packages.manifest');
+ if(has('metadata')){const legacy=db.prepare("SELECT value FROM metadata WHERE key='legacy-content'").get();if(legacy)list(JSON.parse(String(legacy.value)).report?.resources,'metadata.value');}
  // Actual schema, including producer recovery domains. No renderer supplies SQL/resolver code.
  for(const table of db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all()){
   const name=String(table.name),quoted='"'+name.replaceAll('"','""')+'"';

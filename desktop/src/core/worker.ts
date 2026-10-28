@@ -26,7 +26,7 @@ import { AgentStore } from './agent-store';
 import { parentPort, workerData } from 'node:worker_threads';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync, realpathSync, readFileSync, existsSync } from 'node:fs';
-import { join,resolve } from 'node:path';
+import { join,basename } from 'node:path';
 import { FormalRelations } from './formal-relations';
 import { CommandGroups } from './command-groups';
 import { Parsing } from './parsing';
@@ -94,6 +94,7 @@ function snapshot(course: Course, unitId = 'KU-001'): OpenedCourse {
       } } };
 }
 function open(directory: string): OpenedCourse {
+  if(/\.backup-starting-[\w-]+$/.test(basename(directory)))throw new Error('备份初始化未完成，拒绝打开');
   if(existsSync(join(directory,'backup-manifest.json'))&&!existsSync(join(directory,'backup-complete.json')))throw new Error('备份未完成，拒绝打开');
   if (existsSync(join(directory, '课程.json')) && !existsSync(join(directory, 'course.sqlite'))) throw new Error('这是旧版课程，请从停止写入的一致副本转换到新目录');
   mkdirSync(directory, { recursive: true });
@@ -213,7 +214,7 @@ parentPort!.on('message', message => {
     const course = [...courses.values()].find(c => c.sessionId === message.payload?.sessionId);
     try { course?.experiments.stopIssuing(message.payload); } catch { /* Invalid input is rejected by the ordered dispatcher below. */ }
   }
-  if (message.action === 'sources:page' || message.action.startsWith('search:') || message.action.startsWith('backup:')) {
+  if (message.action === 'sources:page' || message.action.startsWith('search:') || message.action.startsWith('backup:') || message.action.startsWith('format:')) {
     // Immutable source bytes may parse asynchronously while short core requests continue.
     // Start after prior ordered writes; only close drains these read-only operations.
     queue = queue.then(() => {

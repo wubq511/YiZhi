@@ -54,14 +54,18 @@ export class CourseBackups {
   if(directory===origin||!outside(relative(origin,directory))||!outside(relative(directory,origin)))throw new Error('备份必须使用课程外的独立新目录');
   if(resume&&(await lstat(directory)).isSymbolicLink())throw new Error('备份目录不能是软链');
   if(this.running.has(directory))throw new Error('此备份正在进行');this.running.add(directory);
-  let m:BackupManifest|undefined;
+  let m:BackupManifest|undefined,initialized=false;
+  const starting=directory+'.backup-starting-'+request.backupId;
   try{
-   if(resume){m=await jsonFile(join(directory,MANIFEST));if(m!.backupId!==request.backupId||m!.courseId!==source.courseId||m!.sourceDirectory!==origin)throw new Error('重试必须使用原课程和备份身份');
+   if(resume){m=await jsonFile(join(directory,MANIFEST));if(m!.backupId!==request.backupId||m!.courseId!==source.courseId||m!.sourceDirectory!==origin)throw new Error('重试必须使用原课程和备份身份');initialized=true;
     if(await exists(join(directory,MARKER))){const result=await this.verify(directory);source.release();return result;}
    }else{
-    await mkdir(directory); // Never adopt an existing arbitrary directory.
+    if(await exists(directory))throw new Error('备份必须使用全新目录');
+    await mkdir(starting); // A killed initialization is visibly a reserved unfinished stage.
     m={schema:'yizhi-full-backup-1',backupId:request.backupId,courseId:source.courseId,sourceDirectory:origin,createdAt:new Date().toISOString(),phase:'snapshotting',resources:[],runtime:{node:process.versions.node,electron:process.versions.electron,sqlite:''}};
-    await durableJSON(join(directory,MANIFEST),m);
+    await durableJSON(join(starting,MANIFEST),m);
+    await rename(starting,directory);initialized=true;
+    const parent=await open(dirname(directory),'r');try{await parent.sync();}finally{await parent.close();}
    }
    source.acquire();
    const snapshot=join(directory,'backup-snapshot.sqlite');
@@ -75,7 +79,14 @@ export class CourseBackups {
    const rootDB=new DatabaseSync(snapshot,{readOnly:true});
    try{
     const declared=declaredResourceRoots(rootDB);
-    if(m!.rootsExtracted&&JSON.stringify(declared)!==JSON.stringify(m!.resources))throw new Error('重试资源清单与原始快照不符');
+    if(m!.rootsExtracted){
+     if(declared.length!==m!.resources.length)throw new Error('重试资源清单与原始快照不符');
+     for(let i=0;i<declared.length;i++){
+      const ref=declared[i],old=m!.resources[i];
+      if(ref.sha256!==old.sha256||ref.path!==old.path||JSON.stringify(ref.declaredBy)!==JSON.stringify(old.declaredBy)||ref.byteLength!==null&&ref.byteLength!==old.byteLength)throw new Error('重试资源清单与原始快照不符');
+      if(ref.byteLength===null&&old.byteLength!==null){if(!Number.isSafeInteger(old.byteLength)||old.byteLength<0)throw new Error('资源核验长度无效');ref.byteLength=old.byteLength;}
+     }
+    }
     m!.resources=declared;m!.rootsExtracted=true;
    }finally{rootDB.close();}
    m!.phase='copying';delete m!.diagnostic;await durableJSON(join(directory,MANIFEST),m);
@@ -112,7 +123,7 @@ export class CourseBackups {
    await durableJSON(join(directory,MARKER),{schema:'yizhi-full-backup-complete-1',backupId:m!.backupId,manifest:await fileDigest(join(directory,MANIFEST))});
    source.release();
    await rm(snapshot,{force:true});return m!;
-  }catch(e){if(m&&!await exists(join(directory,MARKER))){m.phase='unfinished';m.diagnostic=String((e as Error).message);await durableJSON(join(directory,MANIFEST),m);}throw e;}
+  }catch(e){if(m&&initialized&&!await exists(join(directory,MARKER))){m.phase='unfinished';m.diagnostic=String((e as Error).message);await durableJSON(join(directory,MANIFEST),m);}if(!initialized)await rm(starting,{recursive:true,force:true});throw e;}
   finally{this.running.delete(directory);}
  }
 }

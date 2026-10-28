@@ -8,6 +8,8 @@ import { sourceFixture } from './source-fixture';
 import { parsingFixture } from './parsing-fixture';
 import { fork } from 'node:child_process';
 import { once } from 'node:events';
+import { DatabaseSync } from 'node:sqlite';
+import { createHash } from 'node:crypto';
 
 const A='RB-TH-01-01-what-is-positional-notation';
 async function until<T>(read:()=>Promise<T>,done:(v:T)=>boolean){const end=Date.now()+20000;for(;;){const v=await read();if(done(v))return v;if(Date.now()>end)throw new Error('等待真实备份/解析阶段超时');await new Promise(r=>setTimeout(r,5));}}
@@ -44,6 +46,32 @@ test('a directory name beginning with two dots is still inside the live course a
  const root=await mkdtemp(join(tmpdir(),'yizhi-backup-path-')),core=new CourseService(resolve('dist/worker.cjs'));
  try{const c=await core.open(root);await assert.rejects(core.backup.create({...c,directory:join(root,'..backup'),backupId:'nested'}),/独立|课程外/);}
  finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+test('a malformed registered source declaration cannot be hidden by another payload that happens to retain the same file',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-backup-declaration-'));let core=new CourseService(resolve('dist/worker.cjs'));
+ try{
+  const c=await core.open(join(root,'live')),path=join(root,'source.pdf');await sourceFixture(path);
+  const source=(await core.sources.importFile({...c,operationId:'source-declaration',path,title:'Required declaration'})).version;await core.close();
+  const db=new DatabaseSync(join(root,'live','course.sqlite')),payload={...source} as any;delete payload.byteLength;
+  db.prepare('UPDATE source_versions SET payload=? WHERE id=?').run(JSON.stringify(payload),source.versionId);db.close();
+  core=new CourseService(resolve('dist/worker.cjs'));const reopened=await core.open(join(root,'live'));
+  await assert.rejects(core.backup.create({...reopened,directory:join(root,'backup'),backupId:'invalid-declaration'}),/声明|长度/);
+  assert.equal((await core.backup.status({directory:join(root,'backup')})).phase,'unfinished');
+ }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+test('failure writing the final marker retries a verified bare resource declaration without treating its resolved length as a changed snapshot',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-backup-marker-fault-')),gate=new SharedArrayBuffer(4),core=new CourseService(resolve('dist/worker.cjs'),{backupScheduling:{beforeMarker:gate}});let pending:Promise<unknown>|undefined;
+ try{
+  const c=await core.open(join(root,'live')),bytes=Buffer.from('Immutable draft resource'),sha=createHash('sha256').update(bytes).digest('hex');
+  await mkdir(join(root,'live','resources'));await writeFile(join(root,'live','resources',sha),bytes);
+  await core.saveDraft({...c,inputSeq:1,baseRevision:1,changes:[{blockId:A,text:'resources/'+sha}],complete:false});
+  const request={...c,directory:join(root,'backup'),backupId:'marker-fault'};pending=core.backup.create(request);pending.catch(()=>{});
+  await until(async()=>Atomics.load(new Int32Array(gate),0),v=>v===1);await mkdir(join(request.directory,'backup-complete.json.partial'));
+  release(gate);await assert.rejects(pending,/EISDIR/);assert.equal((await core.backup.status(request)).phase,'unfinished');
+  await rm(join(request.directory,'backup-complete.json.partial'),{recursive:true});pending=core.backup.resume(request);const settled:{error?:unknown}={};pending.catch(e=>{settled.error=e;});
+  await until(async()=>Atomics.load(new Int32Array(gate),0)===1||!!settled.error,v=>v);release(gate);await pending;
+  await core.backup.verify(request);
+ }finally{release(gate);await pending?.catch(()=>{});await core.close();await rm(root,{recursive:true,force:true});}
 });
 test('real copy failure retains the fixed manifest; retry verifies and repairs corrupt destination bytes before completing',async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-backup-copy-fault-')),gate=new SharedArrayBuffer(4),core=new CourseService(resolve('dist/worker.cjs'),{backupScheduling:{beforeCopy:gate}});let pending:Promise<unknown>|undefined;
