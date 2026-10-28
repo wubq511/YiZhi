@@ -10,7 +10,8 @@ async function smallExperimentWindow(app: ElectronApplication, phase = 'initial'
   await resizeBoardWindow(app, page, 1024, 688);
   const geometry = await app.evaluate(({ BrowserWindow, screen }) => {
     const window = BrowserWindow.getAllWindows()[0];
-    return { requestedOuter: [1024, 688], outer: window.getSize(), content: window.getContentSize(), workArea: screen.getDisplayMatching(window.getBounds()).workArea };
+    return { requestedOuter: [1024, 688], outer: window.getSize(), content: window.getContentSize(), workArea: screen.getDisplayMatching(window.getBounds()).workArea,
+      hostPid: process.pid, rendererPid: window.webContents.getOSProcessId(), visible: window.isVisible(), focused: window.isFocused(), minimized: window.isMinimized() };
   });
   const renderer = await page.evaluate(() => ({ inner: [innerWidth, innerHeight], board: document.querySelector('main.board')!.getBoundingClientRect().toJSON() }));
   expect(renderer.inner).toEqual(geometry.content);
@@ -23,37 +24,64 @@ async function smallExperimentWindow(app: ElectronApplication, phase = 'initial'
 
 async function reveal(page: Page, target: Locator) {
   await expect(page.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
-  let previous: { x: number; y: number; width: number; height: number } | undefined;
-  let stable = 0;
-  let last;
-  for (let i = 0; i < 60; i++) {
-    const scene = await target.evaluate(el => {
-      const box = el.getBoundingClientRect(), board = document.querySelector('main.board')!;
-      const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
-      return { box: box.toJSON() as { x: number; y: number; width: number; height: number; right: number; bottom: number }, board: board.getBoundingClientRect().toJSON() as { x: number; y: number; width: number; height: number; right: number; bottom: number },
-        clear: !!hit && (hit === el || el.contains(hit)), hit: hit?.outerHTML.slice(0, 280), scroll: [board.scrollLeft, board.scrollTop] };
-    });
-    last = scene;
-    const { box, board } = scene;
-    const dx = box.x + box.width / 2 - board.x - board.width / 2;
-    const dy = box.y + box.height / 2 - board.y - board.height / 2;
-    // A y-only sample can precede a restored scene measurement or leave the
-    // actual click point under another reading object or the fixed board tools.
-    const inside = box.x >= board.x + 8 && box.right <= board.right - 8 && box.y >= board.y + 8 && box.bottom <= board.bottom - 8;
-    if (inside && scene.clear && Math.abs(dx) < board.width / 6 && Math.abs(dy) < board.height / 6) {
-      stable = previous && (['x', 'y', 'width', 'height'] as const).every(key => Math.abs(box[key] - previous![key]) < .5) ? stable + 1 : 1;
-      if (stable >= 3) return;
-      await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => done())));
-    } else {
-      stable = 0;
-      await page.mouse.move(board.x + 8, board.y + board.height / 2);
-      await page.mouse.wheel(Math.max(-500, Math.min(500, dx)), Math.max(-500, Math.min(500, dy)));
-      await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
+  const visibility = await target.evaluateHandle(el => {
+    const entries: unknown[] = []; (el as any).__experimentIntersections = entries;
+    const observer = new IntersectionObserver(changes => {
+      for (const entry of changes) entries.push({ time: entry.time, intersecting: entry.isIntersecting, ratio: entry.intersectionRatio,
+        root: entry.rootBounds?.toJSON(), target: entry.boundingClientRect.toJSON(), intersection: entry.intersectionRect.toJSON() });
+      if (entries.length > 8) entries.splice(0, entries.length - 8);
+    }, { root: el.closest('main.board') });
+    observer.observe(el.closest('[data-reading-block]') ?? el);
+    return { observer, el };
+  });
+  try {
+    let previous: { x: number; y: number; width: number; height: number } | undefined;
+    let stable = 0;
+    let last;
+    for (let i = 0; i < 60; i++) {
+      const scene = await target.evaluate(el => {
+        const box = el.getBoundingClientRect(), board = document.querySelector('main.board')!;
+        const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+        const ancestors = [];
+        for (let parent: Element | null = el; parent; parent = parent.parentElement) ancestors.push({ tag: parent.tagName, className: parent.getAttribute('class'),
+          blockId: parent.getAttribute('data-block-id'), unitId: parent.getAttribute('data-unit-id'), inert: parent.hasAttribute('inert'), pointerEvents: getComputedStyle(parent).pointerEvents });
+        return { box: box.toJSON() as { x: number; y: number; width: number; height: number; right: number; bottom: number }, board: board.getBoundingClientRect().toJSON() as { x: number; y: number; width: number; height: number; right: number; bottom: number },
+          visibility: document.visibilityState, focused: document.hasFocus(), viewport: [innerWidth, innerHeight], disabled: el.matches(':disabled'), ancestors,
+          intersections: (el as any).__experimentIntersections, sameArticle: hit === el.closest('article'),
+          clear: !!hit && (hit === el || el.contains(hit)), hit: hit?.outerHTML.slice(0, 280), scroll: [board.scrollLeft, board.scrollTop] };
+      });
+      last = scene;
+      const { box, board } = scene;
+      const dx = box.x + box.width / 2 - board.x - board.width / 2;
+      const dy = box.y + box.height / 2 - board.y - board.height / 2;
+      // A y-only sample can precede a restored scene measurement or leave the
+      // actual click point under another reading object or the fixed board tools.
+      const inside = box.x >= board.x + 8 && box.right <= board.right - 8 && box.y >= board.y + 8 && box.bottom <= board.bottom - 8;
+      if (inside && scene.clear && Math.abs(dx) < board.width / 6 && Math.abs(dy) < board.height / 6) {
+        stable = previous && (['x', 'y', 'width', 'height'] as const).every(key => Math.abs(box[key] - previous![key]) < .5) ? stable + 1 : 1;
+        if (stable >= 3) return;
+        await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => done())));
+      } else {
+        stable = 0;
+        await page.mouse.move(board.x + 8, board.y + board.height / 2);
+        await page.mouse.wheel(Math.max(-500, Math.min(500, dx)), Math.max(-500, Math.min(500, dy)));
+        await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
+      }
+      previous = box;
     }
-    previous = box;
+    const error = new Error('实验控件未稳定进入无遮挡的画板视野: ' + JSON.stringify(last));
+    try {
+      const scenePath = test.info().outputPath('experiment-reveal-scene.json'), domPath = test.info().outputPath('experiment-reveal-dom.html'), screenPath = test.info().outputPath('experiment-reveal-failure.png');
+      await writeFile(scenePath, JSON.stringify(last, null, 2)); await writeFile(domPath, await page.content()); await page.screenshot({ path: screenPath });
+      await test.info().attach('experiment-reveal-scene', { path: scenePath, contentType: 'application/json' });
+      await test.info().attach('experiment-reveal-dom', { path: domPath, contentType: 'text/html' });
+      await test.info().attach('experiment-reveal-screen', { path: screenPath, contentType: 'image/png' });
+    } catch (captureError) { console.error('Experiment failure evidence capture:', captureError); }
+    throw error;
+  } finally {
+    await visibility.evaluate(({ observer, el }) => { observer.disconnect(); delete (el as any).__experimentIntersections; }).catch(() => {});
+    await visibility.dispose().catch(() => {});
   }
-  await page.screenshot({ path: test.info().outputPath('experiment-reveal-failure.png') });
-  throw new Error('实验控件未稳定进入无遮挡的画板视野: ' + JSON.stringify(last));
 }
 
 
