@@ -3,7 +3,7 @@ import type { ConsistencyPort } from './command-consistency';
 import { applyContentPatch, validatePatch } from './editor-store';
 import { patchTargets } from '../editor-api';
 import { syncAnnotations } from './annotations';
-import { readDrafts, draftScopes, draftReadVersions, draftVersion, transaction, appendEvent, eventCursor } from './save-store';
+import { readDrafts, draftScopes, draftReadVersions, draftVersion, transaction, appendEvent, eventCursor, inputKey } from './save-store';
 import { randomUUID, createHash } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import type { CourseUnit, ReadingBlock } from '../shared';
@@ -51,7 +51,7 @@ export class CommandGroups {
     if (old && input.sequence <= old.sequence) return;
     // Moving the caret must not release the only copy of an unacknowledged input tail.
     if (old?.blockIds.some(id => !input.blockIds.includes(id))) {
-      const durable = this.db.prepare('SELECT seq FROM input_progress WHERE session_id=?').get(input.sessionId);
+      const durable = this.db.prepare('SELECT seq FROM input_progress WHERE session_id=?').get(inputKey(input.sessionId, input.unitId));
       if (input.inputSeq > Number(durable?.seq ?? 0)) throw new Error('最新输入尚未持久保留，不能解除现场保护');
     }
     this.protections.set(input.editorId, structuredClone(input));
@@ -243,6 +243,19 @@ export class CommandGroups {
         return retain(`学生输入依据已变化：${id}。请重新读取并整合；候选已保留`);
       const scope = new Set([...versions.keys(), ...command.changes.map(change => change.objectId)]);
       const writes = new Set([...command.changes.map(change => change.objectId), ...patchTargets(command.patch)]);
+      if (command.resolves !== undefined && (!Array.isArray(command.resolves) || command.resolves.length > 30 ||
+        new Set(command.resolves).size !== command.resolves.length || command.resolves.some(id => !validId(id)))) throw new Error('待整合候选身份无效');
+      for (const candidateId of command.resolves ?? []) {
+        const candidate = this.candidates(command.attemptId, 100).find(c => c.command.operationId === candidateId)?.command;
+        if (!candidate || candidate.unitId !== command.unitId || candidate.basisId === command.basisId) throw new Error('整合必须使用本任务候选与新的实际读取依据');
+        const inserted = new Set(candidate.patch?.structure?.inserted.map(b => b.id) ?? []);
+        const needed = [...candidate.changes.map(c => c.objectId), ...patchTargets(candidate.patch)].filter(id => !inserted.has(id));
+        if (needed.some(id => !writes.has(id)) ||
+          candidate.bundle?.layout?.some(old => !command.bundle?.layout?.some(next => next.unitId === old.unitId)) ||
+          candidate.bundle?.relations?.changes.some(old => !command.bundle?.relations?.changes.some(next => next.id === old.id)) ||
+          candidate.bundle?.experiments?.some(old => !command.bundle?.experiments?.some(next => next.blockId === old.blockId)))
+          throw new Error('必须重新整合完整必要组，不能逐块消耗候选');
+      }
       if (readDrafts(this.db).some(draft => {
         const { direct, ancestors } = draftScopes(this.unit(command.unitId).unit, draft.input);
         return [...direct].some(id => scope.has(id)) || [...ancestors].some(id => writes.has(id));
@@ -335,7 +348,8 @@ export class CommandGroups {
       this.db.prepare('UPDATE units SET payload=?, revision=? WHERE id=?').run(json(unit), nextRevision, unit.id);
       if (command.patch) syncAnnotations(this.db, command.patch);
       changes.push(...this.observe(new Set(command.changes.filter(change => change.objectId.startsWith('dependency:')).map(change => change.objectId))));
-      const result: GroupResult = { operationId: command.operationId, attemptId: command.attemptId,
+      const result: GroupResult = { operationId: command.operationId, attemptId: command.attemptId, basisId: command.basisId,
+        ...(command.resolves?.length ? { resolvedCandidateIds: command.resolves } : {}),
         status: 'committed', unitId: unit.id, ...(related ? {related} : {}), revision: nextRevision, changedObjectIds: changes.map(change => change.objectId) };
       if (changes.length && command.semanticImpact)
         { const prompt = recordSemanticImpact(this.db, this.graph, command.semanticImpact, unit.id, nextRevision); if (prompt) result.reviewPrompt = prompt; }
@@ -343,6 +357,7 @@ export class CommandGroups {
         revision: nextRevision, changedObjectIds: result.changedObjectIds }) : eventCursor(this.db);
       // Successful request bodies are already represented by changed-object history; keep only dedupe facts here.
       this.db.prepare('INSERT INTO cg_candidates VALUES (?, ?, ?, ?)').run(command.operationId, digest(command), '{}', json(result));
+      for (const candidateId of command.resolves ?? []) this.db.prepare('INSERT INTO cg_resolved VALUES (?,?)').run(candidateId, command.operationId);
       if (changes.length) {
         const attempt = this.db.prepare('SELECT task_id FROM cg_attempts WHERE id=?').get(command.attemptId)!;
         const history: GroupHistory = { operationId: command.operationId, attemptId: command.attemptId,
@@ -396,12 +411,11 @@ export class CommandGroups {
       ORDER BY rowid DESC LIMIT ?`).all(attemptId ?? null, attemptId ?? null, Math.min(100, Math.max(1, limit)))
       .map(row => ({ command: parse(row.command), result: parse(row.result) }));
   }
-  recheck(sessionId: string): CandidateCheck[] {
-    return this.candidates().reverse().map(({ command }) => this.transaction((): CandidateCheck => {
-      const objectIds = command.changes.map(c => c.objectId), candidateId = command.operationId;
+  recheck(sessionId: string, attemptId?: string): CandidateCheck[] {
+    return this.candidates(attemptId).reverse().map(({ command }) => this.transaction((): CandidateCheck => {
+      const objectIds = [...new Set([...command.changes.map(c => c.objectId), ...patchTargets(command.patch)])], candidateId = command.operationId;
       const result = (status: CandidateCheck['status'], reason: string): CandidateCheck => ({ candidateId, status, reason, objectIds,
         ...(status === 'conflict' ? { parts: command.changes.map(c => ({ objectId: c.objectId, current: this.object(c.objectId).value, incoming: c.value })) } : {}) });
-      if (command.patch || command.bundle) return result('needs-reread', '结构一致组需要生产者重读后完整整合');
       const attempt = this.attempt(command.attemptId);
       if (attempt.status !== 'running' || attempt.generation !== this.generation()) return result('ineligible', '任务已停止或失效；保留候选供查阅');
       if (this.protectedWrites(objectIds)) return result('waiting', '等待当前编辑结束');
@@ -415,9 +429,19 @@ export class CommandGroups {
       const scope = new Set(original.map(o => o.id));
       const writes = new Set(objectIds);
       if (readDrafts(this.db).some(d => {
-        const s = draftScopes(this.unit().unit, d.input);
+        const s = draftScopes(this.unit(command.unitId).unit, d.input);
         return [...s.direct].some(id => scope.has(id)) || [...s.ancestors].some(id => writes.has(id));
       })) return result('waiting', '最新学生草稿尚待整合');
+      if (command.patch || command.bundle) {
+        for (const update of command.patch?.updates ?? []) {
+          const current = this.object(update.blockId);
+          if (!integrateValue(update.before, current.value.payload, update.after).compatible) return {
+            candidateId, status: 'conflict', objectIds, reason: '同处内容不兼容；学生输入与整组候选均已保留',
+            parts: [{ objectId: update.blockId, current: current.value.payload, incoming: update.after }],
+          };
+        }
+        return result('needs-reread', '结构一致组需要生产者重读后完整整合');
+      }
       const changes = [];
       for (const change of command.changes) {
         const before = original.find(o => o.id === change.objectId);
@@ -478,7 +502,7 @@ export class CommandGroups {
   dispatch(action: string, payload: any): unknown {
     if (action === 'commands:protect') return this.protect(payload);
     if (action === 'commands:releaseView') { this.protections.clear(); return; }
-    if (action === 'commands:recheck') return this.recheck(payload.sessionId);
+    if (action === 'commands:recheck') return this.recheck(payload.sessionId, payload.attemptId);
     if (action === 'commands:resolveCandidate') return this.resolveCandidate(payload);
     if (action === 'commands:startAttempt') return this.startAttempt(payload);
     if (action === 'commands:read') return this.read(payload);

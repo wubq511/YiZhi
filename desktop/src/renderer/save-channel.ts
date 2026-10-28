@@ -48,7 +48,7 @@ export class ParagraphSaveChannel {
       this.splits = (input.splits ?? []).map(split => ({ ...split, seq: this.sequence }));
       if (input.patch) this.patches = [{ seq: this.sequence, patch: input.patch }];
       this.formulaDrafts = input.formulaDrafts ?? [];
-      if (!sameSession) this.replacesDraft = { sessionId: input.sessionId, inputSeq: input.inputSeq };
+      if (!sameSession) this.replacesDraft = { sessionId: input.sessionId, inputSeq: input.inputSeq, ...(input.unitId ? { unitId: input.unitId } : {}) };
       else this.draftSaved = input.inputSeq;
       this.publish('draft');
       if (input.complete) {
@@ -121,7 +121,7 @@ export class ParagraphSaveChannel {
   progress() { return { inputSeq: this.sequence, durableInputSeq: Math.max(this.confirmed, this.draftSaved), confirmedInputSeq: this.confirmed }; }
   pendingTargets() { return new Set([...this.changes.keys(), ...this.splits.flatMap(s => [s.blockId, s.newBlockId]),
     ...this.patches.flatMap(p => patchTargets(p.patch)), ...this.formulaDrafts.map(f => f.blockId)]); }
-  snapshot() { return this.bridge.read(this.course.sessionId); }
+  snapshot() { return this.bridge.read(this.course.sessionId, this.course.unit.id); }
   /** Only after a version-checked explicit resolution of this exact latest durable input. */
   adoptResolution(snapshot: OpenedCourse) {
     if (this.running) throw new Error('请等待当前保存完成');
@@ -160,7 +160,7 @@ export class ParagraphSaveChannel {
     while (this.command || this.sequence > Math.max(this.confirmed, this.draftSaved)) {
       this.publish('saving');
       if (!this.command) {
-        this.command = { sessionId: this.course.sessionId, operationId: crypto.randomUUID(), inputSeq: this.sequence,
+        this.command = { sessionId: this.course.sessionId, unitId: this.course.unit.id, operationId: crypto.randomUUID(), inputSeq: this.sequence,
           baseRevision: this.revision, complete: this.complete,
           changes: [...this.changes.values()].map(({ seq: _, ...change }) => change),
           splits: this.splits.map(({ seq: _, ...split }) => split),
@@ -187,7 +187,7 @@ export class ParagraphSaveChannel {
           this.accept(receipt);
         }
         this.command = undefined;
-        try { this.deliverSnapshot(await this.bridge.read(this.course.sessionId)); }
+        try { this.deliverSnapshot(await this.snapshot()); }
         catch { /* The exact input receipt is already durable. Event replay can refresh its projection. */ }
       } catch (error) {
         const detail = (error as Error).message;
@@ -215,7 +215,7 @@ export class ParagraphSaveChannel {
           const receipt = await this.bridge.queryOperation(this.course.sessionId, this.command.operationId);
           if (receipt) this.accept(receipt);
         }
-        this.deliverSnapshot(page.snapshot);
+        this.deliverSnapshot(page.snapshot.unit.id === this.course.unit.id ? page.snapshot : await this.snapshot());
         this.cursor = page.cursor;
         return;
       }
@@ -223,13 +223,13 @@ export class ParagraphSaveChannel {
       for (const event of page.events) {
         if (event.cursor <= this.cursor) continue;
         if (event.type === 'group.committed') external = true;
-        if (event.type === 'content.committed') {
+        if (event.type === 'content.committed' && (event.receipt.unitId ?? 'KU-001') === this.course.unit.id) {
           if (event.receipt.operationId === this.command?.operationId) this.accept(event.receipt);
           else if (event.receipt.sessionId !== this.course.sessionId || event.receipt.inputSeq > this.confirmed) external = true;
         }
       }
       if (external) {
-        const snapshot = await this.bridge.read(this.course.sessionId);
+        const snapshot = await this.snapshot();
         this.deliverSnapshot(snapshot);
       }
       this.cursor = page.cursor;

@@ -4,6 +4,7 @@ export interface QuestionTarget { unitId: string; blockId?: string; selectedText
 export interface SubmitQuestion extends AgentSession {
   conversationId: string; operationId: string; generation: number; text: string;
   target: QuestionTarget; citationIds?: string[]; model?: string; intent?: import('./agent-mutation-api').AgentIntent;
+  mode?: 'steer' | 'queue';
 }
 export interface QuestionSnapshot {
   intent?: import('./agent-mutation-api').AgentIntent;
@@ -12,8 +13,29 @@ export interface QuestionSnapshot {
 }
 export type AgentTaskStatus = 'running' | 'queued' | 'waiting' | 'stopping' | 'stopped' | 'completed' | 'failed' | 'interrupted' | 'unknown' | 'partial' | 'pending';
 export interface AgentTaskRequest extends AgentSession { taskId: string }
+export interface AgentDelivery {
+  id: string; operationId: string; kind: 'steer' | 'student-change';
+  state: 'pending' | 'sending' | 'accepted' | 'failed' | 'unknown';
+  target?: QuestionTarget; threadId?: string; turnId?: string; error?: string;
+  snapshot?: QuestionSnapshot; model?: string | null; handledTaskId?: string;
+  reviewedBasisId?: string;
+  integratedOperationIds?: string[];
+  change?: { operationId: string; unitId: string; revision: number; objectIds: string[] };
+}
+export type AgentWorkRequest = AgentSession & { taskId: string; attemptId: string; generation: number } & (
+  { action: 'activate' } |
+  { action: 'inspect' } | { action: 'integrate' } |
+  { action: 'delivery'; deliveryId: string; state: AgentDelivery['state']; threadId?: string; turnId?: string; error?: string }
+);
 export interface AgentTask {
   id: string; operationId: string; conversationId: string; attemptId: string; generation: number;
+  blockedBy?: string[];
+  guidedFrom?: { taskId: string; deliveryId: string };
+  deliveries?: AgentDelivery[];
+  integrationChecks?: import('./command-api').CandidateCheck[];
+  waitingReason?: string;
+  integrationRounds?: number;
+  turnHistory?: Array<{ threadId: string; turnId: string; status: AgentTask['executorStatus'] }>;
   toolErrors?: Array<{eventId:string;name:string;error:string}>;
   executorStatus?: 'completed'|'failed'|'interrupted'|'unknown';
   groups?: import('./command-api').GroupResult[]; mutationFailure?: string;
@@ -27,6 +49,7 @@ export interface Conversation { id: string; title: string; updatedAt: string }
 export interface AgentMessage {
   id: string; taskId: string; role: 'user' | 'assistant'; text: string;
   state: 'streaming' | 'partial' | 'complete'; itemId: string | null;
+  deliveryId?: string;
 }
 export interface ConversationView extends Conversation {
   toolFacts: Array<{ taskId: string; name: string; purpose: string; referenceId: string; digest: string; references: string[]; hasRecoveryPayload: boolean }>;
@@ -46,7 +69,7 @@ export interface ExecutorStatus {
   available: boolean; path?: string; version?: string; error?: string;
   models: Array<{ id: string; model: string; displayName: string; isDefault: boolean; defaultReasoningEffort?: string }>;
 }
-export type AgentBridge = AgentAPI & { status(): Promise<ExecutorStatus>; reconcile(request: AgentTaskRequest): Promise<AgentTask> };
+export type AgentBridge = AgentAPI & { status(): Promise<ExecutorStatus>; reconcile(request: AgentTaskRequest): Promise<AgentTask>; retryDelivery(request: AgentSession & { taskId: string; deliveryId: string }): Promise<AgentTask> };
 export function agentClient(invoke: (method: string, request?: any) => Promise<any>): AgentAPI {
   return {
     list: r => invoke('agent:list', r), create: r => invoke('agent:create', r), get: r => invoke('agent:get', r),

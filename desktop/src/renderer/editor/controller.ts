@@ -262,7 +262,7 @@ export class ContinuousEditor {
         const p = this.channel.progress();
         if (p.inputSeq > p.durableInputSeq || this.composing) { this.protectionFailed = true; return; }
       }
-      await this.options.commands.protect({ sessionId: this.course.sessionId, editorId: this.editorId, sequence, blockIds: ids, mode,
+      await this.options.commands.protect({ sessionId: this.course.sessionId, unitId: this.course.unit.id, editorId: this.editorId, sequence, blockIds: ids, mode,
         inputSeq: this.channel.progress().inputSeq });
       if (sequence === this.protectionSequence) { this.protectedIds = new Set(ids); this.protectionFailed = false; }
       if (removed) {
@@ -288,7 +288,7 @@ export class ContinuousEditor {
     const draft = snapshot.drafts.find(d => d.input.sessionId === snapshot.sessionId) ?? snapshot.drafts.at(-1);
     if (!draft) return;
     const conflicts = await this.inputConflicts();
-    await this.options.commands.resolveInput({ sessionId: snapshot.sessionId, operationId: `resolve-input-${crypto.randomUUID()}`,
+    await this.options.commands.resolveInput({ sessionId: snapshot.sessionId, unitId: snapshot.unit.id, operationId: `resolve-input-${crypto.randomUUID()}`,
       draftSessionId: draft.input.sessionId, inputSeq: draft.input.inputSeq, basisRevision: snapshot.revision,
       blockIds: conflicts.map(c => c.blockId), choice });
     const resolved = await this.channel.snapshot(); this.channel.adoptResolution(resolved);
