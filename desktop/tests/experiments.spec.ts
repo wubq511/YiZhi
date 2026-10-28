@@ -63,7 +63,18 @@ async function reveal(page: Page, target: Locator) {
         await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => done())));
       } else {
         stable = 0;
-        await page.mouse.move(board.x + 8, board.y + board.height / 2);
+        // Reading tables own their wheel; find an actual board hit that can pan.
+        const origin = await page.evaluate(({ left, right, top, height }) => {
+          const ownsWheel = '.board-tools, .relations-panel, .source-dialog, .react-flow__minimap, .table-scroll, input, select, textarea, .mux, .builtin-formula-editor, math-field';
+          for (const fraction of [.5, .25, .75]) for (const x of [left, right]) {
+            const y = top + height * fraction, hit = document.elementFromPoint(x, y);
+            if (hit?.closest('main.board') && !hit.closest(ownsWheel)) return { x, y, hit: hit.outerHTML.slice(0, 280) };
+          }
+          return null;
+        }, { left: board.x + 8, right: board.right - 8, top: board.y, height: board.height });
+        last = { ...scene, wheelOrigin: origin };
+        if (!origin) break;
+        await page.mouse.move(origin.x, origin.y);
         await page.mouse.wheel(Math.max(-500, Math.min(500, dx)), Math.max(-500, Math.min(500, dy)));
         await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
       }
