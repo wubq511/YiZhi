@@ -117,7 +117,9 @@ export async function prepareDirectory(request:{sourceDirectory:string;contentCa
   const version=sourceVersion(source),id=randomUUID();mkdirSync(target);
   const preparing={schema,id,operationId:request.operationId,courseId:version.courseId,kind:'legacy-migration',sourceDirectory:source,targetDirectory:target,sourceVersion:version,phase:'verified',preparedAt:new Date().toISOString(),proof:{databaseSha256:'',resources:[]},report:null} as DirectoryDecision;
   durableDecision(targetMarker(target),preparing);
-  await cp(candidate,target,{recursive:true,force:false,errorOnExist:false});
+  // Staging never inherits a candidate's write qualification: its own verified
+  // guard must remain in place throughout copying and materialization.
+  await cp(candidate,target,{recursive:true,force:false,errorOnExist:false,filter:path=>path!==targetMarker(candidate)&&path!==sourceMarker(candidate)});
   const report=await materialize(target,source),decision={...preparing,report,proof:sealDirectory(target)};
   if(!equal(sourceVersion(source),version))throw new Error('源版本已变化，不能发布');
   durableDecision(targetMarker(target),decision);durableDecision(sourceMarker(source),decision);

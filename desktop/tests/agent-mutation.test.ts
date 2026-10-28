@@ -54,7 +54,7 @@ test('formula, finite experiment, necessary reviewed relation and local manual b
   try{
     const {sessionId,citation,view}=await muxCopy(core,root), before=await core.readUnit(sessionId,'KU-057'), graph=await core.graph(sessionId);
     const command=await correction(core,sessionId,citation.id,'necessary-correction');
-    fault=new DatabaseSync(join(root,'course.sqlite'));fault.exec("CREATE TRIGGER fail_necessary BEFORE INSERT ON cg_history BEGIN SELECT RAISE(ABORT,'final necessary group disk fault'); END");
+    fault=new DatabaseSync(join(root,'course.sqlite'));fault.exec("PRAGMA busy_timeout=5000; CREATE TRIGGER fail_necessary BEFORE INSERT ON cg_history BEGIN SELECT RAISE(ABORT,'final necessary group disk fault'); END");
     const failed=await core.commands.commit(command);assert.equal(failed.status,'retained');assert.match(failed.reason!,/final necessary group disk fault/);
     assert.deepEqual(await core.readUnit(sessionId,'KU-057'),before);assert.deepEqual(await core.graph(sessionId),graph);
     assert.deepEqual(await core.experiments.read({sessionId,instanceId:view.instanceId}),view);

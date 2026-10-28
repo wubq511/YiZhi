@@ -150,6 +150,8 @@ class CourseStore:
     @contextmanager
     def _unchecked_transaction(self, write=False):
         with self._lock:
+            if write and getattr(self,'_writes_frozen',False):
+                raise StoreError('save_failed','课程已完成迁移保存屏障，旧连接不再接纳写入')
             if self._connection is None:
                 raise StoreError("save_failed", "Course store is closed")
             db = self._connection

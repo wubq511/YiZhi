@@ -1,5 +1,5 @@
 import { initializeMigrationHistory,migratedHistory,migratedOperation } from './migration-history';
-import { migrationRecords } from './migration-state';
+import { migrationRecords,initializeMigrationRecords } from './migration-state';
 import { prepareDirectory,publishDirectory,directoryStatus,recoverDirectory,admitDirectory,closeDirectoryLeases,abandonDirectory,directoryTransition } from './directory-authority';
 import { importPersonal,importPersonalRecords } from './migration-personal';
 import { FormalHistory } from './formal-history';
@@ -174,7 +174,7 @@ function open(directory: string,preparing=false): OpenedCourse {
 
       courseId: String(db.prepare("SELECT value FROM metadata WHERE key='courseId'").get()!.value) };
     course.courseRestore=new CourseRestore(db,formalHistory,graph,agent,experiments,extensions,next=>{course.sessionId=next;groups.releaseGeneration();formalHistory.releaseGeneration();},workerData?.restoreScheduling);
-    initializeMigrationHistory(db);course.retention.installPayloadTracking();
+    initializeMigrationHistory(db);initializeMigrationRecords(db);course.retention.installPayloadTracking();
     db.prepare('INSERT INTO course_sessions VALUES(?,?)').run(course.sessionId,Number(db.prepare("SELECT value FROM metadata WHERE key='generation'").get()!.value));
     const result = snapshot(course);
     courses.set(canonical, course);
