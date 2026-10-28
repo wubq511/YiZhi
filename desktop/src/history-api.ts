@@ -21,6 +21,7 @@ export interface HistoryResult {
   conflicts: Array<{operationId:string;objectIds:string[];reason:string}>; changedObjectIds: string[]; cursor: number;
 }
 export interface HistoryAPI {
+  release(request:{sessionId:string;token:string}):Promise<void>;
   list(request:{sessionId:string;unitId?:string;limit?:number;before?:string}):Promise<{activities:HistoryActivity[];next?:string}>;
   detail(request:{sessionId:string;operationId:string}):Promise<HistoryGroup>;
   preview(request:{sessionId:string;selection:HistorySelection} | {sessionId:string;unitId:string;atOperationId:string;side:'before'|'after';includeLayout?:boolean}):Promise<HistoryPreview>;
@@ -28,5 +29,5 @@ export interface HistoryAPI {
   query(request:{sessionId:string;operationId:string}):Promise<HistoryResult|null>;
 }
 export function historyClient(request:(action:string,payload:unknown)=>Promise<any>):HistoryAPI {
-  return {list:p=>request('formalHistory:list',p),detail:p=>request('formalHistory:detail',p),preview:p=>request('formalHistory:preview',p),apply:p=>request('formalHistory:apply',p),query:p=>request('formalHistory:query',p)};
+  return {release:p=>request('formalHistory:release',p),list:p=>request('formalHistory:list',p),detail:p=>request('formalHistory:detail',p),preview:p=>request('formalHistory:preview',p),apply:p=>request('formalHistory:apply',p),query:p=>request('formalHistory:query',p)};
 }
