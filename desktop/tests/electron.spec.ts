@@ -375,15 +375,15 @@ test('selection and hand tools offer distinct canvas drag modes', async () => {
     const board = (await window.locator('main.board').boundingBox())!;
     const transform = () => window.locator('.react-flow__viewport').evaluate(el => getComputedStyle(el).transform);
     await select.click(); await expect(select).toHaveAttribute('aria-pressed', 'true');
-    // Start on empty pane, clear of edges that can auto-pan during a selection drag.
+    // Keep the full two-dimensional selection gesture on empty pane, clear of edges that can auto-pan.
     const origin = await window.evaluate(({ x, y, width, height }) => {
       const clear = (px: number, py: number) => document.elementFromPoint(px, py)?.classList.contains('react-flow__pane');
-      for (let py = y + 80; py < y + height - 80; py += 24)
+      for (let py = y + 80; py < y + height - 120; py += 24)
         for (let px = x + 80; px < x + width - 140; px += 24)
-          if ([0, 15, 30, 45, 60].every(step => clear(px + step, py))) return { x: px, y: py };
-      throw new Error('No clear pane path for canvas drag');
+          if (Array.from({ length: 13 }, (_, step) => step).every(step => clear(px + step * 5, py + step * 40 / 12))) return { x: px, y: py };
+      throw new Error(`No clear interior 60x40 pane path: ${JSON.stringify({ x, y, width, height })}`);
     }, board);
-    const drag = async () => { await window.mouse.move(origin.x, origin.y); await window.mouse.down(); await window.mouse.move(origin.x + 60, origin.y, { steps: 4 }); await window.mouse.up(); };
+    const drag = async () => { await window.mouse.move(origin.x, origin.y); await window.mouse.down(); await window.mouse.move(origin.x + 60, origin.y + 40, { steps: 4 }); await window.mouse.up(); };
     const before = await transform(); await drag(); expect(await transform()).toBe(before);
     await hand.click(); await expect(hand).toHaveAttribute('aria-pressed', 'true');
     await drag(); await expect.poll(transform).not.toBe(before);
