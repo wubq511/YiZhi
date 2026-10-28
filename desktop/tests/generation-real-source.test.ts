@@ -60,7 +60,9 @@ test('real original parsed TI source drives the bounded Core read and, when requ
         const task=await runtime.submit(request);
         let activeTaskId=task.id;
         if(firstLesson){
-          await Promise.race([firstLesson,new Promise<never>((_,reject)=>setTimeout(()=>reject(new Error('actual model did not commit the first lesson')),120_000))]);
+          let timer:ReturnType<typeof setTimeout>|undefined;
+          try{await Promise.race([firstLesson,new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new Error('actual model did not commit the first lesson')),120_000);})]);}
+          finally{if(timer)clearTimeout(timer);}
           assert.equal((await core.agentTask({sessionId,taskId:task.id})).groups?.filter(g=>g.status==='committed').length,1);
           await runtime.stop({sessionId,taskId:task.id});
           releaseLesson?.();releaseLesson=undefined;
@@ -71,7 +73,8 @@ test('real original parsed TI source drives the bounded Core read and, when requ
             await new Promise(done=>setTimeout(done,500));
           }
           assert.ok(stopped&&['stopped','interrupted','partial','unknown'].includes(stopped.status),`stop did not settle: ${stopped?.status}`);
-          assert.deepEqual(stopped.generationProgress?.pendingStages,['practice']);
+          const stoppedView=await core.agent.get({sessionId,conversationId:conversation.id});
+          assert.deepEqual(stoppedView.tasks.find(item=>item.id===task.id)?.generationProgress?.pendingStages,['practice']);
           const resumed=await runtime.continue({sessionId,taskId:task.id,operationId:'actual-explicit-continue'});
           assert.notEqual(resumed.attemptId,task.attemptId);
           activeTaskId=resumed.id;

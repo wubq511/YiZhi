@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { CourseService } from '../src/core/course-service';
 
 // An independent, untagged PDF at the public Sources -> Parsing seam. Its active-low
@@ -181,8 +182,10 @@ test('complete lesson publishes one graph-owned unit, stop and explicit continue
     assert.equal(second.status,'committed',second.reason);
     const practiceHistory=(await core.commands.history({sessionId})).find(h=>h.operationId===second.operationId)!;
     assert.ok(practiceHistory.changes.some(c=>c.objectId===`structure:${basis.spec.unitId}`));
-    assert.ok(practiceHistory.changes.every(c=>!['unit:','graph:','theme:','layout:','layout-theme:'].some(prefix=>c.objectId.startsWith(prefix))),
-      'an independent practice addition does not claim a new unit or graph lifecycle');
+    assert.ok(practiceHistory.changes.some(c=>c.objectId===`unit:${basis.spec.unitId}`&&c.before&&c.after),
+      'practice records the full unit revision for task history');
+    assert.ok(practiceHistory.changes.every(c=>!['graph:','theme:','layout:','layout-theme:'].some(prefix=>c.objectId.startsWith(prefix))),
+      'practice does not claim a graph or layout lifecycle');
     assert.deepEqual((await core.readAgentGeneration(nextIdentity)).pendingStages,[]);
     assert.equal((await core.readUnit(sessionId,basis.spec.unitId)).reading.blocks.filter(b=>b.kind==='exercise').length,2);
     assert.equal((await core.graph(sessionId)).nodes.filter(n=>n.id===basis.spec.unitId).length,1);
@@ -191,6 +194,74 @@ test('complete lesson publishes one graph-owned unit, stop and explicit continue
     const reopened=await core.open(join(root,'course'));
     assert.equal((await core.readUnit(reopened.sessionId,basis.spec.unitId)).reading.blocks.filter(b=>b.kind==='exercise').length,2);
     assert.equal((await core.graph(reopened.sessionId)).nodes.filter(n=>n.id===basis.spec.unitId).length,1);
+  }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+
+test('formal task history withdraws and restores generated unit with both stages and preserves personal annotation',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'yizhi-generation-history-'));
+  let core=new CourseService(resolve('dist/worker.cjs'));
+  try{
+    const {sessionId,task}=await prepared(core,root),identity={sessionId,taskId:task.id,attemptId:task.attemptId,generation:task.generation};
+    const initial=await core.readAgentGeneration(identity);
+    const first=await core.publishAgentGeneration({...identity,input:lesson(initial,'history-lesson')});
+    assert.equal(first.status,'committed');
+    const unit=await core.readUnit(sessionId,initial.spec.unitId);
+    const block=unit.reading.blocks[0],text=String(block.payload.text);
+    const note=await core.annotations.create({sessionId,operationId:'history-personal-note',text:'自己整理的理解',selection:{unitId:unit.id,
+      fragments:[{blockId:block.id,block,field:'text',formalRevision:1,source:'formal',projection:{version:1,encoding:'unicode-code-points',text},from:0,to:2,quote:Array.from(text).slice(0,2).join('')}]}});
+    const next=await core.readAgentGeneration(identity);
+    const second=await core.publishAgentGeneration({...identity,input:practice(next,'history-practice')});
+    assert.equal(second.status,'committed');
+    await core.recordAgent({...identity,eventId:'history-finish',kind:'finish',status:'completed'});
+    const preview=await core.formalHistory.preview({sessionId,selection:{kind:'task',taskId:task.id}});
+    const withdrawn=await core.formalHistory.apply({sessionId,operationId:'withdraw-generated-task',preview});
+    assert.equal(withdrawn.status,'committed',JSON.stringify(withdrawn.conflicts));
+    assert.deepEqual(withdrawn.applied,[second.operationId,first.operationId]);
+    await assert.rejects(core.readUnit(sessionId,unit.id),/不存在/);
+    assert.equal((await core.graph(sessionId)).nodes.some(node=>node.id===unit.id),false);
+    const preserved=(await core.annotations.list({sessionId})).find(item=>item.id===note.id)!;
+    assert.equal(preserved.text,note.text);assert.deepEqual(preserved.original,note.original);
+    assert.equal(preserved.current.status,'orphan');
+    const restore=await core.formalHistory.apply({sessionId,operationId:'restore-generated-task',
+      preview:await core.formalHistory.preview({sessionId,selection:{kind:'operations',operationIds:['withdraw-generated-task']}})});
+    assert.equal(restore.status,'committed',JSON.stringify(restore.conflicts));
+    assert.equal((await core.readUnit(sessionId,unit.id)).reading.blocks.filter(item=>item.kind==='exercise').length,2);
+    assert.equal((await core.graph(sessionId)).nodes.filter(node=>node.id===unit.id).length,1);
+    assert.deepEqual((await core.annotations.list({sessionId})).find(item=>item.id===note.id),note);
+    await core.close();core=new CourseService(resolve('dist/worker.cjs'));
+    const reopened=await core.open(join(root,'course'));
+    assert.equal((await core.readUnit(reopened.sessionId,unit.id)).reading.blocks.filter(item=>item.kind==='exercise').length,2);
+    assert.equal((await core.graph(reopened.sessionId)).nodes.filter(node=>node.id===unit.id).length,1);
+    assert.deepEqual((await core.annotations.list({sessionId:reopened.sessionId})).find(item=>item.id===note.id),note);
+  }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
+
+test('generated lifecycle rollback publishes no graph heap and equal placement after ABA still blocks withdrawal',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'yizhi-generation-history-rollback-'));
+  const core=new CourseService(resolve('dist/worker.cjs'));
+  try{
+    const {sessionId,task}=await prepared(core,root),identity={sessionId,taskId:task.id,attemptId:task.attemptId,generation:task.generation};
+    const basis=await core.readAgentGeneration(identity);
+    const saved=await core.publishAgentGeneration({...identity,input:lesson(basis,'rollback-lesson')});
+    const unit=await core.readUnit(sessionId,basis.spec.unitId),graph=await core.graph(sessionId);
+    const selection={kind:'operations' as const,operationIds:[saved.operationId]};
+    const preview=await core.formalHistory.preview({sessionId,selection});
+    const fault=new DatabaseSync(join(root,'course/course.sqlite'));
+    try{
+      fault.exec("CREATE TRIGGER fail_generated_history BEFORE INSERT ON cg_history WHEN new.operation_id='fault-generated-history' BEGIN SELECT RAISE(ABORT,'generated history fault'); END");
+      await assert.rejects(core.formalHistory.apply({sessionId,operationId:'fault-generated-history',preview}),/generated history fault/);
+      assert.deepEqual(await core.readUnit(sessionId,unit.id),unit);
+      assert.deepEqual(await core.graph(sessionId),graph);
+      assert.equal(await core.formalHistory.query({sessionId,operationId:'fault-generated-history'}),null);
+    }finally{fault.exec('DROP TRIGGER fail_generated_history');fault.close();}
+    const node=graph.layout.nodes.find(item=>item.unitId===unit.id)!;
+    const before={unitId:unit.id,x:node.x,y:node.y,width:node.width},away={...before,x:node.x+80};
+    await core.drawings.place({sessionId,operationId:'placement-away',before,after:away});
+    await core.drawings.place({sessionId,operationId:'placement-back',before:away,after:before});
+    const blocked=await core.formalHistory.apply({sessionId,operationId:'withdraw-after-layout-aba',preview:await core.formalHistory.preview({sessionId,selection})});
+    assert.equal(blocked.status,'conflict');
+    assert.ok(blocked.conflicts.some(conflict=>conflict.objectIds.includes(`layout:${unit.id}`)));
+    assert.deepEqual(await core.readUnit(sessionId,unit.id),unit);
   }finally{await core.close();await rm(root,{recursive:true,force:true});}
 });
 

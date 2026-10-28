@@ -13,6 +13,7 @@ import type { Search } from './search';
 import { assignments, formulaOutputs } from './builtin-model';
 import { readDrafts, transaction, appendEvent } from './save-store';
 import { selectorEvidence, exampleEvidence } from './generation-evidence';
+import { initializeGenerationLifecycle,graphRevision,layoutRevision,bumpLayoutRevision } from './generation-lifecycle';
 
 const json=(v:unknown)=>JSON.stringify(v);
 const hash=(v:unknown)=>createHash('sha256').update(json(v)).digest('hex');
@@ -31,16 +32,12 @@ const readingObjects=(blocks:ReadingBlock[],parentId:string):Map<string,unknown>
   }
   return objects;
 };
-const unitHeader=(unit:CourseUnit|undefined)=>{
-  if(!unit)return null;
-  const {reading,...header}=unit;
-  return header;
-};
 
 /** Product Core owner of a single bounded source-backed MUX generation path. */
 export class Generation {
   constructor(private db:DatabaseSync,private graph:CourseGraph,private sources:Sources,private parsing:Parsing,
     private agent:AgentStore,private groups:CommandGroups,private search:Search) {
+    initializeGenerationLifecycle(db);
     db.exec(`CREATE TABLE IF NOT EXISTS generation_bases(id TEXT PRIMARY KEY,attempt_id TEXT NOT NULL REFERENCES cg_attempts(id),payload TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS generation_candidates(id TEXT PRIMARY KEY,attempt_id TEXT NOT NULL REFERENCES cg_attempts(id),digest TEXT NOT NULL,
         proposal TEXT NOT NULL,result TEXT NOT NULL,checks TEXT NOT NULL);
@@ -311,10 +308,15 @@ export class Generation {
         const afterObjects=readingObjects(unit.reading.blocks,spec.unitId);
         const objectIds=[...new Set([...beforeObjects.keys(),...afterObjects.keys()])];
         const beforeVersions=new Map(objectIds.map(id=>[id,Number(this.db.prepare('SELECT version FROM cg_objects WHERE id=?').get(id)?.version??0)]));
-        const beforeGraph=structuredClone(this.graph);
+        const beforeGraph=structuredClone(this.graph),beforeGraphVersion=graphRevision(this.db);
+        const beforeLayoutVersion=layoutRevision(this.db,spec.unitId);
+        const beforeUnitVersion=Number(this.db.prepare('SELECT version FROM cg_objects WHERE id=?').get(`unit:${spec.unitId}`)?.version??0);
         this.db.prepare('INSERT INTO units(id,payload,revision) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,revision=excluded.revision').run(spec.unitId,json(unit),revision);
         nextGraph=this.nextGraph(spec,unit.name,unit);
         if(json(nextGraph)!==json(beforeGraph))this.db.prepare("INSERT INTO metadata VALUES('course-graph',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(json(nextGraph));
+        if(!beforeGraph.layout.nodes.some(n=>n.unitId===spec.unitId)&&nextGraph.layout.nodes.some(n=>n.unitId===spec.unitId))bumpLayoutRevision(this.db,spec.unitId);
+        const afterGraphVersion=graphRevision(this.db),afterLayoutVersion=layoutRevision(this.db,spec.unitId);
+        const afterUnitVersion=Number(this.db.prepare('SELECT version FROM cg_objects WHERE id=?').get(`unit:${spec.unitId}`)?.version??0);
         const invalidated=this.groups.observe();
         const objectChanges=objectIds.flatMap(id=>{
           const before=beforeObjects.get(id)??null,after=afterObjects.get(id)??null;
@@ -322,14 +324,12 @@ export class Generation {
             afterVersion:Number(this.db.prepare('SELECT version FROM cg_objects WHERE id=?').get(id)?.version??0)}];
         });
         const graphChanges=([
-          [`graph:${spec.unitId}`,beforeGraph.nodes.find(n=>n.id===spec.unitId),nextGraph.nodes.find(n=>n.id===spec.unitId)],
-          [`theme:${spec.themeId}`,beforeGraph.groups.find(g=>g.id===spec.themeId),nextGraph.groups.find(g=>g.id===spec.themeId)],
-          [`layout:${spec.unitId}`,beforeGraph.layout.nodes.find(n=>n.unitId===spec.unitId),nextGraph.layout.nodes.find(n=>n.unitId===spec.unitId)],
-          [`layout-theme:${spec.themeId}`,beforeGraph.layout.groups.find(g=>g.themeId===spec.themeId),nextGraph.layout.groups.find(g=>g.themeId===spec.themeId)],
-        ] as const).flatMap(([objectId,prior,after])=>json(prior??null)===json(after??null)?[]:[{objectId,before:prior??null,after:after??null,
-          beforeVersion:prior?revision-1:0,afterVersion:revision}]);
-        const unitChanges=json(unitHeader(old))===json(unitHeader(unit))?[]:
-          [{objectId:`unit:${spec.unitId}`,before:old??null,after:unit,beforeVersion:Number(oldRow?.revision??0),afterVersion:revision}];
+          [`graph:${spec.unitId}`,beforeGraph.nodes.find(n=>n.id===spec.unitId),nextGraph.nodes.find(n=>n.id===spec.unitId),beforeGraphVersion,afterGraphVersion],
+          [`theme:${spec.themeId}`,beforeGraph.groups.find(g=>g.id===spec.themeId),nextGraph.groups.find(g=>g.id===spec.themeId),beforeGraphVersion,afterGraphVersion],
+          [`layout:${spec.unitId}`,beforeGraph.layout.nodes.find(n=>n.unitId===spec.unitId),nextGraph.layout.nodes.find(n=>n.unitId===spec.unitId),beforeLayoutVersion,afterLayoutVersion],
+          [`layout-theme:${spec.themeId}`,beforeGraph.layout.groups.find(g=>g.themeId===spec.themeId),nextGraph.layout.groups.find(g=>g.themeId===spec.themeId),beforeGraphVersion,afterGraphVersion],
+        ] as const).flatMap(([objectId,prior,after,beforeVersion,afterVersion])=>json(prior??null)===json(after??null)?[]:[{objectId,before:prior??null,after:after??null,beforeVersion,afterVersion}]);
+        const unitChanges=[{objectId:`unit:${spec.unitId}`,before:old??null,after:unit,beforeVersion:beforeUnitVersion,afterVersion:afterUnitVersion}];
         const changes=[...unitChanges,...objectChanges,...invalidated,...graphChanges];
         const receipt:GenerationResult={operationId,attemptId:task.attemptId,unitId:spec.unitId,stage:input.stage,status:'committed',revision,
           changedObjectIds:changes.map(c=>c.objectId),checks:checked,cursor:0};
