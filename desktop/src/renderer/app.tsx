@@ -1,3 +1,4 @@
+import { observation } from '../acceptance-observation';
 import { BackupPanel } from './backup-panel';
 import { ReadonlyCourse } from './readonly-course';
 import { CourseRestorePanel } from './course-restore-panel';
@@ -110,6 +111,10 @@ function App() {
   const [graph, setGraph] = useState<CourseGraph>();
   const [selected, setSelected] = useState<CourseUnit>();
   const [mounted, setMounted] = useState<CourseUnit[]>([]);
+  useEffect(() => { if (observation.active) {
+    observation.sample('reading.cachedUnits', mounted.length);
+    observation.sample('reading.cachedBodyCodeUnits', JSON.stringify(mounted).length);
+  } }, [mounted]);
   const [readError, setReadError] = useState<string>();
   const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 0.1 });
   const [directory, setDirectory] = useState(true);
@@ -384,10 +389,18 @@ function App() {
       const current = flow.getViewport();
       if (event.ctrlKey || event.metaKey) {
         const rect = board.getBoundingClientRect(); const px = event.clientX - rect.left, py = event.clientY - rect.top;
-        const zoom = Math.max(.04, Math.min(2, current.zoom * Math.exp(-event.deltaY * .001)));
+        // The custom content-layer handler bypasses React Flow's macOS pinch
+        // normalization. Restore its pixel-mode pinch gain; keep command-wheel gain.
+        const macPinch = event.ctrlKey && !event.metaKey && event.deltaMode === WheelEvent.DOM_DELTA_PIXEL && /Mac/.test(navigator.userAgent);
+        const factor = macPinch ? Math.pow(2, -event.deltaY * .02) : Math.exp(-event.deltaY * .001);
+        const zoom = Math.max(.04, Math.min(2, current.zoom * factor));
         const ratio = zoom / current.zoom;
         void flow.setViewport({ x: px - (px - current.x) * ratio, y: py - (py - current.y) * ratio, zoom });
-      } else camera.pan(-(event.shiftKey ? event.deltaY : event.deltaX), -(event.shiftKey ? 0 : event.deltaY));
+      } else {
+        // Some platforms already deliver Shift+wheel on X. Keep that axis;
+        // otherwise translate the vertical wheel delta to horizontal once.
+        camera.pan(-(event.shiftKey ? event.deltaX || event.deltaY : event.deltaX), -(event.shiftKey ? 0 : event.deltaY));
+      }
     };
     board.addEventListener('wheel', wheel, { passive: false, capture: true });
     board.addEventListener('scroll', nativeScroll, { passive: true });
@@ -554,11 +567,25 @@ function App() {
         if(phase==='start' || phase==='view' || task.progress?.stage==='committed') {
           const unit=await window.yizhi.readUnit(course.sessionId,displayedUnitId);
           if(unit.id==='KU-001'){await channel.current?.synchronize();setCourse(await window.yizhi.open());}else await unitInputs.current.get(unit.id)?.synchronize();
-          setMounted(previous=>previous.some(u=>u.id===unit.id)?previous.map(u=>u.id===unit.id?unit:u):[...previous,unit]);
+          // Keep the current interaction and incoming target; old task displays are reading projections.
+          const protectedUnits = new Set([readingRef.current?.unitId, document.activeElement?.closest('article[data-unit-id]')?.getAttribute('data-unit-id')]);
+          const selection = getSelection();
+          if (selection && !selection.isCollapsed) for (const article of document.querySelectorAll('article[data-unit-id]'))
+            for (let index = 0; index < selection.rangeCount; index++) if (selection.getRangeAt(index).intersectsNode(article)) protectedUnits.add(article.getAttribute('data-unit-id'));
+          setMounted(previous=>{
+            const retained=previous.filter(item=>item.id==='KU-001'||item.id===unit.id||protectedUnits.has(item.id));
+            return retained.some(item=>item.id===unit.id)?retained.map(item=>item.id===unit.id?unit:item):[...retained,unit];
+          });
           setSelected(previous=>previous?.id===unit.id?unit:previous);
           setGraph(await window.yizhi.graph(course.sessionId));setReview(await window.yizhi.reviewStates(course.sessionId));
         }
-        if(phase==='view'){if(!await flushUnitInputs(true))throw new Error('请先保存当前单元输入。');const unit=await window.yizhi.readUnit(course.sessionId,displayedUnitId);setSelected(unit);setDirectoryTheme(unit.theme.id);if(readingRef.current)persist({...readingRef.current,unitId:unit.id});requestAnimationFrame(()=>camera.resume());}
+        if(phase==='view'){
+          if(composing.current)throw new Error('请先完成中文候选输入，再查看修改结果。');
+          if(!await flushUnitInputs(true))throw new Error('请先保存当前单元输入。');
+          const unit=await window.yizhi.readUnit(course.sessionId,displayedUnitId);
+          setMounted(previous=>[...previous.filter(item=>item.id==='KU-001'&&item.id!==unit.id),unit]);
+          setSelected(unit);setDirectoryTheme(unit.theme.id);if(readingRef.current)persist({...readingRef.current,unitId:unit.id});requestAnimationFrame(()=>camera.resume());
+        }
         else if(phase==='finish'){camera.finish();if(readingRef.current)persist({...readingRef.current,modification:{targetId:workTarget.current,ended:true}});}
         else requestAnimationFrame(()=>camera.updated());
       }} onOpenChange={value => { setAgentOpen(value); if (value && narrow) setDirectory(false); }} openCitation={citation => sourcesPanel.current?.openCitation(citation)} />}
@@ -650,3 +677,4 @@ function App() {
 }
 function GenerationBoundary(){const [epoch,setEpoch]=useState(0);useEffect(()=>window.yizhi.onGenerationChanged(()=>setEpoch(n=>n+1)),[]);return <ReactFlowProvider key={epoch}><App /></ReactFlowProvider>;}
 createRoot(document.getElementById('root')!).render(<GenerationBoundary/>);
+import './acceptance';

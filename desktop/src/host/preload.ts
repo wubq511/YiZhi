@@ -74,3 +74,4 @@ const bridge: DesktopBridge = {
   },
 };
 contextBridge.exposeInMainWorld('yizhi', bridge);
+if (process.argv.includes('--yizhi-observe')) contextBridge.exposeInMainWorld('yizhiObservationEnabled', true);

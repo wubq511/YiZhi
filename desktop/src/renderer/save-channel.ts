@@ -1,4 +1,5 @@
 import type { SaveBridge, OpenedCourse, DraftInput, EditCommand, SaveReceipt, TextChange, ParagraphSplit } from '../shared';
+import { observation } from '../acceptance-observation';
 import { composePatch, equal, patchTargets, type ContentPatch, type FormulaDraft } from '../editor-api';
 export type SaveState = { status: 'saved' | 'draft' | 'pending' | 'saving' | 'error'; error?: string;
   inputSeq?: number; confirmedInputSeq?: number; draftInputSeq?: number };
@@ -202,13 +203,17 @@ export class ParagraphSaveChannel {
   /** Replay is explicit and awaitable for reconnect and UI tests; repeated pages cannot reapply input. */
   synchronize(): Promise<void> {
     if (this.syncing) return this.syncing;
-    this.syncing = this.replay().finally(() => { this.syncing = undefined; });
+    const active = observation.resource('notifications.activeConsumers'); active.set(1);
+    this.syncing = this.replay().finally(() => { active.close(); this.syncing = undefined; });
     return this.syncing;
   }
   private async replay() {
     let more = true;
     while (more && !this.disposed) {
       const page = await this.bridge.readEvents(this.course.sessionId, this.cursor, 64);
+      observation.sample('notifications.batchSize', page.kind === 'reset' ? 0 : page.events.length);
+      observation.count(page.kind === 'reset' ? 'notifications.resets' : 'notifications.batches');
+      if (page.kind !== 'reset' && page.hasMore) observation.count('notifications.morePages');
       if (page.kind === 'reset') {
         // A receipt may have fallen out of the event window; query it before consuming the snapshot.
         if (this.command) {
