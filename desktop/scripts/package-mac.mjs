@@ -7,13 +7,16 @@ import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const project = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const git = args => execFileSync('git', args, { cwd: project, encoding: 'utf8' }).trim();
 const args = process.argv.slice(2);
 const outArg = args.find(arg => arg.startsWith('--out='));
 if (args.some(arg => arg !== outArg)) throw new Error('Usage: npm run package:mac -- --out=/absolute/new-directory');
 if (process.platform !== 'darwin' || !['arm64', 'x64'].includes(process.arch))
   throw new Error('This command packages only the current macOS architecture.');
 if (outArg && !isAbsolute(outArg.slice(6))) throw new Error('--out must be an absolute path.');
-const out = outArg ? outArg.slice(6) : join(project, 'artifacts', `macos-${Date.now()}`);
+// Keep package output with the original repository when building from a worktree.
+const out = outArg ? outArg.slice(6) : resolve(git(['rev-parse', '--path-format=absolute', '--git-common-dir']),
+  '..', 'artifacts', 'scratch', `macos-${Date.now()}`);
 try { await stat(out); throw new Error(`Output already exists: ${out}`); }
 catch (error) { if (error.code !== 'ENOENT') throw error; }
 const run = (command, commandArgs, cwd) => execFileSync(command, commandArgs, { cwd, stdio: 'inherit' });
@@ -69,7 +72,6 @@ try {
   // Decode and encode using the staged native module before signing or publishing an artifact.
   run(process.execPath, ['-e', "const c=require('@napi-rs/canvas').createCanvas(2,2);if(!c.toBuffer('image/png').length)throw Error('Native canvas unavailable')"], stage);
   const metadata = JSON.parse(await readFile(join(project, 'package.json'), 'utf8'));
-  const git = args => execFileSync('git', args, { cwd: project, encoding: 'utf8' }).trim();
   const source = { commit: git(['rev-parse', 'HEAD']), dirty: !!git(['status', '--porcelain', '--untracked-files=normal']) };
   const runtimeFiles = await Promise.all(['main.cjs', 'worker.cjs', 'preload.cjs', 'parsing-tool.cjs', 'course-service.cjs', 'renderer/app.js']
     .map(async path => ({ path: `dist/${path}`, sha256: digest(await readFile(join(stage, 'dist', path))) })));

@@ -77,6 +77,7 @@ test('continuous camera gestures keep unchanged graph projection and the active 
 
 test('panning to an adjacent B reads static body without navigating or replacing active input and bounds every body cache',async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-reading-range-'));
+ let failure:unknown;
  const app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_OBSERVE:'1',YIZHI_DATA_HOME:join(root,'profile'),YIZHI_CODEX_PATH:join(root,'missing-cli')}});
  try{
   const page=await app.firstWindow();await resizeBoardWindow(app,page);
@@ -105,5 +106,6 @@ test('panning to an adjacent B reads static body without navigating or replacing
   const counters=await page.evaluate(()=>(window as any).__yizhiObservation());
   await page.screenshot({path:test.info().outputPath('pan-static-body.png')});
   await writeFile(test.info().outputPath('reading-range.json'),JSON.stringify({target,counters,selection:await page.evaluate(()=>getSelection()?.toString()),physical:false},null,2));
- }finally{await app.close();await rm(root,{recursive:true,force:true});}
+ }catch(error){failure=error;throw error;}
+ finally{if(failure)await closeFailedBoard(app,failure);else await app.close();await rm(root,{recursive:true,force:true});}
 });
