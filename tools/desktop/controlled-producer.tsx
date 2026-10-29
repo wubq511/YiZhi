@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
-import type { OpenedCourse } from '../shared';
-import type { Attempt, CommandBasis, GroupCommand, RetainedCandidate } from '../command-api';
+import type { OpenedCourse } from '../../desktop/src/shared';
+import type { Attempt, CommandBasis, GroupCommand, RetainedCandidate } from '../../desktop/src/command-api';
 import './controlled-producer.css';
 
 const targetId = 'RB-TH-01-03-expansion-terms';
@@ -20,7 +20,7 @@ export function ControlledProducer({ course, prepare, committed, settled, narrow
   const [retained, setRetained] = useState<RetainedCandidate[]>([]);
   const pending = useRef<GroupCommand | undefined>(undefined);
   const receiptId = useRef<string | undefined>(undefined);
-  const commands = window.yizhi.commands;
+  const commands = window.yizhiControlled;
   const run = async (job: () => Promise<void>) => {
     setBusy(true);
     try { await prepare(); await job(); }

@@ -1,7 +1,7 @@
 import { parentPort,workerData } from 'node:worker_threads';
 import { beginVerifiedDirectory,prepareVerifiedDirectory,abandonVerifiedDirectory,publishVerifiedDirectory,recoverDirectory,type DirectoryPublicationLease } from './directory-authority';
 import { nativeSourceVersion } from './native-upgrade-source';
-import './migration-state';
+import './imported-state';
 import { registerRetentionResourceRoot } from './retention-resources';
 import { generationRetentionResourceRoot,generationRetentionResourceRoots } from './generation-retention';
 registerRetentionResourceRoot('t30-generation-recovery',generationRetentionResourceRoot,generationRetentionResourceRoots);

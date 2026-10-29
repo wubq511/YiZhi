@@ -1,3 +1,4 @@
+import { controlledElectron } from './controlled-launch';
 import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -7,7 +8,7 @@ import { join, resolve } from 'node:path';
 test('review controls persist, answer reveal does not promote, and a substantive prompt cannot override a newer choice', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-electron-review-'));
   const coursePath = join(root, 'course');
-  const launch = () => electron.launch({ args: [resolve('.'), `--course=${coursePath}`],
+  const launch = () => controlledElectron.launch({ args: [resolve('.'), `--course=${coursePath}`],
     env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   let app = await launch();
   try {

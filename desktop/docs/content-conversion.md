@@ -1,16 +1,19 @@
-# Legacy content candidate (T24)
+# 开发用旧课程内容转换（现有 T24 实现）
+
+按 [ADR-0008](../../docs/adr/0008-product-development-boundary.md)，旧版迁入仅用于开发期间临时复用既有课程，工具已独立归入 `tools/desktop/`，不随正式应用交付。命令与完整个人迁入入口见[开发工具说明](../../tools/desktop/README.md)。已有桌面课程的资源读取、历史和备份保留在正常课程模块。
 
 This converter produces a **content candidate**, not a complete personal migration
 or an authority switch. T25 owns personal state, tasks, drafts, conversations,
 retained history and the final single-authority handoff. It never constructs the
 legacy Python `CourseService` and never replays old receipts over current JSON.
 
-From `desktop/`, after `npm ci` and `npm run build`:
+From the repository root, after installing desktop dependencies:
 
 ```sh
-node scripts/migrate-course.mjs snapshot /path/to/stopped-legacy /new/stopped-copy
-node scripts/migrate-course.mjs convert /new/stopped-copy /new/content-candidate
-node scripts/migrate-course.mjs verify /new/content-candidate
+node tools/desktop/build.mjs
+node artifacts/desktop-development/cli.cjs snapshot '{"sourceDirectory":"/path/to/stopped-legacy","directory":"/new/stopped-copy"}'
+node artifacts/desktop-development/cli.cjs convert '{"sourceDirectory":"/new/stopped-copy","directory":"/new/content-candidate"}'
+node tools/desktop/verify-conversion.mjs verify /new/content-candidate
 ```
 
 Use a **new** directory for both steps. Normally close the old service first;
@@ -30,15 +33,13 @@ the copy receives fresh empty service/content locks. Original state data stays
 in this stopped copy for T25, **not** in the content candidate. `stopped-copy.json`
 is a provenance/inventory record, not a future lock lease.
 
-`CourseService.migration` is host-only: `snapshot`, `convert`, `content`, `resource`.
-It runs in the existing host-owned Core Worker and ordered command queue. Nothing
-exposes filesystem paths or conversion to the renderer/preload. The generated
-extension gets no new capabilities. `content({sessionId})` reads the retained
-original manifest, knowledge, layout and conversion report; `resource` serves
-only registered immutable image identities and verifies bytes on every request.
-The existing source registry/PDF.js/ranged protocol serves fixed original PDFs,
-including the legacy `VER-*` identities. Core `readUnit` reads every converted
-unit from persisted SQLite; candidate reads never fall back to static samples.
+`DevelopmentCourseService.migration` runs in the independent development Worker.
+The formal application has no migration panel, IPC or conversion capability.
+`content({sessionId})` reads retained manifest, knowledge, layout and report only
+in the tool. The formal `CourseService.resources.read` resolves registered image
+identities and verifies bytes; the normal source registry/PDF.js protocol reads
+fixed PDFs including original `VER-*` identities. Core `readUnit` reads converted
+units from persisted SQLite, without falling back to static samples.
 
 Conversion preserves the complete root knowledge document, including every theme,
 unit, question record, mapping, relation, route group, coverage record, rating,

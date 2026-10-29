@@ -1,25 +1,18 @@
+import {coursePath} from '../../desktop/src/core/course-path';
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, realpathSync, lstatSync, rmSync, openSync, fsyncSync, closeSync } from 'node:fs';
 import { join, resolve, dirname, basename, relative } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { hashFile, publishResource } from './immutable-resource';
-import { validateRelationGraph } from './relation-validation';
-import { withPdf } from './source-pdf';
-import type { CourseGraph, CourseUnit, ReadingBlock } from '../shared';
-import type { SourceVersion } from '../sources-api';
-import type { MigrationReport, MigrationTarget, LegacyContent } from '../migration-api';
+import { hashFile, publishResource } from '../../desktop/src/core/immutable-resource';
+import { validateRelationGraph } from '../../desktop/src/core/relation-validation';
+import { withPdf } from '../../desktop/src/core/source-pdf';
+import type { CourseGraph, CourseUnit, ReadingBlock } from '../../desktop/src/shared';
+import type { SourceVersion } from '../../desktop/src/sources-api';
+import type { MigrationReport, MigrationTarget, LegacyContent } from './migration-api';
 
 const json = (value: unknown) => JSON.stringify(value);
 const sha = (value: string | Uint8Array) => createHash('sha256').update(value).digest('hex');
-export function coursePath(root: string, name: string) {
-  if (typeof name !== 'string' || !name || name.startsWith('/') || name.includes('\\') || name.split('/').some(p => !p || p === '.' || p === '..' || /[:\x00-\x1f]/.test(p))) throw new Error(`课程相对路径无效: ${name}`);
-  const path = resolve(root, name);
-  if (relative(root, path).startsWith('..')) throw new Error('课程路径越界');
-  let current = path;
-  while (current !== root) { if (existsSync(current) && lstatSync(current).isSymbolicLink()) throw new Error('课程资源不接受软链'); current = dirname(current); }
-  return path;
-}
 /** A stopped writer lease proves quiescence; this separate receipt proves the old window's confirmed tail. */
 export function legacySaveBarrier(root:string,courseId:string,generation:number,sequence:number){
  const path=join(root,'.review-board','migration-barrier.json');if(!existsSync(path))return null;
@@ -52,15 +45,6 @@ export function legacyContent(db: DatabaseSync): LegacyContent {
   const row = db.prepare("SELECT value FROM metadata WHERE key='legacy-content'").get();
   if (!row) throw new Error('当前课程不是已转换的内容候选');
   return JSON.parse(String(row.value));
-}
-export function candidateResource(db: DatabaseSync, directory: string, asset: string) {
-  const exchanged = db.prepare("SELECT 1 FROM sqlite_master WHERE name='exchange_resources'").get() ? db.prepare('SELECT payload FROM exchange_resources WHERE asset=?').get(asset) : undefined;
-  const legacy = db.prepare("SELECT value FROM metadata WHERE key='legacy-content'").get();
-  const item = exchanged ? JSON.parse(String(exchanged.payload)) : legacy ? JSON.parse(String(legacy.value)).report.resources.find((item: any) => item.asset === asset) : undefined;
-  if (!item || !item.mediaType.startsWith('image/')) throw new Error('未登记的课程图片');
-  const path = coursePath(directory, item.path), actual = hashFile(path);
-  if (actual.sha256 !== item.sha256 || actual.byteLength !== item.byteLength) throw new Error('课程图片损坏或缺失');
-  return { bytes: new Uint8Array(readFileSync(path)), mediaType: item.mediaType };
 }
 function graphFor(knowledge: any, layout: any): CourseGraph {
   const groups = knowledge.themes;
@@ -101,7 +85,7 @@ function validate(knowledge: any, graph: CourseGraph) {
   for (const m of knowledge.mappings) if (!ids.has(m.unitId) || !questions.has(m.questionId)) throw new Error('题目映射目标不存在');
 }
 function durableFile(path: string, bytes: string) { const fd = openSync(path, 'wx'); try { writeFileSync(fd, bytes); fsyncSync(fd); } finally { closeSync(fd); } }
-export async function convertLegacy(request: MigrationTarget, scheduling?: import('../migration-api').MigrationScheduling): Promise<MigrationReport> {
+export async function convertLegacy(request: MigrationTarget, scheduling?: import('./migration-api').MigrationScheduling): Promise<MigrationReport> {
   const root = realpathSync(request.sourceDirectory), target = resolve(request.directory);
   if (existsSync(target) || target.startsWith(root + '/') || root.startsWith(target + '/')) throw new Error('内容候选必须使用源课程外的全新目录');
   return locked(root, async child => {

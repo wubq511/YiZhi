@@ -1,3 +1,4 @@
+import { controlledElectron } from './controlled-launch';
 import { evidencePath } from './evidence-paths';
 import { resizeBoardWindow, revealBoardControl } from './board-test-helpers';
 import { test, expect, _electron as electron } from '@playwright/test';
@@ -17,7 +18,7 @@ async function finish(app: ElectronApplication) {
 
 test('actual cross-paragraph selection holds the shown basis while independent formal changes arrive and aligns only after leaving', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-protected-ui-'));
-  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  const app = await controlledElectron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const page = await app.firstWindow();
     await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
@@ -32,10 +33,10 @@ test('actual cross-paragraph selection holds the shown basis while independent f
     const selected = await page.evaluate(() => getSelection()!.toString());
     const changed = await page.evaluate(async () => {
       const b = (window as any).yizhi, c = await b.open(), target = c.unit.reading.blocks[0];
-      const a = await b.commands.startAttempt({ sessionId: c.sessionId, taskId: 'selection-update' });
-      const basis = await b.commands.read({ sessionId: c.sessionId, attemptId: a.attemptId, objectIds: [target.id] });
-      const object = basis.objects.find((o: any) => o.id === target.id);
-      return b.commands.commit({ sessionId: c.sessionId, attemptId: a.attemptId, basisId: basis.basisId, operationId: 'selection-update',
+      const a = await window.yizhiControlled.startAttempt({ sessionId: c.sessionId, taskId: 'selection-update' });
+      const basis = await window.yizhiControlled.read({ sessionId: c.sessionId, attemptId: a.attemptId, objectIds: [target.id] });
+      const object = basis.objects.find((o: any) => o.id === target.id)!;
+      return window.yizhiControlled.commit({ sessionId: c.sessionId, attemptId: a.attemptId, basisId: basis.basisId, operationId: 'selection-update',
         changes: [{ objectId: target.id, value: { ...object.value, payload: { ...target.payload, text: '外部已保存，选文仍显示原文' } } }] });
     });
     expect(changed.status).toBe('committed');
@@ -95,7 +96,7 @@ test('real persisted overlapping versions expose only the conflict and the stude
 
 test('synthetic composition regression uses real IPC: independent range renders, common ancestor waits, and only student input enters student history', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-composition-regression-'));
-  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  const app = await controlledElectron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   let closed = false;
   try {
     const page = await app.firstWindow();
@@ -107,16 +108,16 @@ test('synthetic composition regression uses real IPC: independent range renders,
     const native = await page.evaluate(() => ({ anchor: getSelection()!.anchorOffset, focus: getSelection()!.focusOffset, active: document.activeElement?.className }));
     const update = await page.evaluate(async () => {
       const api = (window as any).yizhi, c = await api.open(), target = c.unit.reading.blocks.filter((b: any) => b.kind === 'paragraph')[1];
-      const attempt = await api.commands.startAttempt({ sessionId: c.sessionId, taskId: 'composition-independent' });
-      const basis = await api.commands.read({ sessionId: c.sessionId, attemptId: attempt.attemptId, objectIds: [target.id] });
-      const value = basis.objects.find((o: any) => o.id === target.id).value;
-      const independent = await api.commands.commit({ sessionId: c.sessionId, attemptId: attempt.attemptId, basisId: basis.basisId, operationId: 'composition-independent',
+      const attempt = await window.yizhiControlled.startAttempt({ sessionId: c.sessionId, taskId: 'composition-independent' });
+      const basis = await window.yizhiControlled.read({ sessionId: c.sessionId, attemptId: attempt.attemptId, objectIds: [target.id] });
+      const value = basis.objects.find((o: any) => o.id === target.id)!.value;
+      const independent = await window.yizhiControlled.commit({ sessionId: c.sessionId, attemptId: attempt.attemptId, basisId: basis.basisId, operationId: 'composition-independent',
         changes: [{ objectId: target.id, value: { ...value, payload: { ...value.payload, text: '组合输入期间的独立更新' } } }] });
       const structure = 'structure:' + c.unit.id;
-      const sharedBasis = await api.commands.read({ sessionId: c.sessionId, attemptId: attempt.attemptId, objectIds: [structure] });
-      const blockIds = [...sharedBasis.objects.find((o: any) => o.id === structure).value.blockIds];
+      const sharedBasis = await window.yizhiControlled.read({ sessionId: c.sessionId, attemptId: attempt.attemptId, objectIds: [structure] });
+      const blockIds = [...sharedBasis.objects.find((o: any) => o.id === structure)!.value.blockIds];
       [blockIds[blockIds.length - 1], blockIds[blockIds.length - 2]] = [blockIds[blockIds.length - 2], blockIds[blockIds.length - 1]];
-      const shared = await api.commands.commit({ sessionId: c.sessionId, attemptId: attempt.attemptId, basisId: sharedBasis.basisId, operationId: 'composition-shared',
+      const shared = await window.yizhiControlled.commit({ sessionId: c.sessionId, attemptId: attempt.attemptId, basisId: sharedBasis.basisId, operationId: 'composition-shared',
         changes: [{ objectId: structure, value: { blockIds } }] });
       return { independent, shared, blockIds };
     });
@@ -146,7 +147,7 @@ test('synthetic composition regression uses real IPC: independent range renders,
 
 test('caret pause and application blur retain the same paragraph, independent updates continue, leave integrates latest input and Undo preserves the external suffix', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-caret-ui-'));
-  const launch = () => electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  const launch = () => controlledElectron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   let app = await launch();
   try {
     let page = await app.firstWindow();
@@ -162,10 +163,10 @@ test('caret pause and application blur retain the same paragraph, independent up
     await editor.evaluate((el: any) => el.editor.storage.courseSelection.settle());
     const waiting = await page.evaluate(async () => {
       const b = (window as any).yizhi, c = await b.open(), target = c.unit.reading.blocks[0];
-      const a = await b.commands.startAttempt({ sessionId: c.sessionId, taskId: 'caret-producer' });
-      const basis = await b.commands.read({ sessionId: c.sessionId, attemptId: a.attemptId, objectIds: [target.id] });
-      const object = basis.objects.find((o: any) => o.id === target.id);
-      return b.commands.commit({ sessionId: c.sessionId, attemptId: a.attemptId, basisId: basis.basisId, operationId: 'caret-producer',
+      const a = await window.yizhiControlled.startAttempt({ sessionId: c.sessionId, taskId: 'caret-producer' });
+      const basis = await window.yizhiControlled.read({ sessionId: c.sessionId, attemptId: a.attemptId, objectIds: [target.id] });
+      const object = basis.objects.find((o: any) => o.id === target.id)!;
+      return window.yizhiControlled.commit({ sessionId: c.sessionId, attemptId: a.attemptId, basisId: basis.basisId, operationId: 'caret-producer',
         changes: [{ objectId: target.id, value: { ...object.value, payload: { ...target.payload, text: target.payload.text + ' 外部后缀' } } }] });
     });
     expect(waiting.status).toBe('retained');

@@ -1,5 +1,5 @@
 import type { DirectoryDecision,DirectoryStatus } from './core/directory-authority';
-export interface UpgradeRequest {sessionId:string;directory:string;backupDirectory:string;upgradeId:string;saveBarrier?:{viewId:string;confirmedAt:string}}
+export interface UpgradeRequest {sessionId:string;directory:string;backupDirectory:string;upgradeId:string;automatic?:boolean;saveBarrier?:{viewId:string;confirmedAt:string}}
 export interface UpgradeScheduling {afterBackup?:SharedArrayBuffer;beforeValidation?:SharedArrayBuffer}
 export interface UpgradePublish {sessionId?:string;sourceDirectory?:string;upgradeId:string}
 export interface UpgradePreparation extends DirectoryDecision {kind:'format-upgrade';report:{backupDirectory:string;backupId:string;fromVersion:1;toVersion:2;validation:{courseId:string;generation:number;units:number;resources:number}}}

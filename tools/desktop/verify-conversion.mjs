@@ -1,15 +1,18 @@
+import {fileURLToPath} from 'node:url';
 import { createRequire } from 'node:module';
 import { readFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { createHash } from 'node:crypto';
+import { developmentDirectory } from './paths.mjs';
 const require = createRequire(import.meta.url);
-const { CourseService } = require('../dist/course-service.cjs');
+const output = developmentDirectory(fileURLToPath(new URL('../..', import.meta.url)));
+const {DevelopmentCourseService:CourseService}=require(join(output,'course-service.cjs'));
 const [action, source, destination] = process.argv.slice(2);
 if (!['snapshot','convert','verify'].includes(action) || !source || (action !== 'verify' && !destination)) {
-  console.error('Usage: node scripts/migrate-course.mjs snapshot|convert SOURCE NEW_DIRECTORY\n       node scripts/migrate-course.mjs verify CANDIDATE');
+  console.error('Usage: node tools/desktop/verify-conversion.mjs snapshot|convert SOURCE NEW_DIRECTORY\n       node tools/desktop/verify-conversion.mjs verify CANDIDATE');
   process.exit(2);
 }
-const core = new CourseService(resolve('dist/worker.cjs'));
+const core = new CourseService(join(output,'worker.cjs'));
 try {
   if (action === 'verify') {
     const opened=await core.open(resolve(source)),content=await core.migration.content({sessionId:opened.sessionId}),graph=await core.graph(opened.sessionId);

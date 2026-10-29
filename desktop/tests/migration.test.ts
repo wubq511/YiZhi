@@ -1,14 +1,15 @@
+import { developmentDirectory } from '../../tools/desktop/paths.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, rename } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
-import { CourseService } from '../src/core/course-service';
+import { DevelopmentCourseService as CourseService } from '../../tools/desktop/course-service';
 import { legacyFixture } from './migration-fixture';
 
 test('a stopped legacy copy converts every persisted unit and opaque material, then reopens independently', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-migrate-'));
-  let core = new CourseService(resolve('dist/worker.cjs'));
+  let core = new CourseService(join(developmentDirectory(), 'worker.cjs'));
   try {
     const source = join(root, 'source'), candidate = join(root, 'candidate'), moved = join(root, '独立 中文 path');
     const original = await legacyFixture(source);
@@ -26,11 +27,11 @@ test('a stopped legacy copy converts every persisted unit and opaque material, t
     assert.match((await core.sources.page({ sessionId: opened.sessionId, versionId: 'VER-TEST', pdfPageIndex: 0 })).projection.text, /Fixed legacy source/);
     await core.close();
     await rename(candidate, moved); await rm(source, { recursive: true });
-    core = new CourseService(resolve('dist/worker.cjs'));
+    core = new CourseService(join(developmentDirectory(), 'worker.cjs'));
     const reopened = await core.open(moved);
     assert.deepEqual((await core.readUnit(reopened.sessionId, 'KU-086')).reading, original.last.reading);
     assert.match((await core.sources.page({ sessionId: reopened.sessionId, versionId: 'VER-TEST', pdfPageIndex: 0 })).projection.text, /Fixed legacy source/);
-    const asset = await core.migration.resource({ sessionId: reopened.sessionId, asset: '/source-pages/SRC-TEST/VER-TEST/1.png' });
+    const asset = await core.resources.read({ sessionId: reopened.sessionId, asset: '/source-pages/SRC-TEST/VER-TEST/1.png' });
     assert.equal(asset.mediaType, 'image/png'); assert.ok(asset.bytes.length > 500);
   } finally { await core.close(); await rm(root, { recursive: true, force: true }); }
 });
@@ -40,7 +41,7 @@ test('active legacy service/content and SQLite writers reject conversion without
   const { readFile, readdir } = await import('node:fs/promises');
   const { DatabaseSync } = await import('node:sqlite');
   const root = await mkdtemp(join(tmpdir(), 'yizhi-migrate-lock-'));
-  const core = new CourseService(resolve('dist/worker.cjs'));
+  const core = new CourseService(join(developmentDirectory(), 'worker.cjs'));
   try {
     const source = join(root, 'source'); await legacyFixture(source);
     const original = await readFile(join(source, 'data/map.json'));
@@ -63,7 +64,7 @@ test('consistent stopped copy includes committed WAL state and registered bytes,
   const { DatabaseSync } = await import('node:sqlite');
   const { readFile, writeFile } = await import('node:fs/promises');
   const root = await mkdtemp(join(tmpdir(), 'yizhi-stopped-copy-'));
-  const core = new CourseService(resolve('dist/worker.cjs'));
+  const core = new CourseService(join(developmentDirectory(), 'worker.cjs'));
   try {
     const source = join(root, 'source'), copy = join(root, 'copy'); await legacyFixture(source);
     const state = new DatabaseSync(join(source, '.review-board/state.sqlite3'));
@@ -86,7 +87,7 @@ test('consistent stopped copy includes committed WAL state and registered bytes,
 test('answerable questions are stable leaf records, including legacy stems kept only in reading material', async () => {
   const { readFile, writeFile } = await import('node:fs/promises');
   const root = await mkdtemp(join(tmpdir(), 'yizhi-migrate-questions-'));
-  const core = new CourseService(resolve('dist/worker.cjs'));
+  const core = new CourseService(join(developmentDirectory(), 'worker.cjs'));
   try {
     const source = join(root,'source'); await legacyFixture(source);
     const knowledge = JSON.parse(await readFile(join(source,'data/map.json'),'utf8'));
@@ -102,7 +103,7 @@ test('real SQLite failure during registration rolls back all units/resources and
   const { readdir } = await import('node:fs/promises');
   const root = await mkdtemp(join(tmpdir(),'yizhi-migration-rollback-'));
   const gate = new SharedArrayBuffer(4), signal = new Int32Array(gate);
-  const core = new CourseService(resolve('dist/worker.cjs'), { migrationScheduling: { beforeRegistration: gate } });
+  const core = new CourseService(join(developmentDirectory(), 'worker.cjs'), { migrationScheduling: { beforeRegistration: gate } });
   try {
     const source=join(root,'source'),target=join(root,'candidate');await legacyFixture(source);
     const pending=core.migration.convert({sourceDirectory:source,directory:target});
@@ -128,7 +129,7 @@ test('real SQLite failure during registration rolls back all units/resources and
 
 test('the persisted eight-input legacy MUX computes all 2048 finite rows without changing its original definition', async () => {
   const { readFile, writeFile } = await import('node:fs/promises');
-  const root=await mkdtemp(join(tmpdir(),'yizhi-migration-eight-'));const core=new CourseService(resolve('dist/worker.cjs'));
+  const root=await mkdtemp(join(tmpdir(),'yizhi-migration-eight-'));const core=new CourseService(join(developmentDirectory(), 'worker.cjs'));
   try {
     const source=join(root,'source'),target=join(root,'candidate');await legacyFixture(source);
     const knowledge=JSON.parse(await readFile(join(source,'data/map.json'),'utf8'));
@@ -148,7 +149,7 @@ test('the persisted eight-input legacy MUX computes all 2048 finite rows without
 
 test('missing or changed real resources never publish a candidate or modify legacy content; corrupted candidate images fail closed on reopen', async () => {
   const { readFile, writeFile, readdir } = await import('node:fs/promises');
-  const root=await mkdtemp(join(tmpdir(),'yizhi-migration-io-'));let core=new CourseService(resolve('dist/worker.cjs'));
+  const root=await mkdtemp(join(tmpdir(),'yizhi-migration-io-'));let core=new CourseService(join(developmentDirectory(), 'worker.cjs'));
   try {
     const source=join(root,'source'),target=join(root,'candidate');await legacyFixture(source);
     const original=await readFile(join(source,'data/map.json')),pdf=await readFile(join(source,'原始 资料.pdf'));
@@ -159,16 +160,16 @@ test('missing or changed real resources never publish a candidate or modify lega
     const report=await core.migration.convert({sourceDirectory:source,directory:target});
     const image=report.resources.find(r=>r.mediaType==='image/png')!;
     await writeFile(join(target,image.path),'corrupt image bytes');
-    await core.close();core=new CourseService(resolve('dist/worker.cjs'));const reopened=await core.open(target);
-    await assert.rejects(core.migration.resource({sessionId:reopened.sessionId,asset:image.asset}),/损坏|缺失/);
+    await core.close();core=new CourseService(join(developmentDirectory(), 'worker.cjs'));const reopened=await core.open(target);
+    await assert.rejects(core.resources.read({sessionId:reopened.sessionId,asset:image.asset}),/损坏|缺失/);
     assert.equal((await core.readUnit(reopened.sessionId,'KU-086')).reading.blocks[0].payload.text,'末单元完整正文');
-    await assert.rejects(core.migration.resource({sessionId:reopened.sessionId,asset:'../../unregistered'}),/未登记/);
+    await assert.rejects(core.resources.read({sessionId:reopened.sessionId,asset:'../../unregistered'}),/未登记/);
   } finally {await core.close();await rm(root,{recursive:true,force:true});}
 });
 
 test('fixed references and layout identities are checked before a candidate can be published', async () => {
   const {readFile,writeFile,readdir}=await import('node:fs/promises');
-  const root=await mkdtemp(join(tmpdir(),'yizhi-migration-refs-'));const core=new CourseService(resolve('dist/worker.cjs'));
+  const root=await mkdtemp(join(tmpdir(),'yizhi-migration-refs-'));const core=new CourseService(join(developmentDirectory(), 'worker.cjs'));
   try {
     const source=join(root,'source'),target=join(root,'candidate');await legacyFixture(source);
     const path=join(source,'data/map.json'),knowledge=JSON.parse(await readFile(path,'utf8'));

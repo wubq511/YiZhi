@@ -1,10 +1,11 @@
+import { developmentDirectory } from '../../tools/desktop/paths.mjs';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { Page, Locator } from '@playwright/test';
 import { legacyFixture } from './migration-fixture';
-import { CourseService } from '../src/core/course-service';
+import { DevelopmentCourseService as CourseService } from '../../tools/desktop/course-service';
 
 async function reveal(page: Page, target: Locator) {
   await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');
@@ -16,7 +17,7 @@ async function reveal(page: Page, target: Locator) {
 
 test('converted last unit and actual fixed image/source PDF remain readable offline in Electron at a moved path', async () => {
   const root = await mkdtemp(join(tmpdir(),'yizhi-migration-ui-'));
-  const core = new CourseService(resolve('dist/worker.cjs'));
+  const core = new CourseService(join(developmentDirectory(), 'worker.cjs'));
   let app: Awaited<ReturnType<typeof electron.launch>> | undefined;
   try {
     const { rename } = await import('node:fs/promises');

@@ -1,6 +1,10 @@
-# 课程工具
+# 项目工具
 
-课程目录只保存资料、知识及学习状态，可执行工具集中在这里。以下命令从 YiZhi 仓库根运行，默认读取 `courses/digital-logic/`。
+课程目录只保存资料、知识及学习状态，课程工具集中在这里。以下课程命令从 YiZhi 仓库根运行，默认读取 `courses/digital-logic/`。
+
+## 桌面开发工具边界
+
+旧版课程临时迁入和可控生产者在 [桌面开发工具](desktop/README.md) 独立组织和构建。正式应用不加载或打包这些工具；目标边界见 [ADR-0008](../docs/adr/0008-product-development-boundary.md)。
 
 ## 数字逻辑知识
 

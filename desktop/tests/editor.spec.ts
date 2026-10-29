@@ -1,3 +1,4 @@
+import { controlledElectron } from './controlled-launch';
 import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -24,7 +25,7 @@ async function snapshotClipboard(app: ElectronApplication) {
 
 test('independent producer range update survives student Undo and complete SQLite reopen', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-editor-ranges-'));
-  const launch = () => electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  const launch = () => controlledElectron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   let app = await launch();
   try {
     let page = await app.firstWindow();
@@ -37,10 +38,10 @@ test('independent producer range update survives student Undo and complete SQLit
     const updated = await page.evaluate(async () => {
       const bridge = (window as any).yizhi, course = await bridge.open();
       const target = course.unit.reading.blocks.filter((b: any) => b.kind === 'paragraph')[1];
-      const attempt = await bridge.commands.startAttempt({ sessionId: course.sessionId, taskId: 'independent-editor-update' });
-      const basis = await bridge.commands.read({ sessionId: course.sessionId, attemptId: attempt.attemptId, objectIds: [target.id] });
-      const object = basis.objects.find((o: any) => o.id === target.id);
-      const result = await bridge.commands.commit({ sessionId: course.sessionId, attemptId: attempt.attemptId, basisId: basis.basisId,
+      const attempt = await window.yizhiControlled.startAttempt({ sessionId: course.sessionId, taskId: 'independent-editor-update' });
+      const basis = await window.yizhiControlled.read({ sessionId: course.sessionId, attemptId: attempt.attemptId, objectIds: [target.id] });
+      const object = basis.objects.find((o: any) => o.id === target.id)!;
+      const result = await window.yizhiControlled.commit({ sessionId: course.sessionId, attemptId: attempt.attemptId, basisId: basis.basisId,
         operationId: 'independent-editor-update', changes: [{ objectId: target.id, value: { ...object.value, payload: { ...object.value.payload, text: '外部独立更新必须保留' } } }] });
       return { result, targetId: target.id };
     });

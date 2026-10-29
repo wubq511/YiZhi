@@ -1,3 +1,4 @@
+import { controlledElectron } from './controlled-launch';
 import type { DatabaseSync } from 'node:sqlite';
 import { openFaultDatabase } from './fault-database';
 import { evidencePath } from './evidence-paths';
@@ -54,7 +55,7 @@ test('real drawing gesture saves one personal shape, cancels without a commit, a
 
 test('one move or resize is one saved Undo; viewport and producer changes never steal the board step', async () => {
   const root=await mkdtemp(join(tmpdir(),'yizhi-drawing-undo-'));
-  const app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});
+  const app=await controlledElectron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});
   try {
     const page=await app.firstWindow();await resizeBoardWindow(app,page); await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');
     await page.getByRole('button',{name:'绘图标注',exact:true}).click();
@@ -68,7 +69,7 @@ test('one move or resize is one saved Undo; viewport and producer changes never 
     let s=await snapshot(page); expect(s.history).toHaveLength(2); const moved=s.drawings[0];
     expect(moved.value.geometry.x).toBeGreaterThan(original.value.geometry.x);
     await page.mouse.move(board.x+10,board.y+120); await page.mouse.wheel(0,100);
-    const result=await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open(),target=c.unit.reading.blocks[1],a=await b.commands.startAttempt({sessionId:c.sessionId,taskId:'drawing-background'}),basis=await b.commands.read({sessionId:c.sessionId,attemptId:a.attemptId,objectIds:[target.id]});return b.commands.commit({sessionId:c.sessionId,attemptId:a.attemptId,basisId:basis.basisId,operationId:'drawing-background',changes:[{objectId:target.id,value:{...basis.objects[0].value,payload:{...target.payload,text:'后台更新仍然保留'}}}]});});
+    const result=await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open(),target=c.unit.reading.blocks[1],a=await window.yizhiControlled.startAttempt({sessionId:c.sessionId,taskId:'drawing-background'}),basis=await window.yizhiControlled.read({sessionId:c.sessionId,attemptId:a.attemptId,objectIds:[target.id]});return window.yizhiControlled.commit({sessionId:c.sessionId,attemptId:a.attemptId,basisId:basis.basisId,operationId:'drawing-background',changes:[{objectId:target.id,value:{...basis.objects[0].value,payload:{...target.payload,text:'后台更新仍然保留'}}}]});});
     expect(result.status).toBe('committed');
     await page.locator('.drawing-layer').focus(); await page.keyboard.press('Meta+z');
     await expect.poll(async()=>(await snapshot(page)).drawings[0].value.geometry).toEqual(original.value.geometry);

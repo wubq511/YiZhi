@@ -1,0 +1,1 @@
+export function resourcesClient(invoke:(action:string,payload:unknown)=>Promise<any>){return {read:(request:{sessionId:string;asset:string}):Promise<{bytes:Uint8Array;mediaType:string}>=>invoke('resources:read',request)};}

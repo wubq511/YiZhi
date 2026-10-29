@@ -1,5 +1,4 @@
 .backup-panel{width:min(720px,calc(100vw - 40px));height:auto;max-height:calc(100vh - 40px)}
-.backup-panel section{max-width:70ch}.backup-panel h3{font-size:17px;margin:20px 0 8px}.backup-panel p{margin:8px 0 16px;overflow-wrap:anywhere}
+.backup-panel section{max-width:70ch}.backup-panel p{margin:8px 0 16px;overflow-wrap:anywhere}
 .backup-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.backup-actions .history-confirm{margin:8px 0}
-.backup-upgrade{border-top:1px solid #e5e5eb;margin-top:24px;padding-top:4px}.backup-upgrade code{overflow-wrap:anywhere;font-size:12px}
 @media(max-width:760px){.backup-panel{width:calc(100vw - 16px);max-height:calc(100vh - 16px)}}

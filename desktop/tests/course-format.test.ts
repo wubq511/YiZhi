@@ -47,7 +47,7 @@ test('course format, minimum reader, body version and extension interface/input/
     const c=await core.open(directory);await core.extensions.open(c);await core.close();
     const db=new DatabaseSync(join(directory,'course.sqlite'));
     if(axis==='format')db.exec('PRAGMA user_version=999');
-    else if(axis==='reader')db.prepare("INSERT INTO metadata VALUES('minimum-reader','999')").run();
+    else if(axis==='reader')db.prepare("INSERT OR REPLACE INTO metadata VALUES('minimum-reader','999')").run();
     else if(axis.startsWith('scene-')){const scene=JSON.parse(String(db.prepare('SELECT payload FROM extension_scene LIMIT 1').get()!.payload));scene.definition[axis.slice(6)]='future-999';db.prepare('UPDATE extension_scene SET payload=?').run(JSON.stringify(scene));}
     else {const m=JSON.parse(String(db.prepare('SELECT manifest FROM extension_packages LIMIT 1').get()!.manifest));m[axis]='future-999';db.prepare('UPDATE extension_packages SET manifest=?').run(JSON.stringify(m));}
     db.exec('PRAGMA wal_checkpoint(TRUNCATE)');db.close();

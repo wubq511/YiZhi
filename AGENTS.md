@@ -5,6 +5,7 @@
 - 当前产品行为以 [PRODUCT.md](PRODUCT.md) 为准，实施合同从 [系统设计定稿](docs/architecture/系统设计定稿.md) 进入；术语查 [CONTEXT.md](CONTEXT.md)，视觉查 [DESIGN.md](DESIGN.md)。
 - 技术选择、理由和被拒路线在 [ADR](docs/adr/) 与 [设计取舍记录](docs/adr/设计取舍记录.md)。研究、原型和旧版验收各有范围，不覆盖当前合同。
 - 按当前问题查资料使用 [文档导航](docs/README.md)。同一规则只维护一处；新文档承担明确职责，不再建立平行合同或任务过程副本。
+- 新增或调整界面入口时，先明确学生要完成的实际任务；开发验证使用独立工具，可自动完成的内部维护由后台承担。不能因技术模块或验收步骤已经存在，就把它变成用户按钮、面板或设置。产品边界见 [PRODUCT.md](PRODUCT.md)。
 
 ## 代码与课程
 
@@ -17,8 +18,8 @@
 
 ## 运行与验证
 
-- 启动：`python3 legacy/review-board/start.py`。
-- 应用测试见 [运行说明](legacy/review-board/README.md#验证)；课程／教材工具和检查命令见 [tools/README.md](tools/README.md)。
+- 桌面应用的启动与验证见 [desktop/README.md](desktop/README.md)；旧版基线使用 `python3 legacy/review-board/start.py`，验证见 [旧版运行说明](legacy/review-board/README.md#验证)。
+- 课程／教材工具和检查命令见 [tools/README.md](tools/README.md)。
 - 只读查询或目录整理先检查现有数据；只有权威数据或生成器实际变化时才重建派生视图。
 - 原学习目录已清空，不创建软链、兼容副本或对旧目录的依赖。
 

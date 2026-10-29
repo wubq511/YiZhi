@@ -1,9 +1,11 @@
+import { developmentDirectory } from '../../tools/desktop/paths.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, cp,writeFile,readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { CourseService } from '../src/core/course-service';
+import { DevelopmentCourseService } from '../../tools/desktop/course-service';
 import { DatabaseSync } from 'node:sqlite';
 import { fork } from 'node:child_process';
 import { once } from 'node:events';
@@ -202,7 +204,7 @@ test('idle retention still reclaims superseded search epochs while current unind
 });
 test('the legacy whole-unit cache becomes an explicit provenance manifest after its window while current content, unknown metadata and registered resources remain readable',async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-retention-legacy-')),clock=new SharedArrayBuffer(8),t=Date.parse('2030-01-01T00:00:00Z');Atomics.store(new BigInt64Array(clock),0,BigInt(t));
- const core=new CourseService(resolve('dist/worker.cjs'),{retentionScheduling:{clock,manual:true}});
+ const core=new DevelopmentCourseService(join(developmentDirectory(), 'worker.cjs'),{retentionScheduling:{clock,manual:true}});
  try{
   const original=await legacyFixture(join(root,'old'));await core.migration.convert({sourceDirectory:join(root,'old'),directory:join(root,'candidate')});
   const c=await core.open(join(root,'candidate')),imported=await core.migration.content(c);assert.deepEqual(imported.knowledge,original.knowledge);

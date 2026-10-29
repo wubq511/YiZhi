@@ -53,16 +53,13 @@ export interface SaveReceipt {
   basedOnRevision?: number;
 }
 export interface DesktopBridge extends SaveBridge {
-  upgrade: import('./upgrade-api').UpgradeBridge;
   backup: import('./backup-api').BackupBridge;
   courseFormat: import('./format-api').ReadonlyCourseBridge;
-  migration: import('./migration-api').MigrationBridge;
   courseRestore: import('./course-restore-api').CourseRestoreAPI;
   retention: Omit<import('./retention-api').RetentionAPI,'resourceLease'|'resourceLeases'>;
   formalHistory: import('./history-api').HistoryAPI;
   description: import('./description-api').DescriptionAPI;
   drawings: import('./drawing-api').DrawingAPI;
-  exchange: import('./exchange-api').ExchangeBridge;
   search: import('./search-api').SearchAPI;
   annotations: import('./annotation-api').AnnotationAPI;
   extensions: Omit<import('./extensions-api').ExtensionsAPI, 'resource'>;
@@ -70,7 +67,7 @@ export interface DesktopBridge extends SaveBridge {
   agent: import('./agent-api').AgentBridge;
   parsing: import('./parsing-api').ParsingBridge;
   sources: import('./sources-api').SourceBridge;
-  commands: import('./command-api').CommandAPI;
+  commands: StudentCommands;
   relations: import('./relation-api').RelationAPI;
   open(): Promise<OpenedCourse>;
   graph(sessionId: string): Promise<CourseGraph>;
@@ -168,3 +165,7 @@ export interface SaveBridge {
   readEvents(sessionId: string, after: number, limit?: number): Promise<EventPage>;
   read(sessionId: string, unitId?: string): Promise<OpenedCourse>;
 }
+
+/** Commands consumed by the learning UI, including conflict and receipt inspection. */
+export type StudentCommands = Pick<import('./command-api').CommandAPI,
+  'protect' | 'releaseView' | 'recheck' | 'resolveInput' | 'resolveCandidate' | 'query' | 'candidates' | 'history'>;

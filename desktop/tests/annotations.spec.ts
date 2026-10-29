@@ -1,3 +1,4 @@
+import { controlledElectron } from './controlled-launch';
 import type { DatabaseSync } from 'node:sqlite';
 import { openFaultDatabase } from './fault-database';
 import { evidencePath } from './evidence-paths';
@@ -193,7 +194,7 @@ test('real MathLive nested selection uses a lazy reading field, proven independe
 
 test('held displayed selection creates an old-version orphan and explicit reassociation keeps its immutable original context', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-held-note-'));
-  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  const app = await controlledElectron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const page = await app.firstWindow(); await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     const editor = page.getByRole('textbox', { name: '连续编辑正文', exact: true });
@@ -201,19 +202,19 @@ test('held displayed selection creates an old-version orphan and explicit reasso
     const captured = await editor.evaluate((el: any) => el.editor.storage.courseSelection.capture());
     const result = await page.evaluate(async () => {
       const b = (window as any).yizhi, c = await b.open(), target = c.unit.reading.blocks[0];
-      const attempt = await b.commands.startAttempt({ sessionId: c.sessionId, taskId: 'held-note-producer' });
-      const basis = await b.commands.read({ sessionId: c.sessionId, attemptId: attempt.attemptId, objectIds: [target.id] });
-      const object = basis.objects.find((o: any) => o.id === target.id);
-      return b.commands.commit({ sessionId: c.sessionId, operationId: 'held-note-rewrite', attemptId: attempt.attemptId, basisId: basis.basisId,
+      const attempt = await window.yizhiControlled.startAttempt({ sessionId: c.sessionId, taskId: 'held-note-producer' });
+      const basis = await window.yizhiControlled.read({ sessionId: c.sessionId, attemptId: attempt.attemptId, objectIds: [target.id] });
+      const object = basis.objects.find((o: any) => o.id === target.id)!;
+      return window.yizhiControlled.commit({ sessionId: c.sessionId, operationId: 'held-note-rewrite', attemptId: attempt.attemptId, basisId: basis.basisId,
         changes: [{ objectId: target.id, value: { ...object.value, payload: { ...target.payload, text: '外部已改写当前原文' } } }] });
     });
-    await expect.poll(() => editor.evaluate((el: any) => el.editor.storage.courseSelection.capture().latestFormalRevision)).toBe(result.revision);
+    await expect.poll(() => editor.evaluate((el: any) => el.editor.storage.courseSelection.capture().latestFormalRevision)).toBe(result.revision!);
     await page.getByRole('button', { name: '批注所选文字', exact: true }).click();
     await expect(page.getByRole('region', { name: '个人批注', exact: true })).toContainText('待重新关联');
     const getNotes = () => page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return b.annotations.list({ sessionId: c.sessionId }); });
     const note = (await getNotes())[0];
     expect(note.original.fragments).toEqual(captured.fragments);
-    expect(note.original.fragments[0].formalRevision).toBeLessThan(result.revision);
+    expect(note.original.fragments[0].formalRevision).toBeLessThan(result.revision!);
     await editor.evaluate((el: any) => { let n = 0; el.editor.state.doc.forEach((node: any, pos: number) => { if (node.type.name === 'paragraph' && ++n === 2) el.editor.commands.setTextSelection({ from: pos + 1, to: pos + 5 }); }); el.editor.view.focus(); });
     await page.getByRole('button', { name: '关联到当前选段', exact: true }).click();
     await expect.poll(async () => (await getNotes())[0].current.status).toBe('attached');

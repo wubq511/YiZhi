@@ -1,9 +1,11 @@
+import { developmentDirectory } from '../../tools/desktop/paths.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, readFile, writeFile, access, mkdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { CourseService } from '../src/core/course-service';
+import { DevelopmentCourseService } from '../../tools/desktop/course-service';
 import { sourceFixture } from './source-fixture';
 import { parsingFixture } from './parsing-fixture';
 import { fork,spawnSync } from 'node:child_process';
@@ -65,7 +67,7 @@ test('a source and its portable backup cannot both gain writable course identity
  }finally{await copy.close();await core.close();await rm(root,{recursive:true,force:true});}
 });
 test('T25 actual migrated tables enumerate their declared resource closure and reject a missing pending ref without mistaking origin digests for files',async()=>{
- const root=await mkdtemp(join(tmpdir(),'yizhi-backup-t25-roots-')),core=new CourseService(resolve('dist/worker.cjs'));
+ const root=await mkdtemp(join(tmpdir(),'yizhi-backup-t25-roots-')),core=new DevelopmentCourseService(join(developmentDirectory(), 'worker.cjs'));
  try{
   const source=join(root,'legacy'),directory=join(root,'live');await legacyFixture(source);
   const made=spawnSync('python3',['-B',resolve('tests/personal-migration-fixture.py'),source,'state'],{encoding:'utf8'});assert.equal(made.status,0,made.stderr);

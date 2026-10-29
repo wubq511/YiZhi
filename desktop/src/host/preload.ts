@@ -1,11 +1,9 @@
 import { historyClient } from '../history-api';
 import { backupBridge } from '../backup-api';
-import { migrationClient } from '../migration-api';
 import { retentionClient } from '../retention-api';
 import { courseRestoreClient } from '../course-restore-api';
 import { descriptionClient } from '../description-api';
 import { drawingClient } from '../drawing-api';
-import { exchangeBridge } from '../exchange-api';
 import { searchClient } from '../search-api';
 import { annotationClient } from '../annotation-api';
 import {extensionsClient} from '../extensions-api';
@@ -15,7 +13,6 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { DesktopBridge } from '../shared';
 import { parsingBridge } from '../parsing-api';
 import { relationClient } from '../relation-api';
-import { commandClient } from '../command-api';
 import { sourceBridge } from '../sources-api';
 async function invoke(channel: string, argument?: unknown) {
   try { return await ipcRenderer.invoke(channel, argument); }
@@ -25,16 +22,13 @@ async function invoke(channel: string, argument?: unknown) {
   }
 }
 const bridge: DesktopBridge = {
-  upgrade:{info:r=>invoke('upgrade:info',r),choose:r=>invoke('upgrade:choose',r),chooseRecover:()=>invoke('upgrade:chooseRecover')},
   courseFormat:{inspect:()=>invoke('courseFormat:inspect'),readUnit:r=>invoke('courseFormat:readUnit',r),exportText:r=>invoke('courseFormat:exportText',r)},
   backup:backupBridge(invoke),
-  migration:{...migrationClient(invoke),stage:p=>invoke('migration:stage',p),chooseDirectory:kind=>invoke('migration:chooseDirectory',kind),openDirectory:directory=>invoke('migration:openDirectory',directory),currentDirectory:()=>invoke('migration:currentDirectory')},
   retention:(()=>{const {resourceLease:_,resourceLeases:__,...bridge}=retentionClient(invoke);return bridge;})(),
   courseRestore:courseRestoreClient(invoke),
   formalHistory: historyClient(invoke),
   description: descriptionClient(invoke),
   drawings: drawingClient(invoke),
-  exchange: exchangeBridge(invoke),
   search: searchClient(invoke),
   annotations: annotationClient(invoke),
   extensions: (() => { const {resource, ...api}=extensionsClient(invoke); return api; })(),
@@ -43,7 +37,12 @@ const bridge: DesktopBridge = {
     generationCandidates: request => invoke('agent:generationCandidates',request) },
   parsing: parsingBridge(invoke),
   sources: sourceBridge(invoke),
-  commands: commandClient(invoke),
+  commands: {
+    protect: r => invoke('commands:protect', r), releaseView: r => invoke('commands:releaseView', r),
+    recheck: r => invoke('commands:recheck', r), resolveInput: r => invoke('commands:resolveInput', r),
+    resolveCandidate: r => invoke('commands:resolveCandidate', r), query: r => invoke('commands:query', r),
+    candidates: r => invoke('commands:candidates', r), history: r => invoke('commands:history', r),
+  },
   relations: relationClient(invoke),
   open: () => invoke('course:open'),
   graph: sessionId => invoke('course:graph', sessionId),

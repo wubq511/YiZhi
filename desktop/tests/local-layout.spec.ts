@@ -1,3 +1,4 @@
+import { controlledElectron } from './controlled-launch';
 import type { DatabaseSync } from 'node:sqlite';
 import { openFaultDatabase, holdFaultWriter } from './fault-database';
 import { evidencePath } from './evidence-paths';
@@ -72,7 +73,7 @@ async function saveFollowFailure(page: Page, observations: unknown[]) {
 
 test('manual width and drag remain after collapse and reopen without replacing the active editor', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-layout-ui-'));
-  const launch = () => electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  const launch = () => controlledElectron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   let app = await launch();
   let completed = false;
   try {
@@ -98,10 +99,10 @@ test('manual width and drag remain after collapse and reopen without replacing t
     const growth = await page.evaluate(async () => {
       const b = (window as any).yizhi, c = await b.open();
       const target = c.unit.reading.blocks.filter((block: any) => block.kind === 'paragraph')[1].id;
-      const a = await b.commands.startAttempt({ sessionId: c.sessionId, taskId: 'growth-during-drag' });
-      const basis = await b.commands.read({ sessionId: c.sessionId, attemptId: a.attemptId, objectIds: [target] });
+      const a = await window.yizhiControlled.startAttempt({ sessionId: c.sessionId, taskId: 'growth-during-drag' });
+      const basis = await window.yizhiControlled.read({ sessionId: c.sessionId, attemptId: a.attemptId, objectIds: [target] });
       const original = basis.objects[0].value;
-      return b.commands.commit({ sessionId: c.sessionId, attemptId: a.attemptId, operationId: 'growth-during-drag', basisId: basis.basisId,
+      return window.yizhiControlled.commit({ sessionId: c.sessionId, attemptId: a.attemptId, operationId: 'growth-during-drag', basisId: basis.basisId,
         changes: [{ objectId: target, value: { ...original, payload: { ...original.payload, text: '拖动中的后台正文持续增高。'.repeat(40) } } }] });
     });
     expect(growth.status).toBe('committed');
@@ -139,7 +140,7 @@ test('manual width and drag remain after collapse and reopen without replacing t
 
 test('actual producer follows only actual changes, student takeover cancels motion until explicit return, completion never jumps', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-follow-ui-'));
-  const launch = () => electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  const launch = () => controlledElectron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   let app = await launch();
   try {
     let page = await app.firstWindow();
@@ -225,7 +226,7 @@ test('actual producer follows only actual changes, student takeover cancels moti
 
 test('growth displaces the local chain while the current reading anchor and student pan compose at unchanged zoom', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-anchor-ui-'));
-  const launch = () => electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  const launch = () => controlledElectron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   let app = await launch();
   try {
     let page = await app.firstWindow();
@@ -247,10 +248,10 @@ test('growth displaces the local chain while the current reading anchor and stud
     await page.evaluate(async () => {
       const b = (window as any).yizhi, c = await b.open();
       const target = c.editableBlockId;
-      const a = await b.commands.startAttempt({ sessionId: c.sessionId, taskId: 'anchor-growth' });
-      const basis = await b.commands.read({ sessionId: c.sessionId, attemptId: a.attemptId, objectIds: [target] });
+      const a = await window.yizhiControlled.startAttempt({ sessionId: c.sessionId, taskId: 'anchor-growth' });
+      const basis = await window.yizhiControlled.read({ sessionId: c.sessionId, attemptId: a.attemptId, objectIds: [target] });
       const original = basis.objects[0].value;
-      await b.commands.commit({ sessionId: c.sessionId, attemptId: a.attemptId, operationId: 'anchor-growth', basisId: basis.basisId,
+      await window.yizhiControlled.commit({ sessionId: c.sessionId, attemptId: a.attemptId, operationId: 'anchor-growth', basisId: basis.basisId,
         changes: [{ objectId: target, value: { ...original, payload: { ...original.payload, text: '正文增长引起实际局部让位。'.repeat(180) } } }] });
     });
     const board = (await page.locator('main.board').boundingBox())!;

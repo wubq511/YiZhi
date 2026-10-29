@@ -17,13 +17,13 @@ import { formulaView } from './formula';
 import type { FormulaEditing } from './nested-formula';
 import { unitBlocks } from '../../reading-model';
 import { integrateValue, textRange } from '../../content-integration';
-import type { CommandAPI, CandidateCheck } from '../../command-api';
+import type { CandidateCheck } from '../../command-api';
 
 export interface EditorOptions {
   annotate(selection: AnnotationSelection): void;
   renderOpaque(element: HTMLElement, block: ReadingBlock, editing: FormulaEditing): { update(block: ReadingBlock): void; destroy(): void };
   composition(active: boolean): void;
-  commands: CommandAPI;
+  commands: import('../../shared').StudentCommands;
   status(checks: CandidateCheck[]): void;
 }
 export interface DisplayedFragment {

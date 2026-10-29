@@ -1,6 +1,8 @@
 # macOS 连续学习验收工具
 
-这些工具记录 #29 的实际组合证据；结果与实体操作记录按 [本地产物管理](../../docs/development/本地产物管理.md) 保存到原仓库的 `artifacts/evidence/<任务>/`，临时包和测试副本使用 `artifacts/scratch/<任务>/`。跳过的 opt-in 测试不计通过，程序输入、浏览器 rAF、减少动效模拟与实际实体设备使用分别记录。最终迁移、500 单元和安装验收必须先取得 parent 明确确认的 T25/T26 最终集成输入。
+这些工具记录 #29 的实际组合证据；结果与实体操作记录按 [本地产物管理](../../docs/development/本地产物管理.md) 保存到原仓库的 `artifacts/evidence/<任务>/`，临时包和测试副本使用 `artifacts/scratch/<任务>/`。跳过的 opt-in 测试不计通过，程序输入、浏览器 rAF、减少动效模拟与实际实体设备使用分别记录。以下是现有 T28 验收工具与证据格式，复验完整课程、500 单元和安装行为时需使用来源明确、停止写入的课程副本及对应构建输入。
+
+[ADR-0008](../../docs/adr/0008-product-development-boundary.md) 的入口移除、开发工具分离与自动格式升级已落实到代码。新回归从正常应用打开流程执行；开发验证使用 `tools/desktop/` 独立入口。既有 T24—T28 结果仅证明当时的实现范围，不能直接计作新边界通过。
 
 先在当前树 `npm ci`、`npm run build`。本树独占 `dist`。独立小样本检查：
 
@@ -12,13 +14,13 @@ node --test dist/tests/acceptance-input.test.cjs \
   dist/tests/acceptance-fairness.test.cjs dist/tests/growth-fixture.test.cjs
 
 YIZHI_ACCEPTANCE_SMOKE=1 YIZHI_EVIDENCE_DIR="$ARTIFACTS/evidence/t28/harness-small" \
-python3 /absolute/run-ui-serial.py npx playwright test tests/acceptance.spec.ts \
+npx playwright test tests/acceptance.spec.ts --workers=1 \
   --grep 'small development' --output="$ARTIFACTS/evidence/t28/small-ui"
 ```
 
 小样本使用生成课程，覆盖同应用两课共享 Core、B 在真实 dirty-index 批次／正式历史预览／PDF 解析期间读写、导航与局部展开、输入和选区保护、跨控件 Undo、未完成公式草稿、实验离屏续接、PDF 切页、窄窗键盘焦点和模拟减少动效。它不提供最终迁移课／500／安装或实体输入结论。
 
-最终输入就绪后，先合入 parent 指定的最新 integration。停止并复制最终迁移课程；如果输入是完整备份，先由最终 Core 的 `backup.verify` 核对归档，再复制到新恢复目录，之后才打开写入。不能把内容交换包当完整备份，也不能手造或重封目录 authority marker。
+验收输入就绪后，核对工作树、Core、安装包和课程来源对应关系。停止并复制已准备的完整桌面课程；如果输入是完整备份，先由对应 Core 的 `backup.verify` 核对归档，再复制到新恢复目录，之后才打开写入。不能把内容交换包当完整备份，也不能手造或重封目录 authority marker。开发迁入可以准备副本，但不属于学生安装使用流程。
 
 增长工具只操作新副本，要求 source 的 WAL 已关闭／checkpoint，正文已完整物化。它先用指定 Worker 正常打开目标，再追加明确合成的单元／块／布局身份；原 payload 字节、revision 和 ID 保持，关系与资料不伪造。再次 Core 打开／逐个读取新增单元，并保存 `growth-fixture.json`。marker 保持原字节，任何 admission 拒绝都必须由实际 authority 能力解决。
 
@@ -30,12 +32,12 @@ node scripts/prepare-growth-fixture.mjs \
 npm run package:mac -- --out="$ARTIFACTS/scratch/t28/package-FINAL-SHA"
 ```
 
-提交源码后才生成最终包。包清单记录 source commit、dirty 状态和实际交付入口摘要；最终测试拒绝 dirty／旧来源包。parent 的最终 run input 使用 `yizhi-t28-final-input-1`，包括 `parentConfirmedFinal: true`、`parentFinalEvidence` 路径、40 位的 `t25FinalSHA`／`t26FinalSHA`／`integrationSHA`／`sourceSHA`，以及 `app`／`growthCourse`／`migratedCourse` 绝对路径。这是外部验收输入记录，不是课程 authority 协议。
+提交源码后才生成最终包。包清单记录 source commit、dirty 状态和实际交付入口摘要；最终测试拒绝 dirty／旧来源包。现有 T28 run input 使用 `yizhi-t28-final-input-1`，包括 `parentConfirmedFinal: true`、`parentFinalEvidence` 路径、40 位的 `t25FinalSHA`／`t26FinalSHA`／`integrationSHA`／`sourceSHA`，以及 `app`／`growthCourse`／`migratedCourse` 绝对路径。这些是现有验收工具仍要求的字段，保留其历史身份；它们不是课程 authority 协议，也不是新版用户流程需要操作的步骤。
 
 ```sh
 YIZHI_ACCEPTANCE_INPUT="$ARTIFACTS/evidence/t28/final-input.json" \
 YIZHI_EVIDENCE_DIR="$ARTIFACTS/evidence/t28" \
-python3 /absolute/run-ui-serial.py npx playwright test tests/acceptance.spec.ts \
+npx playwright test tests/acceptance.spec.ts --workers=1 \
   --grep 'final installed' --output="$ARTIFACTS/evidence/t28/final-ui"
 ```
 
@@ -49,8 +51,7 @@ python3 /absolute/run-ui-serial.py npx playwright test tests/acceptance.spec.ts 
 
 ```sh
 node scripts/stage-t28-physical.mjs --out="$ARTIFACTS/evidence/t28/physical-harness"
-python3 /absolute/run-ui-serial.py \
-  node "$ARTIFACTS/evidence/t28/physical-harness/t28-physical.cjs" \
+node "$ARTIFACTS/evidence/t28/physical-harness/t28-physical.cjs" \
   --input "$ARTIFACTS/evidence/t28/installed-RUN/physical-input.json"
 ```
 

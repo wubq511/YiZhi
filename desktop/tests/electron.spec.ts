@@ -1,3 +1,4 @@
+import { controlledElectron } from './controlled-launch';
 import {expectBoundedReading} from './board-test-helpers';
 import type { DatabaseSync } from 'node:sqlite';
 import { openFaultDatabase } from './fault-database';
@@ -38,7 +39,7 @@ import { spawn } from 'node:child_process';
 
 test('controlled producer uses real IPC: stale premise is retained, reread integrates, stop keeps the receipt and rejects late writes', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-electron-t03-'));
-  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`],
+  const app = await controlledElectron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`],
     env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const window = await app.firstWindow();
@@ -476,7 +477,7 @@ test('camera can step from reading through unit overview to theme overview in on
 
 test('narrow controlled producer overlay returns focus and isolates the board', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-producer-overlay-'));
-  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  const app = await controlledElectron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const window = await app.firstWindow(); await window.setViewportSize({ width: 700, height: 600 });
     await window.getByRole('button', { name: '关闭目录' }).click();

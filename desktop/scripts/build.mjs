@@ -1,6 +1,10 @@
 import { build } from 'esbuild';
-import { mkdir, copyFile, readdir, cp } from 'node:fs/promises';
+import { mkdir, copyFile, readdir, cp, rm, writeFile } from 'node:fs/promises';
+const production=process.argv.includes('--production');
+if(process.argv.slice(2).some(arg=>arg!=='--production'))throw new Error('Unknown build argument');
+await rm('dist',{recursive:true,force:true});
 await mkdir('dist/tests', { recursive: true });
+const runtimeInputs={};
 const entries = [
   ['src/core/course-service.ts', 'dist/course-service.cjs'],
   ['src/core/parsing-tool.ts', 'dist/parsing-tool.cjs'],
@@ -8,19 +12,21 @@ const entries = [
   ['src/core/upgrade-proof.ts', 'dist/upgrade-proof.cjs'],
   ['src/host/main.ts', 'dist/main.cjs'],
   ['src/host/preload.ts', 'dist/preload.cjs'],
-  ...(await readdir('tests')).filter(file => file.endsWith('.ts') && !file.endsWith('.spec.ts'))
+  ...(production?[]:await readdir('tests')).filter(file => file.endsWith('.ts') && !file.endsWith('.spec.ts'))
     .sort().map(file => [`tests/${file}`, `dist/tests/${file.replace(/\.ts$/, '.cjs')}`]),
 ];
 for (const [entry, outfile] of entries) {
   try {
-    await build({ entryPoints: [entry], outfile, bundle: true, platform: 'node', format: 'cjs',
-      target: 'node24', external: ['electron', 'pdfjs-dist/*', '@napi-rs/canvas', '@playwright/test', 'playwright', 'playwright-core'], sourcemap: true });
+    const result=await build({ entryPoints: [entry], outfile, bundle: true, platform: 'node', format: 'cjs',
+      target: 'node24', external: ['electron', 'pdfjs-dist/*', '@napi-rs/canvas', '@playwright/test', 'playwright', 'playwright-core'], sourcemap: true,metafile:true });
+    if(!outfile.startsWith('dist/tests/'))runtimeInputs[outfile.slice(5)]=Object.keys(result.metafile.inputs).sort();
   } catch (error) { throw error; }
 }
 try {
-  await build({ entryPoints: ['src/renderer/app.tsx'], outfile: 'dist/renderer/app.js', bundle: true,
+  const result=await build({ entryPoints: ['src/renderer/app.tsx'], outfile: 'dist/renderer/app.js', bundle: true,
     platform: 'browser', format: 'esm', target: 'chrome140', define: { 'process.env.NODE_ENV': '"production"' },
-    loader: { '.woff': 'file', '.woff2': 'file', '.ttf': 'file' } });
+    loader: { '.woff': 'file', '.woff2': 'file', '.ttf': 'file' },metafile:true });
+  runtimeInputs['renderer/app.js']=Object.keys(result.metafile.inputs).sort();
   await copyFile('src/renderer/index.html', 'dist/renderer/index.html');
   await copyFile('src/renderer/assets/ti74153-1.png', 'dist/renderer/ti74153-1.png');
   await cp('node_modules/mathlive/fonts', 'dist/renderer/mathlive-fonts', { recursive: true });
@@ -36,6 +42,6 @@ for (const file of await readdir('fixtures')) await copyFile(`fixtures/${file}`,
 
 await cp('src/extensions/packages', 'dist/extensions', { recursive: true });
 
-await copyFile('src/core/legacy-lock.py', 'dist/legacy-lock.py');
-
-await copyFile('../legacy/review-board/reviewboard/directory_authority.py', 'dist/directory_authority.py');
+for(const [entry,inputs] of Object.entries(runtimeInputs))if(inputs.some(input=>input.includes('tools/desktop/')))throw new Error('Development dependency in runtime: '+entry);
+await writeFile('dist/runtime-inputs.json',JSON.stringify(runtimeInputs,null,2)+'\n');
+if(!production)await import('../../tools/desktop/build.mjs');

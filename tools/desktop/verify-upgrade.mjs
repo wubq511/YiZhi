@@ -8,8 +8,10 @@ import {createReadStream} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {spawn} from 'node:child_process';
 import {DatabaseSync} from 'node:sqlite';
-const require=createRequire(import.meta.url),{CourseService}=require('../dist/course-service.cjs');
-const script=fileURLToPath(import.meta.url),worker=resolve('dist/worker.cjs');
+import {developmentDirectory} from './paths.mjs';
+const output=developmentDirectory(fileURLToPath(new URL('../..',import.meta.url)));
+const require=createRequire(import.meta.url),{DevelopmentCourseService:CourseService}=require(join(output,'course-service.cjs'));
+const script=fileURLToPath(import.meta.url),worker=join(output,'worker.cjs');
 const canonical=v=>Array.isArray(v)?'['+v.map(canonical).join(',')+']':v&&typeof v==='object'?'{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canonical(v[k])).join(',')+'}':JSON.stringify(v);
 const digest=v=>createHash('sha256').update(canonical(v)).digest('hex');
 async function fileHash(path){const hash=createHash('sha256');for await(const chunk of createReadStream(path))hash.update(chunk);return hash.digest('hex');}
@@ -51,7 +53,7 @@ if(mode==='_capture'){
 }else if(mode==='_archive'){
  const core=service();try{const c=await core.open(resolve(args[0]));await core.backup.create({...c,directory:resolve(args[1]),backupId:'actual-format2-archive'});await core.backup.verify({directory:resolve(args[1])});}finally{await core.close();}
 }else{
- if(!mode||!args[0])throw new Error('Usage: node scripts/verify-upgrade.mjs READ_ONLY_EVIDENCE NEW_ROOT [T25_RECONCILIATION]');
+ if(!mode||!args[0])throw new Error('Usage: node tools/desktop/verify-upgrade.mjs READ_ONLY_EVIDENCE NEW_ROOT [T25_RECONCILIATION]');
  const evidence=resolve(mode),root=resolve(args[0]),original=await treeHashes(evidence);await mkdir(root);const source=join(root,'source COPY'),target=join(root,'upgrade target'),beforeBackup=join(root,'before-upgrade full backup'),portable=join(root,'portable format2 中文 course'),archive=join(root,'format2 full backup'),restored=join(root,'restored format2');
  await cp(evidence,source,{recursive:true});const baseline=await capture(source);assert.equal(baseline.courseFormat,1);
  if(args[1]){
@@ -66,7 +68,7 @@ if(mode==='_capture'){
  }finally{await core.close();}
  const upgraded=await capture(target);assert.equal(upgraded.courseFormat,2);assert.deepEqual(upgraded.domains,baseline.domains,'all public semantic domains survived upgrade');
  await cp(target,portable,{recursive:true});await rename(source,source+' hidden');await rename(target,target+' hidden');
- const embedded=require('electron');await child(embedded,['_capture',portable,join(root,'portable.json')]);const moved=JSON.parse(await readFile(join(root,'portable.json'),'utf8'));assert.deepEqual(moved.domains,baseline.domains);
+ const embedded=createRequire(new URL('../../desktop/package.json',import.meta.url))('electron');await child(embedded,['_capture',portable,join(root,'portable.json')]);const moved=JSON.parse(await readFile(join(root,'portable.json'),'utf8'));assert.deepEqual(moved.domains,baseline.domains);
  await child(embedded,['_archive',portable,archive]);
  const verifier=service();let manifest;try{manifest=await verifier.backup.verify({directory:archive});assert.equal(manifest.resources.length,baseline.facts.resources);}finally{await verifier.close();}
  const archiveBefore=await treeHashes(archive); // Archive verified BEFORE any writable restore open.

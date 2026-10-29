@@ -1,3 +1,4 @@
+import {oldDesktopCourse} from './old-desktop-fixture';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, readFile, writeFile, readdir } from 'node:fs/promises';
@@ -256,7 +257,7 @@ test('upgrade freezes staged source publication before snapshot while another co
   const root=await mkdtemp(join(tmpdir(),'yizhi-source-upgrade-')),gate=new SharedArrayBuffer(4);
   const core=new CourseService(resolve('dist/worker.cjs'),{sourceScheduling:{beforePublish:gate}});let pending:Promise<unknown>|undefined,upgrade:Promise<unknown>|undefined;
   try {
-    const c=await core.open(join(root,'course')),b=await core.open(join(root,'other')),path=join(root,'real.pdf');await sourceFixture(path);
+    const c=await oldDesktopCourse(core,join(root,'course')),b=await core.open(join(root,'other')),path=join(root,'real.pdf');await sourceFixture(path);
     pending=core.sources.importFile({...c,operationId:'source-at-upgrade',path,title:'May not cross freeze'});pending.catch(()=>{});await sourceStage(gate);
     const request={...c,upgradeId:'freeze-source-stage',directory:join(root,'v2'),backupDirectory:join(root,'backup')};
     upgrade=core.upgrade.prepare(request);upgrade.catch(()=>{});
@@ -278,7 +279,7 @@ test('exact-hash repair stages outside other course saves and rechecks the share
   const root=await mkdtemp(join(tmpdir(),'yizhi-source-repair-stage-')),gate=new SharedArrayBuffer(4);
   const core=new CourseService(resolve('dist/worker.cjs'),{sourceScheduling:{beforePublish:gate}});let pending:Promise<any>|undefined;
   try {
-    const c=await core.open(join(root,'course')),b=await core.open(join(root,'other')),path=join(root,'real.pdf');await sourceFixture(path);
+    const c=await oldDesktopCourse(core,join(root,'course')),b=await core.open(join(root,'other')),path=join(root,'real.pdf');await sourceFixture(path);
     pending=core.sources.importFile({...c,operationId:'repair-stage-source',path,title:'Repair original'});await sourceStage(gate);releaseSource(gate);
     const source=await pending,request={...c,operationId:'held-repair',versionId:source.version.versionId,path};
     await rm(join(root,'course/resources',source.version.sha256));

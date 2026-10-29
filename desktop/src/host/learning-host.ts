@@ -1,3 +1,4 @@
+import { CourseOpening } from './course-opening';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { realpathSync,mkdirSync } from 'node:fs';
@@ -16,12 +17,14 @@ const canonical=(path:string)=>{try{return realpathSync(path);}catch{return reso
 export class LearningHost {
   private views=new Map<string,View>();
   private sequence=0;
+  private opening:CourseOpening;
   private quitting?:Promise<void>;
   private quiescing=false;
   exiting=false;
   private lastDirectory:string;
-  constructor(private core:CourseService,private agent:AgentRuntime,private description:DescriptionRuntime,directory:string,private preloadDirectory:string) {
+  constructor(private core:CourseService,private agent:AgentRuntime,private description:DescriptionRuntime,directory:string,private preloadDirectory:string,private options:{preloadPath?:string}={}) {
     this.lastDirectory=directory;
+    this.opening=new CourseOpening(core);
     ipcMain.on('window:close-result',(event,result)=>{
       let view:View;try{view=this.sender(event);}catch{return;}
       if(result?.requestId===view.requestId && typeof result.saved==='boolean')view.reply?.(result.saved);
@@ -36,34 +39,22 @@ export class LearningHost {
   open=async(event:Electron.IpcMainInvokeEvent)=>{
     const view=this.sender(event);
     view.opening??=(async()=>{
-      const opened=await this.core.open(view.directory);view.sessionId=opened.sessionId;
+      const admitted=await this.opening.open(view.directory),opened=admitted.opened;
+      if(admitted.directory!==view.directory){
+        const other=this.views.get(admitted.directory);
+        if(other&&other!==view){view.saved=true;view.window.destroy();other.window.show();other.window.focus();throw new Error('课程已在另一窗口打开');}
+        this.views.delete(view.directory);view.directory=admitted.directory;this.views.set(view.directory,view);this.lastDirectory=view.directory;
+      }
+      view.sessionId=opened.sessionId;
       view.recovery=await this.core.openLearningView({sessionId:opened.sessionId,viewId:view.id});
     })();
-    await view.opening;
+    try{await view.opening;}catch(error){view.opening=undefined;throw error;}
     // The Worker may rotate course authority after a committed whole-course recovery.
     const latest=await this.core.open(view.directory);
     if(view.sessionId!==latest.sessionId){view.sessionId=latest.sessionId;view.recovery=await this.core.openLearningView({sessionId:latest.sessionId,viewId:view.id});}
     return {...await this.core.read(view.sessionId!),inputRecovery:view.recovery};
   };
   async restored(event:Electron.IpcMainInvokeEvent){const view=this.sender(event);await this.open(event);view.window.webContents.send('course:generation-changed');}
-  async freezeForUpgrade(event:Electron.IpcMainInvokeEvent){
-    this.assertTaskAdmission();const view=this.sender(event);if(view.upgradeFrozen)throw new Error('此课程正在升级');
-    if(view.sessionId)await this.agent.courseRestored(view.sessionId);
-    if(!await this.barrier(view)){view.window.webContents.send('window:close-cancelled');throw new Error('最新输入尚未确认保存，升级未开始。请先重试保存。');}
-    view.upgradeFrozen=true;return {viewId:view.id,confirmedAt:new Date().toISOString()};
-  }
-  async resumeAfterUpgradeError(event:Electron.IpcMainInvokeEvent){
-    const view=this.sender(event),old=view.sessionId;view.upgradeFrozen=false;await this.open(event);
-    view.window.webContents.send('window:close-cancelled');if(old!==view.sessionId)view.window.webContents.send('course:generation-changed');
-  }
-  async enterUpgradedCourse(event:Electron.IpcMainInvokeEvent,directory:string){
-    const view=this.sender(event),old=view.directory;directory=canonical(directory);
-    const other=this.views.get(directory);
-    if(other&&other!==view){view.saved=true;view.window.destroy();other.opening=undefined;other.window.webContents.send('course:generation-changed');await this.show(directory);return;}
-    this.views.delete(old);view.directory=directory;view.opening=undefined;view.sessionId=undefined;view.id=randomUUID();view.upgradeFrozen=false;view.detached=false;
-    this.views.set(directory,view);this.lastDirectory=directory;await this.open(event);
-    view.window.webContents.send('window:close-cancelled');view.window.webContents.send('course:generation-changed');
-  }
   async show(directory=this.lastDirectory,bounds?:Electron.Rectangle) {
     if(this.quiescing||this.exiting)return;
     mkdirSync(directory,{recursive:true});directory=canonical(directory);
@@ -72,7 +63,7 @@ export class LearningHost {
     const existing=this.views.get(directory);
     if(existing){if(existing.window.isMinimized())existing.window.restore();existing.window.show();existing.window.focus();return;}
     const window=new BrowserWindow({width:1280,height:900,...bounds,minWidth:660,minHeight:500,title:'绎知',backgroundColor:'#ffffff',
-      webPreferences:{preload:join(this.preloadDirectory,'preload.cjs'),contextIsolation:true,nodeIntegration:false,nodeIntegrationInSubFrames:false,sandbox:true,
+      webPreferences:{preload:this.options.preloadPath??join(this.preloadDirectory,'preload.cjs'),contextIsolation:true,nodeIntegration:false,nodeIntegrationInSubFrames:false,sandbox:true,
         additionalArguments:process.env.YIZHI_OBSERVE==='1'?['--yizhi-observe']:[]}});
     const view:View={directory,window,id:randomUUID(),saved:false,recovering:false};this.views.set(directory,view);
     window.on('focus',()=>{this.lastDirectory=view.directory;});

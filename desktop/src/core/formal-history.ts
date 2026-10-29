@@ -1,5 +1,5 @@
 import { observation } from '../acceptance-observation';
-import { legacyBodyGroup } from './migration-history';
+import { legacyBodyGroup } from './imported-history';
 import { historyTimestamp } from './history-clock';
 import { initializeHistoryIndex } from './history-index';
 import type { BuiltinExperiments } from './builtin-experiments';

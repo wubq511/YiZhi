@@ -1,12 +1,13 @@
+import {coursePath} from '../../desktop/src/core/course-path';
 import { importRecordHistory } from './migration-history';
 import { migrateAgent } from './migration-agent';
 import { initializeMigrationRecords,migrateNativeState,origin } from './migration-state';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync,realpathSync,existsSync,statSync } from 'node:fs';
 import { join } from 'node:path';
-import { locked,coursePath,legacySaveBarrier } from './migration';
-import { hashFile } from './immutable-resource';
-import { transaction } from './save-store';
+import { locked,legacySaveBarrier } from './migration';
+import { hashFile } from '../../desktop/src/core/immutable-resource';
+import { transaction } from '../../desktop/src/core/save-store';
 /** Import records, never execute their old commands or manufacture selection proofs. */
 export async function importPersonal(db:DatabaseSync,sourceDirectory:string) {
  const root=realpathSync(sourceDirectory);return locked(root,async child=>{

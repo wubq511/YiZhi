@@ -1,0 +1,18 @@
+{
+  "extends": "../../desktop/tsconfig.json",
+  "compilerOptions": {
+    "typeRoots": [
+      "../../desktop/node_modules/@types"
+    ],
+    "paths": {
+      "@napi-rs/canvas": [
+        "../../desktop/node_modules/@napi-rs/canvas"
+      ]
+    }
+  },
+  "include": [
+    "./**/*.ts",
+    "./**/*.tsx",
+    "../../desktop/src/renderer/styles.d.ts"
+  ]
+}

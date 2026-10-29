@@ -1,3 +1,4 @@
+import { controlledElectron } from './controlled-launch';
 import { test, expect, _electron as electron, type Page, type ElectronApplication } from '@playwright/test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -42,7 +43,7 @@ async function openCourse(run: (page: Page, app: ElectronApplication) => Promise
       await core.setLayout(course.sessionId, [{ unitId: isolatedNavigation, x: 20_000, y: 20_000, width: 650 }]);
     } finally { await core.close(); }
   }
-  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`],
+  const app = await controlledElectron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`],
     env: { ...process.env, YIZHI_OBSERVE:'1', YIZHI_DATA_HOME: join(root, 'profile'), YIZHI_CODEX_PATH: join(root, 'missing-cli') } });
   const page = await app.firstWindow();
   try {

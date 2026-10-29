@@ -1,12 +1,10 @@
+import {initializeMigrationRecords} from '../../desktop/src/core/imported-state';
+export {initializeMigrationRecords} from '../../desktop/src/core/imported-state';
 import type { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
-import { registerRetentionResourceRoot } from './retention-resources';
-import { declaredResourcesIn } from './resource-roots';
 const json=JSON.stringify;
 export type LegacyRow={namespace:string;key:string;revision:number;deleted:number;value_json:string};
 const fields:Record<string,string[]>={notes:['noteId','text','objectId','anchor','createdAt','updatedAt'],review:['status'],layout:['objectId','blockId','x','y','width'],annotations:['drawingId','objectId','tool','anchor','createdAt','updatedAt'],reading:['selected','expanded','camera'],materialUpdates:['updateId','versionId','status','createdAt'],knowledge:['hash']};
-export function initializeMigrationRecords(db:DatabaseSync){db.exec(`CREATE TABLE IF NOT EXISTS migration_origins(namespace TEXT NOT NULL,record_key TEXT NOT NULL,revision INTEGER NOT NULL,deleted INTEGER NOT NULL,sha256 TEXT NOT NULL,extra TEXT NOT NULL,PRIMARY KEY(namespace,record_key));
- CREATE TABLE IF NOT EXISTS migration_pending(id TEXT PRIMARY KEY,namespace TEXT NOT NULL,record_key TEXT NOT NULL,purpose TEXT NOT NULL,state TEXT NOT NULL,payload TEXT,created_at TEXT);`);}
 export function origin(db:DatabaseSync,row:LegacyRow,value:any,extra?:any){
  const special=row.namespace==='knowledge'?{contentHash:value?.hash??createHash('sha256').update(json(value)).digest('hex')}:row.namespace==='tasks'?{historyPurpose:'original-execution-facts',extra:Object.fromEntries(Object.entries(value??{}).filter(([k])=>!['submittedEntity','startEntity','reads','concurrentEdits','pendingRequest','previousPendingRequest'].includes(k)))}:row.namespace==='conversations'?Object.fromEntries(Object.entries(value??{}).filter(([k])=>!['messages','draft','title','updatedAt'].includes(k))):row.namespace==='editingDrafts'?{type:value?.type??null,conversationId:value?.conversationId??null,cleared:!!value?.cleared}:undefined;
  const retained=extra??special??(typeof value==='object'&&value!==null?Object.fromEntries(Object.entries(value??{}).filter(([key])=>row.namespace!=='notes'||!(fields.notes??[]).includes(key))):{original:value});
@@ -17,23 +15,6 @@ export function migrationRecords(db:DatabaseSync,p:{namespace?:string;after?:str
  const rows=db.prepare("SELECT * FROM migration_origins WHERE (? IS NULL OR namespace=?) AND namespace||':'||record_key>? ORDER BY namespace,record_key LIMIT ?").all(p.namespace??null,p.namespace??null,p.after??'',limit+1);
  return {records:rows.slice(0,limit).map(r=>({namespace:r.namespace,key:r.record_key,revision:r.revision,deleted:!!r.deleted,sha256:r.sha256,extra:JSON.parse(String(r.extra))})),...(rows.length>limit?{next:rows[limit-1].namespace+':'+rows[limit-1].record_key}:{})};
 }
-/** Enumerate real declarations, including absent blobs, without interpreting origin/value digests as files. */
-export function migrationResourceRoots(db:DatabaseSync){
- const values:unknown[]=[];
- const read=(table:string,column:string,where='1')=>{
-  if(!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table))return;
-  for(const row of db.prepare(`SELECT ${column} value FROM ${table} WHERE ${where}`).all())if(row.value!==null)values.push(JSON.parse(String(row.value)));
- };
- read('migration_values','value');read('migration_pending','payload',"state='unresolved'");read('migration_origins','extra','deleted=0');
- read('restore_timeline','before_value',"kind='legacy'");read('restore_timeline','after_value',"kind='legacy'");
- return declaredResourcesIn(values,'t25-origin-and-imported-history');
-}
-registerRetentionResourceRoot('t25-origin-and-imported-history',(db,sha)=>{
- if(db.prepare("SELECT 1 FROM sqlite_master WHERE name='migration_values'").get()&&db.prepare('SELECT 1 FROM migration_values WHERE value LIKE ? LIMIT 1').get('%'+sha+'%'))return true;
- if(db.prepare("SELECT 1 FROM sqlite_master WHERE name='migration_pending'").get()&&db.prepare("SELECT 1 FROM migration_pending WHERE state='unresolved' AND payload LIKE ? LIMIT 1").get('%'+sha+'%'))return true;
- if(db.prepare("SELECT 1 FROM sqlite_master WHERE name='migration_origins'").get()&&db.prepare('SELECT 1 FROM migration_origins WHERE deleted=0 AND extra LIKE ? LIMIT 1').get('%'+sha+'%'))return true;
- return !!db.prepare("SELECT 1 FROM restore_timeline WHERE kind='legacy' AND (before_value LIKE ? OR after_value LIKE ?) LIMIT 1").get('%'+sha+'%','%'+sha+'%');
-},migrationResourceRoots);
 export function migrateNativeState(db:DatabaseSync,rows:LegacyRow[],report:any){
  const active=rows.filter(r=>!r.deleted),find=(ns:string,key?:string)=>active.find(r=>r.namespace===ns&&(!key||r.key===key)),value=(r:LegacyRow)=>JSON.parse(r.value_json);
  const units=new Map(db.prepare('SELECT id,payload FROM units').all().map(r=>[String(r.id),JSON.parse(String(r.payload))]));

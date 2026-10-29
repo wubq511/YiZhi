@@ -10,7 +10,7 @@ npm run package:mac -- --out=/absolute/YiZhi/artifacts/scratch/package-RUN
 
 省略 `--out` 时，脚本将包写入原仓库根目录的 `artifacts/scratch/macos-时间戳/`，包括从工作树执行的情况。产物为输出目录内的 `YiZhi-darwin-arm64/YiZhi.app`。脚本要求原生二进制与所附许可清单的架构、大小和摘要一致；现有清单只覆盖 macOS arm64。其他架构需先准备并核对对应发布输入的许可材料。输出目录必须尚不存在；不交叉构建其他平台。将完整 `.app` 拷贝到应用程序目录即可保留运行时和许可文件。课程数据在应用外独立保存；可通过“课程”菜单打开既有课程目录，或使用 `YiZhi.app/Contents/MacOS/YiZhi --course=/absolute/course`。
 
-打包会重新构建，依锁文件从本机 npm 缓存安装生产依赖，包含共享 Worker、SQLite 所属 Electron 运行时、本地 PDF.js worker／字体／CMap／ICC／WASM、原生 Canvas、扩展和字体许可。测试、source maps 和开发工具不进入运行目录。`Contents/Resources/app/package-manifest.json` 记录版本、架构、锁文件摘要、生产依赖及许可文件；Electron 与 Chromium 完整许可也位于 `.app` 内。
+打包使用 `build --production`，依锁文件从本机 npm 缓存安装生产依赖，包含共享 Worker、Electron 内置 SQLite、本地 PDF.js、原生 Canvas、扩展和字体许可。生产构建不执行开发工具 builder，也不带入测试、source maps、旧课 Python helper 或转换脚本。`dist/runtime-inputs.json` 记录正式入口的完整构建依赖，拒绝可达 `tools/desktop/` 的运行包；安装回归同时检查公开桥接能力、离线读取、保存、备份与自动升级。`Contents/Resources/app/package-manifest.json` 记录构建输入、版本、架构、锁摘要、生产依赖及许可文件，Electron／Chromium 许可保留在 `.app` 内。
 
 脚本核对应用内原生依赖的全部许可材料摘要，包括隐藏的上游来源记录。当前脚本创建 **本机 ad-hoc 签名**，并执行 `codesign --verify --deep --strict`；没有开发者发行签名、公证或自动更新。这是可检查的本地应用产物，不表示已发布。
 

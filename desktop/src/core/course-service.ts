@@ -1,12 +1,11 @@
+import {resourcesClient} from '../resources-api';
 import { historyClient } from '../history-api';
 import { backupClient } from '../backup-api';
 import { formatClient } from '../format-api';
 import { upgradeClient } from '../upgrade-api';
 import { retentionClient } from '../retention-api';
 import { courseRestoreClient } from '../course-restore-api';
-import { exchangeClient } from '../exchange-api';
 import { searchClient } from '../search-api';
-import { migrationClient } from '../migration-api';
 import { drawingClient } from '../drawing-api';
 import { annotationClient } from '../annotation-api';
 import { extensionsClient } from '../extensions-api';
@@ -21,15 +20,14 @@ import type { CourseGraph, CourseUnit, ReadingState, OpenedCourse, SaveParagraph
 
 /** One instance belongs to the application host, shared by all its windows/courses. */
 export class CourseService {
+  readonly resources=resourcesClient((action,payload)=>this.request(action,payload));
   readonly upgrade=upgradeClient((action,payload)=>this.request(action,payload));
   readonly backup=backupClient((action,payload)=>this.request(action,payload));
   readonly format=formatClient((action,payload)=>this.request(action,payload));
   readonly retention=retentionClient((action,payload)=>this.request(action,payload));
   readonly courseRestore=courseRestoreClient((action,payload)=>this.request(action,payload));
   readonly formalHistory = historyClient((action,payload)=>this.request(action,payload));
-  readonly exchange = exchangeClient((action, payload) => this.request(action, payload));
   readonly search = searchClient((action, payload) => this.request(action, payload));
-  readonly migration = migrationClient((action, payload) => this.request(action, payload));
   readonly drawings = drawingClient((action, payload) => this.request(action, payload));
   readonly annotations = annotationClient((action, payload) => this.request(action, payload));
   readonly extensions = extensionsClient((action, payload) => this.request(action, payload));
@@ -59,7 +57,7 @@ export class CourseService {
   private stopped = false;
   private closing?: Promise<void>;
   private failure?: Error;
-  constructor(workerPath: string, options?: { observe?: boolean; sourceScheduling?:import('../sources-api').SourceScheduling; upgradeScheduling?:import('../upgrade-api').UpgradeScheduling; cutoverScheduling?:import('./directory-authority').CutoverScheduling; backupScheduling?:import('../backup-api').BackupScheduling; retentionScheduling?:import('../retention-api').RetentionScheduling; parseScheduling?: ParseScheduling; migrationScheduling?: import('../migration-api').MigrationScheduling; restoreScheduling?:import('../course-restore-api').CourseRestoreScheduling }) {
+  constructor(workerPath: string, options?: { observe?: boolean; sourceScheduling?:import('../sources-api').SourceScheduling; upgradeScheduling?:import('../upgrade-api').UpgradeScheduling; cutoverScheduling?:import('./directory-authority').CutoverScheduling; backupScheduling?:import('../backup-api').BackupScheduling; retentionScheduling?:import('../retention-api').RetentionScheduling; parseScheduling?: ParseScheduling; restoreScheduling?:import('../course-restore-api').CourseRestoreScheduling }) {
     this.worker = new Worker(workerPath, { workerData: options });
     this.worker.on('message', message => {
       const waiter = this.pending.get(message.id);
@@ -76,7 +74,7 @@ export class CourseService {
     this.worker.on('error', fail);
     this.worker.on('exit', code => { this.stopped = true; fail(new Error(`课程核心已停止 (${code})`)); });
   }
-  private request<T>(action: string, payload?: unknown): Promise<T> {
+  protected request<T>(action: string, payload?: unknown): Promise<T> {
     if (this.stopped || this.failure || this.closing) return Promise.reject(this.failure ?? new Error('课程核心正在退出'));
     const id = ++this.sequence;
     return new Promise((resolve, reject) => {

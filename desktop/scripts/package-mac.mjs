@@ -22,7 +22,7 @@ catch (error) { if (error.code !== 'ENOENT') throw error; }
 const run = (command, commandArgs, cwd) => execFileSync(command, commandArgs, { cwd, stdio: 'inherit' });
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 
-run('npm', ['run', 'build'], project);
+run('npm', ['run', 'build','--','--production'], project);
 const temporary = await mkdtemp(join(tmpdir(), 'yizhi-package-'));
 try {
   const stage = join(temporary, 'app');
@@ -34,8 +34,6 @@ try {
     return !relative.startsWith('/tests') && !path.endsWith('.map') && !path.endsWith('/generate.py');
   } });
   await cp(join(project, 'licenses'), join(stage, 'licenses'), { recursive: true });
-  await mkdir(join(stage, 'scripts'));
-  await cp(join(project, 'scripts/migrate-course.mjs'), join(stage, 'scripts/migrate-course.mjs'));
   // Use the exact production graph; no development tool or checkout symlink enters the app.
   run('npm', ['ci', '--omit=dev', '--ignore-scripts', '--offline', '--no-audit', '--no-fund'], stage);
   for (const name of ['electron', '@electron/packager', '@playwright/test', 'typescript']) {
@@ -78,7 +76,7 @@ try {
   await writeFile(join(stage, 'package-manifest.json'), JSON.stringify({
     name: 'YiZhi', version: metadata.version, platform: 'darwin', arch: process.arch,
     electron: metadata.devDependencies.electron, lockSha256: digest(await readFile(join(stage, 'package-lock.json'))),
-    source, runtimeFiles,
+    source, runtimeFiles, runtimeInputs:JSON.parse(await readFile(join(stage,'dist/runtime-inputs.json'),'utf8')),
     productionPackages: production.sort((a,b) => a.path.localeCompare(b.path)),
     licenseFiles: licenseFiles.sort((a,b) => a.path.localeCompare(b.path)),
     nativeSbom: `node_modules/@napi-rs/canvas-darwin-${process.arch}/sbom.cdx.json`,
