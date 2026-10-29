@@ -43,12 +43,13 @@ export function useLocalLayout(graph: CourseGraph | undefined, activeId: string 
   useLayoutEffect(() => {
     const anchorId = gesture?.unitId ?? manual.current?.unitId ?? readingAnchorId ?? activeId;
     const old = previous.current.nodes.find(n => n.unitId === anchorId), next = placements.find(n => n.unitId === anchorId);
-    const intended = manual.current?.unitId === anchorId ? manual.current : old;
+    const manualAnchor = manual.current?.unitId === anchorId;
+    const intended = manualAnchor ? manual.current : old;
     const measuredAnchor = anchorId !== undefined && measured.current[anchorId] !== undefined && sizes[anchorId] !== undefined;
     // A manual move remains visible. Only the extra collision displacement is
     // compensated, including the transition out of a live placement gesture.
     // Automatic compensation requires an established measured reading surface.
-    if (ready && enabled && !gesture && (manual.current?.unitId === anchorId || measuredAnchor) && (previous.current.fixed !== anchorId || manual.current?.unitId === anchorId) && (previous.current.id === anchorId || manual.current?.unitId === anchorId) && intended && next && (intended.x !== next.x || intended.y !== next.y))
+    if (ready && enabled && !gesture && (manualAnchor || measuredAnchor) && (previous.current.fixed !== anchorId || manualAnchor) && (previous.current.id === anchorId || manualAnchor) && intended && next && (intended.x !== next.x || intended.y !== next.y))
       camera.compensate(next.x - intended.x, next.y - intended.y);
     measured.current = sizes;
     manual.current = undefined;
