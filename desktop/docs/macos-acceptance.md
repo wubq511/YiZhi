@@ -52,12 +52,20 @@ python3 /absolute/run-ui-serial.py \
   --input /persistent/t28-artifacts/installed-RUN/physical-input.json
 ```
 
-工具只被动观测；`sample LABEL` 取样，`mark CATEGORY pass|fail|unverified NOTE` 保存操作者声明，`quit` 收尾。`background` 仅在实际检测到 live composition 且目标是合成单元时，通过正式提交路径更新独立段落；它不发送 composition 或键盘事件。通过父任务向 PTY 发送命令，避免切换到终端打断候选。未记录实体结果的项目始终保持未验。
+指标采集本身被动；`sample LABEL` 取样，`mark CATEGORY pass|fail|unverified NOTE` 保存操作者声明，`quit` 收尾并关闭应用。`background` 是受控正式更新，仅在实际检测到 live composition 且目标是合成单元时，通过正式提交路径更新独立段落；它不发送 composition 或键盘事件，也不是模型调用。通过父任务向 PTY 发送命令，避免切换到终端打断候选。未记录实体结果的项目始终保持未验。
 
 `wheel-start LABEL`／`wheel-stop` 收集最多 512 条原始 wheel 事件（delta、mode、修饰键、目标区域及事件阻止状态），记录丢弃数与前后精确相机；监听器不改写事件。`isTrusted` 也不能单独证明实体输入，需关联实际操作者和设备说明。复验捏合前通过正常目录导航进入中间倍率，先排除上下限截断；硬边界与指针锚点仍由受影响回归检查。
 
 `arm-background` 提前布置一次独立更新，在下一次真实 trusted compositionstart 后执行，避免操作者切回聊天打断候选；`disarm-background` 取消。正式回执和 composition 前后状态均保存，候选已结束或焦点不在应用时不计重叠通过。此命令不生成输入，也不是模型调用。
 
+前后两端均 active/trusted 不证明同一次 composition 始终未结束；必须保留 starts/ends 计数并单独记录操作者对候选、焦点与文本的观察。控制通道丢失时不回填原 session 的 mark/final/raw；如从仍存活的 renderer 恢复环形 buffer，另存恢复身份、total/dropped/limit，原起点相机不可得就记录 null。原入口总是 launch，没有 attach/resume；不能为恢复采样而重启仍在使用的应用。
+
 实体发现导致手势修正后，`YIZHI_GESTURE_INPUT=/persistent/corrected-input.json` 可选择 `tests/acceptance-gestures-installed.spec.ts` 做受影响安装检查。输入沿用 final schema，另包含实际 `courseDirectory`、`profileDirectory`、`evidenceDirectory`、`editableUnitId`；绑定 corrected clean source／真实包清单。它复用原 500 隔离课程，只检查修正手势、正文/草稿保全与重开，不重复 500 连续导航。旧完整负载证据和新受影响证据需同时保留；实体仍由操作者复验。
 
 正文选区与 pinch 合并修正的安装检查使用 `YIZHI_SELECTION_INPUT=/persistent/combined-input.json` 和 `tests/acceptance-selection-installed.spec.ts`，输入字段同上。它按真实字符矩形及浏览器命中位置执行原生鼠标点击、同一行／换行拖选，核对 0.85 和 1.2 倍率的 caret 与 Range，未用编辑器选区命令代替；拖动分段同步浏览器绘制。pinch 检查只控制浏览器帧调度边界，保留实际应用、事件处理和视口 setter；验证帧前不重复发布、帧后累计结果及指针锚点，再核对正文／草稿重开。程序鼠标和帧调度控制仍不是物理输入或手感结论。
+
+正文草稿恢复的非 GUI 公共回归为 `draft-navigation.test.ts`；可见正文／未完成公式在导航与正常重开后的回归为 `draft-navigation.spec.ts`。实际安装检查选择 `YIZHI_DRAFT_NAVIGATION_INPUT=/persistent/corrected-input.json` 和 `tests/acceptance-draft-navigation-installed.spec.ts`：复用已关闭的既有 500 课程完整副本与独立 profile，不重新增长或改写原草稿。核对可见正文等于持久 patch.after、未完成公式保留、正式公式／独立段／正式单元不被覆盖。课程整体 revision 增长不替代目标 payload 和结构依据核对；同处冲突仍保留供显式处理。
+
+包来源、自动验证来源和最终文档来源分别记录。仅测试观测或文档发生变化、真实运行时输入不变时，保留原包及其 manifest，不为改写来源身份重打相同包；保留实际通过的验证 revision 和后续差异。公有读取与可见内容的比较须限定在同一交互区间，不能把主动导航前的相机变化算作面板漂移，也不能只比部分 ReadingState 字段。
+
+按实际覆盖记录 T-10 环境轴。画板 pinch／Cmd+wheel、DPR、窄窗口或 CSS/root 字号模拟不等于实际 OS 系统字号／文字缩放；后者未操作系统设置就保持 unverified。系统 Reduce Motion 的实际设置与浏览器模拟分别记录；Playwright 默认媒体覆盖若通过 `no-override` 清除，应明确注明这项测试设置。字体失败回退需真实请求失败、平台 glyph 与截图证据，不能从 computed font-family 推断。macOS Electron 结果不外推 Safari、Windows 或其他设备；T28 六条验收与环境覆盖分别报告。
