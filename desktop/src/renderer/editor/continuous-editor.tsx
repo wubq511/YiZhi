@@ -6,6 +6,7 @@ import type { ParagraphSaveChannel } from '../save-channel';
 import { ContinuousEditor } from './controller';
 import './editor.css';
 import { observation } from '../../acceptance-observation';
+import { FormulaEditingContext, type FormulaEditing } from './nested-formula';
 
 export function ContinuousUnitEditor({ course, channel, disabled, saveError, composition, renderBlock, controller, annotate, highlight }: {
   highlight(selection: import('../../annotation-api').AnnotationSelection): void;
@@ -20,17 +21,19 @@ export function ContinuousUnitEditor({ course, channel, disabled, saveError, com
   const [conflicts, setConflicts] = useState<Array<{ blockId: string; current: Record<string, any>; student: Record<string, any> }>>([]);
   const [resolving, setResolving] = useState(false), [failure, setFailure] = useState<string>();
   const latest = useRef({ composition, renderBlock, controller, annotate }); latest.current = { composition, renderBlock, controller, annotate };
-  const roots = useRef(new Map<HTMLElement, { root: Root; block: ReadingBlock }>());
+  const roots = useRef(new Map<HTMLElement, { root: Root; block: ReadingBlock; editing: FormulaEditing }>());
+  const render = ({root,block,editing}:{root:Root;block:ReadingBlock;editing:FormulaEditing}) =>
+    root.render(<FormulaEditingContext.Provider value={editing}>{latest.current.renderBlock(block)}</FormulaEditingContext.Provider>);
   useEffect(() => {
     if (!element.current) return;
     const editor = new ContinuousEditor(element.current, course, channel, {
       annotate: selection => latest.current.annotate(selection),
       composition: active => latest.current.composition(active),
       commands: window.yizhi.commands, status: setChecks,
-      renderOpaque(element, block) {
-        const root = createRoot(element); roots.current.set(element, { root, block });
-        root.render(latest.current.renderBlock(block));
-        return () => { roots.current.delete(element); queueMicrotask(() => root.unmount()); };
+      renderOpaque(element, block, editing) {
+        const entry = { root: createRoot(element), block, editing }; roots.current.set(element, entry);
+        render(entry);
+        return { update(next) { entry.block=next;render(entry); }, destroy() { roots.current.delete(element); queueMicrotask(() => entry.root.unmount()); } };
       },
     });
     instance.current = editor; latest.current.controller(editor);
@@ -41,7 +44,7 @@ export function ContinuousUnitEditor({ course, channel, disabled, saveError, com
   useEffect(() => { let cancelled = false; if (saveError) void instance.current?.inputConflicts().then(items => { if (!cancelled) setConflicts(items); });
     else setConflicts([]); return () => { cancelled = true; }; }, [saveError, course]);
   useEffect(() => { instance.current?.reconcile(course); }, [course]);
-  useEffect(() => { for (const { root, block } of roots.current.values()) root.render(renderBlock(block)); }, [renderBlock]);
+  useEffect(() => { for (const entry of roots.current.values()) render(entry); }, [renderBlock]);
   const resolve = async (action: () => Promise<void>) => {
     setResolving(true); setFailure(undefined);
     try { await action(); setConflicts([]); } catch (error) { setFailure((error as Error).message); }

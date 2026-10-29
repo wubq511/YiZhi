@@ -1,4 +1,4 @@
-import { unitBlocks,linkedExperiment } from './consistency-links';
+import { unitBlocks,linkedExperiment,changedCouplings,isBuiltin } from './consistency-links';
 import type { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
 import type { CourseUnit, ReadingBlock } from '../shared';
@@ -60,6 +60,29 @@ export class BuiltinExperiments {
       // No heap/timer mutation before the enclosing necessary group really commits.
       return () => { if (pending && this.live.has(id)) this.live.set(id,pending); };
     } };
+  }
+  /** Student exploration keeps existing link identities and metadata; only formula semantics/config change. */
+  prepareStudentEdit(before:CourseUnit,after:CourseUnit) {
+    const old=unitBlocks(before),next=unitBlocks(after),changes:import('../history-api').HistoryChange[]=[],publications:Array<()=>void>=[];
+    const affected=changedCouplings(before,after);
+    for(const id of affected) {
+      const prior=old.find(b=>b.id===id),block=next.find(b=>b.id===id);
+      if(!isBuiltin(prior)||!equal(prior,block))throw new Error('新增或变更实验仍需要完整一致组共同核验');
+      const linked=next.filter(b=>linkedExperiment(b)===id),previous=old.filter(b=>linkedExperiment(b)===id);
+      if(!equal(linked.map(b=>b.id),previous.map(b=>b.id)))throw new Error('新增、删除或改向的关联公式需要完整一致组');
+      const edited=linked.filter(b=>!equal(b,old.find(a=>a.id===b.id)));
+      if(!edited.length||edited.some(b=>!equal({...b,payload:{...b.payload,latex:old.find(a=>a.id===b.id)!.payload.latex}},old.find(a=>a.id===b.id))))throw new Error('关联公式只支持保留身份的公式编辑');
+      const formulas=new Set(edited.map(b=>b.payload.latex));
+      if(formulas.size!==1||typeof edited[0].payload.latex!=='string')throw new Error('同组关联公式修改不一致');
+      const formula=edited[0].payload.latex,priorDefinition=this.formalDefinition(before.id,id),definition=convertFormula(definitionFrom(block!.payload),formula);
+      if(definition.check==='verified') {
+        block!.payload={...block!.payload,config:definition.config,...(definition.kind==='mux'?{bindings:{...block!.payload.bindings,output:definition.outputName}}:{})};
+      }
+      for(const f of linked)f.payload={...f.payload,latex:formula};
+      const saved=this.restoreDefinition(before.id,block!,definition);publications.push(saved.publish);
+      changes.push({objectId:`experiment:${before.id}/${id}`,before:priorDefinition,after:saved.definition,beforeVersion:priorDefinition.revision,afterVersion:saved.definition.revision});
+    }
+    return {changes,publish:()=>{for(const publish of publications)publish();}};
   }
   /** Historical values are already stored facts. Restore their definition, never a runtime snapshot. */
   restoreDefinition(unitId:string, block:ReadingBlock, historical:BuiltinDefinition) {

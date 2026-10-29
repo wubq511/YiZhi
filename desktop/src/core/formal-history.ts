@@ -280,6 +280,7 @@ export class FormalHistory {
       for(const f of unitBlocks(next).filter(b=>couplings.has(linkedExperiment(b)??''))) {
         const e=unitBlocks(next).find(b=>b.id===linkedExperiment(f));if(!isBuiltin(e))throw new Error('历史公式留下悬空实验引用');
         const definition=replacements.get(`experiment:${unitId}/${e!.id}`)??this.experiments.formalDefinition(unitId,e!.id);
+        if(definition.check==='needs-check') {if(definition.formula!==f.payload.latex)throw new Error('历史待核对公式与实验定义不一致');continue;}
         const checked=convertFormula(definition as any,f.payload.latex);
         if(checked.check!=='verified'||checked.outputName!==definition.outputName)throw new Error('历史公式与实验定义不能共同成立');
         if(definition.kind==='mux'&&!equal(formulaOutputs(f.payload.latex,Object.keys(definition.initialInputs)),assignments(Object.keys(definition.initialInputs)).map(bits=>evaluate(definition as any,bits).output)))throw new Error('历史公式与实验计算不一致');

@@ -6,7 +6,7 @@ import { CourseService } from '../src/core/course-service';
 import { prepareTargetResults } from './acceptance-targets-prepare';
 import { AcceptanceMetrics } from './acceptance-metrics';
 import { navigateUnit } from './acceptance-study';
-import { resizeBoardWindow } from './board-test-helpers';
+import { resizeBoardWindow,expectBoundedReading } from './board-test-helpers';
 
 test('T28 opt-in result display releases previous heavy reading surfaces across distinct saved controlled targets', async () => {
   test.skip(process.env.YIZHI_ACCEPTANCE_SMOKE !== '1', 'Small generated-fixture preparation only; no model.');
@@ -29,7 +29,7 @@ test('T28 opt-in result display releases previous heavy reading surfaces across 
       await buttons.nth(index).click();
       await expect(page.locator(`article[data-unit-id="${fixture.results[index].unitId}"][data-reading-active=true]`)).toHaveCount(1);
       await metrics.sample(`saved-target:${index + 1}`);
-      expect(await page.locator('.reading-layer').count()).toBeLessThanOrEqual(2);
+      await expectBoundedReading(page);
     }
     await metrics.write('measurement.json', { fixture, automatedStatus: 'small harness passed', physicalStatus: 'not exercised' });
   } catch (error) { await metrics.sample('failure').catch(() => {}); await metrics.write('failure.json', { error: String(error), fixture }); throw error;

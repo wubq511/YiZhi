@@ -205,11 +205,13 @@ function open(directory: string,preparing=false): OpenedCourse {
   } catch (error) { db?.close();identityOwner?.close(); owner.close(); throw error; }
 }
 function commit(course: Course, command: EditCommand) {
-  return commitEdit(course.db, command, (unitId, revision, blockIds) => {
+  const publications:Array<()=>void>=[];
+  const receipt=commitEdit(course.db, command, (unitId, revision, blockIds) => {
     const changes = course.groups.observe();
     course.agent.studentChanged({ operationId: command.operationId, unitId, revision, objectIds: blockIds });
     return changes;
-  });
+  },(before,after)=>{const prepared=course.experiments.prepareStudentEdit(before,after);publications.push(prepared.publish);return prepared.changes;});
+  for(const publish of publications)publish();return receipt;
 }
 function save(command: SaveParagraph): SaveReceipt {
   if (!command || command.blockId !== EDITABLE) throw new Error('无效的段落保存请求');
@@ -409,7 +411,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action === 'relations:read') { const course = session(payload.sessionId,action); const basis = course.relations.read(payload); value = { ...basis, graph: layoutGraph(course.db, basis.graph) }; }
     else if (action === 'relations:commit') value = session(payload.sessionId,action).relations.commit(payload);
     else if (action === 'relations:query') value = session(payload.sessionId,action).relations.query(payload.operationId);
-    else if (action === 'commands:resolveInput') { const c = session(payload.sessionId,action); value = resolveInput(c.db, payload, () => c.groups.observe()); }
+    else if (action === 'commands:resolveInput') { const c = session(payload.sessionId,action); const publications:Array<()=>void>=[];value = resolveInput(c.db, payload, () => c.groups.observe(),(before,after)=>{const prepared=c.experiments.prepareStudentEdit(before,after);publications.push(prepared.publish);return prepared.changes;});for(const publish of publications)publish(); }
     else if (action.startsWith('commands:')) value = session(payload.sessionId,action).groups.dispatch(action, payload);
     else if (action.startsWith('drawings:')) value = session(payload.sessionId,action).drawings.dispatch(action, payload);
     else if (action.startsWith('search:')) value = await session(payload.sessionId,action).search.dispatch(action, payload);

@@ -1,3 +1,4 @@
+import {expectBoundedReading} from './board-test-helpers';
 import type { DatabaseSync } from 'node:sqlite';
 import { openFaultDatabase } from './fault-database';
 import { evidencePath } from './evidence-paths';
@@ -284,7 +285,7 @@ test('wheel routes pan and pointer-centered zoom without stealing text input', a
     const window = await app.firstWindow();
     await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
     const editor = window.getByRole('textbox', { name: '编辑首段正文' });
-    await editor.fill('空格'); await editor.press('End'); await editor.press('Space'); await editor.press('X');
+    await editor.fill('空格'); await window.keyboard.press('End'); await window.keyboard.press('Space'); await window.keyboard.press('X');
     await expect(editor).toHaveText('空格 X');
     const board = window.locator('main.board'); const bounds = (await board.boundingBox())!;
     await window.mouse.move(bounds.x + bounds.width - 30, bounds.y + 150);
@@ -532,7 +533,7 @@ test('two actual IPC editors save both paragraphs, split once and recover an unf
   } finally { await app?.close(); await rm(root, { recursive: true, force: true }); }
 });
 
-test('moving among sample units keeps only the active reading and the pinned editor mounted', async () => {
+test('moving among sample units bounds static reading bodies and protects the active and pinned editors', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-bounded-reading-'));
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
@@ -542,7 +543,7 @@ test('moving among sample units keeps only the active reading and the pinned edi
     for (const name of ['非十进制与十进制互转', '二进制、八进制与十六进制互转', '位、字节与存储容量单位']) {
       await nav.getByRole('button', { name, exact: true }).click();
       await expect(window.getByRole('heading', { name, exact: true })).toBeVisible();
-      expect(await window.locator('.reading-layer').count()).toBeLessThanOrEqual(2);
+      await expectBoundedReading(window);
     }
     await nav.getByRole('button', { name: '位置记数法与权展开', exact: true }).click();
     await expect(window.getByRole('textbox', { name: '编辑首段正文' })).toBeVisible();

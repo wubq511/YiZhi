@@ -15,7 +15,7 @@ test('keyboard caret navigation keeps board controls fixed and reopens at the ac
     await first.fill('连续输入的长正文应当保持同一个画板相机和输入现场。'.repeat(90));
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     const beforeZoom = await page.locator('.react-flow__viewport').evaluate(el => new DOMMatrixReadOnly(getComputedStyle(el).transform).a);
-    await first.press('Meta+ArrowDown');
+    await page.keyboard.press('Meta+ArrowDown');
     const board = page.locator('main.board');
     const tools = page.locator('.board-tools');
     const bounds = (await board.boundingBox())!;

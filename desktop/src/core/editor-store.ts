@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import type { CourseUnit, ReadingBlock } from '../shared';
 import { equal, type ContentPatch } from '../editor-api';
+import { unitBlocks } from '../reading-model';
 
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 export function initializeEditorStore(db: DatabaseSync) {
@@ -23,10 +24,11 @@ export function applyContentPatch(db: DatabaseSync, unit: CourseUnit, patch: Con
   const blocks = unit.reading.blocks;
   const before: ReadingBlock[] = [], after: ReadingBlock[] = [];
   const seen = new Set<string>();
+  const editable = new Map(unitBlocks(unit).map(block => [block.id, block]));
   for (const u of patch.updates) {
     if (seen.has(u.blockId)) throw new Error('同一修改不能重复块身份');
     seen.add(u.blockId);
-    const block = blocks.find(b => b.id === u.blockId);
+    const block = editable.get(u.blockId);
     if (!block || !['paragraph', 'formula'].includes(block.kind) || block.children?.length || !equal(block.payload, u.before))
       throw new Error('编辑块依据已变化或暂不支持编辑，草稿仍保留');
     const field = block.kind === 'paragraph' ? 'text' : 'latex';

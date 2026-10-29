@@ -2,7 +2,6 @@ import { formulaModel, formulaEdit } from './formula-selection';
 import type { FormulaModel, FormulaEditProof } from '../../annotation-api';
 import { MathfieldElement } from 'mathlive';
 import katex from 'katex';
-import type { NodeView } from '@tiptap/pm/view';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import type { ReadingBlock } from '../../shared';
 import { observation } from '../../acceptance-observation';
@@ -10,8 +9,9 @@ import { observation } from '../../acceptance-observation';
 MathfieldElement.fontsDirectory = './mathlive-fonts';
 MathfieldElement.soundsDirectory = null;
 
-export function formulaView(initial: PMNode, changed: (blockId: string, latex: string, complete: boolean, proof?: FormulaEditProof, restored?: boolean) => void,
-  draft: (blockId: string) => string | undefined, annotate: (block: ReadingBlock, field: MathfieldElement) => void): NodeView {
+type FormulaNode = { attrs: PMNode['attrs']; type: { name: string } };
+export function formulaView(initial: FormulaNode, changed: (blockId: string, latex: string, complete: boolean, proof?: FormulaEditProof, restored?: boolean) => void,
+  draft: (blockId: string) => string | undefined, annotate: (block: ReadingBlock, field: MathfieldElement) => void) {
   let block = initial.attrs.block as ReadingBlock;
   const dom = document.createElement('div'); dom.className = 'editor-formula'; dom.contentEditable = 'false';
   dom.dataset.blockId = block.id;
@@ -71,6 +71,7 @@ export function formulaView(initial: PMNode, changed: (blockId: string, latex: s
     edit.hidden = true; select.hidden = true; add.hidden = false; leave.hidden = false;
   };
   edit.onclick = () => enter(false);
+  dom.addEventListener('formula-edit',()=>enter(false));
   select.onclick = () => enter(true);
   const leave = document.createElement('button'); leave.type = 'button'; leave.textContent = '返回正文'; leave.hidden = true;
 
@@ -86,7 +87,7 @@ export function formulaView(initial: PMNode, changed: (blockId: string, latex: s
   });
   dom.append(staticMath, edit, select, add, leave, state); paint();
   return { dom, stopEvent: () => true, ignoreMutation: () => true,
-    update(node) {
+    update(node: FormulaNode) {
       if (node.type.name !== 'formula' || node.attrs.block.id !== block.id) return false;
       const next = node.attrs.block as ReadingBlock;
       // Own acknowledgements and node-view updates never reset active input or its inner history.

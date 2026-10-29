@@ -9,22 +9,21 @@ import { Drawings, type DrawingHandle } from './drawings';
 import { ExchangePanel } from './exchange-panel';
 import { SearchPanel } from './search-panel';
 import type { SearchHit } from '../search-api';
-import { highlightSearch, paintFrame } from './search-location';
+import { highlightSearch, paintFrame, waitForSearchElement } from './search-location';
 import { AnnotationPanel, type AnnotationPanelHandle } from './annotation-panel';
 import { CameraController, type FollowState } from './camera-controller';
 import { PinchViewportFrame } from './pinch-viewport-frame';
 import { useLocalLayout, ReadingSurface } from './local-layout';
 import type { LayoutPlacement } from '../layout';
 import {ExtensionExperiment,flushExtensions} from './extension-experiment';
-import { BuiltinExperiment, flushBuiltinExperiments } from './builtin-experiment';
+import { BuiltinExperiment, StaticBuiltinExperiment, flushBuiltinExperiments } from './builtin-experiment';
 
 import { AgentPanel, type AgentPanelHandle } from './agent-panel';
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { ReactFlow, ReactFlowProvider, MiniMap, useReactFlow, MarkerType, type Viewport } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { createRoot } from 'react-dom/client';
-import katex from 'katex';
 import rough from 'roughjs';
 import 'katex/dist/katex.min.css';
 import './style.css';
@@ -34,6 +33,10 @@ import { RelationsPanel, useRelationEvents } from './relations-panel';
 import { ControlledProducer } from './controlled-producer';
 import { ContinuousUnitEditor } from './editor/continuous-editor';
 import { ActiveUnitEditor, type UnitInputHandle } from './editor/active-unit-editor';
+import { NestedFormula } from './editor/nested-formula';
+import { unitBlocks } from '../reading-model';
+import { knowledgeFields } from '../search-projection';
+import { retainReadingCache, nativeReadingUnits, nativeRangeIntersects } from './reading-cache';
 import type { ContinuousEditor } from './editor/controller';
 import { SourcePanel, SourceReferences, type SourcePanelHandle } from './source-panel';
 import type { SourceCitation } from '../sources-api';
@@ -63,24 +66,26 @@ function ReadingBoundary({ children, blockId }: { children: React.ReactNode; blo
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [held, setHeld] = useState(false);
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
-    const observer = new IntersectionObserver(entries => setVisible(entries[0].isIntersecting), { root: element.closest('main.board') });
-    observer.observe(element); return () => observer.disconnect();
+    const selection = () => setHeld(nativeRangeIntersects(element));
+    const observer = new IntersectionObserver(entries => { selection(); setVisible(entries[0].isIntersecting); }, { root: element.closest('main.board') });
+    document.addEventListener('selectionchange', selection); selection();
+    observer.observe(element); return () => { observer.disconnect(); document.removeEventListener('selectionchange', selection); };
   }, []);
-  return <div data-reading-block data-block-id={blockId} ref={ref} inert={!visible && !focused} onFocus={() => setFocused(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>{children}</div>;
+  return <div data-reading-block data-block-id={blockId} ref={ref} inert={!visible && !focused && !held} onFocus={() => setFocused(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>{children}</div>;
 }
 
-function Block(props: Parameters<typeof BlockContent>[0]) {
+const Block=memo(function Block(props: Parameters<typeof BlockContent>[0]) {
   return <div data-search-block={props.block.id}><BlockContent {...props} /></div>;
-}
-function BlockContent({ block, onReference, reading, updateReading, onSource, experiment }: { block: ReadingBlock; experiment: { contentScope?: string; resourceAssets?: string[]; unitId: string; sessionId: string; active: boolean; disabled: boolean; composition?: (active: boolean) => void }; onReference: (id: string, blockId: string) => void; reading: ReadingState | null; updateReading: (key: string, value: boolean) => void; onSource: (button: HTMLButtonElement) => void }) {
+},(a,b)=>a.block===b.block&&a.reading?.expanded===b.reading?.expanded&&a.experiment.sessionId===b.experiment.sessionId&&a.experiment.active===b.experiment.active&&a.experiment.disabled===b.experiment.disabled&&a.experiment.contentScope===b.experiment.contentScope&&a.experiment.resourceAssets===b.experiment.resourceAssets);
+function BlockContent({ block, onReference, reading, updateReading, onSource, experiment }: { block: ReadingBlock; experiment: { contentScope?: string; resourceAssets?: string[]; unitId: string; sessionId: string; active: boolean; disabled: boolean; composition?: (active: boolean) => void; editLinkedFormula?: (blockId:string)=>void }; onReference: (id: string, blockId: string) => void; reading: ReadingState | null; updateReading: (key: string, value: boolean) => void; onSource: (button: HTMLButtonElement) => void }) {
   const payload = block.payload;
   const children = block.children?.map(child => <ReadingBoundary key={child.id} blockId={child.id}><Block block={child} experiment={experiment} onReference={onReference} onSource={onSource} reading={reading} updateReading={updateReading} /></ReadingBoundary>);
   if (block.kind === 'paragraph') return <p data-search-field="text">{payload.text}</p>;
-  if (block.kind === 'formula') return <div className="formula" data-search-field="latex" role="math" aria-label={payload.latex}
-    dangerouslySetInnerHTML={{ __html: katex.renderToString(payload.latex, { throwOnError: false, trust: false, displayMode: true }) }} />;
+  if (block.kind === 'formula') return <NestedFormula block={block} />;
   if (block.kind === 'table') return <div className="table-scroll" tabIndex={0} aria-label="数制对照表"><table>
     <thead><tr>{payload.columns.map((column: string, i: number) => <th key={i} data-search-field={`columns.${i}`}>{column}</th>)}</tr></thead>
     <tbody>{payload.rows.map((row: (string | number)[], i: number) => <tr key={i}>{row.map((cell, j) => <td key={j} data-search-field={`rows.${i}.${j}`}>{cell}</td>)}</tr>)}</tbody>
@@ -92,7 +97,7 @@ function BlockContent({ block, onReference, reading, updateReading, onSource, ex
     {payload.hint && <details className="hint" open={reading?.expanded[block.id + ":hint"] ?? false} onToggle={event => updateReading(block.id + ":hint", event.currentTarget.open)}><summary>学习提示</summary><p data-search-field="hint">{payload.hint}</p></details>}
     {block.kind === 'exercise' ? <details className="answer" open={reading?.expanded[block.id + ":answer"] ?? false} onToggle={event => updateReading(block.id + ":answer", event.currentTarget.open)}><summary>答案与步骤</summary>{children}</details> : children}
   </details>;
-  if (block.kind === 'interactive' && ['mux', 'decoder', 'kmap'].includes(payload.component)) return <BuiltinExperiment block={block} {...experiment} />;
+  if (block.kind === 'interactive' && ['mux', 'decoder', 'kmap'].includes(payload.component)) return experiment.active ? <BuiltinExperiment block={block} {...experiment} /> : <StaticBuiltinExperiment block={block} />;
   if (block.kind === 'figure' && payload.asset) {
     const registered = experiment.contentScope === 'content-candidate' || experiment.resourceAssets?.includes(payload.asset);
     const fixedPage = /^\/source-pages\/([^/]+)\/([^/]+)\/(\d+)\.png$/.exec(payload.asset);
@@ -111,15 +116,30 @@ function App() {
   ), [flow]);
   useEffect(() => () => pinchFrame.cancel(), [pinchFrame]);
   const boardRef = useRef<HTMLElement>(null);
+  const [heldReading,setHeldReading]=useState<string[]>([]),heldReadingRef=useRef<string[]>([]);
+  const [mutationUnit,setMutationUnit]=useState<string>(),mutationUnitRef=useRef<string|undefined>(undefined);
+  const updateReadingProtection=useCallback(()=>{
+    const ids=nativeReadingUnits(boardRef.current);
+    if(ids.join(',')!==heldReadingRef.current.join(',')){heldReadingRef.current=ids;setHeldReading(ids);}
+  },[]);
+  useEffect(()=>{
+    const update=()=>updateReadingProtection();
+    const afterFocus=()=>queueMicrotask(update);
+    document.addEventListener('selectionchange',update);document.addEventListener('focusin',update);document.addEventListener('focusout',afterFocus);
+    return()=>{document.removeEventListener('selectionchange',update);document.removeEventListener('focusin',update);document.removeEventListener('focusout',afterFocus);};
+  },[updateReadingProtection]);
   const [nodesReady, setNodesReady] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [graph, setGraph] = useState<CourseGraph>();
   const [selected, setSelected] = useState<CourseUnit>();
   const [mounted, setMounted] = useState<CourseUnit[]>([]);
+  const cachedBodies=useMemo(()=>observation.resource('reading.cachedUnits'),[]);
+  useEffect(()=>()=>cachedBodies.close(),[cachedBodies]);
   useEffect(() => { if (observation.active) {
+    cachedBodies.set(mounted.length);
     observation.sample('reading.cachedUnits', mounted.length);
     observation.sample('reading.cachedBodyCodeUnits', JSON.stringify(mounted).length);
-  } }, [mounted]);
+  } }, [mounted,cachedBodies]);
   const [readError, setReadError] = useState<string>();
   const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 0.1 });
   const [directory, setDirectory] = useState(true);
@@ -222,7 +242,59 @@ function App() {
     },
   }, setFollowState), [flow, pinchFrame]);
   useEffect(() => () => camera.dispose(), [camera]);
-  const local = useLocalLayout(graph, selected?.id, camera, viewport.zoom >= .55, cameraReady);
+  const layoutMetadata=useRef<import('../layout').LayoutNode[]>([]),rangeAnchorRef=useRef<import('../layout').LayoutPlacement|undefined>(undefined);
+  const readingAnchor=useMemo(()=>{
+    if(!cameraReady||viewport.zoom<.55)return undefined;
+    const x=(40-viewport.x)/viewport.zoom,y=(100-viewport.y)/viewport.zoom;
+    const nodes=layoutMetadata.current.length?layoutMetadata.current:graph?.layout.nodes??[];
+    const previous=nodes.find(n=>n.unitId===rangeAnchorRef.current?.unitId);
+    if(previous&&viewport.x+(previous.x+previous.width)*viewport.zoom>0&&viewport.x+previous.x*viewport.zoom<(boardRef.current?.clientWidth??800)&&viewport.y+(previous.y+previous.height)*viewport.zoom>0&&viewport.y+previous.y*viewport.zoom<(boardRef.current?.clientHeight??600))return rangeAnchorRef.current;
+    const distance=(n:import('../layout').LayoutNode)=>Math.hypot(Math.max(n.x-x,0,x-n.x-n.width),Math.max(n.y-y,0,y-n.y-n.height));
+    const anchor=[...nodes].sort((a,b)=>distance(a)-distance(b)||Math.hypot(a.x-x,a.y-y)-Math.hypot(b.x-x,b.y-y))[0];
+    return rangeAnchorRef.current=anchor?{unitId:anchor.unitId,x:anchor.x,y:anchor.y,width:anchor.width>=360?anchor.width:650}:undefined;
+  },[viewport,cameraReady,graph]);
+  const local = useLocalLayout(graph, selected?.id, camera, viewport.zoom >= .55, cameraReady,readingAnchor);
+  layoutMetadata.current=local.placements;
+  const [readingBounds,setReadingBounds]=useState({width:0,height:0});
+  useEffect(()=>{const board=boardRef.current;if(!board)return;const update=()=>setReadingBounds({width:board.clientWidth,height:board.clientHeight});const observer=new ResizeObserver(update);observer.observe(board);update();return()=>observer.disconnect();},[course?.sessionId]);
+  // Geometry only: the graph DTO/projection stays memoized throughout camera movement.
+  const readingRange=useMemo(()=>{
+    if(!cameraReady||viewport.zoom<.55)return [];
+    const margin=100,left=(-viewport.x-margin)/viewport.zoom,top=(-viewport.y-margin)/viewport.zoom,right=(readingBounds.width-viewport.x+margin)/viewport.zoom,bottom=(readingBounds.height-viewport.y+margin)/viewport.zoom;
+
+    return local.placements.filter(n=>n.x+(n.width>=360?n.width:650)>=left&&n.x<=right&&n.y+n.height>=top&&n.y<=bottom).sort((a,b)=>Number(b.unitId===readingAnchor?.unitId)-Number(a.unitId===readingAnchor?.unitId)||a.y-b.y||a.x-b.x).map(n=>n.unitId);
+  },[cameraReady,viewport,readingBounds,local.placements,readingAnchor]);
+  const rangeKey=readingRange.join(','),rangeDemand=useRef<string[]>([]),rangePump=useRef<Promise<void>|undefined>(undefined),mountedRef=useRef(mounted);mountedRef.current=mounted;
+  const selectedRef=useRef(selected?.id);selectedRef.current=selected?.id;
+  const protectedReadingUnits=(activeId=selectedRef.current)=>[...new Set(['KU-001',activeId,...heldReadingRef.current,mutationUnitRef.current].filter((id):id is string=>!!id))];
+  const cacheUnit=useCallback((unit:CourseUnit,activeId=selectedRef.current)=>{
+    setMounted(previous=>{
+      const all=previous.some(u=>u.id===unit.id)?previous.map(u=>u.id===unit.id?unit:u):[...previous,unit];
+      const next=retainReadingCache(all,rangeDemand.current,protectedReadingUnits(activeId));
+      mountedRef.current=next;return next;
+    });
+  },[]);
+  useEffect(()=>{
+    rangeDemand.current=readingRange;
+    observation.sample('reading.rangeUnits',readingRange.length);
+    observation.sample('reading.protectedUnits',protectedReadingUnits().length);
+    setMounted(previous=>{const next=retainReadingCache(previous,readingRange,protectedReadingUnits());mountedRef.current=next;return next;});
+    const run=async()=>{
+      const failed=new Set<string>();
+      while(sessionRef.current){
+        const sessionId=sessionRef.current,id=rangeDemand.current.find(id=>!failed.has(id)&&!mountedRef.current.some(u=>u.id===id));
+        if(!id)break;
+        try{
+          observation.count('reading.rangeReads');
+          const unit=await window.yizhi.readUnit(sessionId,id);
+          if(sessionRef.current!==sessionId||!rangeDemand.current.includes(id))continue;
+          cacheUnit(unit);
+        }catch(error){failed.add(id);if(sessionRef.current===sessionId&&rangeDemand.current.includes(id))setReadError((error as Error).message);}
+      }
+    };
+    if(!rangePump.current){const work=run();rangePump.current=work;void work.finally(()=>{if(rangePump.current===work)rangePump.current=undefined;});}
+  },[course?.sessionId,rangeKey,heldReading.join(','),mutationUnit,selected?.id,cacheUnit]);
+  useEffect(()=>()=>{rangeDemand.current=[];},[]);
   const placementsRef = useRef(local.placements); placementsRef.current = local.placements;
   const [layoutSave, setLayoutSave] = useState<'saved' | 'pending' | 'error'>('saved');
   type PendingPlacement = { request: import('../drawing-api').PlacementChange & {sessionId:string}; done(edit: import('../drawing-api').PlacementEdit):void };
@@ -347,7 +419,7 @@ function App() {
     if (!position) return;
     setReadError(undefined);
     if (!await flushUnitInputs(true)) { setReadError('当前单元输入尚未保存，请先处理后再切换。'); return; }
-    try { const unit = await window.yizhi.readUnit(course.sessionId, id); persist(nextState ?? { ...(readingRef.current ?? { expanded: {}, returnStack: [], scrollTop: 0 }), unitId: id, scrollTop: 0, pinnedUnitId: mounted.some(item => item.id === 'KU-001') || id === 'KU-001' ? 'KU-001' : undefined }); setSelected(unit); setDirectoryTheme(unit.theme.id); setMounted(previous => previous.some(item => item.id === id) ? previous.map(item => item.id === id ? unit : item) : [...previous.filter(item => item.id === 'KU-001'), unit]); }
+    try { const unit = await window.yizhi.readUnit(course.sessionId, id); persist(nextState ?? { ...(readingRef.current ?? { expanded: {}, returnStack: [], scrollTop: 0 }), unitId: id, scrollTop: 0, pinnedUnitId: mounted.some(item => item.id === 'KU-001') || id === 'KU-001' ? 'KU-001' : undefined }); selectedRef.current=id;setSelected(unit); setDirectoryTheme(unit.theme.id); cacheUnit(unit,id); }
 
     catch (error) { setSelected(undefined); setReadError((error as Error).message); }
     pinchFrame.cancel();
@@ -501,6 +573,24 @@ function App() {
     }
     setSearchReturn(() => restore);
   };
+  const editLinkedFormula=async(unitId:string,experimentId:string)=>{
+    if(!course||composing.current)return;
+    try {
+      if(selected?.id!==unitId)await go(unitId);
+      if(unitId!==course.unit.id)await readyUnitInput(unitId);
+      await paintFrame();
+      const unit=await window.yizhi.readUnit(course.sessionId,unitId),formula=unitBlocks(unit).find(b=>b.kind==='formula'&&b.payload.experimentBlockId===experimentId);
+      if(!formula)throw new Error('关联公式当前不存在，请重新读取单元。');
+      const disclosure=knowledgeFields(unit).find(f=>f.blockId===formula.id&&f.field==='latex')?.disclosure??[];
+      const current=readingRef.current;
+      if(current&&disclosure.length)persist({...current,expanded:{...current.expanded,...Object.fromEntries(disclosure.map(key=>[key,true]))}});
+      const element=await waitForSearchElement(()=>boardRef.current?.querySelector<HTMLElement>(`article[data-unit-id="${CSS.escape(unitId)}"] .editor-formula[data-block-id="${CSS.escape(formula.id)}"]`));
+      for(let parent=element.parentElement;parent&&parent.tagName!=='ARTICLE';parent=parent.parentElement)if(parent instanceof HTMLDetailsElement)parent.open=true;
+      await paintFrame();
+      const rect=element.getBoundingClientRect(),board=boardRef.current!.getBoundingClientRect();camera.pan(board.left+40-rect.left,board.top+110-rect.top);
+      await paintFrame();element.dispatchEvent(new CustomEvent('formula-edit'));
+    }catch(error){setReadError((error as Error).message);}
+  };
   const prepareCourseSnapshot=async()=>{
     if(!course)throw new Error('课程尚未打开');
         if(composing.current)throw new Error('请先完成中文候选输入，再保存课程副本。');
@@ -574,17 +664,11 @@ function App() {
           camera.start(); persist({...(readingRef.current ?? {unitId:task.snapshot.target.unitId,expanded:{},returnStack:[],scrollTop:0}),modification:{targetId:workTarget.current,ended:false}});
         }
         if(phase==='start' || phase==='view' || task.progress?.stage==='committed') {
+          mutationUnitRef.current=displayedUnitId;setMutationUnit(displayedUnitId);
           const unit=await window.yizhi.readUnit(course.sessionId,displayedUnitId);
           if(unit.id==='KU-001'){await channel.current?.synchronize();setCourse(await window.yizhi.open());}else await unitInputs.current.get(unit.id)?.synchronize();
           // Keep the current interaction and incoming target; old task displays are reading projections.
-          const protectedUnits = new Set([readingRef.current?.unitId, document.activeElement?.closest('article[data-unit-id]')?.getAttribute('data-unit-id')]);
-          const selection = getSelection();
-          if (selection && !selection.isCollapsed) for (const article of document.querySelectorAll('article[data-unit-id]'))
-            for (let index = 0; index < selection.rangeCount; index++) if (selection.getRangeAt(index).intersectsNode(article)) protectedUnits.add(article.getAttribute('data-unit-id'));
-          setMounted(previous=>{
-            const retained=previous.filter(item=>item.id==='KU-001'||item.id===unit.id||protectedUnits.has(item.id));
-            return retained.some(item=>item.id===unit.id)?retained.map(item=>item.id===unit.id?unit:item):[...retained,unit];
-          });
+          updateReadingProtection();cacheUnit(unit);
           setSelected(previous=>previous?.id===unit.id?unit:previous);
           setGraph(await window.yizhi.graph(course.sessionId));setReview(await window.yizhi.reviewStates(course.sessionId));
         }
@@ -592,10 +676,10 @@ function App() {
           if(composing.current)throw new Error('请先完成中文候选输入，再查看修改结果。');
           if(!await flushUnitInputs(true))throw new Error('请先保存当前单元输入。');
           const unit=await window.yizhi.readUnit(course.sessionId,displayedUnitId);
-          setMounted(previous=>[...previous.filter(item=>item.id==='KU-001'&&item.id!==unit.id),unit]);
+          selectedRef.current=unit.id;cacheUnit(unit,unit.id);
           setSelected(unit);setDirectoryTheme(unit.theme.id);if(readingRef.current)persist({...readingRef.current,unitId:unit.id});requestAnimationFrame(()=>camera.resume());
         }
-        else if(phase==='finish'){camera.finish();if(readingRef.current)persist({...readingRef.current,modification:{targetId:workTarget.current,ended:true}});}
+        else if(phase==='finish'){mutationUnitRef.current=undefined;setMutationUnit(undefined);camera.finish();if(readingRef.current)persist({...readingRef.current,modification:{targetId:workTarget.current,ended:true}});}
         else requestAnimationFrame(()=>camera.updated());
       }} onOpenChange={value => { setAgentOpen(value); if (value && narrow) setDirectory(false); }} openCitation={citation => sourcesPanel.current?.openCitation(citation)} />}
       {!cameraReady && !loadError && <span role="status" aria-label="画板定位">正在定位画板…</span>}
@@ -629,7 +713,7 @@ function App() {
         <label className="review-filter">复习状态筛选 <select aria-label="复习状态筛选" value={reviewFilter} onChange={event => setReviewFilter(event.target.value as typeof reviewFilter)}><option value="all">全部单元</option><option value="pending">待复习</option><option value="weak">薄弱</option><option value="mastered">已掌握</option></select></label>
         {graph?.groups.map(group => { const counts = review?.themes[group.id]; const matches = graph.nodes.filter(node => node.themeId === group.id && (reviewFilter === 'all' ? (directoryTheme ?? selected?.theme.id) === group.id : review?.units[node.id]?.status === reviewFilter)); return <div key={group.id}><button aria-label={group.name} className="directory-theme" onClick={() => { setDirectoryTheme(group.id); const first = matches[0] ?? graph.nodes.find(node => node.themeId === group.id); if (first) { void go(first.id); if (narrow) closeDirectory(); } }}>{group.name}{counts ? <span aria-hidden="true"> · 待复习 {counts.pending} / 薄弱 {counts.weak} / 已掌握 {counts.mastered}</span> : ''}</button>{matches.map(node => <button aria-label={node.name} className="directory-unit" key={node.id} onClick={() => { void go(node.id); if (narrow) closeDirectory(); }}>{node.name}{review ? <span aria-hidden="true"> · {{ pending: '待复习', weak: '薄弱', mastered: '已掌握' }[review.units[node.id]?.status ?? 'pending']}</span> : ''}</button>)}</div>; })}</nav>}
       <main onWheelCapture={event => { if (!((event.target as HTMLElement).closest('.board-tools, .relations-panel, .source-dialog, input, select, textarea, .mux, .builtin-formula-editor, math-field'))) camera.takeover(); }} onPointerDownCapture={event => { pinchFrame.cancel(); const target = event.target as HTMLElement; if (target.closest('.react-flow__pane, .react-flow__minimap, .board-tools')) camera.takeover(); }} ref={boardRef} className="board" aria-label="知识画板" role="region" inert={narrow && ((directory && !relationsOpen) || producerOpen)}>
-        <div className="board-background" inert={sourceOpen || (narrow && relationsOpen)}><ReactFlow onlyRenderVisibleElements nodes={nodes} edges={edges} onInit={() => setNodesReady(true)} onEdgeClick={(_event, edge) => { setRelationFocus(edge.id); setRelationsOpen(true); }} minZoom={0.04} maxZoom={2} nodesDraggable={false} panOnScroll zoomOnScroll={false} zoomOnPinch panOnDrag={tool === "select" ? [1] : [0, 1]} selectionOnDrag={tool === "select"} panActivationKeyCode="Space" onMoveStart={event => { if (event) { pinchFrame.cancel(); camera.takeover(); } }} onMove={(event, next) => { if (event) camera.takeover(); setViewport(next); }} onMoveEnd={(_event, next) => { const current = readingRef.current; if (current) persist({ ...current, camera: next }); }} onNodeClick={(_event, node) => { const first = graph?.nodes.find(item => item.id === node.id || item.themeId === node.id); if (first) void go(first.id); }}>
+        <div className="board-background" inert={sourceOpen || (narrow && relationsOpen)}><ReactFlow onlyRenderVisibleElements nodes={nodes} edges={edges} onInit={() => setNodesReady(true)} onEdgeClick={(_event, edge) => { setRelationFocus(edge.id); setRelationsOpen(true); }} minZoom={0.04} maxZoom={2} nodesDraggable={false} panOnScroll zoomOnScroll={false} zoomOnPinch panOnDrag={tool === "select" ? [1] : [0, 1]} selectionOnDrag={tool === "select"} panActivationKeyCode="Space" onMoveStart={event => { if (event) { pinchFrame.cancel(); camera.takeover(); } }} onMove={(event, next) => { updateReadingProtection(); if (event) camera.takeover(); setViewport(next); }} onMoveEnd={(_event, next) => { const current = readingRef.current; if (current) persist({ ...current, camera: next }); }} onNodeClick={(_event, node) => { const first = graph?.nodes.find(item => item.id === node.id || item.themeId === node.id); if (first) void go(first.id); }}>
 
 
 
@@ -638,7 +722,7 @@ function App() {
         <div className="board-tools">{reading?.returnStack.length ? <button onClick={() => { const previous = reading.returnStack[reading.returnStack.length - 1]; void go(previous.unitId, { ...reading, unitId: previous.unitId, scrollTop: previous.scrollTop, camera: previous.camera, returnStack: reading.returnStack.slice(0, -1) }); }}>返回引用位置</button> : null}<button ref={directoryButton} onClick={() => setDirectory(!directory)}>{directory ? '收起目录' : '展开目录'}</button><button onClick={() => setMinimap(!minimap)}>{minimap ? '收起小地图' : '展开小地图'}</button><button onClick={() => { camera.takeover(); void flow.fitView({ duration: 0 }); }}>全图</button><button aria-pressed={tool === "read"} onClick={() => setTool("read")}>阅读工具</button><button aria-pressed={tool === "select"} onClick={() => setTool("select")}>选择工具</button><button aria-pressed={tool === "hand"} onClick={() => setTool("hand")}>手形工具</button><button ref={relationButton} onClick={() => setRelationsOpen(!relationsOpen)}>{relationsOpen ? "关闭关系" : "查看关系"}</button><label>关系 <select aria-label="关系范围" value={relationView} onChange={event => setRelationView(event.target.value)}><option value="main">主关系</option><option value="auxiliary">辅助关系</option><option value="all">全部关系</option></select></label></div>
         {loadError && <div className="load-error" role="alert"><h1>课程未打开</h1><p>{loadError}</p><button onClick={() => void load()}>重新打开课程</button></div>}
         {readError && <div className="read-error" role="status">{readError}</div>}
-        {course && mounted.map(unit => { const position = local.placements.find(node => node.unitId === unit.id); if (!position) return null; return <div key={unit.id} className="reading-layer" data-unit-id={unit.id} style={{ width: position.width >= 360 ? position.width : 650, transform: `translate(${viewport.x + position.x * viewport.zoom}px, ${viewport.y + position.y * viewport.zoom}px) scale(${viewport.zoom})`, visibility: viewport.zoom >= 0.55 ? 'visible' : 'hidden' }}>
+        {course && mounted.filter(unit=>unit.id===selected?.id||unit.id==='KU-001'||readingRange.includes(unit.id)||heldReading.includes(unit.id)||unit.id===mutationUnit).map(unit => { const position = local.placements.find(node => node.unitId === unit.id); if (!position) return null; return <div key={unit.id} className="reading-layer" data-unit-id={unit.id} style={{ width: position.width >= 360 ? position.width : 650, transform: `translate(${viewport.x + position.x * viewport.zoom}px, ${viewport.y + position.y * viewport.zoom}px) scale(${viewport.zoom})`, visibility: viewport.zoom >= 0.55 ? 'visible' : 'hidden' }}>
           <ReadingSurface id={unit.id} name={unit.name} position={position} baseline={graph!.layout.nodes.find(node => node.unitId === unit.id)!} active={selected?.id === unit.id} articleRef={articleRef} measure={local.measure} gesture={local.gesture} commit={place} takeover={() => camera.takeover()}>
             <RoughFrame id={unit.id} />
 
@@ -649,7 +733,7 @@ function App() {
               highlight={selection => { void drawingPanel.current?.highlight(selection); }}
               annotate={selection => { void notesPanel.current?.create(selection); }}
               composition={active => { composing.current = active; }} controller={instance => { continuous.current = instance; }}
-              renderBlock={block => <ReadingBoundary><Block block={block} experiment={{ contentScope: course.contentScope, resourceAssets: course.resourceAssets, unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing, composition: active => { composing.current = active; } }} reading={reading} updateReading={updateReading}
+              renderBlock={block => <ReadingBoundary><Block block={block} experiment={{ editLinkedFormula: blockId=>{void editLinkedFormula(unit.id,blockId);}, contentScope: course.contentScope, resourceAssets: course.resourceAssets, unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing, composition: active => { composing.current = active; } }} reading={reading} updateReading={updateReading}
                 onSource={button => { sourceTrigger.current = button; if ((course.contentScope || button.dataset.sourceRegistered) && button.dataset.sourceVersion) sourcesPanel.current?.openVersion(button.dataset.sourceVersion, Number(button.dataset.sourcePage ?? 1) - 1); else setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;
                   void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} /></ReadingBoundary>} />
               : selected?.id === unit.id ? <ActiveUnitEditor sessionId={course.sessionId} unitId={unit.id} disabled={closing || !cameraReady}
@@ -664,10 +748,10 @@ function App() {
                 composition={active => { composing.current = active; }}
                 highlight={selection => { void drawingPanel.current?.highlight(selection); }}
                 annotate={selection => { void notesPanel.current?.create(selection); }}
-              renderBlock={block => <ReadingBoundary><Block block={block} experiment={{ contentScope: course.contentScope, resourceAssets: course.resourceAssets, unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing, composition: active => { composing.current = active; } }} reading={reading} updateReading={updateReading}
+              renderBlock={block => <ReadingBoundary><Block block={block} experiment={{ editLinkedFormula: blockId=>{void editLinkedFormula(unit.id,blockId);}, contentScope: course.contentScope, resourceAssets: course.resourceAssets, unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing, composition: active => { composing.current = active; } }} reading={reading} updateReading={updateReading}
                 onSource={button => { sourceTrigger.current = button; if ((course.contentScope || button.dataset.sourceRegistered) && button.dataset.sourceVersion) sourcesPanel.current?.openVersion(button.dataset.sourceVersion, Number(button.dataset.sourcePage ?? 1) - 1); else setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;
                   void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} /></ReadingBoundary>} />
-              : unit.reading.blocks.map(block => <ReadingBoundary key={block.id} blockId={block.id}><Block block={block} experiment={{ contentScope: course.contentScope, resourceAssets: course.resourceAssets, unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing, composition: active => { composing.current = active; } }} reading={reading} updateReading={updateReading}
+              : unit.reading.blocks.map(block => <ReadingBoundary key={block.id} blockId={block.id}><Block block={block} experiment={{ editLinkedFormula: blockId=>{void editLinkedFormula(unit.id,blockId);}, contentScope: course.contentScope, resourceAssets: course.resourceAssets, unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing, composition: active => { composing.current = active; } }} reading={reading} updateReading={updateReading}
                 onSource={button => { sourceTrigger.current = button; if ((course.contentScope || button.dataset.sourceRegistered) && button.dataset.sourceVersion) sourcesPanel.current?.openVersion(button.dataset.sourceVersion, Number(button.dataset.sourcePage ?? 1) - 1); else setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;
                   void go(id, { ...current, unitId: id, scrollTop: 0, camera: undefined, returnStack: [...current.returnStack, { unitId: unit.id, blockId, scrollTop: 0, camera: flow.getViewport() }] }); }} /></ReadingBoundary>)}
 

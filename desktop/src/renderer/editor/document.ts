@@ -10,6 +10,7 @@ import { Fragment, Slice } from '@tiptap/pm/model';
 import type { ContentPatch } from '../../editor-api';
 import { equal } from '../../editor-api';
 import type { ReadingBlock } from '../../shared';
+import { unitBlocks } from '../../reading-model';
 
 export const newId = () => `student-${crypto.randomUUID()}`;
 function clipboardBlock(element: HTMLElement): ReadingBlock | null {
@@ -38,9 +39,9 @@ export function blocksOf(doc: PMNode): ReadingBlock[] {
 }
 export function delta(before: ReadingBlock[], after: ReadingBlock[], unitId: string,
   correspondence: ContentPatch['correspondence'] = []): ContentPatch {
-  const old = new Map(before.map(b => [b.id, b]));
+  const old = new Map(unitBlocks({reading:{blocks:before}}).map(b => [b.id, b]));
   const ids = after.map(b => b.id), prior = before.map(b => b.id);
-  return { updates: after.filter(b => old.has(b.id) && !equal(old.get(b.id)!.payload, b.payload))
+  return { updates: unitBlocks({reading:{blocks:after}}).filter(b => old.has(b.id) && !equal(old.get(b.id)!.payload, b.payload))
     .map(b => ({ blockId: b.id, before: old.get(b.id)!.payload, after: b.payload })),
     ...(!equal(ids, prior) ? { structure: { parentId: unitId, before: prior, after: ids, inserted: after.filter(b => !old.has(b.id)) } } : {}),
     correspondence };

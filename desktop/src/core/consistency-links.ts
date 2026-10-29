@@ -1,10 +1,7 @@
 import type { CourseUnit,ReadingBlock } from '../shared';
 import { equal } from '../editor-api';
-export function unitBlocks(unit?:CourseUnit):ReadingBlock[] {
- const result:ReadingBlock[]=[];
- const walk=(blocks:ReadingBlock[])=>{for(const block of blocks){result.push(block);walk(block.children??[]);}};
- walk(unit?.reading.blocks??[]);return result;
-}
+import { unitBlocks } from '../reading-model';
+export { unitBlocks } from '../reading-model';
 export const isBuiltin=(block?:ReadingBlock)=>block?.kind==='interactive'&&['mux','decoder','kmap'].includes(block.payload.component);
 export const linkedExperiment=(block?:ReadingBlock):string|undefined=>block?.kind==='formula'&&typeof block.payload.experimentBlockId==='string'?block.payload.experimentBlockId:undefined;
 const definitionFields=(block?:ReadingBlock)=>block&&[block.kind,block.payload.component,block.payload.config,block.payload.inputs,block.payload.bindings,block.payload.necessaryRelationIds];
