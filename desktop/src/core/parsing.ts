@@ -1,4 +1,5 @@
 import { historyTimestamp } from './history-clock';
+import { observation } from '../acceptance-observation';
 import { Worker } from 'node:worker_threads';
 import type { DatabaseSync } from 'node:sqlite';
 import { createHash, randomUUID } from 'node:crypto';
@@ -122,6 +123,8 @@ export class Parsing {
       });
       const tool=new Worker(join(__dirname,'parsing-tool.cjs'), {workerData:{kind:'parse-page',directory:this.directory,
         source:task.source,pageIndex,scheduling:this.scheduling}});
+      const observedTool = observation.resource('parser.tools'); observedTool.set(1);
+      tool.once('exit', () => observedTool.close());
       this.tools.add(tool); let delivered=false;
       const receive=(message:any)=>{
         if(delivered) return; delivered=true;

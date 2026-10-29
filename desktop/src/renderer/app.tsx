@@ -1,3 +1,4 @@
+import { observation } from '../acceptance-observation';
 import { BackupPanel } from './backup-panel';
 import { ReadonlyCourse } from './readonly-course';
 import { CourseRestorePanel } from './course-restore-panel';
@@ -11,6 +12,7 @@ import type { SearchHit } from '../search-api';
 import { highlightSearch, paintFrame } from './search-location';
 import { AnnotationPanel, type AnnotationPanelHandle } from './annotation-panel';
 import { CameraController, type FollowState } from './camera-controller';
+import { PinchViewportFrame } from './pinch-viewport-frame';
 import { useLocalLayout, ReadingSurface } from './local-layout';
 import type { LayoutPlacement } from '../layout';
 import {ExtensionExperiment,flushExtensions} from './extension-experiment';
@@ -104,12 +106,20 @@ function BlockContent({ block, onReference, reading, updateReading, onSource, ex
 function App() {
   const [readonlyReport,setReadonlyReport]=useState<import('../format-api').FormatCapabilities>();
   const flow = useReactFlow();
+  const pinchFrame = useMemo(() => new PinchViewportFrame(
+    () => flow.getViewport(), next => { void flow.setViewport(next, { duration: 0 }); },
+  ), [flow]);
+  useEffect(() => () => pinchFrame.cancel(), [pinchFrame]);
   const boardRef = useRef<HTMLElement>(null);
   const [nodesReady, setNodesReady] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [graph, setGraph] = useState<CourseGraph>();
   const [selected, setSelected] = useState<CourseUnit>();
   const [mounted, setMounted] = useState<CourseUnit[]>([]);
+  useEffect(() => { if (observation.active) {
+    observation.sample('reading.cachedUnits', mounted.length);
+    observation.sample('reading.cachedBodyCodeUnits', JSON.stringify(mounted).length);
+  } }, [mounted]);
   const [readError, setReadError] = useState<string>();
   const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 0.1 });
   const [directory, setDirectory] = useState(true);
@@ -201,7 +211,7 @@ function App() {
   const [followState, setFollowState] = useState<FollowState>('idle');
   const workTarget = useRef('RB-TH-01-03-expansion-terms');
   const camera = useMemo(() => new CameraController({
-    get: () => flow.getViewport(), set: next => { void flow.setViewport(next, { duration: 0 }); },
+    get: () => pinchFrame.current(), set: next => { pinchFrame.cancel(); void flow.setViewport(next, { duration: 0 }); },
     bounds: () => ({ width: boardRef.current?.clientWidth ?? 800, height: boardRef.current?.clientHeight ?? 600 }),
     reduced: () => matchMedia('(prefers-reduced-motion: reduce)').matches,
     target: () => {
@@ -210,7 +220,7 @@ function App() {
       const rect = element.getBoundingClientRect(), board = boardRef.current!.getBoundingClientRect(), view = flow.getViewport();
       return { x: (rect.left - board.left - view.x) / view.zoom, y: (rect.top - board.top - view.y) / view.zoom, width: rect.width / view.zoom, height: rect.height / view.zoom };
     },
-  }, setFollowState), [flow]);
+  }, setFollowState), [flow, pinchFrame]);
   useEffect(() => () => camera.dispose(), [camera]);
   const local = useLocalLayout(graph, selected?.id, camera, viewport.zoom >= .55, cameraReady);
   const placementsRef = useRef(local.placements); placementsRef.current = local.placements;
@@ -286,6 +296,7 @@ function App() {
   useEffect(()=>window.yizhi.onCloseCancelled(()=>{document.body.inert=false;setClosing(false);}),[]);
   useEffect(() => window.yizhi.onCloseRequested(async () => {
     // Freeze all input surfaces, including portals, before taking any async tail snapshot.
+    pinchFrame.flush();
     document.body.inert=true;
     const saveWindow=async()=>{
     if (producerRunning.current) return false;
@@ -323,12 +334,13 @@ function App() {
     };
     try {const saved=await saveWindow();if(!saved){document.body.inert=false;setClosing(false);}return saved;}
     catch(error){document.body.inert=false;setClosing(false);setReadError((error as Error).message);return false;}
-  }), []);
+  }), [pinchFrame]);
   useEffect(() => {
     if (course) setMounted(previous => previous.map(unit => unit.id === course.unit.id ? course.unit : unit));
   }, [course, selected]);
   const navigate = async (id: string, nextState?: ReadingState): Promise<void> => {
     if (!course || !graph) return;
+    pinchFrame.cancel();
     camera.takeover();
     if (composing.current) { setReadError('请先完成中文候选输入，再切换阅读位置。'); return; }
     const position = placementsRef.current.find(node => node.unitId === id);
@@ -338,6 +350,7 @@ function App() {
     try { const unit = await window.yizhi.readUnit(course.sessionId, id); persist(nextState ?? { ...(readingRef.current ?? { expanded: {}, returnStack: [], scrollTop: 0 }), unitId: id, scrollTop: 0, pinnedUnitId: mounted.some(item => item.id === 'KU-001') || id === 'KU-001' ? 'KU-001' : undefined }); setSelected(unit); setDirectoryTheme(unit.theme.id); setMounted(previous => previous.some(item => item.id === id) ? previous.map(item => item.id === id ? unit : item) : [...previous.filter(item => item.id === 'KU-001'), unit]); }
 
     catch (error) { setSelected(undefined); setReadError((error as Error).message); }
+    pinchFrame.cancel();
     if (nextState?.camera) await flow.setViewport(nextState.camera, { duration: 0 });
     else await flow.setCenter(position.x + 325, position.y + 250, { zoom: 0.85, duration: 0 });
   };
@@ -381,26 +394,35 @@ function App() {
 
       event.preventDefault(); event.stopPropagation();
       camera.takeover();
-      const current = flow.getViewport();
       if (event.ctrlKey || event.metaKey) {
         const rect = board.getBoundingClientRect(); const px = event.clientX - rect.left, py = event.clientY - rect.top;
-        const zoom = Math.max(.04, Math.min(2, current.zoom * Math.exp(-event.deltaY * .001)));
-        const ratio = zoom / current.zoom;
-        void flow.setViewport({ x: px - (px - current.x) * ratio, y: py - (py - current.y) * ratio, zoom });
-      } else camera.pan(-(event.shiftKey ? event.deltaY : event.deltaX), -(event.shiftKey ? 0 : event.deltaY));
+        // The custom content-layer handler bypasses React Flow's macOS pinch
+        // normalization. Restore its pixel-mode pinch gain; keep command-wheel gain.
+        const macPinch = event.ctrlKey && !event.metaKey && event.deltaMode === WheelEvent.DOM_DELTA_PIXEL && /Mac/.test(navigator.userAgent);
+        const factor = macPinch ? Math.pow(2, -event.deltaY * .02) : Math.exp(-event.deltaY * .001);
+        pinchFrame.pinch(factor, px, py);
+      } else {
+        // Some platforms already deliver Shift+wheel on X. Keep that axis;
+        // otherwise translate the vertical wheel delta to horizontal once.
+        camera.pan(-(event.shiftKey ? event.deltaX || event.deltaY : event.deltaX), -(event.shiftKey ? 0 : event.deltaY));
+      }
     };
     board.addEventListener('wheel', wheel, { passive: false, capture: true });
     board.addEventListener('scroll', nativeScroll, { passive: true });
-    return () => { board.removeEventListener('wheel', wheel, true); board.removeEventListener('scroll', nativeScroll); };
-  }, [flow, camera]);
-  const nodes = useMemo(() => graph ? [
-    ...graph.layout.groups.map(group => ({ id: group.themeId, position: { x: group.x, y: group.y }, data: { label: group.title }, width: group.width, height: group.height, style: { width: group.width, height: group.height, fontSize: 50, border: "1px solid #bbc9d5", background: "#fff", opacity: viewport.zoom < 0.35 ? 1 : 0.35 }, selectable: false, draggable: false })),
-    ...graph.nodes.map(node => { const pos = local.placements.find(item => item.unitId === node.id)!; return { id: node.id, position: { x: pos.x, y: pos.y }, data: { label: node.name }, width: pos.width, height: pos.height, style: { width: pos.width, height: pos.height, opacity: viewport.zoom >= 0.35 ? 1 : 0, pointerEvents: viewport.zoom >= 0.35 ? "auto" as const : "none" as const }, draggable: false, focusable: viewport.zoom >= 0.35 && pos.x * viewport.zoom + viewport.x + pos.width * viewport.zoom > 0 && pos.y * viewport.zoom + viewport.y + pos.height * viewport.zoom > 0 && pos.x * viewport.zoom + viewport.x < (boardRef.current?.clientWidth ?? 0) && pos.y * viewport.zoom + viewport.y < (boardRef.current?.clientHeight ?? 0) }; })
-  ] : [], [graph, local.placements, viewport]);
+    return () => { pinchFrame.cancel(); board.removeEventListener('wheel', wheel, true); board.removeEventListener('scroll', nativeScroll); };
+  }, [flow, camera, pinchFrame]);
+  const unitDetail = viewport.zoom >= .35;
+  const nodes = useMemo(() => {
+    observation.count('scene.graphProjections');
+    const placements = new Map(local.placements.map(node => [node.unitId, node]));
+    return graph ? [
+    ...graph.layout.groups.map(group => ({ id: group.themeId, position: { x: group.x, y: group.y }, data: { label: group.title }, width: group.width, height: group.height, style: { width: group.width, height: group.height, fontSize: 50, border: "1px solid #bbc9d5", background: "#fff", opacity: unitDetail ? .35 : 1 }, selectable: false, draggable: false })),
+    ...graph.nodes.map(node => { const pos = placements.get(node.id)!; return { id: node.id, position: { x: pos.x, y: pos.y }, data: { label: node.name }, width: pos.width, height: pos.height, style: { width: pos.width, height: pos.height, opacity: unitDetail ? 1 : 0, pointerEvents: unitDetail ? "auto" as const : "none" as const }, draggable: false, focusable: unitDetail }; })
+  ] : []; }, [graph, local.placements, unitDetail]);
   const edges = useMemo(() => {
     if (!graph) return [];
     const visible = graph.edges.filter(edge => relationView === 'all' || edge.view === relationView);
-    if (viewport.zoom >= 0.35) return visible.map(edge => ({ id: edge.id, source: edge.fromUnitId, target: edge.toUnitId, label: edge.requirementGroupId ? `${edge.type} · ${edge.requirementGroupId}（${graph.requirementGroups.find(g => g.id === edge.requirementGroupId)?.mode === "any" ? "或" : "且"}）` : edge.type, markerEnd: edge.directed ? { type: MarkerType.ArrowClosed } : undefined, animated: false }));
+    if (unitDetail) return visible.map(edge => ({ id: edge.id, source: edge.fromUnitId, target: edge.toUnitId, label: edge.requirementGroupId ? `${edge.type} · ${edge.requirementGroupId}（${graph.requirementGroups.find(g => g.id === edge.requirementGroupId)?.mode === "any" ? "或" : "且"}）` : edge.type, markerEnd: edge.directed ? { type: MarkerType.ArrowClosed } : undefined, animated: false }));
     const groups = new Map<string, { source: string; target: string; count: number; type: string; directed: boolean }>();
     for (const edge of visible) {
       const source = graph.nodes.find(node => node.id === edge.fromUnitId)?.themeId;
@@ -410,7 +432,7 @@ function App() {
       const group = groups.get(key) ?? { source, target, count: 0, type: edge.type, directed: edge.directed }; group.count++; groups.set(key, group);
     }
     return [...groups.entries()].map(([id, group]) => ({ id, source: group.source, target: group.target, label: `${group.type} · ${group.count} 条已有关系`, markerEnd: group.directed ? { type: MarkerType.ArrowClosed } : undefined, animated: false }));
-  }, [graph, relationView, viewport.zoom]);
+  }, [graph, relationView, unitDetail]);
   const changeReview = async (unitId: string, status: ReviewStatus) => {
     if (!course) return;
     try { setReview(await window.yizhi.setReviewStatus(course.sessionId, unitId, status)); }
@@ -554,11 +576,25 @@ function App() {
         if(phase==='start' || phase==='view' || task.progress?.stage==='committed') {
           const unit=await window.yizhi.readUnit(course.sessionId,displayedUnitId);
           if(unit.id==='KU-001'){await channel.current?.synchronize();setCourse(await window.yizhi.open());}else await unitInputs.current.get(unit.id)?.synchronize();
-          setMounted(previous=>previous.some(u=>u.id===unit.id)?previous.map(u=>u.id===unit.id?unit:u):[...previous,unit]);
+          // Keep the current interaction and incoming target; old task displays are reading projections.
+          const protectedUnits = new Set([readingRef.current?.unitId, document.activeElement?.closest('article[data-unit-id]')?.getAttribute('data-unit-id')]);
+          const selection = getSelection();
+          if (selection && !selection.isCollapsed) for (const article of document.querySelectorAll('article[data-unit-id]'))
+            for (let index = 0; index < selection.rangeCount; index++) if (selection.getRangeAt(index).intersectsNode(article)) protectedUnits.add(article.getAttribute('data-unit-id'));
+          setMounted(previous=>{
+            const retained=previous.filter(item=>item.id==='KU-001'||item.id===unit.id||protectedUnits.has(item.id));
+            return retained.some(item=>item.id===unit.id)?retained.map(item=>item.id===unit.id?unit:item):[...retained,unit];
+          });
           setSelected(previous=>previous?.id===unit.id?unit:previous);
           setGraph(await window.yizhi.graph(course.sessionId));setReview(await window.yizhi.reviewStates(course.sessionId));
         }
-        if(phase==='view'){if(!await flushUnitInputs(true))throw new Error('请先保存当前单元输入。');const unit=await window.yizhi.readUnit(course.sessionId,displayedUnitId);setSelected(unit);setDirectoryTheme(unit.theme.id);if(readingRef.current)persist({...readingRef.current,unitId:unit.id});requestAnimationFrame(()=>camera.resume());}
+        if(phase==='view'){
+          if(composing.current)throw new Error('请先完成中文候选输入，再查看修改结果。');
+          if(!await flushUnitInputs(true))throw new Error('请先保存当前单元输入。');
+          const unit=await window.yizhi.readUnit(course.sessionId,displayedUnitId);
+          setMounted(previous=>[...previous.filter(item=>item.id==='KU-001'&&item.id!==unit.id),unit]);
+          setSelected(unit);setDirectoryTheme(unit.theme.id);if(readingRef.current)persist({...readingRef.current,unitId:unit.id});requestAnimationFrame(()=>camera.resume());
+        }
         else if(phase==='finish'){camera.finish();if(readingRef.current)persist({...readingRef.current,modification:{targetId:workTarget.current,ended:true}});}
         else requestAnimationFrame(()=>camera.updated());
       }} onOpenChange={value => { setAgentOpen(value); if (value && narrow) setDirectory(false); }} openCitation={citation => sourcesPanel.current?.openCitation(citation)} />}
@@ -592,8 +628,8 @@ function App() {
       {directory && <nav ref={navRef} inert={sourceOpen || (narrow && (relationsOpen || producerOpen))} aria-label="课程目录" onKeyDown={event => trap(event, closeDirectory)}><h2>课程目录</h2>{narrow && <button onClick={closeDirectory}>关闭目录</button>}
         <label className="review-filter">复习状态筛选 <select aria-label="复习状态筛选" value={reviewFilter} onChange={event => setReviewFilter(event.target.value as typeof reviewFilter)}><option value="all">全部单元</option><option value="pending">待复习</option><option value="weak">薄弱</option><option value="mastered">已掌握</option></select></label>
         {graph?.groups.map(group => { const counts = review?.themes[group.id]; const matches = graph.nodes.filter(node => node.themeId === group.id && (reviewFilter === 'all' ? (directoryTheme ?? selected?.theme.id) === group.id : review?.units[node.id]?.status === reviewFilter)); return <div key={group.id}><button aria-label={group.name} className="directory-theme" onClick={() => { setDirectoryTheme(group.id); const first = matches[0] ?? graph.nodes.find(node => node.themeId === group.id); if (first) { void go(first.id); if (narrow) closeDirectory(); } }}>{group.name}{counts ? <span aria-hidden="true"> · 待复习 {counts.pending} / 薄弱 {counts.weak} / 已掌握 {counts.mastered}</span> : ''}</button>{matches.map(node => <button aria-label={node.name} className="directory-unit" key={node.id} onClick={() => { void go(node.id); if (narrow) closeDirectory(); }}>{node.name}{review ? <span aria-hidden="true"> · {{ pending: '待复习', weak: '薄弱', mastered: '已掌握' }[review.units[node.id]?.status ?? 'pending']}</span> : ''}</button>)}</div>; })}</nav>}
-      <main onWheelCapture={event => { if (!((event.target as HTMLElement).closest('.board-tools, .relations-panel, .source-dialog, input, select, textarea, .mux, .builtin-formula-editor, math-field'))) camera.takeover(); }} onPointerDownCapture={event => { const target = event.target as HTMLElement; if (target.closest('.react-flow__pane, .react-flow__minimap, .board-tools')) camera.takeover(); }} ref={boardRef} className="board" aria-label="知识画板" role="region" inert={narrow && ((directory && !relationsOpen) || producerOpen)}>
-        <div className="board-background" inert={sourceOpen || (narrow && relationsOpen)}><ReactFlow nodes={nodes} edges={edges} onInit={() => setNodesReady(true)} onEdgeClick={(_event, edge) => { setRelationFocus(edge.id); setRelationsOpen(true); }} minZoom={0.04} maxZoom={2} nodesDraggable={false} panOnScroll zoomOnScroll={false} zoomOnPinch panOnDrag={tool === "select" ? [1] : [0, 1]} selectionOnDrag={tool === "select"} panActivationKeyCode="Space" onMoveStart={event => { if (event) camera.takeover(); }} onMove={(event, next) => { if (event) camera.takeover(); setViewport(next); }} onMoveEnd={(_event, next) => { const current = readingRef.current; if (current) persist({ ...current, camera: next }); }} onNodeClick={(_event, node) => { const first = graph?.nodes.find(item => item.id === node.id || item.themeId === node.id); if (first) void go(first.id); }}>
+      <main onWheelCapture={event => { if (!((event.target as HTMLElement).closest('.board-tools, .relations-panel, .source-dialog, input, select, textarea, .mux, .builtin-formula-editor, math-field'))) camera.takeover(); }} onPointerDownCapture={event => { pinchFrame.cancel(); const target = event.target as HTMLElement; if (target.closest('.react-flow__pane, .react-flow__minimap, .board-tools')) camera.takeover(); }} ref={boardRef} className="board" aria-label="知识画板" role="region" inert={narrow && ((directory && !relationsOpen) || producerOpen)}>
+        <div className="board-background" inert={sourceOpen || (narrow && relationsOpen)}><ReactFlow onlyRenderVisibleElements nodes={nodes} edges={edges} onInit={() => setNodesReady(true)} onEdgeClick={(_event, edge) => { setRelationFocus(edge.id); setRelationsOpen(true); }} minZoom={0.04} maxZoom={2} nodesDraggable={false} panOnScroll zoomOnScroll={false} zoomOnPinch panOnDrag={tool === "select" ? [1] : [0, 1]} selectionOnDrag={tool === "select"} panActivationKeyCode="Space" onMoveStart={event => { if (event) { pinchFrame.cancel(); camera.takeover(); } }} onMove={(event, next) => { if (event) camera.takeover(); setViewport(next); }} onMoveEnd={(_event, next) => { const current = readingRef.current; if (current) persist({ ...current, camera: next }); }} onNodeClick={(_event, node) => { const first = graph?.nodes.find(item => item.id === node.id || item.themeId === node.id); if (first) void go(first.id); }}>
 
 
 
@@ -650,3 +686,4 @@ function App() {
 }
 function GenerationBoundary(){const [epoch,setEpoch]=useState(0);useEffect(()=>window.yizhi.onGenerationChanged(()=>setEpoch(n=>n+1)),[]);return <ReactFlowProvider key={epoch}><App /></ReactFlowProvider>;}
 createRoot(document.getElementById('root')!).render(<GenerationBoundary/>);
+import './acceptance';

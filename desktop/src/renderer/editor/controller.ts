@@ -53,17 +53,8 @@ export class ContinuousEditor {
   private shown = new Map<string, { revision: number; version?: number; block: ReadingBlock }>();
   constructor(element: HTMLElement, private course: OpenedCourse, private channel: ParagraphSaveChannel, private options: EditorOptions) {
     channel.useContentPatches();
-    const recovered = structuredClone(course.unit.reading.blocks);
     const recovery = channel.recovery();
-    for (const block of recovered) if (block.kind === 'paragraph') block.payload.text = channel.text(block.id) ?? block.payload.text;
-    // Recover only a verified original basis. Incompatible drafts remain durable for reconciliation.
-    if (recovery.patch && course.drafts.some(d => d.input.baseRevision === course.revision)) {
-      for (const u of recovery.patch.updates) { const b = recovered.find(b => b.id === u.blockId); if (b && equal(b.payload, u.before)) b.payload = u.after; }
-      if (recovery.patch.structure && equal(recovery.patch.structure.before, recovered.map(b => b.id))) {
-        const byId = new Map([...recovered, ...recovery.patch.structure.inserted].map(b => [b.id, b]));
-        recovered.splice(0, recovered.length, ...recovery.patch.structure.after.map(id => byId.get(id)!));
-      }
-    }
+    const recovered = recovery.blocks;
     this.drafts = new Map(recovery.formulaDrafts.map(f => [f.blockId, f.latex]));
     this.previous = recovered;
     for (const block of course.unit.reading.blocks) this.shown.set(block.id, { revision: course.revision, version: course.blockVersions?.[block.id], block: structuredClone(block) });
@@ -138,8 +129,8 @@ export class ContinuousEditor {
       onSelectionUpdate: () => { if (this.engaged) this.selectionChanged(); },
     });
     Object.assign(this.editor.storage, { courseSelection: { capture: () => this.captureSelection(), captureAnnotation: () => this.captureAnnotation(), settle: () => this.settleProtection() } });
-    // Paragraph aliases remain programmatically focusable for accessibility/legacy IPC tests,
-    // while ProseMirror owns the single native editing focus and selection observer.
+    // Paragraph aliases provide block-level labels without separate pointer focus.
+    // Explicit alias focus still transfers to ProseMirror's single editing host.
     this.editor.view.dom.addEventListener('focusin', event => {
       const formula = (event.target as HTMLElement).closest<HTMLElement>('.editor-formula');
       if (formula?.dataset.blockId) { this.engaged = true; this.setProtection([formula.dataset.blockId], (event.target as MathfieldElement).readOnly ? 'selection' : 'editing'); }

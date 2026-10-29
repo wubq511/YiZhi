@@ -5,6 +5,7 @@ import katex from 'katex';
 import type { NodeView } from '@tiptap/pm/view';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import type { ReadingBlock } from '../../shared';
+import { observation } from '../../acceptance-observation';
 
 MathfieldElement.fontsDirectory = './mathlive-fonts';
 MathfieldElement.soundsDirectory = null;
@@ -18,6 +19,7 @@ export function formulaView(initial: PMNode, changed: (blockId: string, latex: s
   const edit = document.createElement('button'); edit.textContent = '编辑公式'; edit.type = 'button';
   const state = document.createElement('span'); state.className = 'formula-draft'; state.setAttribute('role', 'status');
   let field: MathfieldElement | undefined;
+  const resource = observation.resource('mathlive.instances');
   let temporary = false;
   let restoring = false, inputScheduled = false;
   let beforeInput: { model: FormulaModel; range: readonly number[] } | undefined;
@@ -45,6 +47,7 @@ export function formulaView(initial: PMNode, changed: (blockId: string, latex: s
     if (!field) {
       temporary = readOnly;
       field = new MathfieldElement();
+      resource.set(1);
       field.mathVirtualKeyboardPolicy = 'manual';
       field.setAttribute('aria-label', '编辑公式内容');
       field.value = draft(block.id) ?? String(block.payload.latex);
@@ -72,7 +75,7 @@ export function formulaView(initial: PMNode, changed: (blockId: string, latex: s
   const leave = document.createElement('button'); leave.type = 'button'; leave.textContent = '返回正文'; leave.hidden = true;
 
   leave.onclick = () => {
-    if (field && temporary) { field.remove(); field = undefined; }
+    if (field && temporary) { field.remove(); field = undefined; resource.set(0); }
     else if (field) { field.hidden = true; field.readOnly = false; field.dataset.annotationSelection = 'false'; }
     staticMath.hidden = false; edit.hidden = false; select.hidden = false; add.hidden = true; leave.hidden = true; paint();
     dom.dispatchEvent(new CustomEvent('formula-exit', { bubbles: true }));
@@ -90,6 +93,6 @@ export function formulaView(initial: PMNode, changed: (blockId: string, latex: s
       if (next.payload.latex !== block.payload.latex && field && !field.hasFocus() && draft(block.id) === undefined &&
         field.getValue() !== next.payload.latex) field.setValue(String(next.payload.latex), { silenceNotifications: true });
       block = next; paint(); return true;
-    }, destroy() { field?.removeEventListener('input', input); },
+    }, destroy() { field?.removeEventListener('input', input); resource.close(); },
   };
 }

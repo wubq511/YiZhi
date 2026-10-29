@@ -74,10 +74,11 @@ class ExperimentClient {
   }
 }
 const clients = new Map<string, ExperimentClient>();
+const observedClients = observation.resource('experiment.retainedClients');
 function clientFor(bridge: DesktopBridge, sessionId: string, unitId: string, blockId: string) {
   const key = `${sessionId}/${unitId}/${blockId}`;
   let client = clients.get(key);
-  if (!client) { client = new ExperimentClient(bridge, sessionId, unitId, blockId); clients.set(key, client); }
+  if (!client) { client = new ExperimentClient(bridge, sessionId, unitId, blockId); clients.set(key, client); observedClients.set(clients.size); }
   return client;
 }
 /** Close barrier includes all retained clients, including experiments that left the DOM. */
@@ -92,6 +93,7 @@ function FormulaEditor({ initial, changed, done, composition }: { initial: strin
   const host = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const field = new MathfieldElement(); field.mathVirtualKeyboardPolicy = 'manual';
+    const resource = observation.resource('mathlive.experimentInstances'); resource.set(1);
     field.setAttribute('aria-label', '实验公式内容'); field.value = initial.replace(/¬/g, '\\neg ').replace(/·/g, '\\cdot ');
     const input = () => changed(field.getValue('latex'));
     field.addEventListener('input', input);
@@ -103,7 +105,7 @@ function FormulaEditor({ initial, changed, done, composition }: { initial: strin
       }
     }, true);
     host.current!.append(field); field.focus();
-    return () => { field.removeEventListener('input', input); field.removeEventListener('compositionstart', composing); field.removeEventListener('compositionend', composed); composition?.(false); field.remove(); };
+    return () => { field.removeEventListener('input', input); field.removeEventListener('compositionstart', composing); field.removeEventListener('compositionend', composed); composition?.(false); field.remove(); resource.close(); };
   }, []);
   return <div className="builtin-formula-editor"><div ref={host} /><button onClick={done}>完成公式编辑</button></div>;
 }
@@ -131,8 +133,9 @@ export function BuiltinExperiment({ block, unitId, sessionId, active, disabled, 
   const [localInputs, setLocalInputs] = useState<Record<string, number>>();
   useEffect(() => client.subscribe(() => { paint(n => n + 1); if (!client.pending && !client.error) setLocalInputs(undefined); }), [client]);
   useEffect(() => {
+    const resource = observation.resource('experiment.builtinViews'); resource.set(1);
     const timer = setInterval(() => void client.poll(), 150); void client.poll();
-    return () => clearInterval(timer);
+    return () => { clearInterval(timer); resource.close(); };
   }, [client]);
   useEffect(() => {
     let inView = false, last: boolean | undefined;
@@ -178,3 +181,4 @@ export function BuiltinExperiment({ block, unitId, sessionId, active, disabled, 
     </>}
   </section>;
 }
+import { observation } from '../acceptance-observation';

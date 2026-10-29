@@ -3,22 +3,32 @@ import type { CourseGraph } from '../shared';
 import { projectLayout, type LayoutNode, type LayoutPlacement, type LayoutSizes } from '../layout';
 import type { CameraController } from './camera-controller';
 import './local-layout.css';
+import { observation } from '../acceptance-observation';
 
 export function useLocalLayout(graph: CourseGraph | undefined, activeId: string | undefined, camera: CameraController, enabled: boolean, ready = true) {
+  const observed = useMemo(() => ({ pending: observation.resource('measurement.pending'),
+    frame: observation.resource('layout.scheduledFrames'), metadata: observation.resource('measurement.metadataEntries') }), []);
   const [sizes, setSizes] = useState<LayoutSizes>({});
   const [gesture, setGesture] = useState<LayoutPlacement>();
   const measured = useRef<LayoutSizes>({});
   const pending = useRef<LayoutSizes>({}), frame = useRef<number | undefined>(undefined);
   const measure = useCallback((id: string, width: number, height: number) => {
+    observation.count('measurement.callbacks');
     pending.current[id] = { width, height };
+    observed.pending.set(Object.keys(pending.current).length);
     if (frame.current !== undefined) return;
     frame.current = requestAnimationFrame(() => {
       frame.current = undefined;
       const updates = pending.current; pending.current = {};
+      observed.pending.set(0); observed.frame.set(0);
+      observation.sample('layout.batchSize', Object.keys(updates).length);
       setSizes(previous => Object.entries(updates).some(([id, size]) => previous[id]?.height !== size.height || previous[id]?.width !== size.width) ? { ...previous, ...updates } : previous);
     });
+    observed.frame.set(1);
   }, []);
-  useEffect(() => () => { if (frame.current !== undefined) cancelAnimationFrame(frame.current); }, []);
+  useEffect(() => () => { if (frame.current !== undefined) cancelAnimationFrame(frame.current);
+    observed.pending.close(); observed.frame.close(); observed.metadata.close(); }, []);
+  useLayoutEffect(() => { observed.metadata.set(Object.keys(sizes).length); }, [sizes, observed]);
   const placements = useMemo(() => graph ? projectLayout(graph.layout.nodes, enabled ? Object.fromEntries(Object.entries(sizes).filter(([id]) => id === activeId || id === 'KU-001')) : {}, gesture) : [], [graph, enabled, sizes, gesture, activeId]);
   const manual = useRef<string | undefined>(undefined);
   const previous = useRef<{ id?: string; fixed?: string; nodes: LayoutNode[] }>({ nodes: [] });
@@ -56,8 +66,9 @@ export function ReadingSurface({ id, name, position, baseline, measure, gesture,
   const readWidth = width ?? (position.width >= 360 ? position.width : 650);
   useEffect(() => {
     const node = element.current!;
+    const resource = observation.resource('reading.surfaces'); resource.set(1);
     const observer = new ResizeObserver(() => latest.current(id, node.offsetWidth, node.offsetHeight));
-    observer.observe(node); return () => observer.disconnect();
+    observer.observe(node); return () => { observer.disconnect(); resource.close(); };
   }, [id]);
   useEffect(() => { if (active) articleRef.current = element.current; }, [active, articleRef]);
   const start = (event: PointerEvent<HTMLElement>, kind: 'move' | 'width') => {

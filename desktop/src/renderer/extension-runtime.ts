@@ -8,6 +8,7 @@ class PackageFrame {
   private pending=new Map<string,{resolve:(s:ExtensionState)=>void;reject:(e:Error)=>void;timer:ReturnType<typeof setTimeout>}>();
   private loaded:Promise<void>;
   private dead=false;
+  private observedFrame=observation.resource('experiment.extensionFrames');
   constructor(container:HTMLElement,sessionId:string,readonly manifest:ExtensionManifest,readonly identity:ExtensionIdentity,hidden=false){
     this.element.title=hidden?'新定义现场检查':'奇偶校验运行结果';
     this.element.sandbox.add('allow-scripts','allow-same-origin');
@@ -16,6 +17,7 @@ class PackageFrame {
     addEventListener('message',this.message);
     this.element.src=`${origin}/${sessionId}/${manifest.packageVersion}/index.html`;
     container.append(this.element);
+    this.observedFrame.set(1);
   }
   private message=(event:MessageEvent)=>{
     if(this.dead || event.source!==this.element.contentWindow || event.origin!==origin || !equal(event.data?.identity,this.identity)) return;
@@ -32,6 +34,7 @@ class PackageFrame {
   }
   dispose(){
     if(this.dead)return;this.dead=true;
+    this.observedFrame.close();
     this.element.contentWindow?.postMessage({id:crypto.randomUUID(),kind:'dispose',identity:this.identity},origin);
     removeEventListener('message',this.message);this.element.remove();
     for(const p of this.pending.values()){clearTimeout(p.timer);p.reject(Error('扩展实例已销毁'));}this.pending.clear();
@@ -144,3 +147,4 @@ export class ExtensionRuntime {
   async recover(){this.frame?.dispose();this.frame=undefined;this.error=undefined;await this.send({kind:'recover'});await this.tick();}
   dispose(){this.stopped=true;clearInterval(this.timer);this.frame?.dispose();this.candidate?.dispose();}
 }
+import { observation } from '../acceptance-observation';

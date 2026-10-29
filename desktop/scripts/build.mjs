@@ -19,7 +19,8 @@ for (const [entry, outfile] of entries) {
 }
 try {
   await build({ entryPoints: ['src/renderer/app.tsx'], outfile: 'dist/renderer/app.js', bundle: true,
-    platform: 'browser', format: 'esm', target: 'chrome140', loader: { '.woff': 'file', '.woff2': 'file', '.ttf': 'file' } });
+    platform: 'browser', format: 'esm', target: 'chrome140', define: { 'process.env.NODE_ENV': '"production"' },
+    loader: { '.woff': 'file', '.woff2': 'file', '.ttf': 'file' } });
   await copyFile('src/renderer/index.html', 'dist/renderer/index.html');
   await copyFile('src/renderer/assets/ti74153-1.png', 'dist/renderer/ti74153-1.png');
   await cp('node_modules/mathlive/fonts', 'dist/renderer/mathlive-fonts', { recursive: true });

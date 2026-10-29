@@ -44,7 +44,8 @@ else {
   });
   app.whenReady().then(async () => {
     courseDirectory = resolve(initialCourse ?? join(app.getPath('userData'), 'courses/digital-logic-t01'));
-    core = new CourseService(join(__dirname, 'worker.cjs'));
+    core = new CourseService(join(__dirname, 'worker.cjs'), { observe: process.env.YIZHI_OBSERVE === '1' });
+    if (process.env.YIZHI_OBSERVE === '1') (globalThis as any).__yizhiAcceptance = { core: () => core.observe() };
     agent = new AgentRuntime(core, { directory: join(app.getPath('userData'), 'agent-runtime'), cliPath: process.env.YIZHI_CODEX_PATH });
     description = new DescriptionRuntime(core, { directory: join(app.getPath('userData'), 'search-runtime'), cliPath: process.env.YIZHI_CODEX_PATH });
     void agent.detect();

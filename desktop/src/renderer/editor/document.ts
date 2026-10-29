@@ -73,7 +73,7 @@ export const IdentityAndHistory = Extension.create({
       const decorations: Decoration[] = []; let index = 0;
       state.doc.forEach((node, pos) => { if (node.type.name === 'paragraph') {
         const i = index++;
-        decorations.push(Decoration.node(pos, pos + node.nodeSize, { role: 'textbox', tabindex: '-1',
+        decorations.push(Decoration.node(pos, pos + node.nodeSize, { role: 'textbox',
           'aria-label': i === 0 ? '编辑首段正文' : i === 1 ? '编辑第二段正文' : `编辑第 ${i + 1} 段正文`, 'aria-multiline': 'true' }));
       } }); return DecorationSet.create(state.doc, decorations);
     } }, appendTransaction(transactions, _old, state) {

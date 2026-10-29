@@ -1,4 +1,5 @@
 import type { SearchHit } from '../search-api';
+import { observation } from '../acceptance-observation';
 import { useEffect, useRef } from 'react';
 import { getDocument, GlobalWorkerOptions, PDFDataRangeTransport, TextLayer, type PDFDocumentLoadingTask, type RenderTask } from 'pdfjs-dist';
 import type { PageViewport } from 'pdfjs-dist/types/src/display/page_viewport';
@@ -22,6 +23,8 @@ export function SourcePdf({ sessionId, version, page, scale, regionMode, citatio
     const host = container.current!;
     let disposed = false, task: PDFDocumentLoadingTask | undefined, render: RenderTask | undefined, textLayer: TextLayer | undefined;
     const abort = new AbortController();
+    const rangeEntries = observation.resource('pdf.rangeEntries'), rangeBytes = observation.resource('pdf.rangeBytes');
+    const documents = observation.resource('pdf.documents');
     callbacks.current.onSelection(null); host.replaceChildren();
     const complete = () => {
       let position: { x: number; y: number } | undefined;
@@ -73,6 +76,7 @@ export function SourcePdf({ sessionId, version, page, scale, regionMode, citatio
             bytes = new Uint8Array(await response.arrayBuffer());
             if (bytes.length !== stop - start) throw new Error('本地来源读取不完整');
             chunks.set(start, bytes); if (chunks.size > 8) chunks.delete(chunks.keys().next().value!);
+            rangeEntries.set(chunks.size); rangeBytes.set([...chunks.values()].reduce((sum, chunk) => sum + chunk.byteLength, 0));
           }
           const length = Math.min(end, stop) - offset;
           result.set(bytes.subarray(offset - start, offset - start + length), offset - begin); offset += length;
@@ -89,6 +93,7 @@ export function SourcePdf({ sessionId, version, page, scale, regionMode, citatio
       task = getDocument({ range, disableAutoFetch: true, disableStream: true, rangeChunkSize: 65536,
         cMapUrl: `${base}cmaps/`, standardFontDataUrl: `${base}standard_fonts/`, wasmUrl: `${base}wasm/`,
         iccUrl: `${base}iccs/`, useWorkerFetch: true, useSystemFonts: false, stopAtErrors: true });
+      documents.set(1);
       const doc = await task.promise;
       if (disposed) return;
       const pdfPage = await doc.getPage(page.pdfPageIndex + 1);
@@ -138,7 +143,9 @@ export function SourcePdf({ sessionId, version, page, scale, regionMode, citatio
       disposed = true; document.removeEventListener('selectionchange', selection);
       abort.abort();
       render?.cancel(); textLayer?.cancel(); layerRef.current = null; viewportRef.current = null;
-      void task?.destroy(); host.replaceChildren();
+      const released = () => { documents.close(); rangeEntries.close(); rangeBytes.close(); };
+      if (task) void task.destroy().finally(released); else released();
+      host.replaceChildren();
     };
   }, [sessionId, version.versionId, page.pdfPageIndex, page.projection.id, scale, citation?.id, searchHit]);
   const pdfRegion = (x0: number, y0: number, x1: number, y1: number) => {

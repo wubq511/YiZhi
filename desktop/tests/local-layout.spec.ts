@@ -110,6 +110,8 @@ test('manual width and drag remain after collapse and reopen without replacing t
     expect(afterGrowth.x).toBeCloseTo(duringDrag.x, 1); expect(afterGrowth.y).toBeCloseTo(duringDrag.y, 1);
     await page.mouse.up();
     await expect(page.getByRole('status', { name: '布局状态' })).toHaveText('布局已保存');
+    // The old saved label can still belong to the preceding width edit; wait for this move's durable result.
+    await expect.poll(() => page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return (await b.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-001').x; })).toBeGreaterThan(180);
     const saved = await page.evaluate(async () => { const bridge = (window as any).yizhi; const c = await bridge.open(); return (await bridge.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-001'); });
     expect(saved.width).toBe(674); expect(saved.x).toBeGreaterThan(180);
     expect(await editor.evaluate(el => el.closest('.tiptap') === (window as any).savedEditor)).toBe(true);

@@ -1,4 +1,5 @@
 import type { SaveBridge, OpenedCourse, DraftInput, EditCommand, SaveReceipt, TextChange, ParagraphSplit } from '../shared';
+import { observation } from '../acceptance-observation';
 import { composePatch, equal, patchTargets, type ContentPatch, type FormulaDraft } from '../editor-api';
 export type SaveState = { status: 'saved' | 'draft' | 'pending' | 'saving' | 'error'; error?: string;
   inputSeq?: number; confirmedInputSeq?: number; draftInputSeq?: number };
@@ -116,8 +117,21 @@ export class ParagraphSaveChannel {
     this.splits = this.splits.filter(split => !convertedSplits.has(split));
   }
   /** Initial recovery projection only. Live editors reconcile snapshots through range transactions. */
-  recovery() { return { patch: this.patches.reduce<ContentPatch | undefined>((p, n) => composePatch(p, n.patch), undefined),
-    formulaDrafts: structuredClone(this.formulaDrafts) }; }
+  recovery() {
+    const patch = this.patches.reduce<ContentPatch | undefined>((p, n) => composePatch(p, n.patch), undefined);
+    const blocks = structuredClone(this.course.unit.reading.blocks);
+    for (const block of blocks) if (block.kind === 'paragraph') block.payload.text = this.text(block.id) ?? block.payload.text;
+    // An unrelated formal update can advance the course revision. Verify the actual
+    // target payload/order instead; incompatible drafts stay durable for reconciliation.
+    if (patch) {
+      for (const u of patch.updates) { const b = blocks.find(b => b.id === u.blockId); if (b && equal(b.payload, u.before)) b.payload = u.after; }
+      if (patch.structure && equal(patch.structure.before, blocks.map(b => b.id))) {
+        const byId = new Map([...blocks, ...patch.structure.inserted].map(b => [b.id, b]));
+        blocks.splice(0, blocks.length, ...patch.structure.after.map(id => byId.get(id)!));
+      }
+    }
+    return { blocks, patch, formulaDrafts: structuredClone(this.formulaDrafts) };
+  }
   progress() { return { inputSeq: this.sequence, durableInputSeq: Math.max(this.confirmed, this.draftSaved), confirmedInputSeq: this.confirmed }; }
   pendingTargets() { return new Set([...this.changes.keys(), ...this.splits.flatMap(s => [s.blockId, s.newBlockId]),
     ...this.patches.flatMap(p => patchTargets(p.patch)), ...this.formulaDrafts.map(f => f.blockId)]); }
@@ -202,13 +216,17 @@ export class ParagraphSaveChannel {
   /** Replay is explicit and awaitable for reconnect and UI tests; repeated pages cannot reapply input. */
   synchronize(): Promise<void> {
     if (this.syncing) return this.syncing;
-    this.syncing = this.replay().finally(() => { this.syncing = undefined; });
+    const active = observation.resource('notifications.activeConsumers'); active.set(1);
+    this.syncing = this.replay().finally(() => { active.close(); this.syncing = undefined; });
     return this.syncing;
   }
   private async replay() {
     let more = true;
     while (more && !this.disposed) {
       const page = await this.bridge.readEvents(this.course.sessionId, this.cursor, 64);
+      observation.sample('notifications.batchSize', page.kind === 'reset' ? 0 : page.events.length);
+      observation.count(page.kind === 'reset' ? 'notifications.resets' : 'notifications.batches');
+      if (page.kind !== 'reset' && page.hasMore) observation.count('notifications.morePages');
       if (page.kind === 'reset') {
         // A receipt may have fallen out of the event window; query it before consuming the snapshot.
         if (this.command) {

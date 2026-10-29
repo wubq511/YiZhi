@@ -69,9 +69,14 @@ try {
   // Decode and encode using the staged native module before signing or publishing an artifact.
   run(process.execPath, ['-e', "const c=require('@napi-rs/canvas').createCanvas(2,2);if(!c.toBuffer('image/png').length)throw Error('Native canvas unavailable')"], stage);
   const metadata = JSON.parse(await readFile(join(project, 'package.json'), 'utf8'));
+  const git = args => execFileSync('git', args, { cwd: project, encoding: 'utf8' }).trim();
+  const source = { commit: git(['rev-parse', 'HEAD']), dirty: !!git(['status', '--porcelain', '--untracked-files=normal']) };
+  const runtimeFiles = await Promise.all(['main.cjs', 'worker.cjs', 'preload.cjs', 'parsing-tool.cjs', 'course-service.cjs', 'renderer/app.js']
+    .map(async path => ({ path: `dist/${path}`, sha256: digest(await readFile(join(stage, 'dist', path))) })));
   await writeFile(join(stage, 'package-manifest.json'), JSON.stringify({
     name: 'YiZhi', version: metadata.version, platform: 'darwin', arch: process.arch,
     electron: metadata.devDependencies.electron, lockSha256: digest(await readFile(join(stage, 'package-lock.json'))),
+    source, runtimeFiles,
     productionPackages: production.sort((a,b) => a.path.localeCompare(b.path)),
     licenseFiles: licenseFiles.sort((a,b) => a.path.localeCompare(b.path)),
     nativeSbom: `node_modules/@napi-rs/canvas-darwin-${process.arch}/sbom.cdx.json`,

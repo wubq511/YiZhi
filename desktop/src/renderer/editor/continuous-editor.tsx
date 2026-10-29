@@ -5,6 +5,7 @@ import type { OpenedCourse, ReadingBlock } from '../../shared';
 import type { ParagraphSaveChannel } from '../save-channel';
 import { ContinuousEditor } from './controller';
 import './editor.css';
+import { observation } from '../../acceptance-observation';
 
 export function ContinuousUnitEditor({ course, channel, disabled, saveError, composition, renderBlock, controller, annotate, highlight }: {
   highlight(selection: import('../../annotation-api').AnnotationSelection): void;
@@ -33,7 +34,8 @@ export function ContinuousUnitEditor({ course, channel, disabled, saveError, com
       },
     });
     instance.current = editor; latest.current.controller(editor);
-    return () => { editor.destroy(); instance.current = null; latest.current.controller(null); };
+    const resource = observation.resource('editor.instances'); resource.set(1);
+    return () => { editor.destroy(); resource.close(); instance.current = null; latest.current.controller(null); };
   }, [channel]);
   useEffect(() => { instance.current?.setEditable(!disabled && !resolving); }, [disabled, resolving]);
   useEffect(() => { let cancelled = false; if (saveError) void instance.current?.inputConflicts().then(items => { if (!cancelled) setConflicts(items); });
