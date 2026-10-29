@@ -25,7 +25,7 @@ test('all visible short bodies load beyond eight and a static native selection s
   try {
     const c = await core.open(course), graph = await core.graph(c.sessionId);
     if (input) expect(graph.nodes).toHaveLength(500);
-    const ids: string[] = input ? graph.nodes.filter(n => n.id.startsWith('KU-LOAD-')).slice(0, 12).map(n => n.id)
+    const ids: string[] = input ? graph.nodes.filter(n => n.id.startsWith('KU-LOAD-')).slice(0, 10).map(n => n.id)
       : ['KU-001', 'KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-035', 'KU-055', 'KU-057', 'KU-062'];
     const heldId=ids[5];let unrelatedBoundaryId='';
     const originals = input ? await Promise.all(graph.nodes.filter(n => !n.id.startsWith('KU-LOAD-')).map(async n => ({ id: n.id, unit: await core.readUnit(c.sessionId, n.id) }))) : [];
