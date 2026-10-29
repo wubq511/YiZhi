@@ -117,8 +117,21 @@ export class ParagraphSaveChannel {
     this.splits = this.splits.filter(split => !convertedSplits.has(split));
   }
   /** Initial recovery projection only. Live editors reconcile snapshots through range transactions. */
-  recovery() { return { patch: this.patches.reduce<ContentPatch | undefined>((p, n) => composePatch(p, n.patch), undefined),
-    formulaDrafts: structuredClone(this.formulaDrafts) }; }
+  recovery() {
+    const patch = this.patches.reduce<ContentPatch | undefined>((p, n) => composePatch(p, n.patch), undefined);
+    const blocks = structuredClone(this.course.unit.reading.blocks);
+    for (const block of blocks) if (block.kind === 'paragraph') block.payload.text = this.text(block.id) ?? block.payload.text;
+    // An unrelated formal update can advance the course revision. Verify the actual
+    // target payload/order instead; incompatible drafts stay durable for reconciliation.
+    if (patch) {
+      for (const u of patch.updates) { const b = blocks.find(b => b.id === u.blockId); if (b && equal(b.payload, u.before)) b.payload = u.after; }
+      if (patch.structure && equal(patch.structure.before, blocks.map(b => b.id))) {
+        const byId = new Map([...blocks, ...patch.structure.inserted].map(b => [b.id, b]));
+        blocks.splice(0, blocks.length, ...patch.structure.after.map(id => byId.get(id)!));
+      }
+    }
+    return { blocks, patch, formulaDrafts: structuredClone(this.formulaDrafts) };
+  }
   progress() { return { inputSeq: this.sequence, durableInputSeq: Math.max(this.confirmed, this.draftSaved), confirmedInputSeq: this.confirmed }; }
   pendingTargets() { return new Set([...this.changes.keys(), ...this.splits.flatMap(s => [s.blockId, s.newBlockId]),
     ...this.patches.flatMap(p => patchTargets(p.patch)), ...this.formulaDrafts.map(f => f.blockId)]); }
