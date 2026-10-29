@@ -1,6 +1,7 @@
 import type { SaveBridge, OpenedCourse, DraftInput, EditCommand, SaveReceipt, TextChange, ParagraphSplit } from '../shared';
 import { observation } from '../acceptance-observation';
 import { composePatch, equal, patchTargets, type ContentPatch, type FormulaDraft } from '../editor-api';
+import { unitBlocks } from '../reading-model';
 export type SaveState = { status: 'saved' | 'draft' | 'pending' | 'saving' | 'error'; error?: string;
   inputSeq?: number; confirmedInputSeq?: number; draftInputSeq?: number };
 export interface EditorDelta { changes: TextChange[]; splits?: ParagraphSplit[]; complete?: boolean;
@@ -124,7 +125,8 @@ export class ParagraphSaveChannel {
     // An unrelated formal update can advance the course revision. Verify the actual
     // target payload/order instead; incompatible drafts stay durable for reconciliation.
     if (patch) {
-      for (const u of patch.updates) { const b = blocks.find(b => b.id === u.blockId); if (b && equal(b.payload, u.before)) b.payload = u.after; }
+      const all = unitBlocks({reading:{blocks}});
+      for (const u of patch.updates) { const b = all.find(b => b.id === u.blockId); if (b && equal(b.payload, u.before)) b.payload = u.after; }
       if (patch.structure && equal(patch.structure.before, blocks.map(b => b.id))) {
         const byId = new Map([...blocks, ...patch.structure.inserted].map(b => [b.id, b]));
         blocks.splice(0, blocks.length, ...patch.structure.after.map(id => byId.get(id)!));

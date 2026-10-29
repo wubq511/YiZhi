@@ -26,3 +26,13 @@ export function unitChanges(db:DatabaseSync,before:CourseUnit,after:CourseUnit,v
   }
   return changes;
 }
+
+/** Unit identity/metadata is separate from block bodies in new history records. */
+export function unitHeader(unit:CourseUnit|null):Record<string,any>|null {
+  if(!unit)return null;
+  const {blocks:_,...reading}=unit.reading;
+  return {encoding:'unit-header-v1',value:{...unit,reading}};
+}
+export function isUnitHeader(value:any):boolean {
+  return value?.encoding==='unit-header-v1' && !!value.value && !!value.value.reading && !('blocks' in value.value.reading);
+}

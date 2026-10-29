@@ -177,7 +177,7 @@ function open(directory: string,preparing=false): OpenedCourse {
       experiments.fenceOperation('commands:commit', operationId);
       extensions.fence('commands:commit', operationId);
     }, sourceUnit, { read: request => consistency.read(request), apply: (...args) => consistency.apply(...args), committed: result => agent.group(result) });
-    const sources = new Sources(db, canonical, sourceUnit);
+    const sources = new Sources(db, canonical, sourceUnit,workerData?.sourceScheduling,command=>{session(command.sessionId,'sources:importFile');fenceRequest('sources:importFile',command);});
     const storedCatalog = db.prepare("SELECT value FROM metadata WHERE key='relation-catalog'").get();
     const relationCatalog = JSON.parse(storedCatalog ? String(storedCatalog.value) : readFileSync(join(__dirname, 'fixtures/relation-catalog.json'), 'utf8'));
     const relations = new FormalRelations(db, graph, { retiredUnitIds: relationCatalog.retiredUnitIds,
@@ -205,11 +205,13 @@ function open(directory: string,preparing=false): OpenedCourse {
   } catch (error) { db?.close();identityOwner?.close(); owner.close(); throw error; }
 }
 function commit(course: Course, command: EditCommand) {
-  return commitEdit(course.db, command, (unitId, revision, blockIds) => {
+  const publications:Array<()=>void>=[];
+  const receipt=commitEdit(course.db, command, (unitId, revision, blockIds) => {
     const changes = course.groups.observe();
     course.agent.studentChanged({ operationId: command.operationId, unitId, revision, objectIds: blockIds });
     return changes;
-  });
+  },(before,after)=>{const prepared=course.experiments.prepareStudentEdit(before,after);publications.push(prepared.publish);return prepared.changes;});
+  for(const publish of publications)publish();return receipt;
 }
 function save(command: SaveParagraph): SaveReceipt {
   if (!command || command.blockId !== EDITABLE) throw new Error('无效的段落保存请求');
@@ -244,7 +246,7 @@ function upgradeSource(c:Course,directory:string):UpgradeSource{
   acquireBackup:(id,target)=>acquireBackup(c,id,target),releaseBackup:id=>releaseBackup(c,id),
  };
 }
-// Async validation/import shares the SAME ordered command boundary with saves, stop and close.
+// Staging yields outside the ordered command queue; synchronous commits recheck current authority.
 let queue = Promise.resolve();
 const sourceReads = new Set<Promise<void>>();
 let draining = false;
@@ -256,7 +258,7 @@ parentPort!.on('message', message => {
     const course = [...courses.values()].find(c => c.sessionId === message.payload?.sessionId);
     try { course?.experiments.stopIssuing(message.payload); } catch { /* Invalid input is rejected by the ordered dispatcher below. */ }
   }
-  if (message.action === 'sources:page' || message.action.startsWith('search:') || message.action.startsWith('backup:') || message.action.startsWith('format:') || message.action.startsWith('upgrade:') || message.action==='migration:prepare' || message.action==='migration:publish' || message.action==='migration:convert' || message.action==='migration:snapshot') {
+  if (message.action === 'sources:importFile' || message.action === 'sources:repairFile' || message.action === 'sources:page' || message.action.startsWith('search:') || message.action.startsWith('backup:') || message.action.startsWith('format:') || message.action.startsWith('upgrade:') || message.action==='migration:prepare' || message.action==='migration:publish' || message.action==='migration:convert' || message.action==='migration:snapshot') {
     // Independent file staging and immutable parsing yield while other courses save.
     // Start after prior ordered writes; close drains every pending stage/lease.
     queue = queue.then(() => {
@@ -265,14 +267,8 @@ parentPort!.on('message', message => {
     });
   } else queue = queue.then(() => dispatch(message));
 });
-async function dispatch({ id, action, payload }: { id: number; action: string; payload: any }) {
-  queuedObservation.set(--observedQueued);
-  const started = performance.now(), activeObservation = observation.resource('core.active');
-  activeObservation.set(1);
-  try {
-    if(workerData?.retentionScheduling?.clock)for(const course of courses.values())if(!course.upgradeFrozen)course.retention.synchronizeClock();
-    if(action==='courseRestore:apply' && session(payload.sessionId,action).sessionId!==payload.sessionId && !session(payload.sessionId,action).courseRestore.query(payload.operationId))throw new Error('编辑会话已失效，未执行新的整课恢复，请重新打开核对');
-    if (payload?.operationId && payload.sessionId) {
+function fenceRequest(action:string,payload:any) {
+  if (payload?.operationId && payload.sessionId) {
       const course = session(payload.sessionId,action);
       if(course.db.prepare('SELECT 1 FROM expired_payloads WHERE operation_id=?').get(payload.operationId))throw new Error('这项操作明细已过期清理；原身份保留，不能重新应用，请重新读取当前内容');
       if(action!=='courseRestore:apply'&&!action.endsWith(':query')&&action!=='queryOperation'&&action!=='formalHistory:detail'&&course.db.prepare('SELECT 1 FROM course_restore_requests WHERE id=?').get(payload.operationId))throw new Error('操作身份已用于整课恢复');
@@ -286,6 +282,15 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
       course.experiments.fenceOperation(fencedAction, payload.operationId);
       course.extensions.fence(fencedAction, payload.operationId);
     }
+}
+async function dispatch({ id, action, payload }: { id: number; action: string; payload: any }) {
+  queuedObservation.set(--observedQueued);
+  const started = performance.now(), activeObservation = observation.resource('core.active');
+  activeObservation.set(1);
+  try {
+    if(workerData?.retentionScheduling?.clock)for(const course of courses.values())if(!course.upgradeFrozen)course.retention.synchronizeClock();
+    if(action==='courseRestore:apply' && session(payload.sessionId,action).sessionId!==payload.sessionId && !session(payload.sessionId,action).courseRestore.query(payload.operationId))throw new Error('编辑会话已失效，未执行新的整课恢复，请重新打开核对');
+    fenceRequest(action,payload);
     let value: unknown;
     if(action==='upgrade:status')value=upgrades.status(payload.directory);
     else if(action==='upgrade:recover')value=await upgrades.recover(payload.directory);
@@ -406,7 +411,7 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     else if (action === 'relations:read') { const course = session(payload.sessionId,action); const basis = course.relations.read(payload); value = { ...basis, graph: layoutGraph(course.db, basis.graph) }; }
     else if (action === 'relations:commit') value = session(payload.sessionId,action).relations.commit(payload);
     else if (action === 'relations:query') value = session(payload.sessionId,action).relations.query(payload.operationId);
-    else if (action === 'commands:resolveInput') { const c = session(payload.sessionId,action); value = resolveInput(c.db, payload, () => c.groups.observe()); }
+    else if (action === 'commands:resolveInput') { const c = session(payload.sessionId,action); const publications:Array<()=>void>=[];value = resolveInput(c.db, payload, () => c.groups.observe(),(before,after)=>{const prepared=c.experiments.prepareStudentEdit(before,after);publications.push(prepared.publish);return prepared.changes;});for(const publish of publications)publish(); }
     else if (action.startsWith('commands:')) value = session(payload.sessionId,action).groups.dispatch(action, payload);
     else if (action.startsWith('drawings:')) value = session(payload.sessionId,action).drawings.dispatch(action, payload);
     else if (action.startsWith('search:')) value = await session(payload.sessionId,action).search.dispatch(action, payload);

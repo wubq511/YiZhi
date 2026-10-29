@@ -14,12 +14,14 @@ import type { ContentPatch } from '../../editor-api';
 import type { ParagraphSaveChannel } from '../save-channel';
 import { atom, baseExtensions, blocksOf, delta, freshClipboard, project } from './document';
 import { formulaView } from './formula';
+import type { FormulaEditing } from './nested-formula';
+import { unitBlocks } from '../../reading-model';
 import { integrateValue, textRange } from '../../content-integration';
 import type { CommandAPI, CandidateCheck } from '../../command-api';
 
 export interface EditorOptions {
   annotate(selection: AnnotationSelection): void;
-  renderOpaque(element: HTMLElement, block: ReadingBlock): () => void;
+  renderOpaque(element: HTMLElement, block: ReadingBlock, editing: FormulaEditing): { update(block: ReadingBlock): void; destroy(): void };
   composition(active: boolean): void;
   commands: CommandAPI;
   status(checks: CandidateCheck[]): void;
@@ -57,12 +59,17 @@ export class ContinuousEditor {
     const recovered = recovery.blocks;
     this.drafts = new Map(recovery.formulaDrafts.map(f => [f.blockId, f.latex]));
     this.previous = recovered;
-    for (const block of course.unit.reading.blocks) this.shown.set(block.id, { revision: course.revision, version: course.blockVersions?.[block.id], block: structuredClone(block) });
+    for (const block of unitBlocks(course.unit)) this.shown.set(block.id, { revision: course.revision, version: course.blockVersions?.[block.id], block: structuredClone(block) });
+    const editing: FormulaEditing = {
+      changed: (id, latex, complete, proof, restored) => this.formulaInput(id, latex, complete, proof, restored),
+      draft: id => this.drafts.get(id), annotate: (block, field) => options.annotate(this.captureFormula(block, field)),
+    };
     const opaque = atom('opaque').extend({ addNodeView: () => ({ node }) => {
       const dom = document.createElement('div'); dom.contentEditable = 'false'; dom.dataset.blockId = node.attrs.block.id;
       dom.className = 'editor-preserved';
-      const cleanup = options.renderOpaque(dom, node.attrs.block);
-      return { dom, stopEvent: () => true, ignoreMutation: () => true, destroy: cleanup };
+      const rendered = options.renderOpaque(dom, node.attrs.block, editing), id = node.attrs.block.id;
+      return { dom, stopEvent: () => true, ignoreMutation: () => true, destroy: () => rendered.destroy(),
+        update(next) { if (next.type.name !== 'opaque' || next.attrs.block.id !== id) return false; rendered.update(next.attrs.block); return true; } };
     } });
     const formula = atom('formula').extend({ addNodeView: () => ({ node }) => formulaView(node,
       (id, latex, complete, proof, restored) => this.formulaInput(id, latex, complete, proof, restored), id => this.drafts.get(id), (block, field) => {
@@ -165,7 +172,7 @@ export class ContinuousEditor {
     const field = [...this.editor.view.dom.querySelectorAll<MathfieldElement>('math-field:not([hidden])')].find(field => field.hasFocus());
     if (field) {
       const id = field.closest<HTMLElement>('[data-block-id]')?.dataset.blockId;
-      const block = this.previous.find(b => b.id === id);
+      const block = unitBlocks({reading:{blocks:this.previous}}).find(b => b.id === id);
       if (block && !field.selectionIsCollapsed) return this.captureFormula(block, field);
     }
     return { unitId: this.course.unit.id, fragments: this.captureSelection().fragments };
@@ -200,12 +207,12 @@ export class ContinuousEditor {
   async revealAnnotation(note: PersonalNote) {
     if (note.current.status !== 'attached') throw new Error('此批注待重新关联，请先选择新的片段。');
     const locations = note.current.fragments;
-    const current = blocksOf(this.editor.state.doc);
+    const current = unitBlocks({reading:{blocks:blocksOf(this.editor.state.doc)}});
     for (const l of locations) {
       const block = current.find(b => b.id === l.blockId);
       if (!block) throw new Error('当前显示内容尚未对齐，请结束输入或选择后重试。');
       const digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(block))))].map(n => n.toString(16).padStart(2, '0')).join('');
-      if (digest !== l.version || !equal(blocksOf(this.editor.state.doc).find(b => b.id === l.blockId), block)) throw new Error('当前显示版本不同，请结束输入或选择后重试。');
+      if (digest !== l.version || !equal(unitBlocks({reading:{blocks:blocksOf(this.editor.state.doc)}}).find(b => b.id === l.blockId), block)) throw new Error('当前显示版本不同，请结束输入或选择后重试。');
     }
     if (locations[0].field === 'latex') {
       const l = locations[0], element = [...this.editor.view.dom.querySelectorAll<HTMLElement>('.editor-formula')].find(e => e.dataset.blockId === l.blockId);
@@ -270,7 +277,7 @@ export class ContinuousEditor {
     const draft = snapshot.drafts.find(d => d.input.sessionId === snapshot.sessionId) ?? snapshot.drafts.at(-1);
     if (!draft?.input.patch || draft.input.patch.structure) return [];
     return draft.input.patch.updates.flatMap(u => {
-      const current = snapshot.unit.reading.blocks.find(b => b.id === u.blockId);
+      const current = unitBlocks(snapshot.unit).find(b => b.id === u.blockId);
       return current && !integrateValue(u.before, current.payload, u.after).compatible
         ? [{ blockId: u.blockId, current: current.payload, student: u.after }] : [];
     });
@@ -322,7 +329,7 @@ export class ContinuousEditor {
     this.previous = current;
   }
   private formulaDrafts(blocks = this.previous) {
-    const live = new Set(blocks.map(b => b.id));
+    const live = new Set(unitBlocks({reading:{blocks}}).map(b => b.id));
     return [...this.drafts].filter(([id]) => live.has(id)).map(([blockId, latex]) => ({ blockId, latex }));
   }
   private formulaInput(id: string, latex: string, complete: boolean, proof?: FormulaEditProof, restored = false) {
@@ -330,9 +337,11 @@ export class ContinuousEditor {
     const hadDraft = this.drafts.delete(id);
     let found = false;
     this.editor.state.doc.forEach((node, pos) => {
-      if (node.attrs.block.id === id && node.attrs.block.payload.latex !== latex) {
+      const current = unitBlocks({reading:{blocks:[node.attrs.block]}}).find(b => b.id === id);
+      if (current && current.payload.latex !== latex) {
         found = true;
-        const block = { ...node.attrs.block, payload: { ...node.attrs.block.payload, latex } };
+        const block = structuredClone(node.attrs.block);
+        unitBlocks({reading:{blocks:[block]}}).find(b => b.id === id)!.payload.latex = latex;
         this.editor.view.dispatch(this.editor.state.tr.setNodeMarkup(pos, undefined, { block }).setMeta('addToHistory', false).setMeta('formulaProof', proof).setMeta('formulaRestore', restored));
       }
     });
@@ -370,6 +379,12 @@ export class ContinuousEditor {
     view.dispatch(tr); view.focus();
   }
   /** External updates map only changed ranges through the existing history and native selection. */
+  private acknowledgeShown(block: ReadingBlock, snapshot: OpenedCourse, protectedAncestor = false) {
+    const held = protectedAncestor || this.protectedIds.has(block.id);
+    if (!held || !equal(this.shown.get(block.id)?.block, block))
+      this.shown.set(block.id, { revision: snapshot.revision, version: snapshot.blockVersions?.[block.id], block: structuredClone(block) });
+    for (const child of block.children ?? []) this.acknowledgeShown(child, snapshot, held);
+  }
   reconcile(snapshot: OpenedCourse): boolean {
     if (snapshot.revision < this.course.revision) return true;
     this.course = snapshot;
@@ -404,18 +419,18 @@ export class ContinuousEditor {
       if (equal(displayed, incoming)) {
         // A held selection retains its creation context even when an unrelated formal
         // revision arrives. A new own acknowledgement can still confirm its draft projection.
-        if (!this.protectedIds.has(incoming.id) || !equal(this.shown.get(incoming.id)?.block, incoming))
-          this.shown.set(incoming.id, { revision: snapshot.revision, version: snapshot.blockVersions?.[incoming.id], block: structuredClone(incoming) });
+        this.acknowledgeShown(incoming, snapshot);
         continue;
       }
-      if (this.protectedIds.has(incoming.id) || this.drafts.has(incoming.id) || this.channel.pendingTargets().has(incoming.id)) { blocked = true; continue; }
+      const pending = this.channel.pendingTargets();
+      if (unitBlocks({reading:{blocks:[incoming]}}).some(b => this.protectedIds.has(b.id) || this.drafts.has(b.id) || pending.has(b.id))) { blocked = true; continue; }
       if (node.type.name === 'paragraph' && incoming.kind === 'paragraph') {
         const range = textRange(node.textContent, String(incoming.payload.text)), points = Array.from(node.textContent);
         const start = points.slice(0, range.start).join('').length, end = points.slice(0, range.end).join('').length;
         if (start !== end || range.text) tr.insertText(range.text, pos + 1 + start, pos + 1 + end);
         tr.setNodeMarkup(pos, undefined, { block: incoming });
       } else tr.replaceWith(pos, pos + node.nodeSize, this.editor.schema.nodeFromJSON(project(incoming)));
-      this.shown.set(incoming.id, { revision: snapshot.revision, version: snapshot.blockVersions?.[incoming.id], block: structuredClone(incoming) });
+      this.acknowledgeShown(incoming, snapshot);
     }
     if (tr.docChanged) this.editor.view.dispatch(tr.setMeta('external', true).setMeta('addToHistory', false));
     return !blocked;

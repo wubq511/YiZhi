@@ -118,7 +118,10 @@ test('complete lesson publishes one graph-owned unit, stop and explicit continue
     const practiceHistory=(await core.commands.history({sessionId})).find(h=>h.operationId===second.operationId)!;
     assert.ok(practiceHistory.changes.some(c=>c.objectId===`structure:${basis.spec.unitId}`));
     assert.ok(practiceHistory.changes.some(c=>c.objectId===`unit:${basis.spec.unitId}`&&c.before&&c.after),
-      'practice records the full unit revision for task history');
+      'practice records the unit identity revision for task history');
+    const header=practiceHistory.changes.find(c=>c.objectId===`unit:${basis.spec.unitId}`)!;
+    assert.equal(header.after!.encoding,'unit-header-v1');
+    assert.equal(JSON.stringify(header).includes(String(unit.reading.blocks[0].payload.text)),false,'unchanged lesson bodies live only in their original object history');
     assert.ok(practiceHistory.changes.every(c=>!['graph:','theme:','layout:','layout-theme:'].some(prefix=>c.objectId.startsWith(prefix))),
       'practice does not claim a graph or layout lifecycle');
     assert.deepEqual((await core.readAgentGeneration(nextIdentity)).pendingStages,[]);
@@ -562,4 +565,38 @@ test('a full backup retains actual T30 waiting generation basis resources and ne
   const recovered=await copy.agentTask({sessionId:c.sessionId,taskId:task.id});assert.notEqual(recovered.status,'running');
   assert.equal((await copy.generationCandidates({sessionId:c.sessionId,taskId:task.id})).length,1);
  }finally{await copy?.close();await core.close();await rm(root,{recursive:true,force:true});}
+});
+
+test('old full-unit generation histories remain byte-identical, reversible and queryable with original receipts after reopen',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'yizhi-old-generation-history-'));let core=new CourseService(resolve('dist/worker.cjs'));
+  try {
+    const {sessionId,task}=await prepared(core,root),identity={sessionId,taskId:task.id,attemptId:task.attemptId,generation:task.generation};
+    const initial=await core.readAgentGeneration(identity),lessonReceipt=await core.publishAgentGeneration({...identity,input:lesson(initial,'legacy-header-lesson')});
+    const old=await core.readUnit(sessionId,initial.spec.unitId),basis=await core.readAgentGeneration(identity);
+    const practiceReceipt=await core.publishAgentGeneration({...identity,input:practice(basis,'legacy-header-practice')});
+    const current=await core.readUnit(sessionId,old.id);
+    await core.recordAgent({...identity,eventId:'legacy-header-finish',kind:'finish',status:'completed'});
+    // System-boundary fixture: exact pre-fix stored encoding. Product code must never rewrite it.
+    const db=new DatabaseSync(join(root,'course/course.sqlite'));const original=new Map<string,string>();
+    try {
+      db.exec('PRAGMA busy_timeout=1000');
+      for(const [id,before,after] of [[lessonReceipt.operationId,null,old],[practiceReceipt.operationId,old,current]] as const) {
+        const h=JSON.parse(String(db.prepare('SELECT payload FROM cg_history WHERE operation_id=?').get(id)!.payload));
+        const unit=h.changes.find((c:any)=>c.objectId===`unit:${old.id}`);unit.before=before;unit.after=after;
+        const text=JSON.stringify(h);db.prepare('UPDATE cg_history SET payload=? WHERE operation_id=?').run(text,id);original.set(id,text);
+      }
+    }finally{db.close();}
+    await core.close();core=new CourseService(resolve('dist/worker.cjs'));const reopened=await core.open(join(root,'course'));
+    assert.deepEqual(await core.queryAgentGeneration({...identity,sessionId:reopened.sessionId,operationId:'legacy-header-lesson'}),lessonReceipt);
+    assert.deepEqual(await core.queryAgentGeneration({...identity,sessionId:reopened.sessionId,operationId:'legacy-header-practice'}),practiceReceipt);
+    const preview=await core.formalHistory.preview({...reopened,selection:{kind:'task',taskId:task.id}});
+    assert.equal((await core.formalHistory.apply({...reopened,operationId:'undo-old-generation',preview})).status,'committed');
+    await assert.rejects(core.readUnit(reopened.sessionId,old.id),/不存在/);
+    const redo=await core.formalHistory.preview({...reopened,selection:{kind:'operations',operationIds:['undo-old-generation']}});
+    assert.equal((await core.formalHistory.apply({...reopened,operationId:'redo-old-generation',preview:redo})).status,'committed');
+    assert.deepEqual(await core.readUnit(reopened.sessionId,old.id),current);
+    const verify=new DatabaseSync(join(root,'course/course.sqlite'),{readOnly:true});
+    try{for(const [id,payload] of original)assert.equal(verify.prepare('SELECT payload FROM cg_history WHERE operation_id=?').get(id)!.payload,payload);}
+    finally{verify.close();}
+  }finally{await core.close();await rm(root,{recursive:true,force:true});}
 });

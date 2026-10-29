@@ -4,7 +4,7 @@ import type { CourseGraph, OpenedCourse } from '../src/shared';
 import { AcceptanceMetrics } from './acceptance-metrics';
 import { exerciseDirtyIndex, exerciseHistoryPreview, exerciseParserPreparation, flattenBlocks, prepareLongHistory, type StudyAPI } from './acceptance-workload';
 import { parsingFixture } from './parsing-fixture';
-import { readCameraTransform, revealBoardControl } from './board-test-helpers';
+import { readCameraTransform, revealBoardControl, expectBoundedReading } from './board-test-helpers';
 
 export function studyAPI(page: Page, other?: { page: Page; sessionId: string }): StudyAPI {
   const call = (path: string[], args: unknown[]) => {
@@ -50,7 +50,7 @@ export async function exerciseTargetDisplays(page: Page, fixture: SavedTargetFix
     const result = fixture.results[index]; await buttons.nth(index).click();
     const article = page.locator(`article[data-unit-id="${result.unitId}"][data-reading-active=true]`);
     await expect(article).toHaveCount(1); await expect(article).toContainText(result.marker);
-    const layers = await page.locator('.reading-layer').count(); expect(layers).toBeLessThanOrEqual(2);
+    const layers = await expectBoundedReading(page);
     await metrics.sample(`saved-target:${index + 1}`); displays.push({ unitId: result.unitId, taskId: result.taskId, layers });
   }
   await page.getByRole('button', { name: '收起对话', exact: true }).click();
@@ -83,7 +83,7 @@ export async function runStudyAcceptance(app: ElectronApplication, page: Page, m
   for (let index = 0; index < ids.length; index++) {
     const id = ids[index];
     await metrics.time(`navigation:${id}`, () => navigateUnit(page, graph, id));
-    expect(await page.locator('.reading-layer').count()).toBeLessThanOrEqual(2);
+    await expectBoundedReading(page);
     const summary = page.locator(`article[data-unit-id="${id}"] details > summary`).first();
     if (index % 25 === 0 && await summary.count()) {
       await revealBoardControl(page, summary); await summary.click(); disclosures++;

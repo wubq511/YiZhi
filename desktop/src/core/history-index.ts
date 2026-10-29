@@ -1,3 +1,4 @@
+import { initializeHistoryActivities } from './history-activity-index';
 import type { DatabaseSync } from 'node:sqlite';
 /** Rebuildable metadata only. Bodies continue to live in their original formal records. */
 export function initializeHistoryIndex(db:DatabaseSync) {
@@ -56,4 +57,5 @@ export function initializeHistoryIndex(db:DatabaseSync) {
       db.prepare("INSERT INTO metadata VALUES('history-index-v1','1')").run();db.exec('COMMIT');
     }catch(error){db.exec('ROLLBACK');throw error;}
   }
+  initializeHistoryActivities(db);
 }

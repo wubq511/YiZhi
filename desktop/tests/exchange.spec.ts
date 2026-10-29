@@ -5,12 +5,13 @@ import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { CourseService } from '../src/core/course-service';
 import { exchangeFixture } from './exchange-fixture';
-import { resizeBoardWindow, revealBoardControl } from './board-test-helpers';
+import { resizeBoardWindow, revealBoardControl, captureBoardState, closeFailedBoard } from './board-test-helpers';
 
 test('explicit exchange scope, failed real registration, retry and independent offline reopen at 1024 and 700', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-exchange-ui-'));
   const core = new CourseService(resolve('dist/worker.cjs'));
   let app: Awaited<ReturnType<typeof electron.launch>> | undefined;
+  let failure: unknown;
   try {
     await exchangeFixture(join(root, 'legacy'));
     await core.migration.convert({ sourceDirectory: join(root, 'legacy'), directory: join(root, 'source') });
@@ -82,6 +83,7 @@ test('explicit exchange scope, failed real registration, retry and independent o
     await mkdir(resolve('dist/t27-acceptance'), { recursive: true });
     await page.screenshot({ path: resolve('dist/t27-acceptance/ui-narrow.png') });
     await page.getByRole('button', { name: '关闭内容交换' }).click();
+    await test.info().attach('destination-before-normal-close.json',{body:JSON.stringify(await captureBoardState(app,page),null,2),contentType:'application/json'});
     await app.close();
     app = undefined;
     await rm(join(root, 'source'), { recursive: true });
@@ -118,9 +120,10 @@ test('explicit exchange scope, failed real registration, retry and independent o
     expect(
       await page.evaluate(() => 'importPackage' in window.yizhi.exchange || 'exportPackage' in window.yizhi.exchange),
     ).toBe(false);
-  } finally {
+  } catch(error) { failure=error;throw error; }
+  finally {
     await core.close();
-    if (app) await app.close();
+    if (app) { if(failure)await closeFailedBoard(app,failure);else await app.close(); }
     await rm(root, { recursive: true, force: true });
   }
 });
@@ -129,6 +132,7 @@ test('a declared unit imported into a native course uses its registered image an
   const root = await mkdtemp(join(tmpdir(), 'yizhi-exchange-native-ui-'));
   const core = new CourseService(resolve('dist/worker.cjs'));
   let app: Awaited<ReturnType<typeof electron.launch>> | undefined;
+  let failure: unknown;
   try {
     await exchangeFixture(join(root, 'legacy'), 'KU-NEW');
     const { readFile, writeFile } = await import('node:fs/promises');
@@ -172,9 +176,10 @@ test('a declared unit imported into a native course uses its registered image an
     await revealBoardControl(page, source);
     await source.click();
     await expect(page.locator('.source-pdf .textLayer')).toContainText('Fixed legacy source');
-  } finally {
+  } catch(error) { failure=error;throw error; }
+  finally {
     await core.close();
-    if (app) await app.close();
+    if (app) { if(failure)await closeFailedBoard(app,failure);else await app.close(); }
     await rm(root, { recursive: true, force: true });
   }
 });

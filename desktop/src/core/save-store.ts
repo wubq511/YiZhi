@@ -2,6 +2,7 @@ import { historyTimestamp } from './history-clock';
 import { objectVersions, unitChanges } from './history-objects';
 import { syncAnnotations } from './annotations';
 import { changedCouplings } from './consistency-links';
+import { unitBlocks } from '../reading-model';
 import type { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
 import { patchTargets } from '../editor-api';
@@ -68,7 +69,7 @@ export function transaction<T>(db: DatabaseSync, run: () => T): T {
   }
 }
 /** Explicit conflict choice is version checked and consumes only the exact durable draft. */
-export function resolveInput(db: DatabaseSync, request: import('../command-api').InputResolution, afterWrite: () => unknown): EditReceipt {
+export function resolveInput(db: DatabaseSync, request: import('../command-api').InputResolution, afterWrite: () => unknown, prepareCouplings?: (before:CourseUnit,after:CourseUnit)=>import('../history-api').HistoryChange[]): EditReceipt {
   if (!request || !['student', 'external'].includes(request.choice) || !Array.isArray(request.blockIds) ||
     !request.blockIds.length || request.blockIds.some(id => typeof id !== 'string')) throw new Error('无效的冲突选择');
   return transaction(db, () => {
@@ -86,7 +87,7 @@ export function resolveInput(db: DatabaseSync, request: import('../command-api')
     const unit: CourseUnit = JSON.parse(String(row.payload));
     const patch = structuredClone(draft.input.patch);
     for (const u of patch.updates) {
-      const block = unit.reading.blocks.find(b => b.id === u.blockId);
+      const block = unitBlocks(unit).find(b => b.id === u.blockId);
       if (!block) throw new Error('冲突对象已移除，请重新读取');
       const merged = integrateValue(u.before, block.payload, u.after);
       if (!merged.compatible) {
@@ -101,7 +102,7 @@ export function resolveInput(db: DatabaseSync, request: import('../command-api')
     db.prepare('DELETE FROM drafts WHERE session_id=?').run(inputKey(draft.input.sessionId, draft.input.unitId));
     const seq = Number(db.prepare('SELECT seq FROM input_progress WHERE session_id=?').get(inputKey(request.sessionId, request.unitId))?.seq ?? 0) + 1;
     const receipt = commitEdit(db, { sessionId: request.sessionId, unitId: request.unitId, operationId: request.operationId, inputSeq: seq,
-      baseRevision: request.basisRevision, complete: true, changes: [], patch }, afterWrite);
+      baseRevision: request.basisRevision, complete: true, changes: [], patch }, afterWrite,prepareCouplings);
     db.prepare('INSERT INTO input_resolutions VALUES (?, ?)').run(request.operationId, digest(request));
     return receipt;
   });
@@ -170,7 +171,7 @@ export function draftTargets(input: DraftInput): Set<string> {
  * The observer may update block/ancestor/dependency projections on the same connection;
  * a thrown error rolls back every fact. Returned changed-object effects belong in history.
  */
-export function commitEdit(db: DatabaseSync, command: EditCommand, afterWrite?: (unitId: string, revision: number, blockIds: string[]) => unknown): EditReceipt {
+export function commitEdit(db: DatabaseSync, command: EditCommand, afterWrite?: (unitId: string, revision: number, blockIds: string[]) => unknown, prepareCouplings?: (before:CourseUnit,after:CourseUnit)=>import('../history-api').HistoryChange[]): EditReceipt {
   validate(command);
   if (typeof command.operationId !== 'string' || !command.operationId.length || command.operationId.length > 160)
     throw new Error('无效的操作身份');
@@ -208,7 +209,7 @@ export function commitEdit(db: DatabaseSync, command: EditCommand, afterWrite?: 
     if (stale && (!command.patch || command.changes.length || command.splits?.length)) throw new Error('正文版本已变化，输入仍保留，请重新核对');
     const patch = command.patch && structuredClone(command.patch);
     if (patch) for (const update of patch.updates) {
-      const block = unit.reading.blocks.find(b => b.id === update.blockId);
+      const block = unitBlocks(unit).find(b => b.id === update.blockId);
       if (!block) throw new Error('共同结构已变化，学生草稿仍保留');
       const merged = integrateValue(update.before, block.payload, update.after);
       if (!merged.compatible) throw new Error('当前段落的同时修改不兼容，正式内容与学生草稿均已保留。请在正文处理冲突部分。');
@@ -253,16 +254,19 @@ export function commitEdit(db: DatabaseSync, command: EditCommand, afterWrite?: 
       found.block.payload.text = text.slice(0, split.offset).join('');
       found.siblings.splice(found.siblings.indexOf(found.block) + 1, 0, next);
     }
-    // Ordinary student editing has no finite proof/source/necessary-relation bundle.
-    // Inspect both sides, including newly inserted and retargeted links, before any formal publication.
-    if (changedCouplings(beforeUnit, unit).size) throw new Error('关联公式与实验定义必须通过完整一致组共同核验；输入未正式提交，请通过 Agent 共同修改。');
+    let couplingChanges:import('../history-api').HistoryChange[]=[];
+    if(changedCouplings(beforeUnit,unit).size) {
+      if(!prepareCouplings)throw new Error('关联公式需要共同保存实验定义');
+      couplingChanges=prepareCouplings(beforeUnit,unit);
+      for(const change of unitChanges(db,beforeUnit,unit,historyVersions))if(!change.objectId.startsWith('structure:'))affected.add(change.objectId);
+    }
     const receipt: EditReceipt = { operationId: command.operationId, sessionId: command.sessionId,
       basedOnRevision: command.baseRevision, unitId: unit.id,
       inputSeq: command.inputSeq, revision: Number(row.revision) + 1,
       blockId: command.changes[0]?.blockId ?? command.splits?.[0]?.blockId ?? patchTargets(command.patch)[0] ?? unit.id, blockIds: [...affected], cursor: 0 };
     db.prepare('UPDATE units SET payload=?, revision=? WHERE id=?').run(JSON.stringify(unit), receipt.revision, unit.id);
     syncAnnotations(db, patch ?? { updates: [], correspondence: correspondence.map(s => ({ kind: 'split', sourceId: s.blockId, targetId: s.newBlockId, offset: s.offset })) });
-    const relatedChanges = afterWrite?.(unit.id, receipt.revision, receipt.blockIds);
+    const relatedChanges = [...((afterWrite?.(unit.id, receipt.revision, receipt.blockIds) ?? []) as import('../history-api').HistoryChange[]),...couplingChanges];
     const formalChanges = unitChanges(db,beforeUnit,unit,historyVersions);
     receipt.cursor = appendEvent(db, { type: 'content.committed', receipt: { ...receipt, cursor: eventCursor(db) + 1 } });
     const legacyAffected = new Set([...command.changes.map(c => c.blockId), ...(command.splits ?? []).flatMap(s => [s.blockId, s.newBlockId])]);

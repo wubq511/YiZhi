@@ -5,7 +5,7 @@ import type { CameraController } from './camera-controller';
 import './local-layout.css';
 import { observation } from '../acceptance-observation';
 
-export function useLocalLayout(graph: CourseGraph | undefined, activeId: string | undefined, camera: CameraController, enabled: boolean, ready = true) {
+export function useLocalLayout(graph: CourseGraph | undefined, activeId: string | undefined, camera: CameraController, enabled: boolean, ready = true,readingAnchor?:LayoutPlacement) {
   const observed = useMemo(() => ({ pending: observation.resource('measurement.pending'),
     frame: observation.resource('layout.scheduledFrames'), metadata: observation.resource('measurement.metadataEntries') }), []);
   const [sizes, setSizes] = useState<LayoutSizes>({});
@@ -13,6 +13,8 @@ export function useLocalLayout(graph: CourseGraph | undefined, activeId: string 
   const measured = useRef<LayoutSizes>({});
   const pending = useRef<LayoutSizes>({}), frame = useRef<number | undefined>(undefined);
   const measure = useCallback((id: string, width: number, height: number) => {
+    // ResizeObserver can deliver a final zero rectangle after a virtualized body detaches.
+    if(!Number.isFinite(width)||!Number.isFinite(height)||width<=0||height<=0)return;
     observation.count('measurement.callbacks');
     pending.current[id] = { width, height };
     observed.pending.set(Object.keys(pending.current).length);
@@ -29,17 +31,23 @@ export function useLocalLayout(graph: CourseGraph | undefined, activeId: string 
   useEffect(() => () => { if (frame.current !== undefined) cancelAnimationFrame(frame.current);
     observed.pending.close(); observed.frame.close(); observed.metadata.close(); }, []);
   useLayoutEffect(() => { observed.metadata.set(Object.keys(sizes).length); }, [sizes, observed]);
-  const placements = useMemo(() => graph ? projectLayout(graph.layout.nodes, enabled ? Object.fromEntries(Object.entries(sizes).filter(([id]) => id === activeId || id === 'KU-001')) : {}, gesture) : [], [graph, enabled, sizes, gesture, activeId]);
+  const placements = useMemo(() => {
+    if(!graph)return [];
+    const ids=new Set(graph.layout.nodes.map(n=>n.unitId));
+    const fixed=gesture??(enabled&&readingAnchor&&ids.has(readingAnchor.unitId)?readingAnchor:undefined);
+    const known=Object.fromEntries(Object.entries(sizes).filter(([id])=>ids.has(id)));
+    return projectLayout(graph.layout.nodes,enabled?known:{},fixed);
+  },[graph,enabled,sizes,gesture,readingAnchor]);
   const manual = useRef<string | undefined>(undefined);
   const previous = useRef<{ id?: string; fixed?: string; nodes: LayoutNode[] }>({ nodes: [] });
   useLayoutEffect(() => {
     const old = previous.current.nodes.find(n => n.unitId === activeId), next = placements.find(n => n.unitId === activeId);
-    if (ready && enabled && manual.current !== activeId && previous.current.fixed !== activeId && previous.current.id === activeId && old && next && gesture?.unitId !== activeId && (old.x !== next.x || old.y !== next.y))
+    if (ready && enabled && (!readingAnchor||readingAnchor.unitId===activeId) && manual.current !== activeId && previous.current.fixed !== activeId && previous.current.id === activeId && old && next && gesture?.unitId !== activeId && (old.x !== next.x || old.y !== next.y))
       camera.compensate(next.x - old.x, next.y - old.y);
     measured.current = sizes;
     manual.current = undefined;
     previous.current = { id: activeId, fixed: gesture?.unitId, nodes: placements };
-  }, [placements, activeId, enabled, ready, camera, gesture, sizes]);
+  }, [placements, activeId, enabled, ready, camera, gesture, sizes,readingAnchor]);
   const waitForMeasurements = async (ids: string[]) => {
     let unchanged = 0, last = measured.current;
     for (let attempt = 0; attempt < 60; attempt++) {

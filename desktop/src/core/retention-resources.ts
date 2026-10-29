@@ -3,6 +3,12 @@ import { readdirSync,lstatSync,unlinkSync,existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { declaredResourceRoots as enumerateDeclared } from './resource-roots';
 import type { BackupResource } from '../backup-api';
+const publishers=new WeakMap<DatabaseSync,number>();
+/** Worker-local publication lifetime. A crashed publisher cannot leave a persistent lease behind. */
+export function retainResourcePublication(db:DatabaseSync) {
+ publishers.set(db,(publishers.get(db)??0)+1);let released=false;
+ return ()=>{if(!released){released=true;const count=(publishers.get(db)??1)-1;if(count)publishers.set(db,count);else publishers.delete(db);}};
+}
 type RootCheck=(db:DatabaseSync,sha256:string)=>boolean;
 const extraRoots=new Map<string,RootCheck>();
 const extraEnumerators=new Map<string,(db:DatabaseSync)=>BackupResource[]>();
@@ -19,7 +25,7 @@ export function declaredResourceRoots(db:DatabaseSync){
  }
  return refs.sort((a,b)=>a.sha256.localeCompare(b.sha256));
 }
-const roots=[['source_versions','payload'],['parse_artifacts','payload'],['exchange_resources','payload'],['extension_packages','manifest'],
+const roots=[['source_imports','payload'],['source_versions','payload'],['parse_artifacts','payload'],['exchange_resources','payload'],['extension_packages','manifest'],
  ['units','payload'],['personal_notes','value'],['personal_drawings','value'],['drafts','input'],['annotation_versions','block'],
  ['builtin_experiments','payload'],['builtin_formal_definitions','payload'],['extension_scene','payload'],['cg_history','payload'],
  ['operations','before_text'],['operations','after_text'],['history_boundary','value'],['agent_tool_recovery','input'],['agent_tool_recovery','output'],['agent_executor_receipts','payload'],
@@ -51,6 +57,7 @@ export class RetentionResources {
   return false;
  }
  run(limit:number,cutoff:string){
+  if(publishers.has(this.db))return {phase:'resources-pinned',pending:false,removed:0};
   if(this.db.prepare("SELECT 1 FROM retention_resource_leases WHERE state='active' LIMIT 1").get())return {phase:'resources-pinned',pending:false,removed:0};
   // A parser publishes immutable bytes before Core registers its ArtifactRef.
   if(this.db.prepare("SELECT 1 FROM parse_tasks WHERE json_extract(payload,'$.status')='running' LIMIT 1").get())return {phase:'resources-pinned',pending:false,removed:0};

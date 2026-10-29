@@ -65,3 +65,45 @@ test('each active B has its own formal revision and recoverable input progress i
     assert.equal((await core.read(reopened.sessionId, 'KU-057')).unit.reading.blocks.find(p => p.id === b.id)!.payload.text, right.changes[0].text);
   } finally { await core.close(); await rm(root, { recursive: true, force: true }); }
 });
+
+import { muxCopy, correction, muxId } from './agent-mutation-setup';
+test('student linked formula saves synchronize supported config, retain unsupported formula as needs-check, and undo together', async () => {
+  const root=await mkdtemp(join(tmpdir(),'yizhi-student-formula-'));let core=new CourseService(resolve('dist/worker.cjs'));
+  try {
+    const fixture=await muxCopy(core,root),sessionId=fixture.sessionId;
+    assert.equal((await core.commands.commit(await correction(core,sessionId,fixture.citation.id,'verified-baseline'))).status,'committed');
+    let v=await core.experiments.read({sessionId,instanceId:fixture.view.instanceId});
+    v=await core.experiments.act({sessionId,instanceId:v.instanceId,generation:v.generation,operationId:'baseline-adopt',action:{kind:'migrate',baseVersion:v.version}});
+    let s=await core.read(sessionId,'KU-057');const original=s.unit;
+    const edit=async(latex:string,seq:number)=>{
+      const block=s.unit.reading.blocks.find(b=>b.id==='mux-linked-formula')!;
+      const cmd={sessionId,unitId:s.unit.id,inputSeq:seq,baseRevision:s.revision,operationId:`student-formula-${seq}`,complete:true,changes:[],patch:{updates:[{blockId:block.id,before:block.payload,after:{...block.payload,latex}}],correspondence:[]}};
+      const {operationId,...input}=cmd;await core.saveDraft(input);
+      if(seq===1){const {DatabaseSync}=await import('node:sqlite'),fault=new DatabaseSync(join(root,'course.sqlite'));const before=await core.experiments.read({sessionId,instanceId:v.instanceId});try{fault.exec("CREATE TRIGGER reject_student_formula BEFORE INSERT ON operations BEGIN SELECT RAISE(ABORT,'formula write fault');END");await assert.rejects(core.commitEdit(cmd),/formula write fault/);assert.deepEqual((await core.read(sessionId,'KU-057')).unit,original);assert.deepEqual(await core.experiments.read({sessionId,instanceId:v.instanceId}),before);fault.exec('DROP TRIGGER reject_student_formula');}finally{fault.close();}}
+      const receipt=await core.commitEdit(cmd);assert.deepEqual(await core.commitEdit(cmd),receipt);
+      s=await core.read(sessionId,'KU-057');return receipt;
+    };
+    await edit('Z=0',1);
+    assert.deepEqual(s.unit.reading.blocks.find(b=>b.id===muxId)!.payload.config.dataSignals,['0','0','0','0']);
+    const changed=await core.formalHistory.detail({sessionId,operationId:'student-formula-1'});
+    assert.ok(changed.changes.some(c=>c.objectId===`experiment:KU-057/${muxId}`));
+    const verified=s.unit;
+    await edit('Z=S_{10}',2);
+    assert.equal(s.unit.reading.blocks.find(b=>b.id==='mux-linked-formula')!.payload.latex,'Z=S_{10}');
+    assert.deepEqual(s.unit.reading.blocks.find(b=>b.id===muxId)!.payload.config,verified.reading.blocks.find(b=>b.id===muxId)!.payload.config);
+    v=await core.experiments.read({sessionId,instanceId:v.instanceId});assert.equal(v.pendingDefinition?.check,'needs-check');
+    v=await core.experiments.act({sessionId,instanceId:v.instanceId,generation:v.generation,operationId:'unsupported-adopt',action:{kind:'migrate',baseVersion:v.version}});
+    assert.equal(v.definition.formula,'Z=S_{10}');assert.equal(v.result,null);assert.equal(v.phase,'needs-check');
+    const preview=await core.formalHistory.preview({sessionId,selection:{kind:'operations',operationIds:['student-formula-2']}});
+    assert.equal((await core.formalHistory.apply({sessionId,preview,operationId:'undo-student-formula'})).status,'committed');
+    assert.deepEqual((await core.read(sessionId,'KU-057')).unit,verified);
+    const redo=await core.formalHistory.preview({sessionId,selection:{kind:'operations',operationIds:['undo-student-formula']}});
+    assert.equal((await core.formalHistory.apply({sessionId,preview:redo,operationId:'redo-student-formula'})).status,'committed');
+    assert.equal((await core.read(sessionId,'KU-057')).unit.reading.blocks.find(b=>b.id==='mux-linked-formula')!.payload.latex,'Z=S_{10}');
+    assert.equal((await core.read(sessionId,'KU-057')).unit.reading.blocks.find(b=>b.id===muxId)!.id,original.reading.blocks.find(b=>b.id===muxId)!.id);
+    await core.close();core=new CourseService(resolve('dist/worker.cjs'));const reopened=await core.open(root);
+    v=await core.experiments.open({sessionId:reopened.sessionId,unitId:'KU-057',blockId:muxId});
+    if(v.pendingDefinition)v=await core.experiments.act({sessionId:reopened.sessionId,instanceId:v.instanceId,generation:v.generation,operationId:'reopen-adopt',action:{kind:'migrate',baseVersion:v.version}});
+    assert.equal(v.definition.check,'needs-check');assert.equal(v.result,null);
+  }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
