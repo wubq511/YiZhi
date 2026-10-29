@@ -8,7 +8,7 @@ import type { CourseGraph } from '../shared';
 import { layoutGraph,saveLayout } from './local-layout';
 import { changedCouplings,unitBlocks,linkedExperiment,isBuiltin } from './consistency-links';
 import { assignments,evaluate,formulaOutputs,convertFormula } from './builtin-model';
-import { unitObjects } from './history-objects';
+import { unitObjects,unitHeader,isUnitHeader } from './history-objects';
 import { graphObjectRevision,layoutRevision,bumpLayoutRevision } from './generation-lifecycle';
 import { syncAnnotations } from './annotations';
 import { equal } from '../editor-api';
@@ -51,7 +51,7 @@ export class FormalHistory {
     return changes.filter(c=>{
       const kind=this.object(c.objectId).kind;
       if(!['block','structure','reference','dependency','layout','layout-theme','unit','graph','theme','experiment','formal-relation','review'].includes(kind))return true;
-      if(kind==='unit')return [c.before,c.after].some(v=>v&&(v.id!==c.objectId.slice(5)||!Array.isArray(v.reading?.blocks)||!v.theme?.id));
+      if(kind==='unit')return [c.before,c.after].some(v=>{if(!v)return false;const unit=isUnitHeader(v)?v.value:v;return unit.id!==c.objectId.slice(5)||(!isUnitHeader(v)&&!Array.isArray(unit.reading?.blocks))||!unit.theme?.id;});
       if(['graph','theme','layout-theme'].includes(kind))return !changes.some(change=>change.objectId.startsWith('unit:'));
       return false;
     }).map(c=>c.objectId);
@@ -83,6 +83,10 @@ export class FormalHistory {
     };
     return {...unit,reading:{...unit.reading,blocks:build(unit.id,unit.reading.blocks)}};
   }
+  private historyUnit(value:Record<string,any>,current:CourseUnit|undefined,replacements:Map<string,Record<string,any>|null>):CourseUnit {
+    const unit=isUnitHeader(value)?{...value.value,reading:{...value.value.reading,blocks:current?.reading.blocks??[]}}:value;
+    return this.projectUnit(unit as CourseUnit,replacements);
+  }
   /** A projection from stored object differences; does not execute or replay old commands. */
   courseProjection(unitIds:string[],atOperationId:string,side:'before'|'after',includeLayout=false) {
     const anchor=this.detail(atOperationId),scope=new Set(unitIds),desired=new Map<string,Record<string,any>|null>();
@@ -113,7 +117,7 @@ export class FormalHistory {
     const units=[...scope].flatMap(id=>{
       const row=this.db.prepare('SELECT payload FROM units WHERE id=?').get(id);
       const unit=desired.has(`unit:${id}`)?desired.get(`unit:${id}`):row?parse(row.payload):null;
-      return unit?[this.projectUnit(unit as CourseUnit,desired)]:[];
+      return unit?[this.historyUnit(unit,row?parse(row.payload):undefined,desired)]:[];
     });
     return {anchor,unitIds:[...scope],changes,units};
   }
@@ -152,7 +156,7 @@ export class FormalHistory {
         }
       }
       if(desired.has(`unit:${p.unitId}`)&&desired.get(`unit:${p.unitId}`)===null)throw new Error('所选版本尚无该单元；请撤回完整创建一致组');
-      unit=this.projectUnit((desired.get(`unit:${p.unitId}`)??current) as CourseUnit,desired);guardIds=[...unitObjects(current).keys()];
+      unit=this.historyUnit(desired.get(`unit:${p.unitId}`)??current,current,desired);guardIds=[...unitObjects(current).keys()];
       const changes:HistoryChange[]=[];
       for(const [id,value] of desired) {const now=this.object(id);if(!equal(value,now.value))changes.push({objectId:id,before:value,after:now.value,beforeVersion:now.version,afterVersion:now.version});}
       groups=[{...anchor,unitIds:[...scope],changes,explanation:'恢复单元旧内容'}];
@@ -198,6 +202,7 @@ export class FormalHistory {
           if(unsupported.length) {result.conflicts.push({operationId:group.operationId,objectIds:unsupported,reason:this.unsupportedReason(unsupported)});continue;}
           const canonical=(id:string,v:any)=>{
             if(v?.retired)return null;
+            if(id.startsWith('unit:')&&v)return isUnitHeader(v)?v:unitHeader(v);
             if(id.startsWith('layout:')&&v)return {unitId:v.unitId,x:v.x,y:v.y,width:v.width};
             return v;
           };
@@ -243,7 +248,8 @@ export class FormalHistory {
       const unit:CourseUnit|undefined=row?parse(row.payload):undefined;
       const lifecycle=replacements.has(`unit:${unitId}`);
       if(!unit&&!lifecycle)continue;
-      const next=lifecycle?replacements.get(`unit:${unitId}`) as CourseUnit|null:this.projectUnit(unit!,replacements);
+      const stored=lifecycle?replacements.get(`unit:${unitId}`):undefined;
+      const next=lifecycle?(stored?this.historyUnit(stored,unit,replacements):null):this.projectUnit(unit!,replacements);
       if(lifecycle){
         if(next&&next.id!==unitId)throw new Error('历史单元身份不一致');
         if(!unit||!next){
@@ -344,7 +350,7 @@ export class FormalHistory {
     const restorations=[...units.values()].flatMap(unit=>unitBlocks(unit)).filter(block=>replacements.has(block.id));
     syncAnnotations(this.db,{updates:[],correspondence:[],restorations});
     const effects=this.commands.observe(new Set(changes.filter(c=>c.objectId.startsWith('dependency:')).map(c=>c.objectId)));
-    return [...effects.filter(c=>!replacements.has(c.objectId)),...changes.map(c=>overrides.get(c.objectId)??({objectId:c.objectId,before:before.get(c.objectId)!.value,after:this.object(c.objectId).value,beforeVersion:before.get(c.objectId)!.version,afterVersion:this.object(c.objectId).version}))];
+    return [...effects.filter(c=>!replacements.has(c.objectId)),...changes.map(c=>overrides.get(c.objectId)??({objectId:c.objectId,before:c.objectId.startsWith('unit:')?unitHeader(before.get(c.objectId)!.value as CourseUnit|null):before.get(c.objectId)!.value,after:c.objectId.startsWith('unit:')?unitHeader(this.object(c.objectId).value as CourseUnit|null):this.object(c.objectId).value,beforeVersion:before.get(c.objectId)!.version,afterVersion:this.object(c.objectId).version}))];
   }
   private taskRoot(id:string):string {
     const seen=new Set<string>();

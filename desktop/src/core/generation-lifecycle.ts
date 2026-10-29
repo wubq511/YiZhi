@@ -4,12 +4,14 @@ import type { DatabaseSync } from 'node:sqlite';
 export function initializeGenerationLifecycle(db:DatabaseSync) {
   db.exec(`CREATE TABLE IF NOT EXISTS course_graph_revisions(id INTEGER PRIMARY KEY CHECK(id=1),version INTEGER NOT NULL);
     INSERT OR IGNORE INTO course_graph_revisions VALUES(1,0);
-    CREATE TRIGGER IF NOT EXISTS generation_unit_insert AFTER INSERT ON units BEGIN
-      INSERT INTO cg_objects VALUES('unit:'||new.id,'unit',new.payload,1)
+    DROP TRIGGER IF EXISTS generation_unit_insert;
+    DROP TRIGGER IF EXISTS generation_unit_update;
+    CREATE TRIGGER generation_unit_insert AFTER INSERT ON units BEGIN
+      INSERT INTO cg_objects VALUES('unit:'||new.id,'unit',json_object('encoding','unit-header-v1','value',json(json_remove(new.payload,'$.reading.blocks'))),1)
       ON CONFLICT(id) DO UPDATE SET value=excluded.value,version=version+1;
     END;
-    CREATE TRIGGER IF NOT EXISTS generation_unit_update AFTER UPDATE ON units BEGIN
-      INSERT INTO cg_objects VALUES('unit:'||new.id,'unit',new.payload,1)
+    CREATE TRIGGER generation_unit_update AFTER UPDATE ON units BEGIN
+      INSERT INTO cg_objects VALUES('unit:'||new.id,'unit',json_object('encoding','unit-header-v1','value',json(json_remove(new.payload,'$.reading.blocks'))),1)
       ON CONFLICT(id) DO UPDATE SET value=excluded.value,version=version+1;
     END;
     CREATE TRIGGER IF NOT EXISTS generation_unit_delete AFTER DELETE ON units BEGIN

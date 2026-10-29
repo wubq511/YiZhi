@@ -1,3 +1,4 @@
+import { unitObjects,unitHeader } from './history-objects';
 import { createHash } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import type { AgentIdentity } from '../agent-mutation-api';
@@ -24,15 +25,6 @@ const parse=(v:unknown)=>JSON.parse(String(v));
 const stages=['lesson','practice'] as const;
 const roles=['intro','formula','derivation','table','example','example-answer','exercise','exercise-answer','practice','practice-answer'] as const;
 const blockId=(unitId:string,role:string)=>`RB-GEN-${hash([unitId,role]).slice(0,28)}`;
-const readingObjects=(blocks:ReadingBlock[],parentId:string):Map<string,unknown>=>{
-  const objects=new Map<string,unknown>([[`structure:${parentId}`,{blockIds:blocks.map(b=>b.id)}]]);
-  for(const block of blocks){
-    const {children,...self}=block;
-    objects.set(block.id,self);
-    for(const [id,value] of readingObjects(children??[],block.id))objects.set(id,value);
-  }
-  return objects;
-};
 
 /** Product Core owner of a single bounded source-backed MUX generation path. */
 export class Generation {
@@ -64,7 +56,7 @@ export class Generation {
     const spec=taskRow?this.spec(parse(taskRow.payload)):undefined;
     const unitRow=spec?this.db.prepare('SELECT payload FROM units WHERE id=?').get(spec.unitId):undefined;
     const unit=unitRow?parse(unitRow.payload) as CourseUnit:undefined;
-    const objects=unit?readingObjects(unit.reading.blocks,unit.id):new Map<string,unknown>();
+    const objects=unit?unitObjects(unit):new Map<string,unknown>();
     return this.db.prepare('SELECT stage,operation_id,receipt FROM generation_groups WHERE root_task_id=? ORDER BY rowid').all(root)
       .map(row=>({stage:String(row.stage) as 'lesson'|'practice',operationId:String(row.operation_id),receipt:parse(row.receipt) as GenerationResult}))
       .filter(stage=>!!spec&&!!unit&&(stage.stage==='lesson'?roles.slice(0,8):roles.slice(8)).every(role=>objects.has(blockId(spec.unitId,role))));
@@ -318,8 +310,8 @@ export class Generation {
           reading:{...(old?.reading??{}),schemaVersion:'1',blocks:old?[...old.reading.blocks.filter(b=>!added.some(n=>n.id===b.id)),...added]:added},
         } as CourseUnit): {...old!,reading:{...old!.reading,blocks:[...old!.reading.blocks.filter(b=>b.id!==added[0].id),...added]}};
         const revision=Number(oldRow?.revision??0)+1;
-        const beforeObjects=old?readingObjects(old.reading.blocks,spec.unitId):new Map<string,unknown>();
-        const afterObjects=readingObjects(unit.reading.blocks,spec.unitId);
+        const beforeObjects=old?unitObjects(old):new Map<string,unknown>();
+        const afterObjects=unitObjects(unit);
         const objectIds=[...new Set([...beforeObjects.keys(),...afterObjects.keys()])];
         const beforeVersions=new Map(objectIds.map(id=>[id,Number(this.db.prepare('SELECT version FROM cg_objects WHERE id=?').get(id)?.version??0)]));
         const beforeGraph=structuredClone(this.graph);
@@ -346,7 +338,7 @@ export class Generation {
           [`layout:${spec.unitId}`,beforeGraph.layout.nodes.find(n=>n.unitId===spec.unitId),nextGraph.layout.nodes.find(n=>n.unitId===spec.unitId),beforeLayoutVersion,afterLayoutVersion],
           [`layout-theme:${spec.themeId}`,beforeGraph.layout.groups.find(g=>g.themeId===spec.themeId),nextGraph.layout.groups.find(g=>g.themeId===spec.themeId),beforeGraphVersions.get(`layout-theme:${spec.themeId}`)!,afterGraphVersions.get(`layout-theme:${spec.themeId}`)!],
         ] as const).flatMap(([objectId,prior,after,beforeVersion,afterVersion])=>json(prior??null)===json(after??null)?[]:[{objectId,before:prior??null,after:after??null,beforeVersion,afterVersion}]);
-        const unitChanges=[{objectId:`unit:${spec.unitId}`,before:old??null,after:unit,beforeVersion:beforeUnitVersion,afterVersion:afterUnitVersion}];
+        const unitChanges=[{objectId:`unit:${spec.unitId}`,before:unitHeader(old??null),after:unitHeader(unit),beforeVersion:beforeUnitVersion,afterVersion:afterUnitVersion}];
         const changes=[...unitChanges,...objectChanges,...invalidated,...graphChanges];
         const receipt:GenerationResult={operationId,attemptId:task.attemptId,unitId:spec.unitId,stage:input.stage,status:'committed',revision,
           changedObjectIds:changes.map(c=>c.objectId),checks:checked,cursor:0};
