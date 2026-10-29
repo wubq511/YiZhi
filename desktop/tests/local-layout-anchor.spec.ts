@@ -17,8 +17,8 @@ test('late upstream measurements compensate a measured reading body but never an
    ]}};
    window.moves=[];
    const camera={compensate(dx,dy){window.moves.push({dx,dy});}};
-   function App(){
-    const [height,setHeight]=useState(200),[loaded,setLoaded]=useState(false),article=useRef(null);
+   function App({initiallyLoaded=false}){
+    const [height,setHeight]=useState(200),[loaded,setLoaded]=useState(initiallyLoaded),article=useRef(null);
     const local=useLocalLayout(graph,'ANCHOR',camera,true,true,'ANCHOR');
     window.placements=local.placements;
     window.waitMeasurements=ids=>local.waitForMeasurements(ids);
@@ -36,7 +36,13 @@ test('late upstream measurements compensate a measured reading body but never an
      </div>)}
     </>;
    }
-   createRoot(document.getElementById('root')).render(<App/>);
+   function Root(){
+    const [epoch,setEpoch]=useState(0);window.epoch=epoch;
+    return <><button style={{position:'fixed',right:0,top:60,zIndex:1}}
+     onClick={()=>{window.moves=[];setEpoch(value=>value+1);}}>Remount with loaded anchor</button>
+     <App key={epoch} initiallyLoaded={epoch>0}/></>;
+   }
+   createRoot(document.getElementById('root')).render(<Root/>);
   `,resolveDir:resolve('.'),loader:'tsx'},outfile:join(root,'app.js'),bundle:true,platform:'browser',format:'iife',jsx:'automatic',
    define:{'process.env.NODE_ENV':'"production"'}});
   await writeFile(join(root,'index.html'),'<!doctype html><div id="root"></div><script src="app.js"></script>');
@@ -68,6 +74,13 @@ test('late upstream measurements compensate a measured reading body but never an
    expect(moves.length).toBeGreaterThan(0);
    expect(moves.reduce((total:number,item:{dx:number})=>total+item.dx,0)).toBe(0);
    expect(moves.reduce((total:number,item:{dy:number})=>total+item.dy,0)).toBe(after.y-beforeMeasured.y);
+   await page.getByRole('button',{name:'Remount with loaded anchor'}).click();
+   await page.waitForFunction(()=>(window as any).epoch===1);
+   await page.evaluate(()=>(window as any).waitMeasurements(['UPSTREAM','ANCHOR']));
+   const firstMeasured=await anchor(),firstMoves=await page.evaluate(()=>(window as any).moves);
+   expect(firstMeasured.y).toBeGreaterThan(200);
+   // A body already on screen keeps its header when its first real measurements arrive.
+   expect(firstMoves.reduce((total:number,item:{dy:number})=>total+item.dy,0)).toBe(firstMeasured.y-200);
   }finally{await app.close();}
  }finally{await rm(root,{recursive:true,force:true});}
 });
