@@ -1,3 +1,4 @@
+import { observation } from '../acceptance-observation';
 import { legacyBodyGroup } from './migration-history';
 import { historyTimestamp } from './history-clock';
 import { initializeHistoryIndex } from './history-index';
@@ -60,7 +61,7 @@ export class FormalHistory {
     if(selection.kind==='task'){
       const root=this.taskRoot(selection.taskId);
       if(this.db.prepare('SELECT task_id FROM history_expired WHERE task_id IS NOT NULL').all().some(r=>this.taskRoot(String(r.task_id))===root))throw new Error('此任务部分明细已过期清理，不能声称撤回整个任务；请选择仍可恢复的修改');
-      return this.groups().filter(g=>g.taskId===root);
+      return this.db.prepare('SELECT operation_id FROM history_index WHERE activity_id=? AND operation_id NOT IN(SELECT operation_id FROM history_expired) ORDER BY seq').all(`task:${root}`).map(r=>this.detail(String(r.operation_id)));
     }
     if(!Array.isArray(selection.operationIds)||!selection.operationIds.length||selection.operationIds.length>1000)throw new Error('无效的撤回范围');
     return [...new Set(selection.operationIds)].map(id=>this.detail(id)).sort((a,b)=>a.order.localeCompare(b.order));
@@ -85,7 +86,7 @@ export class FormalHistory {
   /** A projection from stored object differences; does not execute or replay old commands. */
   courseProjection(unitIds:string[],atOperationId:string,side:'before'|'after',includeLayout=false) {
     const anchor=this.detail(atOperationId),scope=new Set(unitIds),desired=new Map<string,Record<string,any>|null>();
-    const groups=this.groups(true),later=groups.filter(g=>g.order>anchor.order||(side==='before'&&g.operationId===anchor.operationId)).reverse();
+    const groups=this.scopedIds(unitIds,0,true).map(r=>this.detail(r.id,true)),later=groups.filter(g=>g.order>anchor.order||(side==='before'&&g.operationId===anchor.operationId)).reverse();
     const owned=new Set<string>(),children=new Map<string,Set<string>>();
     for(const id of unitIds){const row=this.db.prepare('SELECT payload FROM units WHERE id=?').get(id);if(row)for(const objectId of unitObjects(parse(row.payload)).keys())owned.add(objectId);owned.add(`structure:${id}`);owned.add(`unit:${id}`);owned.add(`graph:${id}`);}
     // Stable historical membership also covers blocks removed from today's projection.
@@ -123,7 +124,7 @@ export class FormalHistory {
   }
   preview(p:any):HistoryPreview {
     const preview=this.buildPreview(p),retentionPin=randomUUID();
-    this.pins.set(retentionPin,new Set(preview.kind==='restore'?this.groups(true).filter(g=>g.order>=preview.groups[0].order).map(g=>g.operationId):preview.groups.map(g=>g.operationId)));
+    this.pins.set(retentionPin,new Set(preview.kind==='restore'?this.scopedIds([preview.unitId!],Number(preview.groups[0].order),true).map(r=>r.id):preview.groups.map(g=>g.operationId)));
     return {...preview,retentionPin};
   }
   private buildPreview(p:any):HistoryPreview {
@@ -138,7 +139,7 @@ export class FormalHistory {
       if(!row)throw new Error('单元不存在');
       const current:CourseUnit=parse(row.payload), desired=new Map<string,Record<string,any>|null>();
       const scope=new Set<string>([p.unitId]);
-      const later=this.groups(true).filter(g=>g.order>anchor.order||(p.side==='before'&&g.operationId===anchor.operationId)).reverse();
+      const later=this.scopedIds([p.unitId],Number(anchor.order)+(p.side==='before'?0:1),true).reverse().map(r=>this.detail(r.id,true));
       // Retake only this unit's content plus complete necessary domains in its original aggregates.
       for(const g of later)if(g.unitIds.includes(p.unitId)) {
         const unsupported=this.unsupported(g.changes);
@@ -352,6 +353,7 @@ export class FormalHistory {
   }
   private rawDetail(operationId:string,windowReference=false):HistoryGroup {
     if(!windowReference&&this.db.prepare('SELECT 1 FROM history_expired WHERE operation_id=?').get(operationId))throw new Error('此修改明细已过期清理，不能恢复；请使用仍可恢复的时间范围');
+    observation.count('history.bodiesRead');
     const index=this.db.prepare('SELECT * FROM history_index WHERE operation_id=?').get(operationId);
     const order=String(index?.seq??0).padStart(16,'0');
     if(index?.source==='legacy'){const group=legacyBodyGroup(this.db,operationId);return {operationId,activityId:String(index.activity_id),actor:'student',committedAt:String(index.committed_at),explanation:String(index.explanation),...group,order,source:'legacy'};}
@@ -394,7 +396,7 @@ export class FormalHistory {
     // Earlier student records did not store cg revisions. Walk only their affected object's
     // subsequent formal changes backwards from the live monotonic revision, checking every value.
     // Never use equality alone to declare an old write conflict-free (ABA still consumes revisions).
-    const later=this.db.prepare('SELECT operation_id FROM history_index WHERE seq>? AND (operation_id NOT IN(SELECT operation_id FROM history_expired) OR operation_id IN(SELECT operation_id FROM history_window_refs)) ORDER BY seq DESC').all(Number(group.order)).map(r=>this.rawDetail(String(r.operation_id),true));
+    const later=this.db.prepare('SELECT operation_id FROM history_index WHERE seq>? AND EXISTS(SELECT 1 FROM json_each(history_index.object_ids) WHERE value IN(SELECT value FROM json_each(?))) AND (operation_id NOT IN(SELECT operation_id FROM history_expired) OR operation_id IN(SELECT operation_id FROM history_window_refs)) ORDER BY seq DESC').all(Number(group.order),JSON.stringify(group.changes.map(c=>c.objectId))).map(r=>this.rawDetail(String(r.operation_id),true));
     const canonical=(v:any)=>v?.retired?null:v;
     for(const c of group.changes)if(!c.afterVersion) {
       let {value,version}=this.object(c.objectId),valid=true;
@@ -416,21 +418,32 @@ export class FormalHistory {
   list(request:{unitId?:string;limit?:number;before?:string}) {
     const limit=request.limit??20;
     if(!Number.isSafeInteger(limit)||limit<1||limit>100||(request.before!==undefined&&!/^\d{16}$/.test(request.before)))throw new Error('无效的历史分页');
-    // Only small metadata is grouped. Full before/after bodies are loaded by detail/preview on demand.
-    const roots=new Map<string,string>();
-    for(const r of this.db.prepare('SELECT id FROM agent_tasks').all())roots.set(String(r.id),this.taskRoot(String(r.id)));
-    const taskRoot=(id:string|null)=>id?roots.get(id)??id:null;
-    const activities=new Map<string,HistoryActivity>();
-    const rows=this.db.prepare('SELECT * FROM history_index WHERE operation_id NOT IN(SELECT operation_id FROM history_expired) AND (? IS NULL OR EXISTS(SELECT 1 FROM json_each(unit_ids) WHERE value=?)) ORDER BY seq').all(request.unitId??null,request.unitId??null);
-    for(const row of rows) {
-      const taskId=taskRoot(row.task_id as string|null)??undefined,id=taskId?`task:${taskId}`:String(row.activity_id),order=String(row.seq).padStart(16,'0');
-      const a=activities.get(id)??{id,actor:row.actor as HistoryActivity['actor'],taskId,committedAt:String(row.committed_at),explanation:String(row.explanation),unitIds:[],operationIds:[],affectedObjectIds:[],order};
-      a.committedAt=String(row.committed_at);a.order=order;a.operationIds.push(String(row.operation_id));
-      a.unitIds=[...new Set([...a.unitIds,...parse(row.unit_ids)])];a.affectedObjectIds=[...new Set([...a.affectedObjectIds,...parse(row.object_ids)])];activities.set(id,a);
+    const heads=this.db.prepare('SELECT activity_id,seq FROM history_activity_heads WHERE unit_id=? AND seq<? ORDER BY seq DESC LIMIT ?').all(request.unitId??'',request.before?Number(request.before):Number.MAX_SAFE_INTEGER,limit+1);
+    observation.count('history.listRowsRead',heads.length);
+    const page:HistoryActivity[]=[];
+    for(const head of heads.slice(0,limit)) {
+      const rows=this.db.prepare('SELECT * FROM history_index WHERE activity_id=? AND operation_id NOT IN(SELECT operation_id FROM history_expired) AND (? IS NULL OR operation_id IN(SELECT operation_id FROM history_unit_refs WHERE unit_id=?)) ORDER BY seq').all(head.activity_id!,request.unitId??null,request.unitId??null);
+      observation.count('history.listRowsRead',rows.length);
+      const first=rows[0],last=rows.at(-1)!;
+      page.push({id:String(head.activity_id),actor:first.actor as HistoryActivity['actor'],...(first.task_id?{taskId:this.taskRoot(String(first.task_id))}:{}),
+        committedAt:String(last.committed_at),explanation:String(first.explanation),order:String(head.seq).padStart(16,'0'),
+        operationIds:rows.map(r=>String(r.operation_id)),unitIds:[...new Set(rows.flatMap(r=>parse(r.unit_ids)))],affectedObjectIds:[...new Set(rows.flatMap(r=>parse(r.object_ids)))]});
     }
-    const sorted=[...activities.values()].sort((a,b)=>b.order.localeCompare(a.order)).filter(a=>!request.before||a.order<request.before);
-    const page=sorted.slice(0,limit);return {activities:page,...(sorted.length>limit?{next:page.at(-1)!.order}:{})};
+    return {activities:page,...(heads.length>limit?{next:page.at(-1)!.order}:{})};
   }
+  /** Seek through only the selected units' metadata; decode necessary bodies on demand. */
+  private scopedIds(unitIds:string[],from=0,windowReferences=false):Array<{id:string;seq:number}> {
+    const result:Array<{id:string;seq:number}>=[];
+    let cursor=from-1;
+    for(;;) {
+      const rows=this.db.prepare(`SELECT DISTINCT h.operation_id,h.seq FROM history_unit_refs u JOIN history_index h USING(operation_id)
+        WHERE u.unit_id IN(SELECT value FROM json_each(?)) AND h.seq>? AND (h.operation_id NOT IN(SELECT operation_id FROM history_expired) ${windowReferences?'OR h.operation_id IN(SELECT operation_id FROM history_window_refs)':''}) ORDER BY h.seq LIMIT 64`).all(JSON.stringify(unitIds),cursor);
+      for(const r of rows)result.push({id:String(r.operation_id),seq:Number(r.seq)});
+      if(rows.length<64)break;cursor=Number(rows.at(-1)!.seq);
+    }
+    return result;
+  }
+
   dispatch(action:string,p:any):unknown {
     if(action==='formalHistory:release')return this.release(p.pinId);
     if(action==='formalHistory:list')return this.list(p);

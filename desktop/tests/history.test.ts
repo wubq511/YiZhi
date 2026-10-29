@@ -279,3 +279,37 @@ test('a historically restored relation is live and editable again without permit
  const retired=await s.relations.read({sessionId});
  await assert.rejects(s.relations.commit({sessionId,generation:1,basisId:retired.basisId,operationId:'illegal-reuse',changes:[{id:edge.id,value:{...edge,value:'Unrelated replacement'}}]}),/退休/);
 }));
+
+
+test('history page reads only the requested activities and old-unit preview decodes only its necessary groups', async () => {
+  const directory=await mkdtemp(join(tmpdir(),'yizhi-bounded-history-'));
+  const core=new CourseService(resolve('dist/worker.cjs'),{observe:true});
+  try {
+    const a=await core.open(directory), b=await core.read(a.sessionId,'KU-057'),sessionId=a.sessionId;
+    await agentEdit(core,sessionId,'anchor-task','bounded-anchor',A,'old selected unit');
+    await agentEdit(core,sessionId,'next-task','bounded-next',A,'current selected unit');
+    const block=b.unit.reading.blocks.find(x=>x.kind==='paragraph')!;
+    for(let i=0;i<12;i++) {
+      const attempt=await core.commands.startAttempt({sessionId,taskId:`unrelated-${i}`});
+      const read=await core.commands.read({sessionId,unitId:b.unit.id,attemptId:attempt.attemptId,objectIds:[block.id]});
+      const value=read.objects.find(x=>x.id===block.id)!.value;
+      assert.equal((await core.commands.commit({sessionId,unitId:b.unit.id,attemptId:attempt.attemptId,basisId:read.basisId,operationId:`unrelated-${i}`,changes:[{objectId:block.id,value:{...value,payload:{...value.payload,text:`other ${i}`}}}]})).status,'committed');
+    }
+    const before=await core.observe();
+    const first=await core.formalHistory.list({sessionId,limit:1});
+    const listed=await core.observe();
+    assert.equal(first.activities.length,1);assert.ok(first.next);
+    assert.ok(listed.counters['history.listRowsRead'].count-(before.counters['history.listRowsRead']?.count??0)<=3,'SQL page bounds actual metadata reads');
+    const second=await core.formalHistory.list({sessionId,limit:1,before:first.next});
+    assert.notEqual(first.activities[0].id,second.activities[0].id);
+    const previewBefore=await core.observe();
+    const preview=await core.formalHistory.preview({sessionId,unitId:a.unit.id,atOperationId:'bounded-anchor',side:'after'});
+    const after=await core.observe();
+    assert.equal(preview.unit!.reading.blocks[0].payload.text,'old selected unit');
+    assert.ok(after.counters['history.bodiesRead'].count-(previewBefore.counters['history.bodiesRead']?.count??0)<=3,'unrelated course history bodies are never decoded for the preview or pin');
+    const restored=await core.formalHistory.apply({sessionId,operationId:'bounded-restore',preview});
+    assert.equal(restored.status,'committed');
+    assert.equal((await core.read(sessionId,a.unit.id)).unit.reading.blocks[0].payload.text,'old selected unit');
+    assert.equal((await core.read(sessionId,b.unit.id)).unit.reading.blocks.find(x=>x.id===block.id)!.payload.text,'other 11');
+  } finally {await core.close();await rm(directory,{recursive:true,force:true});}
+});
