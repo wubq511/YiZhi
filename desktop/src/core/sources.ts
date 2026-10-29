@@ -7,15 +7,16 @@ import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 import type { CourseUnit, ReadingBlock } from '../shared';
 import type { RelationSource } from '../relation-api';
 import { appendEvent, transaction } from './save-store';
-import { hashFile, MAX_RESOURCE_READ, publishResource } from './immutable-resource';
+import { hashFile, hashFileAsync, MAX_RESOURCE_READ, publishResource } from './immutable-resource';
 import { withPdf } from './source-pdf';
 import { observation } from '../acceptance-observation';
 
 const id = (value: unknown) => typeof value === 'string' && value.length > 0 && value.length <= 200;
 export class Sources {
+  private stages=new Map<string,{digest:string;promise:Promise<any>}>();
   private verified = new Map<string, string>();
   private verifiedObservation = observation.resource('sources.verifiedCacheEntries');
-  constructor(private db: DatabaseSync, private directory: string, private unit?: (id: string) => CourseUnit | undefined) {
+  constructor(private db: DatabaseSync, private directory: string, private unit?: (id: string) => CourseUnit | undefined, private scheduling?:import('../sources-api').SourceScheduling, private admit:(command:SourceCommand)=>void=()=>{}) {
     db.exec(`CREATE TABLE IF NOT EXISTS source_versions(id TEXT PRIMARY KEY, source_id TEXT NOT NULL, payload TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS source_operations(id TEXT PRIMARY KEY, digest TEXT NOT NULL, receipt TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS source_imports(id TEXT PRIMARY KEY, digest TEXT NOT NULL, payload TEXT NOT NULL);
@@ -23,6 +24,11 @@ export class Sources {
       CREATE TABLE IF NOT EXISTS source_citations(id TEXT PRIMARY KEY, version_id TEXT NOT NULL REFERENCES source_versions(id), payload TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS source_intents(id TEXT PRIMARY KEY, version_id TEXT NOT NULL REFERENCES source_versions(id), payload TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS source_reading(id INTEGER PRIMARY KEY CHECK(id=1), session_id TEXT NOT NULL, seq INTEGER NOT NULL, payload TEXT NOT NULL);`);
+  }
+  private async stageGate() {
+    if (!this.scheduling?.beforePublish) return;
+    const gate=new Int32Array(this.scheduling.beforePublish); Atomics.store(gate,0,1);
+    while(Atomics.load(gate,0)===1) await new Promise(r=>setTimeout(r,5));
   }
   private generation() { return Number(this.db.prepare("SELECT value FROM metadata WHERE key='generation'").get()!.value); }
   /** Preserve the common logical-operation namespace across student, producer, relation and source writes. */
@@ -56,6 +62,8 @@ export class Sources {
     return catalog;
   }
   private eligible(command: SourceCommand) {
+    this.admit(command);
+    this.fenceOperation('sources:write',command.operationId);
     if (!id(command.operationId)) throw new Error('无效的来源操作身份');
     if (command.generation !== this.generation()) throw new Error('课程代际已变化，请重新读取');
   }
@@ -99,7 +107,7 @@ export class Sources {
       if (old.digest !== digest) throw new Error('同一操作不能换用不同内容');
       return JSON.parse(String(old.receipt));
     }
-    if (command.generation !== this.generation()) throw new Error('课程代际已变化，请重新读取');
+    this.eligible(command);
     if (command.sourceId && !this.db.prepare('SELECT 1 FROM source_versions WHERE source_id=?').get(command.sourceId))
       throw new Error('来源身份不存在');
     const staged = this.db.prepare('SELECT * FROM source_imports WHERE id=?').get(command.operationId);
@@ -107,7 +115,8 @@ export class Sources {
     if (staged) {
       if (staged.digest !== digest) throw new Error('同一操作不能换用不同内容');
       version = JSON.parse(String(staged.payload));
-      this.verifiedPath(version);
+      await this.verifyStaged(version);
+      this.eligible(command);
     } else {
       let pdfPages = 0;
       const mediaType = /\.pdf$/i.test(command.path) ? 'application/pdf' : /\.png$/i.test(command.path) ? 'image/png' : /\.jpe?g$/i.test(command.path) ? 'image/jpeg' : undefined;
@@ -123,7 +132,8 @@ export class Sources {
           const image = await loadImage(path);
           if (!image.width || !image.height) throw new Error('图片不可读');
         }
-      });
+        await this.stageGate();
+      },undefined,()=>this.eligible(command));
       version = { sourceId: command.sourceId ?? randomUUID(), versionId: randomUUID(),
         sha256: resource.sha256, byteLength: resource.byteLength, mediaType, pdfPages,
         originalName: basename(command.path), title: command.title, importedAt: new Date().toISOString() };
@@ -135,7 +145,9 @@ export class Sources {
       });
     }
     return transaction(this.db, () => {
-      if (command.generation !== this.generation()) throw new Error('课程代际已变化，请重新读取');
+      this.eligible(command);
+      const prior=this.db.prepare('SELECT digest,receipt FROM source_operations WHERE id=?').get(command.operationId);
+      if(prior){if(prior.digest!==digest)throw new Error('同一操作不能换用不同内容');return JSON.parse(String(prior.receipt));}
       this.db.prepare('INSERT INTO source_versions VALUES (?, ?, ?)').run(version.versionId, version.sourceId, JSON.stringify(version));
       const cursor = appendEvent(this.db, { type: 'source.registered', versionId: version.versionId, sourceId: version.sourceId });
       const receipt = { operationId: command.operationId, generation: command.generation, cursor, version };
@@ -143,6 +155,10 @@ export class Sources {
       this.db.prepare('DELETE FROM source_imports WHERE id=?').run(command.operationId);
       return receipt;
     });
+  }
+  private async verifyStaged(version: SourceVersion) {
+    const path=join(this.directory,'resources',version.sha256),actual=await hashFileAsync(path);
+    if(actual.sha256!==version.sha256||actual.byteLength!==version.byteLength)throw new Error('来源资源损坏，请从原件重试');
   }
   private verifiedPath(version: SourceVersion) {
     const directory = join(this.directory, 'resources');
@@ -165,8 +181,9 @@ export class Sources {
   repairFile(command: SourceCommand & { versionId: string; path: string }) {
     return this.operation('repair', command, async () => {
       const version = this.version(command.versionId);
-      await publishResource(join(this.directory, 'resources'), command.path, async () => {}, version.sha256);
-      this.verified.delete(version.sha256); this.verifiedPath(version);
+      await publishResource(join(this.directory, 'resources'), command.path, async () => {await this.stageGate();}, version.sha256,()=>this.eligible(command));
+      this.verified.delete(version.sha256); await this.verifyStaged(version);
+      this.eligible(command);
       return () => version;
     });
   }
@@ -296,9 +313,15 @@ export class Sources {
   }
   citations(): SourceCitation[] { return this.db.prepare('SELECT payload FROM source_citations ORDER BY rowid').all().map(row => JSON.parse(String(row.payload))); }
   async dispatch(action: string, payload: any) {
-    if (action === 'sources:importFile') return this.importFile(payload);
+    if (action === 'sources:importFile' || action === 'sources:repairFile') {
+      const {sessionId:_,...body}=payload,digest=createHash('sha256').update(JSON.stringify([action,body])).digest('hex');
+      const old=this.stages.get(payload.operationId);
+      if(old){if(old.digest!==digest)throw new Error('同一操作不能换用不同内容');return old.promise;}
+      const promise=action==='sources:importFile'?this.importFile(payload):this.repairFile(payload);
+      this.stages.set(payload.operationId,{digest,promise});
+      try{return await promise;}finally{this.stages.delete(payload.operationId);}
+    }
     if (action === 'sources:list') return this.list(payload.sessionId);
-    if (action === 'sources:repairFile') return this.repairFile(payload);
     if (action === 'sources:getVersion') return this.version(payload.versionId);
     if (action === 'sources:page') return this.page(payload);
     if (action === 'sources:mapPrintedPage') return this.mapPrintedPage(payload);

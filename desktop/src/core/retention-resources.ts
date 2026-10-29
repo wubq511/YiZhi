@@ -19,7 +19,7 @@ export function declaredResourceRoots(db:DatabaseSync){
  }
  return refs.sort((a,b)=>a.sha256.localeCompare(b.sha256));
 }
-const roots=[['source_versions','payload'],['parse_artifacts','payload'],['exchange_resources','payload'],['extension_packages','manifest'],
+const roots=[['source_imports','payload'],['source_versions','payload'],['parse_artifacts','payload'],['exchange_resources','payload'],['extension_packages','manifest'],
  ['units','payload'],['personal_notes','value'],['personal_drawings','value'],['drafts','input'],['annotation_versions','block'],
  ['builtin_experiments','payload'],['builtin_formal_definitions','payload'],['extension_scene','payload'],['cg_history','payload'],
  ['operations','before_text'],['operations','after_text'],['history_boundary','value'],['agent_tool_recovery','input'],['agent_tool_recovery','output'],['agent_executor_receipts','payload'],

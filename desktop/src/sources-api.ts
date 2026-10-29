@@ -78,3 +78,6 @@ export function sourceBridge(invoke: (action: string, payload: any) => Promise<a
   const { importFile: _, repairFile: _repair, readResource: _range, ...publicAPI } = sourcesClient(invoke);
   return { ...publicAPI, chooseImport: request => invoke('sources:chooseImport', request), chooseRepair: request => invoke('sources:chooseRepair', request) };
 }
+
+/** Host-only scheduling seam; validates real bytes before holding publication. */
+export interface SourceScheduling { beforePublish?: SharedArrayBuffer }
