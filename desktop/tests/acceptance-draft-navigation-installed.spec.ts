@@ -16,7 +16,10 @@ test('T28 installed navigation restores the existing durable body draft beside a
   const manifest = JSON.parse(bytes.toString());
   expect(manifest.source).toEqual({ commit: input.sourceSHA, dirty: false });
   expect(hash(bytes)).toBe(input.appManifestSha256);
-  expect(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()).toBe(input.sourceSHA);
+  const verificationSHA = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  execFileSync('git', ['merge-base', '--is-ancestor', input.sourceSHA, verificationSHA]);
+  const verificationOnlyPaths = execFileSync('git', ['diff', '--name-only', input.sourceSHA, verificationSHA], { encoding: 'utf8' }).trim().split('\n').filter(Boolean);
+  expect(verificationOnlyPaths.filter(path => !/^desktop\/tests\//.test(path))).toEqual([]);
   expect(execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim()).toBe('');
   for (const entry of manifest.runtimeFiles) expect(hash(await readFile(join(input.app, 'Contents/Resources/app', entry.path)))).toBe(entry.sha256);
   execFileSync('/usr/bin/codesign', ['--verify', '--deep', '--strict', input.app]);
@@ -55,7 +58,7 @@ test('T28 installed navigation restores the existing durable body draft beside a
       await expect(body).toHaveText(update.after.text);
       await expect(article.locator(`.tiptap p[data-block-id="${independent.id}"]`)).toHaveText(independent.payload.text);
       const formula = article.locator(`.editor-formula[data-block-id="${formulaDraft.blockId}"]`);
-      await expect(formula.getByRole('math')).toHaveAttribute('aria-label', formalFormula.payload.latex);
+      await expect(formula.getByRole('math', { name: formalFormula.payload.latex, exact: true })).toHaveAttribute('aria-label', formalFormula.payload.latex);
       await expect(formula).toContainText('未完成公式 · 草稿已保留，正式公式保持原值');
       const edit = formula.getByRole('button', { name: '编辑公式', exact: true });
       await revealBoardControl(page!, edit); await edit.click();
@@ -78,7 +81,7 @@ test('T28 installed navigation restores the existing durable body draft beside a
     opened = await page.evaluate(() => (window as any).yizhi.open());
     graph = await page.evaluate(id => (window as any).yizhi.graph(id), opened.sessionId);
     await navigateUnit(page, graph, unitId); await inspect('normal-reopen');
-    await writeFile(join(input.evidenceDirectory, 'affected-installed.json'), JSON.stringify({ input, runtime, checkpoints,
+    await writeFile(join(input.evidenceDirectory, 'affected-installed.json'), JSON.stringify({ input, verificationSHA, verificationOnlyPaths, runtime, checkpoints,
       scope: 'existing500 copy navigation and normal reopen of actual durable bad body/formula draft; no new growth/model/input/physical pass' }, null, 2) + '\n');
   } catch (error) {
     if (page && !page.isClosed()) {
