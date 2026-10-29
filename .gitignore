@@ -26,6 +26,7 @@
 /apps/*/build/
 
 # Formal desktop runtime build/test outputs
+/artifacts/
 /desktop/dist/
 /desktop/test-results/
 /desktop/playwright-report/

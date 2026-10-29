@@ -5,10 +5,10 @@
 ```sh
 cd desktop
 npm ci
-npm run package:mac -- --out=/absolute/new-output
+npm run package:mac -- --out=/absolute/YiZhi/artifacts/scratch/package-RUN
 ```
 
-当前核验产物为 `new-output/YiZhi-darwin-arm64/YiZhi.app`。脚本要求原生二进制与所附许可清单的架构、大小和摘要一致；现有清单只覆盖 macOS arm64。其他架构需先准备并核对对应发布输入的许可材料。输出目录必须尚不存在；不交叉构建其他平台。将完整 `.app` 拷贝到应用程序目录即可保留运行时和许可文件。课程数据在应用外独立保存；可通过“课程”菜单打开既有课程目录，或使用 `YiZhi.app/Contents/MacOS/YiZhi --course=/absolute/course`。
+省略 `--out` 时，脚本将包写入原仓库根目录的 `artifacts/scratch/macos-时间戳/`，包括从工作树执行的情况。产物为输出目录内的 `YiZhi-darwin-arm64/YiZhi.app`。脚本要求原生二进制与所附许可清单的架构、大小和摘要一致；现有清单只覆盖 macOS arm64。其他架构需先准备并核对对应发布输入的许可材料。输出目录必须尚不存在；不交叉构建其他平台。将完整 `.app` 拷贝到应用程序目录即可保留运行时和许可文件。课程数据在应用外独立保存；可通过“课程”菜单打开既有课程目录，或使用 `YiZhi.app/Contents/MacOS/YiZhi --course=/absolute/course`。
 
 打包会重新构建，依锁文件从本机 npm 缓存安装生产依赖，包含共享 Worker、SQLite 所属 Electron 运行时、本地 PDF.js worker／字体／CMap／ICC／WASM、原生 Canvas、扩展和字体许可。测试、source maps 和开发工具不进入运行目录。`Contents/Resources/app/package-manifest.json` 记录版本、架构、锁文件摘要、生产依赖及许可文件；Electron 与 Chromium 完整许可也位于 `.app` 内。
 
@@ -24,4 +24,4 @@ YIZHI_PACKAGED_APP=/absolute/YiZhi.app npx playwright test tests/packaged-app.sp
 
 完整迁移课程、约 500 单元增长负载、公平性与实体鼠标／触控板／中文输入法等组合验收仍由 T28 单列记录，不能从这条小范围安装回归推断。
 
-组合 harness、最终输入和被动实体观测工具见 [macOS 连续学习验收工具](macos-acceptance.md)。最终产物与证据应保存到 persistent scratch，不能只放在可能归档的实现工作树内。
+组合 harness、最终输入和被动实体观测工具见 [macOS 连续学习验收工具](macos-acceptance.md)。包、证据与临时输出的存放及清理遵守 [本地产物管理](../../docs/development/本地产物管理.md)；发布候选归入 `artifacts/releases/<版本>/`，实际安装使用 `/Applications/YiZhi.app`。
