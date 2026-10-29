@@ -5,7 +5,7 @@ import type { CameraController } from './camera-controller';
 import './local-layout.css';
 import { observation } from '../acceptance-observation';
 
-export function useLocalLayout(graph: CourseGraph | undefined, activeId: string | undefined, camera: CameraController, enabled: boolean, ready = true,readingAnchor?:LayoutPlacement) {
+export function useLocalLayout(graph: CourseGraph | undefined, activeId: string | undefined, camera: CameraController, enabled: boolean, ready = true,readingAnchorId?:string) {
   const observed = useMemo(() => ({ pending: observation.resource('measurement.pending'),
     frame: observation.resource('layout.scheduledFrames'), metadata: observation.resource('measurement.metadataEntries') }), []);
   const [sizes, setSizes] = useState<LayoutSizes>({});
@@ -34,20 +34,24 @@ export function useLocalLayout(graph: CourseGraph | undefined, activeId: string 
   const placements = useMemo(() => {
     if(!graph)return [];
     const ids=new Set(graph.layout.nodes.map(n=>n.unitId));
-    const fixed=gesture??(enabled&&readingAnchor&&ids.has(readingAnchor.unitId)?readingAnchor:undefined);
     const known=Object.fromEntries(Object.entries(sizes).filter(([id])=>ids.has(id)));
-    return projectLayout(graph.layout.nodes,enabled?known:{},fixed);
-  },[graph,enabled,sizes,gesture,readingAnchor]);
-  const manual = useRef<string | undefined>(undefined);
+    // Only a live placement gesture may override the latest manual baseline.
+    return projectLayout(graph.layout.nodes,enabled?known:{},gesture);
+  },[graph,enabled,sizes,gesture]);
+  const manual = useRef<LayoutPlacement | undefined>(undefined);
   const previous = useRef<{ id?: string; fixed?: string; nodes: LayoutNode[] }>({ nodes: [] });
   useLayoutEffect(() => {
-    const old = previous.current.nodes.find(n => n.unitId === activeId), next = placements.find(n => n.unitId === activeId);
-    if (ready && enabled && (!readingAnchor||readingAnchor.unitId===activeId) && manual.current !== activeId && previous.current.fixed !== activeId && previous.current.id === activeId && old && next && gesture?.unitId !== activeId && (old.x !== next.x || old.y !== next.y))
-      camera.compensate(next.x - old.x, next.y - old.y);
+    const anchorId = gesture?.unitId ?? manual.current?.unitId ?? readingAnchorId ?? activeId;
+    const old = previous.current.nodes.find(n => n.unitId === anchorId), next = placements.find(n => n.unitId === anchorId);
+    const intended = manual.current?.unitId === anchorId ? manual.current : old;
+    // A manual move remains visible. Only the extra collision displacement is
+    // compensated, including the transition out of a live placement gesture.
+    if (ready && enabled && !gesture && (previous.current.fixed !== anchorId || manual.current?.unitId === anchorId) && (previous.current.id === anchorId || manual.current?.unitId === anchorId) && intended && next && (intended.x !== next.x || intended.y !== next.y))
+      camera.compensate(next.x - intended.x, next.y - intended.y);
     measured.current = sizes;
     manual.current = undefined;
-    previous.current = { id: activeId, fixed: gesture?.unitId, nodes: placements };
-  }, [placements, activeId, enabled, ready, camera, gesture, sizes,readingAnchor]);
+    previous.current = { id: anchorId, fixed: gesture?.unitId, nodes: placements };
+  }, [placements, activeId, enabled, ready, camera, gesture, sizes,readingAnchorId]);
   const waitForMeasurements = async (ids: string[]) => {
     let unchanged = 0, last = measured.current;
     for (let attempt = 0; attempt < 60; attempt++) {
@@ -59,7 +63,7 @@ export function useLocalLayout(graph: CourseGraph | undefined, activeId: string 
     }
     throw new Error('阅读尺寸尚未就绪');
   };
-  return { placements, measure, waitForMeasurements, gesture: setGesture, manual: (id: string) => { manual.current = id; } };
+  return { placements, measure, waitForMeasurements, gesture: setGesture, manual: (placement: LayoutPlacement) => { manual.current = placement; } };
 }
 
 export function ReadingSurface({ id, name, position, baseline, measure, gesture, commit, takeover, children, active, articleRef }: {

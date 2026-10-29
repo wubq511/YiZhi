@@ -26,8 +26,8 @@ test('all visible short bodies load beyond eight and a static native selection s
     const c = await core.open(course), graph = await core.graph(c.sessionId);
     if (input) expect(graph.nodes).toHaveLength(500);
     const ids: string[] = input ? graph.nodes.filter(n => n.id.startsWith('KU-LOAD-')).slice(0, 10).map(n => n.id)
-      : ['KU-001', 'KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-035', 'KU-055', 'KU-057', 'KU-062'];
-    const heldId=ids[5];let unrelatedBoundaryId='';
+      : ['KU-002', 'KU-003', 'KU-004', 'KU-005', 'KU-006', 'KU-035', 'KU-055', 'KU-057', 'KU-062'];
+    const heldId=input?ids[5]:'KU-006';let unrelatedBoundaryId='';
     const originals = input ? await Promise.all(graph.nodes.filter(n => !n.id.startsWith('KU-LOAD-')).map(async n => ({ id: n.id, unit: await core.readUnit(c.sessionId, n.id) }))) : [];
     for (const id of ids) {
       const snapshot = await core.read(c.sessionId, id), blocks = snapshot.unit.reading.blocks;
@@ -42,7 +42,9 @@ test('all visible short bodies load beyond eight and a static native selection s
           structure: { parentId: id, before: blocks.map(b => b.id), after: retained.map(b => b.id), inserted: [] }, correspondence: [],
         } });
     }
-    await core.setLayout(c.sessionId, ids.map((unitId, index) => ({ unitId, x: 20_000 + index % 5 * 400, y: 20_000 + Math.floor(index / 5) * 650, width: 360 })));
+    // Keep the permanent KU001 editor outside this static-body grid. Its extra
+    // controls can otherwise push the next row beyond a clamped CI window.
+    await core.setLayout(c.sessionId, ids.map((unitId, index) => ({ unitId, x: 20_000 + index % 5 * 440, y: 20_000 + Math.floor(index / 5) * 650, width: 400 })));
     await core.setReadingState(c.sessionId, { unitId: 'KU-001', pinnedUnitId: 'KU-001', expanded: {}, returnStack: [], scrollTop: 0,
       camera: { x: 10 - 20_000 * .55, y: 10 - 20_000 * .55, zoom: .55 } });
     for (const original of originals) expect(await core.readUnit(c.sessionId, original.id)).toEqual(original.unit);
@@ -51,17 +53,19 @@ test('all visible short bodies load beyond eight and a static native selection s
     app = await electron.launch({ ...(input ? { executablePath: join(input.app, 'Contents/MacOS/YiZhi'), cwd: join(root, 'empty') } : {}),
       args: [...(input ? [] : [resolve('.')]), `--course=${course}`],
       env: { ...process.env, YIZHI_OBSERVE: '1', YIZHI_DATA_HOME: join(root, 'profile'), YIZHI_CODEX_PATH: join(root, 'no-cli') } });
-    const page = await app.firstWindow(); await page.context().setOffline(true); await resizeBoardWindow(app, page, 1440, 842);
+    const page = await app.firstWindow(); await page.context().setOffline(true); await resizeBoardWindow(app, page, 1440, 684);
     const runtime = await app.evaluate(({ app }) => ({ packaged: app.isPackaged, appPath: app.getAppPath(), executable: process.execPath }));
     if (input) expect(runtime.executable).toBe(join(input.app, 'Contents/MacOS/YiZhi'));
     for (const id of ids) await expect(page.locator(`article[data-unit-id="${id}"]`)).toContainText(`Reading range body ${id}`);
-    const visible = await page.evaluate(() => {
+    const geometry = await page.evaluate(() => {
       const board = document.querySelector('main.board')!.getBoundingClientRect();
-      return [...document.querySelectorAll<HTMLElement>('article[data-unit-id]')].filter(article => {
-        const rect = article.getBoundingClientRect(); return rect.left < board.right && rect.right > board.left && rect.top < board.bottom && rect.bottom > board.top;
-      }).map(article => article.dataset.unitId);
+      const articles=[...document.querySelectorAll<HTMLElement>('article[data-unit-id]')].map(article=>({unitId:article.dataset.unitId!,rect:article.getBoundingClientRect().toJSON()}));
+      return {board:board.toJSON(),viewport:[innerWidth,innerHeight],articles,
+        visible:articles.filter(({rect})=>rect.left<board.right&&rect.right>board.left&&rect.top<board.bottom&&rect.bottom>board.top).map(article=>article.unitId)};
     });
+    const {visible}=geometry;
     expect(visible.length).toBeGreaterThan(8);
+    expect(visible).toEqual(expect.arrayContaining(ids));
     await expectBoundedReading(page);
     expect(visible).toContain(heldId);expect(unrelatedBoundaryId).not.toBe('');
     const unrelated=page.locator(`article[data-unit-id="${heldId}"] [data-reading-block][data-block-id="${unrelatedBoundaryId}"]`);
@@ -107,7 +111,7 @@ test('all visible short bodies load beyond eight and a static native selection s
       for(const original of originals)expect(await next.evaluate(async id=>{const c=await window.yizhi.open();return window.yizhi.readUnit(c.sessionId,id);},original.id)).toEqual(original.unit);
       await expectBoundedReading(next);reopened={camera,nodeCount:state.graph.nodes.length,originalUnitsUnchanged:originals.length};
     }
-    const evidence = { sourceSHA: input?.sourceSHA ?? null, runtime, originalUnitsUnchanged: originals.length, visible, heldId, held, retained,
+    const evidence = { sourceSHA: input?.sourceSHA ?? null, runtime, originalUnitsUnchanged: originals.length, visible, geometry, heldId, held, retained,
       cameraAfterPan,reopened, unrelatedOffscreenMaterialInert:unrelatedBoundaryId, physical: false, scope: 'targeted scene; existing corpus; no growth workload or model run' };
     await writeFile(join(root, 'reading-range.json'), JSON.stringify(evidence, null, 2));
     await writeFile(test.info().outputPath('reading-range.json'), JSON.stringify(evidence, null, 2));

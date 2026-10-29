@@ -1,6 +1,6 @@
 import { evidencePath } from './evidence-paths';
-import { test, expect, _electron as electron } from '@playwright/test';
-import { mkdtemp, rm, chmod } from 'node:fs/promises';
+import { test, expect, _electron as electron, type Page } from '@playwright/test';
+import { mkdtemp, rm, chmod, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { resizeBoardWindow, revealBoardControl } from './board-test-helpers';
@@ -10,8 +10,10 @@ test('actual active B edits and Undo save to that B and reopen without changing 
   const launch = () => electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: {
     ...process.env, YIZHI_DATA_HOME: join(root, 'profile'), YIZHI_CODEX_PATH: join(root, 'no-model-needed') } });
   let app = await launch();
+  let inputPage:Page|undefined;
   try {
     let page = await app.firstWindow(); await resizeBoardWindow(app, page);
+    inputPage=page;
     const before = await page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return { first: c.unit, other: await b.readUnit(c.sessionId, 'KU-057') }; });
     await page.getByRole('button', { name: '复用器与分配器', exact: true }).click();
     await page.getByRole('button', { name: 'MUX 器件、级联与扩展', exact: true }).first().click();
@@ -19,9 +21,20 @@ test('actual active B edits and Undo save to that B and reopen without changing 
     const editor = reader.getByRole('textbox', { name: '连续编辑正文', exact: true });
     await expect(editor).toBeVisible();
     const paragraph = editor.locator('[data-block-id]').filter({ hasText: before.other.reading.blocks.find((b: any) => b.kind === 'paragraph').payload.text }).first();
-    await revealBoardControl(page, paragraph); await paragraph.click(); await page.keyboard.press('Home');
-    await page.keyboard.insertText('学生同时编辑：');
     const originalBlock = before.other.reading.blocks.find((b: any) => b.kind === 'paragraph');
+    await expect(paragraph).toHaveText(originalBlock.payload.text);
+    await page.evaluate(id=>{
+      const proof:any[]=[];(window as any).__activeBInputProof=proof;
+      for(const name of ['beforeinput','input'])addEventListener(name,event=>{
+        if(proof.length>=40)return;
+        const e=event as InputEvent,target=e.target as Element;
+        if(!target.closest?.('article[data-unit-id="KU-057"] .tiptap'))return;
+        proof.push({type:e.type,data:e.data,inputType:e.inputType,trusted:e.isTrusted,text:document.querySelector(`[data-block-id="${id}"]`)?.textContent?.slice(0,1000)});
+      },true);
+    },originalBlock.id);
+    await revealBoardControl(page, paragraph); await paragraph.click();await expect(editor).toBeFocused();await page.keyboard.press('Home');
+    await expect.poll(()=>paragraph.evaluate(p=>{const selection=getSelection();return !!selection?.isCollapsed&&!!selection.anchorNode&&p.contains(selection.anchorNode);})).toBe(true);
+    await page.keyboard.insertText('学生同时编辑：');
     await expect.poll(() => page.evaluate(async id => { const b = (window as any).yizhi, c = await b.open(); return (await b.readUnit(c.sessionId, 'KU-057')).reading.blocks.find((p: any) => p.id === id).payload.text; }, originalBlock.id)).toContain('学生同时编辑：');
     await page.keyboard.press('Meta+z');
     await expect.poll(() => page.evaluate(async id => { const b = (window as any).yizhi, c = await b.open(); return (await b.readUnit(c.sessionId, 'KU-057')).reading.blocks.find((p: any) => p.id === id).payload.text; }, originalBlock.id)).toBe(originalBlock.payload.text);
@@ -29,10 +42,16 @@ test('actual active B edits and Undo save to that B and reopen without changing 
     const edited = await page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return b.read(c.sessionId, 'KU-057'); });
     await expect.poll(() => page.evaluate(async id => { const b = (window as any).yizhi, c = await b.open(); return (await b.readUnit(c.sessionId, 'KU-057')).reading.blocks.find((p: any) => p.id === id).payload.text; }, originalBlock.id)).toContain('学生同时编辑：');
     expect((await page.evaluate(() => (window as any).yizhi.open())).unit).toEqual(before.first);
+    await writeFile(test.info().outputPath('active-b-input-provenance.json'),JSON.stringify(await page.evaluate(()=>(window as any).__activeBInputProof),null,2));
     await app.close(); app = await launch(); page = await app.firstWindow(); await resizeBoardWindow(app, page);
     await expect(page.locator('[data-agent-unit="KU-057"]').getByRole('textbox', { name: '连续编辑正文', exact: true })).toContainText('学生同时编辑：');
     expect((await page.evaluate(() => (window as any).yizhi.open())).unit).toEqual(before.first);
     expect(edited.unit.id).toBe('KU-057');
+  } catch(error) {
+    if(inputPage&&!inputPage.isClosed())await writeFile(test.info().outputPath('active-b-input-failure.json'),JSON.stringify(await inputPage.evaluate(async()=>{
+      const b=window.yizhi,c=await b.open();return {events:(window as any).__activeBInputProof,unit:await b.readUnit(c.sessionId,'KU-057'),dom:document.querySelector('article[data-unit-id="KU-057"] .tiptap')?.textContent};
+    }).catch(String),null,2));
+    throw error;
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
