@@ -1,3 +1,4 @@
+import { initializeRelationProjection } from './command-projections';
 import { observation } from '../acceptance-observation';
 import { historyTimestamp } from './history-clock';
 import { objectVersions, unitChanges } from './history-objects';
@@ -51,6 +52,7 @@ export class CommandGroups {
       INSERT OR IGNORE INTO cg_dirty_units SELECT id FROM units;`);
     for (const action of ['INSERT','UPDATE','DELETE']) db.exec(`CREATE TRIGGER IF NOT EXISTS cg_units_${action} AFTER ${action} ON units BEGIN
       INSERT OR IGNORE INTO cg_dirty_units VALUES(${action === 'DELETE' ? 'old' : 'new'}.id); END`);
+    initializeRelationProjection(db);
     this.observe();
   }
   protect(input: EditorProtection) {
@@ -100,38 +102,42 @@ export class CommandGroups {
   observe(explicitDependencies = new Set<string>()): GroupHistory['changes'] {
     syncAnnotations(this.db);
     const changed = new Set<string>();
-    const memberships = new Map<string, string[]>();
     const dirty = json(this.db.prepare('SELECT id FROM cg_dirty_units').all().map(r => String(r.id)));
     const previousIds = this.db.prepare('SELECT id FROM cg_block_units WHERE unit_id IN(SELECT value FROM json_each(?))').all(dirty).map(r => String(r.id));
+    observation.count('commands.ownerBlocksRead',previousIds.length);
     const present = new Set<string>();
     let unitId = '';
     const walk = (blocks: ReadingBlock[], parentId: string) => {
       this.put(`structure:${parentId}`, 'structure', { blockIds: blocks.map(block => block.id) });
       for (const block of blocks) {
         const { children, ...self } = block;
-        memberships.set(block.id, []); present.add(block.id);
+        present.add(block.id);
         this.db.prepare('INSERT INTO cg_block_units VALUES(?,?) ON CONFLICT(id) DO UPDATE SET unit_id=excluded.unit_id').run(block.id,unitId);
         const old = this.db.prepare('SELECT value FROM cg_objects WHERE id=?').get(block.id);
         if (old && String(old.value) !== json(self)) changed.add(block.id);
+        if (!old || parse(old.value).retired) this.db.prepare('INSERT OR IGNORE INTO cg_dirty_memberships VALUES(?)').run(block.id);
         this.put(block.id, 'block', self);
         walk(children ?? [], block.id);
       }
     };
     for (const row of this.db.prepare('SELECT payload FROM units WHERE id IN(SELECT value FROM json_each(?))').all(dirty)) { observation.count('commands.unitsObserved'); const unit: CourseUnit = parse(row.payload); unitId=unit.id; walk(unit.reading.blocks, unit.id); }
     for (const id of previousIds) if (!present.has(id)) {
+      observation.count('commands.retiredBlocksRead');
       const row=this.db.prepare('SELECT id,value FROM cg_objects WHERE id=?').get(id)!;
       this.put(String(row.id), 'block', { id: String(row.id), retired: true });
       if (!parse(row.value).retired) { changed.add(String(row.id)); this.put(`structure:${row.id}`, 'structure', {blockIds:[]}); }
+      this.db.prepare('DELETE FROM cg_block_units WHERE id=?').run(id);
     }
-    for (const row of this.db.prepare("SELECT id, value FROM cg_objects WHERE kind IN ('reference', 'dependency')").all()) {
-      const relation = parse(row.value);
-      for (const id of new Set([relation.sourceBlockId, relation.dependentBlockId, relation.fromBlockId, relation.toBlockId])) {
-        if (id) { if (!memberships.has(id)) memberships.set(id,[]); memberships.get(id)!.push(String(row.id)); }
-      }
+    for (const row of this.db.prepare('SELECT id FROM cg_dirty_memberships').all()) {
+      const endpoints=this.db.prepare('SELECT relation_id FROM cg_relation_endpoints WHERE block_id=? ORDER BY relation_id').all(row.id!);
+      observation.count('commands.relationRowsRead',endpoints.length);
+      observation.count('commands.membershipsObserved');
+      this.put(`relations:${row.id}`,'structure',{relationIds:endpoints.map(r=>String(r.relation_id))});
     }
-    for (const [id, relationIds] of memberships) this.put(`relations:${id}`, 'structure', { relationIds: relationIds.sort() });
+    this.db.exec('DELETE FROM cg_dirty_memberships');
     const invalidated: GroupHistory['changes'] = [];
-    for (const row of this.db.prepare("SELECT * FROM cg_objects WHERE kind='dependency'").all()) {
+    for (const row of this.db.prepare("SELECT * FROM cg_objects WHERE kind='dependency' AND json_extract(value,'$.sourceBlockId') IN(SELECT value FROM json_each(?))").all(json([...changed]))) {
+      observation.count('commands.relationRowsRead');
       const before = parse(row.value);
       if (!explicitDependencies.has(String(row.id)) && changed.has(before.sourceBlockId) && before.status !== 'needs-review') {
         const after = { ...before, status: 'needs-review' };

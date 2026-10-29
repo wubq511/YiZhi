@@ -299,3 +299,42 @@ test('restoring identical text does not revive old read versions, and reordered 
     assert.equal((await service.commands.commit({ ...old, operationId: 'before-reorder', basisId: child.basisId })).status, 'retained');
   });
 });
+
+
+test('local student save reads only affected dependency metadata and never revisits accumulated retired block owners',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'yizhi-bounded-relations-'));
+  const core=new CourseService(resolve('dist/worker.cjs'),{observe:true});
+  try {
+    let a=await core.open(root);const sessionId=a.sessionId,b=await core.read(sessionId,'KU-057');
+    const ps=b.unit.reading.blocks.filter(x=>x.kind==='paragraph').slice(0,2),ids=Array.from({length:12},(_,i)=>`reference:other-unit-${i}`);
+    const attempt=await core.commands.startAttempt({sessionId,taskId:'many-other-relations'});
+    const basis=await core.commands.read({sessionId,unitId:b.unit.id,attemptId:attempt.attemptId,objectIds:[...ps.map(x=>x.id),...ids]});
+    assert.equal((await core.commands.commit({sessionId,unitId:b.unit.id,attemptId:attempt.attemptId,basisId:basis.basisId,operationId:'other-relations',changes:ids.map(objectId=>({objectId,value:{fromBlockId:ps[0].id,toBlockId:ps[1].id,meaning:'其他单元引用'}}))})).status,'committed');
+    let inputSeq=0;
+    const write=async(patch:any)=>{await core.commitEdit({sessionId,inputSeq:++inputSeq,baseRevision:a.revision,operationId:`retire-history-${inputSeq}`,complete:true,changes:[],patch});a=await core.read(sessionId);};
+    for(let i=0;i<8;i++) {
+      const id=`RB-RETIRED-LOCAL-${i}`,order=a.unit.reading.blocks.map(x=>x.id);
+      await write({updates:[],correspondence:[],structure:{parentId:a.unit.id,before:order,after:[...order,id],inserted:[{id,kind:'paragraph',payload:{text:'临时正文身份'}}]}});
+      await write({updates:[],correspondence:[],structure:{parentId:a.unit.id,before:[...order,id],after:order,inserted:[]}});
+    }
+    const before=await core.observe();
+    const receipt=await core.commitEdit({sessionId,inputSeq:++inputSeq,baseRevision:a.revision,operationId:'bounded-relations-save',complete:true,changes:[{blockId:a.editableBlockId,text:'只改这一段'}]});
+    const after=await core.observe();
+    assert.equal((after.counters['commands.relationRowsRead']?.count??0)-(before.counters['commands.relationRowsRead']?.count??0),0,'unrelated relation metadata is not read');
+    assert.equal((after.counters['commands.retiredBlocksRead']?.count??0)-(before.counters['commands.retiredBlocksRead']?.count??0),0,'current owner index never revisits retired identities');
+    const history=await core.formalHistory.detail({sessionId,operationId:'retire-history-2'});
+    assert.ok(history.changes.some(c=>c.objectId==='RB-RETIRED-LOCAL-0'&&c.before&&c.after===null),'old retirement history survives owner pruning');
+    assert.deepEqual(await core.queryOperation(sessionId,'bounded-relations-save'),receipt);
+    assert.deepEqual((await core.read(sessionId,b.unit.id)).unit,b.unit);
+    const local=await core.commands.startAttempt({sessionId,taskId:'local-dependency-check'});
+    const read=await core.commands.read({sessionId,attemptId:local.attemptId,objectIds:[premise,target,'dependency:local-check']});
+    await core.commands.commit({sessionId,attemptId:local.attemptId,basisId:read.basisId,operationId:'local-dependency-check',changes:[{objectId:'dependency:local-check',value:{sourceBlockId:premise,dependentBlockId:target,status:'current'}}]});
+    a=await core.read(sessionId);const localBefore=await core.observe();
+    await core.commitEdit({sessionId,inputSeq:++inputSeq,baseRevision:a.revision,operationId:'local-dependency-source-edit',complete:true,changes:[{blockId:premise,text:'受影响的前提变更'}]});
+    const localAfter=await core.observe();
+    assert.equal(localAfter.counters['commands.relationRowsRead'].count-localBefore.counters['commands.relationRowsRead'].count,1,'only the actual dependency source is read');
+    assert.equal(localAfter.counters['commands.membershipsObserved'].count-localBefore.counters['commands.membershipsObserved'].count,0,'content edits do not diff unchanged endpoint membership');
+    const dependency=await core.commands.read({sessionId,attemptId:local.attemptId,objectIds:[target]});
+    assert.equal(dependency.objects.find(x=>x.id==='dependency:local-check')!.value.status,'needs-review');
+  }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
