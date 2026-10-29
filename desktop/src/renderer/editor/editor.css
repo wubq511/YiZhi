@@ -1,0 +1,25 @@
+.editor-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px; margin: 22px 0; background: #fffdf8; border: 1px solid #b9c9d9; border-radius: 11px; font: 13px/1.5 system-ui, sans-serif; color: #345d88; }
+.editor-tools span { flex-basis: 100%; }
+.editor-tools button { color: #345d88; font: inherit; }
+.editor-integration { margin-block: 18px; padding: 12px; border: 1px solid #b9c9d9; border-radius: 8px; background: #fffdf8; color: #345d88; font: 14px/1.7 system-ui, sans-serif; overflow-wrap: anywhere; }
+.editor-integration p { margin-block: 0 10px; }
+.editor-integration dt { font-weight: 600; }
+.editor-integration dd { margin: 0 0 12px; white-space: pre-wrap; }
+.editor-integration button { margin: 0 8px 8px 0; }
+.continuous-prose { outline: none; caret-color: #6965db; overflow-wrap: anywhere; }
+.continuous-prose p[data-block-id] { min-height: 1.85em; white-space: pre-wrap; }
+.continuous-prose p[data-block-id]:focus { outline: none; }
+.continuous-prose:focus-visible { outline: 2px solid #6965db; outline-offset: 8px; }
+.continuous-prose ::selection { background: #eceaff; }
+.continuous-prose .ProseMirror-selectednode { outline: 2px solid #6965db; outline-offset: 4px; }
+.editor-preserved { position: relative; }
+.editor-formula { margin: 28px 0; }
+.editor-formula button { font: 13px/1.5 system-ui, sans-serif; }
+.editor-formula math-field { display: block; width: 100%; min-width: 0; padding: 10px; font-size: 1.08em; --caret-color: #6965db; --selection-background-color: #e5efff; border: 1px solid #b9c9d9; border-radius: 8px; background: #fffdf8; }
+.editor-formula math-field[hidden] { display: none; }
+.editor-formula math-field:focus-within { outline: 2px solid #6965db; outline-offset: 3px; }
+.formula-draft { display: block; color: #41627e; font: 13px/1.7 system-ui, sans-serif; }
+.formula-draft:not(:empty) { border: 1px dashed #a9bdce; background: #f0f5fa; padding: 8px; margin-top: 10px; }
+
+.continuous-prose .annotation-highlight { background: #fff3ce; text-decoration: underline; text-decoration-color: #bc9a5b; text-underline-offset: .2em; }
+.continuous-prose .drawing-text-highlight { background: #fff0ad; text-decoration: underline; text-decoration-color: #bc9a5b; text-underline-offset: .2em; }

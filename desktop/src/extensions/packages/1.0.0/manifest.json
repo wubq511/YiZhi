@@ -1,0 +1,60 @@
+{
+  "packageId": "parity-lab",
+  "packageVersion": "1.0.0",
+  "interfaceVersion": "extension-api-1",
+  "inputVersion": "bits-3-v1",
+  "stateVersion": "parity-state-1",
+  "entry": "index.html",
+  "license": "MIT",
+  "inputs": [
+    "A",
+    "B",
+    "C"
+  ],
+  "editableFields": [
+    "A",
+    "B",
+    "C"
+  ],
+  "resources": [
+    {
+      "path": "index.html",
+      "sha256": "d24d92faee80d831cef0aa89856b7e25d9ba4b3d3f6f1997fc66f2701f0e7b2f",
+      "byteLength": 269,
+      "mediaType": "text/html; charset=utf-8",
+      "license": "MIT"
+    },
+    {
+      "path": "frame.js",
+      "sha256": "92a56324d41141ea47578302c2d35d2132ba9ff1e83eee08dd8a8dfd8574bd2f",
+      "byteLength": 1814,
+      "mediaType": "text/javascript",
+      "license": "MIT"
+    },
+    {
+      "path": "compute.js",
+      "sha256": "eb973af29cddb9354bf88446c36a016ad28215c840320e75c2f6ff88ef9f2be8",
+      "byteLength": 1390,
+      "mediaType": "text/javascript",
+      "license": "MIT"
+    },
+    {
+      "path": "style.css",
+      "sha256": "29dd4ae8b29342b68776aa80a479cff2865126e560be14695db21529955201a1",
+      "byteLength": 188,
+      "mediaType": "text/css",
+      "license": "MIT"
+    },
+    {
+      "path": "LICENSE.txt",
+      "sha256": "cd51baf99f2d93a74fb47cc1e4fce2c395b7e99ec94d153511d6129daef9389f",
+      "byteLength": 1075,
+      "mediaType": "text/plain",
+      "license": "MIT"
+    }
+  ],
+  "migratesFrom": [],
+  "learningResult": "Odd parity of the declared bits; exhaustive finite minterms",
+  "stepMs": 250,
+  "sha256": "a47642a8f169c15b74028d677e5728694236735ff07225cd0ea9c6aa9f8379e7"
+}

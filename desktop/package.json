@@ -1,0 +1,47 @@
+{
+  "name": "yizhi-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "YiZhi offline macOS learning workspace",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "npm run build && electron .",
+    "package:mac": "node scripts/package-mac.mjs",
+    "typecheck": "tsc --noEmit",
+    "verify": "node scripts/verify.mjs",
+    "test:runner": "node --test scripts/tests/validation.test.mjs",
+    "test:ui:coverage": "node scripts/check-ui-shards.mjs",
+    "test:built": "node scripts/run-tests.mjs",
+    "test:electron:built": "node scripts/run-tests.mjs --electron",
+    "test:smoke:built": "playwright test",
+    "test": "npm run build && node scripts/run-tests.mjs",
+    "test:electron": "npm run build && node scripts/run-tests.mjs --electron",
+    "test:smoke": "npm run build && playwright test"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "1.0.13",
+    "@tiptap/core": "3.32.0",
+    "@tiptap/extension-document": "3.32.0",
+    "@tiptap/extension-paragraph": "3.32.0",
+    "@tiptap/extension-text": "3.32.0",
+    "@tiptap/pm": "3.32.0",
+    "@xyflow/react": "12.12.0",
+    "katex": "0.19.1",
+    "mathlive": "0.111.1",
+    "pdfjs-dist": "6.4.299",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "roughjs": "4.6.6"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.3.0",
+    "@playwright/test": "1.64.1",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "electron": "45.0.0",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2"
+  }
+}

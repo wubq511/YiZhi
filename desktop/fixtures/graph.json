@@ -1,0 +1,3923 @@
+{
+  "sourceHash": "2588c903a74e05ac80b41e4ff0105c8387109711553f994b47b51cd7ac892adb",
+  "view": "all",
+  "nodes": [
+    {
+      "id": "KU-001",
+      "name": "位置记数法与权展开",
+      "kind": "concept",
+      "themeId": "TH-01",
+      "themeName": "数制与数制转换",
+      "stars": 4,
+      "questionTypes": [
+        "数制转换"
+      ]
+    },
+    {
+      "id": "KU-002",
+      "name": "非十进制与十进制互转",
+      "kind": "method",
+      "themeId": "TH-01",
+      "themeName": "数制与数制转换",
+      "stars": 5,
+      "questionTypes": [
+        "数制转换"
+      ]
+    },
+    {
+      "id": "KU-003",
+      "name": "二进制、八进制与十六进制互转",
+      "kind": "method",
+      "themeId": "TH-01",
+      "themeName": "数制与数制转换",
+      "stars": 5,
+      "questionTypes": [
+        "数制转换"
+      ]
+    },
+    {
+      "id": "KU-004",
+      "name": "位、字节与存储容量单位",
+      "kind": "concept",
+      "themeId": "TH-01",
+      "themeName": "数制与数制转换",
+      "stars": 4,
+      "questionTypes": [
+        "基础支撑"
+      ]
+    },
+    {
+      "id": "KU-005",
+      "name": "无符号二进制四则运算",
+      "kind": "method",
+      "themeId": "TH-01",
+      "themeName": "数制与数制转换",
+      "stars": 4,
+      "questionTypes": [
+        "数制转换"
+      ]
+    },
+    {
+      "id": "KU-006",
+      "name": "模运算与补码原理",
+      "kind": "concept",
+      "themeId": "TH-02",
+      "themeName": "有符号数与补码运算",
+      "stars": 4,
+      "questionTypes": [
+        "数制转换"
+      ]
+    },
+    {
+      "id": "KU-007",
+      "name": "原码、反码、补码表示与转换",
+      "kind": "method",
+      "themeId": "TH-02",
+      "themeName": "有符号数与补码运算",
+      "stars": 5,
+      "questionTypes": [
+        "数制转换"
+      ]
+    },
+    {
+      "id": "KU-008",
+      "name": "补码加减运算",
+      "kind": "method",
+      "themeId": "TH-02",
+      "themeName": "有符号数与补码运算",
+      "stars": 4,
+      "questionTypes": [
+        "数制转换"
+      ]
+    },
+    {
+      "id": "KU-009",
+      "name": "有符号数溢出判断与检测",
+      "kind": "concept",
+      "themeId": "TH-02",
+      "themeName": "有符号数与补码运算",
+      "stars": 4,
+      "questionTypes": [
+        "数制转换"
+      ]
+    },
+    {
+      "id": "KU-010",
+      "name": "零扩展与符号扩展",
+      "kind": "method",
+      "themeId": "TH-02",
+      "themeName": "有符号数与补码运算",
+      "stars": 4,
+      "questionTypes": [
+        "数制转换"
+      ]
+    },
+    {
+      "id": "KU-011",
+      "name": "BCD 码及常用变体",
+      "kind": "concept",
+      "themeId": "TH-03",
+      "themeName": "常用编码与可靠性编码",
+      "stars": 5,
+      "questionTypes": [
+        "数制转换"
+      ]
+    },
+    {
+      "id": "KU-012",
+      "name": "BCD 加法与减法",
+      "kind": "method",
+      "themeId": "TH-03",
+      "themeName": "常用编码与可靠性编码",
+      "stars": 3,
+      "questionTypes": [
+        "数制转换"
+      ]
+    },
+    {
+      "id": "KU-013",
+      "name": "ASCII 字符编码",
+      "kind": "concept",
+      "themeId": "TH-03",
+      "themeName": "常用编码与可靠性编码",
+      "stars": 2,
+      "questionTypes": [
+        "基础支撑"
+      ]
+    },
+    {
+      "id": "KU-014",
+      "name": "格雷码性质与编码转换",
+      "kind": "method",
+      "themeId": "TH-03",
+      "themeName": "常用编码与可靠性编码",
+      "stars": 5,
+      "questionTypes": [
+        "数制转换"
+      ]
+    },
+    {
+      "id": "KU-015",
+      "name": "奇偶校验码",
+      "kind": "concept",
+      "themeId": "TH-03",
+      "themeName": "常用编码与可靠性编码",
+      "stars": 3,
+      "questionTypes": [
+        "基础支撑"
+      ]
+    },
+    {
+      "id": "KU-016",
+      "name": "汉明码",
+      "kind": "concept",
+      "themeId": "TH-03",
+      "themeName": "常用编码与可靠性编码",
+      "stars": 2,
+      "questionTypes": [
+        "基础支撑"
+      ]
+    },
+    {
+      "id": "KU-017",
+      "name": "三种基本逻辑运算与真值表",
+      "kind": "concept",
+      "themeId": "TH-04",
+      "themeName": "逻辑运算与逻辑门",
+      "stars": 4,
+      "questionTypes": [
+        "基础支撑"
+      ]
+    },
+    {
+      "id": "KU-018",
+      "name": "正逻辑与负逻辑",
+      "kind": "concept",
+      "themeId": "TH-04",
+      "themeName": "逻辑运算与逻辑门",
+      "stars": 4,
+      "questionTypes": [
+        "基础支撑"
+      ]
+    },
+    {
+      "id": "KU-019",
+      "name": "复合逻辑门功能",
+      "kind": "module",
+      "themeId": "TH-04",
+      "themeName": "逻辑运算与逻辑门",
+      "stars": 4,
+      "questionTypes": [
+        "逻辑分析"
+      ]
+    },
+    {
+      "id": "KU-020",
+      "name": "用通用门实现基本逻辑",
+      "kind": "method",
+      "themeId": "TH-04",
+      "themeName": "逻辑运算与逻辑门",
+      "stars": 5,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-021",
+      "name": "异或、同或性质与多变量奇偶性",
+      "kind": "concept",
+      "themeId": "TH-04",
+      "themeName": "逻辑运算与逻辑门",
+      "stars": 5,
+      "questionTypes": [
+        "逻辑分析"
+      ]
+    },
+    {
+      "id": "KU-022",
+      "name": "电路原理图连接规范",
+      "kind": "concept",
+      "themeId": "TH-04",
+      "themeName": "逻辑运算与逻辑门",
+      "stars": 3,
+      "questionTypes": [
+        "基础支撑"
+      ]
+    },
+    {
+      "id": "KU-023",
+      "name": "逻辑代数公理与基本定理",
+      "kind": "concept",
+      "themeId": "TH-05",
+      "themeName": "逻辑代数公理与规则",
+      "stars": 4,
+      "questionTypes": [
+        "函数化简"
+      ]
+    },
+    {
+      "id": "KU-024",
+      "name": "摩根定理",
+      "kind": "concept",
+      "themeId": "TH-05",
+      "themeName": "逻辑代数公理与规则",
+      "stars": 5,
+      "questionTypes": [
+        "函数化简",
+        "逻辑分析"
+      ]
+    },
+    {
+      "id": "KU-025",
+      "name": "推气泡法",
+      "kind": "method",
+      "themeId": "TH-05",
+      "themeName": "逻辑代数公理与规则",
+      "stars": 4,
+      "questionTypes": [
+        "逻辑分析",
+        "函数化简"
+      ]
+    },
+    {
+      "id": "KU-026",
+      "name": "代入、反演与对偶规则",
+      "kind": "method",
+      "themeId": "TH-05",
+      "themeName": "逻辑代数公理与规则",
+      "stars": 3,
+      "questionTypes": [
+        "函数化简"
+      ]
+    },
+    {
+      "id": "KU-027",
+      "name": "与-或式与或-与式",
+      "kind": "concept",
+      "themeId": "TH-06",
+      "themeName": "逻辑函数表达与表示",
+      "stars": 4,
+      "questionTypes": [
+        "函数化简"
+      ]
+    },
+    {
+      "id": "KU-028",
+      "name": "最小项、最大项与标准式",
+      "kind": "concept",
+      "themeId": "TH-06",
+      "themeName": "逻辑函数表达与表示",
+      "stars": 5,
+      "questionTypes": [
+        "函数化简"
+      ]
+    },
+    {
+      "id": "KU-029",
+      "name": "真值表与标准式互转",
+      "kind": "method",
+      "themeId": "TH-06",
+      "themeName": "逻辑函数表达与表示",
+      "stars": 5,
+      "questionTypes": [
+        "函数化简"
+      ]
+    },
+    {
+      "id": "KU-030",
+      "name": "非 HDL 逻辑表示法识别与互转",
+      "kind": "method",
+      "themeId": "TH-06",
+      "themeName": "逻辑函数表达与表示",
+      "stars": 5,
+      "questionTypes": [
+        "逻辑分析"
+      ]
+    },
+    {
+      "id": "KU-031",
+      "name": "与或非式实现",
+      "kind": "method",
+      "themeId": "TH-06",
+      "themeName": "逻辑函数表达与表示",
+      "stars": 4,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-032",
+      "name": "最简表达式标准与电路优化",
+      "kind": "concept",
+      "themeId": "TH-07",
+      "themeName": "逻辑函数化简",
+      "stars": 4,
+      "questionTypes": [
+        "函数化简"
+      ]
+    },
+    {
+      "id": "KU-033",
+      "name": "代数法化简",
+      "kind": "method",
+      "themeId": "TH-07",
+      "themeName": "逻辑函数化简",
+      "stars": 5,
+      "questionTypes": [
+        "函数化简"
+      ]
+    },
+    {
+      "id": "KU-034",
+      "name": "卡诺图结构、格雷码排列与相邻规则",
+      "kind": "concept",
+      "themeId": "TH-08",
+      "themeName": "卡诺图基础与化简",
+      "stars": 4,
+      "questionTypes": [
+        "函数化简"
+      ]
+    },
+    {
+      "id": "KU-035",
+      "name": "2–4 变量卡诺图化简",
+      "kind": "method",
+      "themeId": "TH-08",
+      "themeName": "卡诺图基础与化简",
+      "stars": 5,
+      "questionTypes": [
+        "函数化简"
+      ]
+    },
+    {
+      "id": "KU-036",
+      "name": "质蕴含、必要质蕴含与最简覆盖",
+      "kind": "concept",
+      "themeId": "TH-08",
+      "themeName": "卡诺图基础与化简",
+      "stars": 4,
+      "questionTypes": [
+        "函数化简"
+      ]
+    },
+    {
+      "id": "KU-037",
+      "name": "5–6 变量卡诺图与多图邻接",
+      "kind": "method",
+      "themeId": "TH-08",
+      "themeName": "卡诺图基础与化简",
+      "stars": 3,
+      "questionTypes": [
+        "函数化简"
+      ]
+    },
+    {
+      "id": "KU-038",
+      "name": "卡诺图上的反函数、对偶与逻辑运算",
+      "kind": "method",
+      "themeId": "TH-08",
+      "themeName": "卡诺图基础与化简",
+      "stars": 3,
+      "questionTypes": [
+        "函数化简",
+        "逻辑分析"
+      ]
+    },
+    {
+      "id": "KU-039",
+      "name": "无关项与含无关项化简",
+      "kind": "method",
+      "themeId": "TH-09",
+      "themeName": "无关项、或-与式与多输出化简",
+      "stars": 5,
+      "questionTypes": [
+        "函数化简"
+      ]
+    },
+    {
+      "id": "KU-040",
+      "name": "最大项法与两次取反求或-与式",
+      "kind": "method",
+      "themeId": "TH-09",
+      "themeName": "无关项、或-与式与多输出化简",
+      "stars": 4,
+      "questionTypes": [
+        "函数化简"
+      ]
+    },
+    {
+      "id": "KU-041",
+      "name": "多输出函数共享乘积项化简",
+      "kind": "method",
+      "themeId": "TH-09",
+      "themeName": "无关项、或-与式与多输出化简",
+      "stars": 4,
+      "questionTypes": [
+        "函数化简"
+      ]
+    },
+    {
+      "id": "KU-042",
+      "name": "组合逻辑电路定义与判别",
+      "kind": "concept",
+      "themeId": "TH-10",
+      "themeName": "组合逻辑分析与设计",
+      "stars": 3,
+      "questionTypes": [
+        "逻辑分析"
+      ]
+    },
+    {
+      "id": "KU-043",
+      "name": "组合逻辑电路分析",
+      "kind": "method",
+      "themeId": "TH-10",
+      "themeName": "组合逻辑分析与设计",
+      "stars": 5,
+      "questionTypes": [
+        "逻辑分析"
+      ]
+    },
+    {
+      "id": "KU-044",
+      "name": "组合逻辑设计流程",
+      "kind": "method",
+      "themeId": "TH-10",
+      "themeName": "组合逻辑分析与设计",
+      "stars": 5,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-045",
+      "name": "由文字需求直接列写逻辑表达式",
+      "kind": "method",
+      "themeId": "TH-11",
+      "themeName": "组合逻辑设计实例",
+      "stars": 5,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-046",
+      "name": "含无关项的判别与设计",
+      "kind": "method",
+      "themeId": "TH-11",
+      "themeName": "组合逻辑设计实例",
+      "stars": 4,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-047",
+      "name": "码变换电路设计",
+      "kind": "method",
+      "themeId": "TH-11",
+      "themeName": "组合逻辑设计实例",
+      "stars": 5,
+      "questionTypes": [
+        "逻辑分析",
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-048",
+      "name": "分层设计与比较器实现",
+      "kind": "method",
+      "themeId": "TH-11",
+      "themeName": "组合逻辑设计实例",
+      "stars": 3,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-050",
+      "name": "1 位十进制 BCD 加法器设计",
+      "kind": "method",
+      "themeId": "TH-11",
+      "themeName": "组合逻辑设计实例",
+      "stars": 3,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-051",
+      "name": "竞争与冒险概念",
+      "kind": "concept",
+      "themeId": "TH-12",
+      "themeName": "竞争冒险与延迟",
+      "stars": 3,
+      "questionTypes": [
+        "逻辑分析"
+      ]
+    },
+    {
+      "id": "KU-052",
+      "name": "冒险判断（代数法与卡诺图法）",
+      "kind": "method",
+      "themeId": "TH-12",
+      "themeName": "竞争冒险与延迟",
+      "stars": 4,
+      "questionTypes": [
+        "逻辑分析"
+      ]
+    },
+    {
+      "id": "KU-053",
+      "name": "消除冒险的方法",
+      "kind": "method",
+      "themeId": "TH-12",
+      "themeName": "竞争冒险与延迟",
+      "stars": 4,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-054",
+      "name": "传播延迟、最小延迟与关键路径",
+      "kind": "concept",
+      "themeId": "TH-12",
+      "themeName": "竞争冒险与延迟",
+      "stars": 3,
+      "questionTypes": [
+        "逻辑分析"
+      ]
+    },
+    {
+      "id": "KU-055",
+      "name": "MUX 功能与 2:1/4:1 表达式",
+      "kind": "concept",
+      "themeId": "TH-13",
+      "themeName": "复用器与分配器",
+      "stars": 5,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-056",
+      "name": "用 MUX 实现逻辑函数",
+      "kind": "method",
+      "themeId": "TH-13",
+      "themeName": "复用器与分配器",
+      "stars": 4,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-057",
+      "name": "MUX 器件、级联与扩展",
+      "kind": "module",
+      "themeId": "TH-13",
+      "themeName": "复用器与分配器",
+      "stars": 4,
+      "questionTypes": [
+        "逻辑设计",
+        "逻辑分析"
+      ]
+    },
+    {
+      "id": "KU-058",
+      "name": "MUX 波形分析",
+      "kind": "method",
+      "themeId": "TH-13",
+      "themeName": "复用器与分配器",
+      "stars": 3,
+      "questionTypes": [
+        "逻辑分析"
+      ]
+    },
+    {
+      "id": "KU-059",
+      "name": "DMUX 与 MUX/DMUX 数据传输",
+      "kind": "module",
+      "themeId": "TH-13",
+      "themeName": "复用器与分配器",
+      "stars": 3,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-060",
+      "name": "编码器功能与普通/优先编码",
+      "kind": "concept",
+      "themeId": "TH-14",
+      "themeName": "编码器与译码器",
+      "stars": 4,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-061",
+      "name": "74LS148 与 74LS147 优先编码器",
+      "kind": "module",
+      "themeId": "TH-14",
+      "themeName": "编码器与译码器",
+      "stars": 4,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-062",
+      "name": "译码器功能与 2:4/3:8 译码器",
+      "kind": "concept",
+      "themeId": "TH-14",
+      "themeName": "编码器与译码器",
+      "stars": 4,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-063",
+      "name": "74LS138 端口、有效电平与使能",
+      "kind": "module",
+      "themeId": "TH-14",
+      "themeName": "编码器与译码器",
+      "stars": 4,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-064",
+      "name": "用译码器实现逻辑函数",
+      "kind": "method",
+      "themeId": "TH-14",
+      "themeName": "编码器与译码器",
+      "stars": 5,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-065",
+      "name": "译码器级联扩展",
+      "kind": "method",
+      "themeId": "TH-14",
+      "themeName": "编码器与译码器",
+      "stars": 3,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-066",
+      "name": "二-十进制译码器与七段显示译码器",
+      "kind": "module",
+      "themeId": "TH-14",
+      "themeName": "编码器与译码器",
+      "stars": 3,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-067",
+      "name": "移位器功能与移位类型",
+      "kind": "module",
+      "themeId": "TH-15",
+      "themeName": "移位器",
+      "stars": 3,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-068",
+      "name": "奇偶校验器与 74LS280",
+      "kind": "module",
+      "themeId": "TH-16",
+      "themeName": "校验器与比较器",
+      "stars": 3,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-069",
+      "name": "数值比较器与 74HC85",
+      "kind": "module",
+      "themeId": "TH-16",
+      "themeName": "校验器与比较器",
+      "stars": 4,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-070",
+      "name": "半加器与全加器",
+      "kind": "module",
+      "themeId": "TH-17",
+      "themeName": "加法器、减法器与乘法器",
+      "stars": 3,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-071",
+      "name": "行波进位加法器",
+      "kind": "module",
+      "themeId": "TH-17",
+      "themeName": "加法器、减法器与乘法器",
+      "stars": 4,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-072",
+      "name": "超前进位加法器与 74LS283",
+      "kind": "module",
+      "themeId": "TH-17",
+      "themeName": "加法器、减法器与乘法器",
+      "stars": 5,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-074",
+      "name": "半减器与全减器",
+      "kind": "module",
+      "themeId": "TH-17",
+      "themeName": "加法器、减法器与乘法器",
+      "stars": 3,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-075",
+      "name": "加/减法器与溢出标志",
+      "kind": "module",
+      "themeId": "TH-17",
+      "themeName": "加法器、减法器与乘法器",
+      "stars": 4,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-076",
+      "name": "二进制乘法器",
+      "kind": "module",
+      "themeId": "TH-17",
+      "themeName": "加法器、减法器与乘法器",
+      "stars": 5,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-077",
+      "name": "二进制转 BCD（推导方程与移位加 3）",
+      "kind": "method",
+      "themeId": "TH-18",
+      "themeName": "二进制与 BCD 转换",
+      "stars": 3,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-078",
+      "name": "开关电路与分立元件门",
+      "kind": "concept",
+      "themeId": "TH-19",
+      "themeName": "逻辑门器件理论",
+      "stars": 4,
+      "questionTypes": [
+        "基础支撑"
+      ]
+    },
+    {
+      "id": "KU-079",
+      "name": "二极管开关特性",
+      "kind": "concept",
+      "themeId": "TH-19",
+      "themeName": "逻辑门器件理论",
+      "stars": 4,
+      "questionTypes": [
+        "基础支撑"
+      ]
+    },
+    {
+      "id": "KU-080",
+      "name": "三极管开关特性",
+      "kind": "concept",
+      "themeId": "TH-19",
+      "themeName": "逻辑门器件理论",
+      "stars": 4,
+      "questionTypes": [
+        "基础支撑"
+      ]
+    },
+    {
+      "id": "KU-081",
+      "name": "TTL/CMOS 集成门与器件分类",
+      "kind": "concept",
+      "themeId": "TH-19",
+      "themeName": "逻辑门器件理论",
+      "stars": 4,
+      "questionTypes": [
+        "基础支撑"
+      ]
+    },
+    {
+      "id": "KU-082",
+      "name": "用 PAL/PLA 实现组合函数",
+      "kind": "module",
+      "themeId": "TH-20",
+      "themeName": "可编程逻辑器件与 FPGA",
+      "stars": 3,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-083",
+      "name": "用 LE/LUT 实现组合函数",
+      "kind": "module",
+      "themeId": "TH-20",
+      "themeName": "可编程逻辑器件与 FPGA",
+      "stars": 4,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-084",
+      "name": "PROM/PAL/PLA 阵列结构",
+      "kind": "module",
+      "themeId": "TH-20",
+      "themeName": "可编程逻辑器件与 FPGA",
+      "stars": 4,
+      "questionTypes": [
+        "逻辑分析",
+        "逻辑设计"
+      ]
+    },
+    {
+      "id": "KU-085",
+      "name": "CPLD 宏单元与开关矩阵",
+      "kind": "module",
+      "themeId": "TH-20",
+      "themeName": "可编程逻辑器件与 FPGA",
+      "stars": 2,
+      "questionTypes": [
+        "基础支撑"
+      ]
+    },
+    {
+      "id": "KU-086",
+      "name": "FPGA 的 LE/LUT 结构",
+      "kind": "module",
+      "themeId": "TH-20",
+      "themeName": "可编程逻辑器件与 FPGA",
+      "stars": 3,
+      "questionTypes": [
+        "逻辑设计"
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "id": "TH-01",
+      "name": "数制与数制转换",
+      "lessonId": "L01",
+      "coreOutcome": "能在十进制、二进制、八进制、十六进制之间准确转换，并按权解释一个数的值。",
+      "rating": {
+        "stars": 5,
+        "rationale": "主题核心的多类数制转换被习题课基本题型明确列出，并被多次作业直接考查。"
+      },
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 3,
+        "5": 2
+      }
+    },
+    {
+      "id": "TH-02",
+      "name": "有符号数与补码运算",
+      "lessonId": "L01",
+      "coreOutcome": "能写出正负数的原码、反码、补码，并用补码完成加减与溢出判断。",
+      "rating": {
+        "stars": 5,
+        "rationale": "主题核心的原反补码与补码运算被习题课明确列出，并被多次作业直接考查。"
+      },
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 4,
+        "5": 1
+      }
+    },
+    {
+      "id": "TH-03",
+      "name": "常用编码与可靠性编码",
+      "lessonId": "L01",
+      "coreOutcome": "能识别并使用 BCD、ASCII、格雷码、奇偶校验码与汉明码，说明其编码规则和检错能力。",
+      "rating": {
+        "stars": 5,
+        "rationale": "主题核心的 BCD、格雷码等有习题课基本题型和解答例题支撑，作业覆盖也充分。"
+      },
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 2,
+        "3": 2,
+        "4": 0,
+        "5": 2
+      }
+    },
+    {
+      "id": "TH-04",
+      "name": "逻辑运算与逻辑门",
+      "lessonId": "L02",
+      "coreOutcome": "能由逻辑门或真值表判断逻辑功能，并用基本门或通用门实现给定运算。",
+      "rating": {
+        "stars": 5,
+        "rationale": "主题核心的逻辑门及通用门实现有习题课基本题型和解答例题直接支撑。"
+      },
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 1,
+        "4": 3,
+        "5": 2
+      }
+    },
+    {
+      "id": "TH-05",
+      "name": "逻辑代数公理与规则",
+      "lessonId": "L02",
+      "coreOutcome": "能运用逻辑代数公理、定理、摩根定理、推气泡法和三个重要规则完成等式变换与证明。",
+      "rating": {
+        "stars": 5,
+        "rationale": "主题核心的代数规则、摩根定理在习题课解答例题中直接应用。"
+      },
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 1,
+        "4": 2,
+        "5": 1
+      }
+    },
+    {
+      "id": "TH-06",
+      "name": "逻辑函数表达与表示",
+      "lessonId": "L02",
+      "coreOutcome": "能在函数式、真值表、逻辑图、波形图之间转换，并写出标准与-或式或标准或-与式。",
+      "rating": {
+        "stars": 5,
+        "rationale": "主题核心的标准式与表示转换被习题课明确列出，并在多组解答例题中出现。"
+      },
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 2,
+        "5": 3
+      }
+    },
+    {
+      "id": "TH-07",
+      "name": "逻辑函数化简",
+      "lessonId": "L02",
+      "coreOutcome": "能按最简与-或式标准，用代数法合并、吸收、消去、消项和配项。",
+      "rating": {
+        "stars": 5,
+        "rationale": "主题核心的代数化简在习题课多组解答例题和作业中直接考查。"
+      },
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 1,
+        "5": 1
+      }
+    },
+    {
+      "id": "TH-08",
+      "name": "卡诺图基础与化简",
+      "lessonId": "L03",
+      "coreOutcome": "能画出并读取 2–6 变量卡诺图，按相邻与最简覆盖规则完成化简。",
+      "rating": {
+        "stars": 5,
+        "rationale": "主题核心的卡诺图化简在习题课多组解答例题和作业中直接考查。"
+      },
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 2,
+        "4": 2,
+        "5": 1
+      }
+    },
+    {
+      "id": "TH-09",
+      "name": "无关项、或-与式与多输出化简",
+      "lessonId": "L03",
+      "coreOutcome": "能利用无关项、最大项法和两次取反法化简，并对多输出函数共享乘积项。",
+      "rating": {
+        "stars": 5,
+        "rationale": "主题核心的无关项、最大项和多输出化简有基本题型、解答例题及作业证据。"
+      },
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 2,
+        "5": 1
+      }
+    },
+    {
+      "id": "TH-10",
+      "name": "组合逻辑分析与设计",
+      "lessonId": "L04",
+      "coreOutcome": "能判断组合电路、由电路图求功能，并按设计流程从需求得到逻辑电路。",
+      "rating": {
+        "stars": 5,
+        "rationale": "主题核心的组合分析与设计在习题课基本题型和解答例题中均有直接证据。"
+      },
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 1,
+        "4": 0,
+        "5": 2
+      }
+    },
+    {
+      "id": "TH-11",
+      "name": "组合逻辑设计实例",
+      "lessonId": "L04",
+      "coreOutcome": "能把文字需求、编码转换、比较与十进制运算转化为分层、可实现的组合电路。",
+      "rating": {
+        "stars": 5,
+        "rationale": "主题核心的文字需求与码变换设计在习题课解答例题中直接覆盖，并有作业支撑。"
+      },
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 2,
+        "4": 1,
+        "5": 2
+      }
+    },
+    {
+      "id": "TH-12",
+      "name": "竞争冒险与延迟",
+      "lessonId": "L04",
+      "coreOutcome": "能识别竞争、冒险和关键路径，判断冒险并用冗余项、电容或选通脉冲消除。",
+      "rating": {
+        "stars": 4,
+        "rationale": "主题核心的冒险判断与消除有作业直接证据，但缺少习题课专项解答例题。"
+      },
+      "unitPeak": 4,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 2,
+        "4": 2,
+        "5": 0
+      }
+    },
+    {
+      "id": "TH-13",
+      "name": "复用器与分配器",
+      "lessonId": "L05",
+      "coreOutcome": "能使用 MUX 选择数据、用 MUX 实现逻辑函数，并说明 MUX/DMUX 的扩展与数据传输。",
+      "rating": {
+        "stars": 5,
+        "rationale": "主题核心的 MUX 功能、分析、实现与器件在基本题型、解答例题和作业中均有证据。"
+      },
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 2,
+        "4": 2,
+        "5": 1
+      }
+    },
+    {
+      "id": "TH-14",
+      "name": "编码器与译码器",
+      "lessonId": "L05",
+      "coreOutcome": "能区分普通/优先编码与通用/显示译码，使用 74 系列器件实现函数、扩展与地址译码。",
+      "rating": {
+        "stars": 5,
+        "rationale": "主题核心的译码器实现有习题课解答例题，编码/译码器件也有汇总与作业证据。"
+      },
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 2,
+        "4": 4,
+        "5": 1
+      }
+    },
+    {
+      "id": "TH-15",
+      "name": "移位器",
+      "lessonId": "L05",
+      "coreOutcome": "能区分逻辑、循环、算术移位，并说明 4 位移位器控制码与输出关系。",
+      "rating": {
+        "stars": 3,
+        "rationale": "主题核心的移位类型和控制只有课件实例；习题课的移位乘法不覆盖整个主题，故不按直接主题证据升级。"
+      },
+      "unitPeak": 3,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 1,
+        "4": 0,
+        "5": 0
+      }
+    },
+    {
+      "id": "TH-16",
+      "name": "校验器与比较器",
+      "lessonId": "L06",
+      "coreOutcome": "能用异或与 74LS280 构成奇偶校验，用 74HC85 完成数位比较与级联。",
+      "rating": {
+        "stars": 4,
+        "rationale": "主题核心的数值比较器有作业和器件汇总直接证据；校验器部分缺少直接题目，整体不按五星。"
+      },
+      "unitPeak": 4,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 1,
+        "4": 1,
+        "5": 0
+      }
+    },
+    {
+      "id": "TH-17",
+      "name": "加法器、减法器与乘法器",
+      "lessonId": "L06",
+      "coreOutcome": "能分析半加/全加、行波与超前进位、加减法器和二进制乘法器的结构及溢出。",
+      "rating": {
+        "stars": 5,
+        "rationale": "主题核心的加法器实现和移位相加乘法有习题课解答例题及作业证据。"
+      },
+      "unitPeak": 5,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 2,
+        "4": 2,
+        "5": 2
+      }
+    },
+    {
+      "id": "TH-18",
+      "name": "二进制与 BCD 转换",
+      "lessonId": "L06",
+      "coreOutcome": "能用推导方程或移位加 3 算法完成二进制到 BCD 的转换。",
+      "rating": {
+        "stars": 3,
+        "rationale": "主题核心的二进制转 BCD 算法只有课件完整示例，未获得直接题目证据。"
+      },
+      "unitPeak": 3,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 1,
+        "4": 0,
+        "5": 0
+      }
+    },
+    {
+      "id": "TH-19",
+      "name": "逻辑门器件理论",
+      "lessonId": "L06",
+      "coreOutcome": "能说明开关电路、二极管/三极管开关特性以及 TTL/CMOS 门电路的器件基础。",
+      "rating": {
+        "stars": 4,
+        "rationale": "习题课基本题型明确列出常用逻辑门及电器特征，但缺少专项解答例题。"
+      },
+      "unitPeak": 4,
+      "unitDistribution": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 4,
+        "5": 0
+      }
+    },
+    {
+      "id": "TH-20",
+      "name": "可编程逻辑器件与 FPGA",
+      "lessonId": "L06",
+      "coreOutcome": "能说明 PROM/PAL/PLA 的阵列可编程性、CPLD 的宏单元结构，以及 FPGA 的 LE、LUT 与配置结构。",
+      "rating": {
+        "stars": 4,
+        "rationale": "主题核心的与或阵列和 LE/LUT 实现有作业直接证据，但缺少习题课专项解答例题。"
+      },
+      "unitPeak": 4,
+      "unitDistribution": {
+        "1": 0,
+        "2": 1,
+        "3": 2,
+        "4": 2,
+        "5": 0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "REL-001",
+      "fromUnitId": "KU-006",
+      "toUnitId": "KU-007",
+      "type": "requires",
+      "directed": true,
+      "value": "先理解模 2^n 与补数，才能解释补码表示及后续减法转加法，而非只背取反加一。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C01",
+          "pdfPages": [
+            25,
+            26,
+            27,
+            35,
+            36,
+            37,
+            38
+          ],
+          "visualStatus": "verified",
+          "note": "模与补数到补码表示",
+          "versionId": "VER-SRC-C01-42c5e893c129"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-002",
+      "fromUnitId": "KU-007",
+      "toUnitId": "KU-008",
+      "type": "requires",
+      "directed": true,
+      "value": "先要能写出并识别正负数补码，才能把减法转成加负数补码并正确解释运算结果。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C01",
+          "pdfPages": [
+            35,
+            36,
+            37,
+            38,
+            39,
+            43,
+            44,
+            45
+          ],
+          "visualStatus": "verified",
+          "note": "补码表示到补码加减",
+          "versionId": "VER-SRC-C01-42c5e893c129"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-003",
+      "fromUnitId": "KU-008",
+      "toUnitId": "KU-075",
+      "type": "requires",
+      "directed": true,
+      "value": "加/减法器的减法路线复用 A-B=A+B′+1，先掌握补码减法才能理解 B 取反且 C0=1。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C01",
+          "pdfPages": [
+            39,
+            43,
+            44,
+            45
+          ],
+          "visualStatus": "verified",
+          "note": "补码减法原理",
+          "versionId": "VER-SRC-C01-42c5e893c129"
+        },
+        {
+          "sourceId": "SRC-C06",
+          "pdfPages": [
+            28,
+            29,
+            30
+          ],
+          "visualStatus": "verified",
+          "note": "加/减法器结构",
+          "versionId": "VER-SRC-C06-f7d512d6fda5"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-004",
+      "fromUnitId": "KU-012",
+      "toUnitId": "KU-050",
+      "type": "requires",
+      "directed": true,
+      "value": "BCD 加法器的修正逻辑直接实现和大于 9 或产生进位则加 6，先掌握该算术规则才能理解修正级。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C01",
+          "pdfPages": [
+            49,
+            50
+          ],
+          "visualStatus": "verified",
+          "note": "BCD 加减规则",
+          "versionId": "VER-SRC-C01-42c5e893c129"
+        },
+        {
+          "sourceId": "SRC-C04",
+          "pdfPages": [
+            38,
+            39,
+            40,
+            41,
+            42,
+            43
+          ],
+          "visualStatus": "verified",
+          "note": "1 位 BCD 加法器设计",
+          "versionId": "VER-SRC-C04-f29340849838"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-005",
+      "fromUnitId": "KU-023",
+      "toUnitId": "KU-033",
+      "type": "requires",
+      "directed": true,
+      "value": "并项、吸收、消去、消项和配项都以公理、定理为合法变换依据，能避免只会套技巧而不知化简为何成立。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C02",
+          "pdfPages": [
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            52,
+            53,
+            54,
+            55,
+            56,
+            57,
+            58,
+            59,
+            60
+          ],
+          "visualStatus": "verified",
+          "note": "公理定理到代数化简",
+          "versionId": "VER-SRC-C02-1c152428693e"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-006",
+      "fromUnitId": "KU-028",
+      "toUnitId": "KU-034",
+      "type": "requires",
+      "directed": true,
+      "value": "卡诺图每格对应最小项，先会编号和读写标准式，才能正确填图并理解相邻合并为何能消去变量。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C02",
+          "pdfPages": [
+            34,
+            35,
+            36,
+            37
+          ],
+          "visualStatus": "verified",
+          "note": "最小项与标准式",
+          "versionId": "VER-SRC-C02-1c152428693e"
+        },
+        {
+          "sourceId": "SRC-C03",
+          "pdfPages": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            35
+          ],
+          "visualStatus": "verified",
+          "note": "卡诺图单元与最小项",
+          "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-007",
+      "fromUnitId": "KU-034",
+      "toUnitId": "KU-035",
+      "type": "requires",
+      "directed": true,
+      "value": "圈组前必须掌握格雷排列及首尾、四角相邻，否则会把并不相邻的格错误合并。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C03",
+          "pdfPages": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "visualStatus": "verified",
+          "note": "卡诺图结构与相邻规则",
+          "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-008",
+      "fromUnitId": "KU-035",
+      "toUnitId": "KU-039",
+      "type": "requires",
+      "directed": true,
+      "value": "含 d 化简仍须形成合法 2^k 块并完整覆盖 1，先会普通圈组才能决定每个 d 是否值得圈入。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C03",
+          "pdfPages": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            23,
+            24,
+            25,
+            26,
+            27
+          ],
+          "visualStatus": "verified",
+          "note": "普通圈组到含无关项化简",
+          "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-009",
+      "fromUnitId": "KU-030",
+      "toUnitId": "KU-043",
+      "type": "requires",
+      "directed": true,
+      "value": "组合分析要在逻辑图、函数式、真值表和波形之间转换，先掌握表示互转才能沿不同路径求得电路功能。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C02",
+          "pdfPages": [
+            45,
+            46,
+            47,
+            48
+          ],
+          "visualStatus": "verified",
+          "note": "非 HDL 表示互转",
+          "versionId": "VER-SRC-C02-1c152428693e"
+        },
+        {
+          "sourceId": "SRC-C04",
+          "pdfPages": [
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17
+          ],
+          "visualStatus": "verified",
+          "note": "组合逻辑分析",
+          "versionId": "VER-SRC-C04-f29340849838"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-010",
+      "fromUnitId": "KU-033",
+      "toUnitId": "KU-044",
+      "type": "requires",
+      "directed": true,
+      "value": "通用设计的求最简式可走代数法，与卡诺图路线并列显示可避免把两种方法误设为共同必需。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C02",
+          "pdfPages": [
+            52,
+            53,
+            54,
+            55,
+            56,
+            57,
+            58,
+            59,
+            60
+          ],
+          "visualStatus": "verified",
+          "note": "代数化简路线",
+          "versionId": "VER-SRC-C02-1c152428693e"
+        },
+        {
+          "sourceId": "SRC-C04",
+          "pdfPages": [
+            19,
+            20
+          ],
+          "visualStatus": "verified",
+          "note": "组合设计流程",
+          "versionId": "VER-SRC-C04-f29340849838"
+        }
+      ],
+      "view": "main",
+      "status": "approved",
+      "requirementGroupId": "G1"
+    },
+    {
+      "id": "REL-011",
+      "fromUnitId": "KU-035",
+      "toUnitId": "KU-044",
+      "type": "requires",
+      "directed": true,
+      "value": "通用设计的求最简式也可走卡诺图，与代数法组成可替代路线，便于按题目给定表示选择方法。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C03",
+          "pdfPages": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16
+          ],
+          "visualStatus": "verified",
+          "note": "卡诺图化简路线",
+          "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+        },
+        {
+          "sourceId": "SRC-C04",
+          "pdfPages": [
+            19,
+            20
+          ],
+          "visualStatus": "verified",
+          "note": "组合设计流程",
+          "versionId": "VER-SRC-C04-f29340849838"
+        }
+      ],
+      "view": "main",
+      "status": "approved",
+      "requirementGroupId": "G1"
+    },
+    {
+      "id": "REL-012",
+      "fromUnitId": "KU-039",
+      "toUnitId": "KU-046",
+      "type": "requires",
+      "directed": true,
+      "value": "含无关项设计先要把系统约束翻译成 d 并独立决定是否圈入，才能由无效或不出现组合得到合法最简电路。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C03",
+          "pdfPages": [
+            23,
+            24,
+            25,
+            26,
+            27
+          ],
+          "visualStatus": "verified",
+          "note": "无关项及使用",
+          "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+        },
+        {
+          "sourceId": "SRC-C04",
+          "pdfPages": [
+            25,
+            35,
+            36,
+            37
+          ],
+          "visualStatus": "verified",
+          "note": "含无关项设计",
+          "versionId": "VER-SRC-C04-f29340849838"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-013",
+      "fromUnitId": "KU-055",
+      "toUnitId": "KU-056",
+      "type": "requires",
+      "directed": true,
+      "value": "用 MUX 实现函数前要先理解选择端如何选中通道，才能正确对应选择变量与数据端的 0、1、原变量或反变量。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C05",
+          "pdfPages": [
+            4,
+            5,
+            17,
+            18,
+            19,
+            20
+          ],
+          "visualStatus": "verified",
+          "note": "MUX 选择规则与函数实现",
+          "versionId": "VER-SRC-C05-ad2a56210ce2"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-014",
+      "fromUnitId": "KU-055",
+      "toUnitId": "KU-057",
+      "type": "constructs",
+      "directed": true,
+      "value": "三个 2:1 MUX 构成 4:1 能直接展示两级选择如何扩展通道数，而不是只背 74 系列型号。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C05",
+          "pdfPages": [
+            4,
+            5,
+            13
+          ],
+          "visualStatus": "verified",
+          "note": "二选一 MUX 构造四选一 MUX",
+          "versionId": "VER-SRC-C05-ad2a56210ce2"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-015",
+      "fromUnitId": "KU-028",
+      "toUnitId": "KU-064",
+      "type": "requires",
+      "directed": true,
+      "value": "译码器实现函数前要先写成 Σm 并识别所需最小项，否则无法确定应连接哪些输出端。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C02",
+          "pdfPages": [
+            34,
+            35,
+            36,
+            37,
+            40,
+            41,
+            42,
+            43
+          ],
+          "visualStatus": "verified",
+          "note": "最小项与标准式",
+          "versionId": "VER-SRC-C02-1c152428693e"
+        },
+        {
+          "sourceId": "SRC-C05",
+          "pdfPages": [
+            35,
+            37,
+            39,
+            42,
+            43
+          ],
+          "visualStatus": "verified",
+          "note": "译码器实现函数",
+          "versionId": "VER-SRC-C05-ad2a56210ce2"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-016",
+      "fromUnitId": "KU-062",
+      "toUnitId": "KU-064",
+      "type": "requires",
+      "directed": true,
+      "value": "必须先知道译码器各输出对应哪个输入码及其极性，才能选择输出端和正确的合并门。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C05",
+          "pdfPages": [
+            30,
+            31,
+            32,
+            34,
+            35,
+            37,
+            39,
+            42,
+            43
+          ],
+          "visualStatus": "verified",
+          "note": "译码器功能、极性与函数实现",
+          "versionId": "VER-SRC-C05-ad2a56210ce2"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-017",
+      "fromUnitId": "KU-062",
+      "toUnitId": "KU-065",
+      "type": "constructs",
+      "directed": true,
+      "value": "两片 3:8 译码器借高位地址控制使能形成 4:16，清楚呈现低位并接、高位分片的扩展结构。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C05",
+          "pdfPages": [
+            30,
+            31,
+            32,
+            36,
+            40,
+            41
+          ],
+          "visualStatus": "verified",
+          "note": "译码器级联扩展",
+          "versionId": "VER-SRC-C05-ad2a56210ce2"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-018",
+      "fromUnitId": "KU-070",
+      "toUnitId": "KU-071",
+      "type": "constructs",
+      "directed": true,
+      "value": "行波加法器把全加器的进位逐位串联，连接结构本身同时解释多位加法与进位链的来源。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C06",
+          "pdfPages": [
+            14,
+            15,
+            16,
+            17,
+            20
+          ],
+          "visualStatus": "verified",
+          "note": "全加器到行波进位加法器",
+          "versionId": "VER-SRC-C06-f7d512d6fda5"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-019",
+      "fromUnitId": "KU-071",
+      "toUnitId": "KU-072",
+      "type": "improves",
+      "directed": true,
+      "value": "超前进位用生成、传播信号并行求进位，可与行波结构直接比较同一加法功能如何缩短进位等待。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C06",
+          "pdfPages": [
+            17,
+            18,
+            19
+          ],
+          "visualStatus": "verified",
+          "note": "行波进位到超前进位",
+          "versionId": "VER-SRC-C06-f7d512d6fda5"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-020",
+      "fromUnitId": "KU-071",
+      "toUnitId": "KU-075",
+      "type": "constructs",
+      "directed": true,
+      "value": "在多位加法器前加入受控异或并复用 C0，就能演进到加/减两用结构，突出硬件复用而非另造一套电路。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C06",
+          "pdfPages": [
+            17,
+            20,
+            28,
+            29,
+            30
+          ],
+          "visualStatus": "verified",
+          "note": "多位加法器到加/减法器",
+          "versionId": "VER-SRC-C06-f7d512d6fda5"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-021",
+      "fromUnitId": "KU-071",
+      "toUnitId": "KU-076",
+      "type": "constructs",
+      "directed": true,
+      "value": "乘法器复用多位加法器累加部分积，可把与门产生部分积、加法器逐行累加的整体结构看清。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C06",
+          "pdfPages": [
+            17,
+            20,
+            33,
+            34
+          ],
+          "visualStatus": "verified",
+          "note": "多位加法器到二进制乘法器",
+          "versionId": "VER-SRC-C06-f7d512d6fda5"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-022",
+      "fromUnitId": "KU-071",
+      "toUnitId": "KU-050",
+      "type": "constructs",
+      "directed": true,
+      "value": "1 位 BCD 加法器以 4 位二进制加法器为第一级，再接加 6 修正级，呈现算术规则到两级硬件的构造。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C06",
+          "pdfPages": [
+            17,
+            20
+          ],
+          "visualStatus": "verified",
+          "note": "多位加法器基础",
+          "versionId": "VER-SRC-C06-f7d512d6fda5"
+        },
+        {
+          "sourceId": "SRC-C04",
+          "pdfPages": [
+            38,
+            39,
+            40,
+            41,
+            42,
+            43
+          ],
+          "visualStatus": "verified",
+          "note": "BCD 加法器两级构造",
+          "versionId": "VER-SRC-C04-f29340849838"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-023",
+      "fromUnitId": "KU-027",
+      "toUnitId": "KU-082",
+      "type": "requires",
+      "directed": true,
+      "value": "PAL/PLA 通过乘积项和与或阵列实现 SOP，先理解与-或式才能分配乘积项并处理阵列资源约束。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C02",
+          "pdfPages": [
+            30,
+            31
+          ],
+          "visualStatus": "verified",
+          "note": "与-或式",
+          "versionId": "VER-SRC-C02-1c152428693e"
+        },
+        {
+          "sourceId": "SRC-C06",
+          "pdfPages": [
+            55,
+            56,
+            57,
+            58,
+            59,
+            60
+          ],
+          "visualStatus": "verified",
+          "note": "PAL/PLA 实现",
+          "versionId": "VER-SRC-C06-f7d512d6fda5"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-024",
+      "fromUnitId": "KU-084",
+      "toUnitId": "KU-082",
+      "type": "requires",
+      "directed": true,
+      "value": "实现前必须区分 PROM/PAL/PLA 哪一阵列可编程，尤其 PAL 固定或阵列会直接限制乘积项分配。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C06",
+          "pdfPages": [
+            54,
+            55,
+            56,
+            57,
+            58,
+            59,
+            60
+          ],
+          "visualStatus": "verified",
+          "note": "阵列结构到 PAL/PLA 实现",
+          "versionId": "VER-SRC-C06-f7d512d6fda5"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-025",
+      "fromUnitId": "KU-086",
+      "toUnitId": "KU-083",
+      "type": "requires",
+      "directed": true,
+      "value": "估算和配置 LE 前需知道 LE 含有 4 输入 LUT 及相关资源，否则无法判断单 LE 能力和多 LE 分解。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C06",
+          "pdfPages": [
+            63,
+            64,
+            65,
+            66,
+            67
+          ],
+          "visualStatus": "verified",
+          "note": "FPGA/LE/LUT 结构到实现",
+          "versionId": "VER-SRC-C06-f7d512d6fda5"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-026",
+      "fromUnitId": "KU-030",
+      "toUnitId": "KU-083",
+      "type": "requires",
+      "directed": true,
+      "value": "LUT 按真值表配置输入组合对应的输出，先会在函数式与真值表间转换才能配置，不需要先化简。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C02",
+          "pdfPages": [
+            45,
+            46,
+            47,
+            48
+          ],
+          "visualStatus": "verified",
+          "note": "表示转换到 LUT 配置",
+          "versionId": "VER-SRC-C02-1c152428693e"
+        },
+        {
+          "sourceId": "SRC-C06",
+          "pdfPages": [
+            63,
+            64,
+            65,
+            66,
+            67
+          ],
+          "visualStatus": "verified",
+          "note": "LE/LUT 实现",
+          "versionId": "VER-SRC-C06-f7d512d6fda5"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-027",
+      "fromUnitId": "KU-084",
+      "toUnitId": "KU-085",
+      "type": "constructs",
+      "directed": true,
+      "value": "多个含与或阵列的 PLD/宏单元经可编程开关矩阵连接形成 CPLD，可解释其宏单元和互连结构从何而来。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C06",
+          "pdfPages": [
+            54,
+            55,
+            56,
+            61,
+            62
+          ],
+          "visualStatus": "verified",
+          "note": "PLD 阵列到 CPLD 结构",
+          "versionId": "VER-SRC-C06-f7d512d6fda5"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-028",
+      "fromUnitId": "KU-001",
+      "toUnitId": "KU-002",
+      "type": "requires",
+      "directed": true,
+      "value": "按权相加与除基、乘基都围绕位权和基数展开，先理解权展开可减少对两套转换规则的机械记忆。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C01",
+          "pdfPages": [
+            20,
+            30,
+            31,
+            32,
+            33
+          ],
+          "visualStatus": "verified",
+          "note": "位权与数制转换",
+          "versionId": "VER-SRC-C01-42c5e893c129"
+        }
+      ],
+      "view": "auxiliary",
+      "status": "approved"
+    },
+    {
+      "id": "REL-029",
+      "fromUnitId": "KU-008",
+      "toUnitId": "KU-009",
+      "type": "requires",
+      "directed": true,
+      "value": "溢出判断发生在补码加减之后，先会执行并解释运算，才能进一步判断同号相加异号或进位差异。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C01",
+          "pdfPages": [
+            39,
+            42,
+            43,
+            44,
+            45
+          ],
+          "visualStatus": "verified",
+          "note": "补码运算到溢出判断",
+          "versionId": "VER-SRC-C01-42c5e893c129"
+        },
+        {
+          "sourceId": "SRC-C06",
+          "pdfPages": [
+            21,
+            22
+          ],
+          "visualStatus": "verified",
+          "note": "溢出检测变体",
+          "versionId": "VER-SRC-C06-f7d512d6fda5"
+        }
+      ],
+      "view": "auxiliary",
+      "status": "approved"
+    },
+    {
+      "id": "REL-030",
+      "fromUnitId": "KU-007",
+      "toUnitId": "KU-010",
+      "type": "requires",
+      "directed": true,
+      "value": "符号扩展要保持负数补码值，先识别符号位与补码表示才能理解为何复制符号位而不是补 0。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C01",
+          "pdfPages": [
+            23,
+            35,
+            36,
+            37,
+            38,
+            40,
+            41
+          ],
+          "visualStatus": "verified",
+          "note": "补码表示到符号扩展",
+          "versionId": "VER-SRC-C01-42c5e893c129"
+        }
+      ],
+      "view": "auxiliary",
+      "status": "approved"
+    },
+    {
+      "id": "REL-031",
+      "fromUnitId": "KU-011",
+      "toUnitId": "KU-012",
+      "type": "requires",
+      "directed": true,
+      "value": "BCD 运算先要知道 4 位对应一个十进制数字及 0000–1001 的有效范围，才能解释加 6 和十进制进位。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C01",
+          "pdfPages": [
+            47,
+            48,
+            49,
+            50
+          ],
+          "visualStatus": "verified",
+          "note": "BCD 编码到 BCD 加减",
+          "versionId": "VER-SRC-C01-42c5e893c129"
+        }
+      ],
+      "view": "auxiliary",
+      "status": "approved"
+    },
+    {
+      "id": "REL-032",
+      "fromUnitId": "KU-015",
+      "toUnitId": "KU-068",
+      "type": "requires",
+      "directed": true,
+      "value": "校验器实现的是奇偶校验协议，先理解校验位及只能发现奇数个错误，才能正确解释发送、接收和报错。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C01",
+          "pdfPages": [
+            55
+          ],
+          "visualStatus": "verified",
+          "note": "奇偶校验码",
+          "versionId": "VER-SRC-C01-42c5e893c129"
+        },
+        {
+          "sourceId": "SRC-C06",
+          "pdfPages": [
+            3,
+            4,
+            5
+          ],
+          "visualStatus": "verified",
+          "note": "奇偶校验器实现",
+          "versionId": "VER-SRC-C06-f7d512d6fda5"
+        }
+      ],
+      "view": "auxiliary",
+      "status": "approved"
+    },
+    {
+      "id": "REL-033",
+      "fromUnitId": "KU-024",
+      "toUnitId": "KU-025",
+      "type": "requires",
+      "directed": true,
+      "value": "推气泡是摩根定理的图形化操作，先掌握断反相线、换与或和逐项取反，才能避免改错门。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C02",
+          "pdfPages": [
+            21,
+            22,
+            23,
+            24
+          ],
+          "visualStatus": "verified",
+          "note": "摩根定理到推气泡",
+          "versionId": "VER-SRC-C02-1c152428693e"
+        }
+      ],
+      "view": "auxiliary",
+      "status": "approved"
+    },
+    {
+      "id": "REL-034",
+      "fromUnitId": "KU-035",
+      "toUnitId": "KU-036",
+      "type": "improves",
+      "directed": true,
+      "value": "质蕴含和必要质蕴含把尽量圈大推进为可检查的最简覆盖流程，可用来发现漏圈必要项或任意选圈。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C03",
+          "pdfPages": [
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16
+          ],
+          "visualStatus": "verified",
+          "note": "圈组到最简覆盖",
+          "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+        }
+      ],
+      "view": "auxiliary",
+      "status": "approved"
+    },
+    {
+      "id": "REL-035",
+      "fromUnitId": "KU-035",
+      "toUnitId": "KU-037",
+      "type": "requires",
+      "directed": true,
+      "value": "5–6 变量图新增跨子图邻接，先会单图圈组，才能继续判断选择码只差一位的对应块能否合并。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C03",
+          "pdfPages": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            19,
+            20,
+            21
+          ],
+          "visualStatus": "verified",
+          "note": "单图到多图邻接",
+          "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+        }
+      ],
+      "view": "auxiliary",
+      "status": "approved"
+    },
+    {
+      "id": "REL-036",
+      "fromUnitId": "KU-035",
+      "toUnitId": "KU-040",
+      "type": "requires",
+      "directed": true,
+      "value": "圈 0 求 POS 或先化简 F′ 都复用基本圈组规则，先掌握圈 1 化简再切换覆盖对象可减少混淆。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C03",
+          "pdfPages": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            29,
+            30,
+            31,
+            32,
+            33
+          ],
+          "visualStatus": "verified",
+          "note": "圈 1 到圈 0 与或-与式",
+          "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+        }
+      ],
+      "view": "auxiliary",
+      "status": "approved"
+    },
+    {
+      "id": "REL-037",
+      "fromUnitId": "KU-032",
+      "toUnitId": "KU-041",
+      "type": "improves",
+      "directed": true,
+      "value": "多输出共享把单输出最简标准扩展为总乘积项、总门数优化，防止各输出分别最简却失去共享收益。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C02",
+          "pdfPages": [
+            50,
+            51
+          ],
+          "visualStatus": "verified",
+          "note": "最简标准",
+          "versionId": "VER-SRC-C02-1c152428693e"
+        },
+        {
+          "sourceId": "SRC-C03",
+          "pdfPages": [
+            40,
+            41,
+            42,
+            43,
+            44,
+            45
+          ],
+          "visualStatus": "verified",
+          "note": "多输出共享优化",
+          "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+        }
+      ],
+      "view": "auxiliary",
+      "status": "approved"
+    },
+    {
+      "id": "REL-038",
+      "fromUnitId": "KU-043",
+      "toUnitId": "KU-044",
+      "type": "inverse",
+      "directed": false,
+      "value": "把电路到功能与需求到电路并排对照，可用分析结果验证设计；此边只作互逆导航，不参与前置追溯。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C04",
+          "pdfPages": [
+            13,
+            19,
+            20,
+            56
+          ],
+          "visualStatus": "verified",
+          "note": "组合分析与设计互逆",
+          "versionId": "VER-SRC-C04-f29340849838"
+        }
+      ],
+      "view": "auxiliary",
+      "status": "approved"
+    },
+    {
+      "id": "REL-039",
+      "fromUnitId": "KU-011",
+      "toUnitId": "KU-046",
+      "type": "requires",
+      "directed": true,
+      "value": "在 8421 设计中，先知道 0000–1001 有效才能把 1010–1111 识别为 d，是 BCD 无效码设计的必要先备。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C01",
+          "pdfPages": [
+            47,
+            48
+          ],
+          "visualStatus": "verified",
+          "note": "8421 有效编码",
+          "versionId": "VER-SRC-C01-42c5e893c129"
+        },
+        {
+          "sourceId": "SRC-C04",
+          "pdfPages": [
+            25,
+            35,
+            36,
+            37
+          ],
+          "visualStatus": "verified",
+          "note": "BCD 无效码设计",
+          "versionId": "VER-SRC-C04-f29340849838"
+        }
+      ],
+      "view": "auxiliary",
+      "status": "approved",
+      "route": "BCD 无效码设计"
+    },
+    {
+      "id": "REL-040",
+      "fromUnitId": "KU-024",
+      "toUnitId": "KU-064",
+      "type": "requires",
+      "directed": true,
+      "value": "低有效输出 Yi′=mi′ 时，摩根定理能解释为何用 NAND 或等效负逻辑 OR 合成 Σm，而非普通 OR。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C02",
+          "pdfPages": [
+            21,
+            22
+          ],
+          "visualStatus": "verified",
+          "note": "摩根定理",
+          "versionId": "VER-SRC-C02-1c152428693e"
+        },
+        {
+          "sourceId": "SRC-C05",
+          "pdfPages": [
+            35,
+            37,
+            39,
+            42,
+            43
+          ],
+          "visualStatus": "verified",
+          "note": "低有效输出实现",
+          "versionId": "VER-SRC-C05-ad2a56210ce2"
+        }
+      ],
+      "view": "auxiliary",
+      "status": "approved",
+      "route": "低有效输出实现"
+    },
+    {
+      "id": "REL-041",
+      "fromUnitId": "KU-072",
+      "toUnitId": "KU-047",
+      "type": "constructs",
+      "directed": true,
+      "value": "余 3=BCD+3 时可直接复用 4 位加法器，绕过逐输出化简，为码变换增加一条算术构造路线。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C06",
+          "pdfPages": [
+            18,
+            19
+          ],
+          "visualStatus": "verified",
+          "note": "4 位加法器",
+          "versionId": "VER-SRC-C06-f7d512d6fda5"
+        },
+        {
+          "sourceId": "SRC-C04",
+          "pdfPages": [
+            26,
+            27,
+            28,
+            29,
+            30
+          ],
+          "visualStatus": "verified",
+          "note": "算术码变换",
+          "versionId": "VER-SRC-C04-f29340849838"
+        }
+      ],
+      "view": "auxiliary",
+      "status": "approved",
+      "route": "算术码变换"
+    },
+    {
+      "id": "REL-042",
+      "fromUnitId": "KU-021",
+      "toUnitId": "KU-068",
+      "type": "constructs",
+      "directed": true,
+      "value": "多变量异或的奇偶性可直接构成校验位生成、检测树，使学生能把代数性质与门级校验电路对应起来。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C02",
+          "pdfPages": [
+            11,
+            12
+          ],
+          "visualStatus": "verified",
+          "note": "异或性质",
+          "versionId": "VER-SRC-C02-1c152428693e"
+        },
+        {
+          "sourceId": "SRC-C06",
+          "pdfPages": [
+            3,
+            4,
+            5
+          ],
+          "visualStatus": "verified",
+          "note": "异或树与校验器",
+          "versionId": "VER-SRC-C06-f7d512d6fda5"
+        }
+      ],
+      "view": "auxiliary",
+      "status": "approved",
+      "route": "异或门实现"
+    },
+    {
+      "id": "REL-043",
+      "fromUnitId": "KU-029",
+      "toUnitId": "KU-044",
+      "type": "requires",
+      "directed": true,
+      "value": "组合设计要求由功能说明列真值表并写表达式，先掌握真值表与标准式互转才能完成该步骤。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C02",
+          "pdfPages": [
+            33,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43
+          ],
+          "visualStatus": "verified",
+          "note": "真值表与标准式",
+          "versionId": "VER-SRC-C02-1c152428693e"
+        },
+        {
+          "sourceId": "SRC-C04",
+          "pdfPages": [
+            19,
+            20
+          ],
+          "visualStatus": "verified",
+          "note": "组合设计流程",
+          "versionId": "VER-SRC-C04-f29340849838"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    }
+  ],
+  "themeEdges": [
+    {
+      "fromThemeId": "TH-02",
+      "toThemeId": "TH-17",
+      "type": "requires",
+      "relationIds": [
+        "REL-003"
+      ],
+      "count": 1
+    },
+    {
+      "fromThemeId": "TH-03",
+      "toThemeId": "TH-11",
+      "type": "requires",
+      "relationIds": [
+        "REL-004",
+        "REL-039"
+      ],
+      "count": 2
+    },
+    {
+      "fromThemeId": "TH-03",
+      "toThemeId": "TH-16",
+      "type": "requires",
+      "relationIds": [
+        "REL-032"
+      ],
+      "count": 1
+    },
+    {
+      "fromThemeId": "TH-04",
+      "toThemeId": "TH-16",
+      "type": "constructs",
+      "relationIds": [
+        "REL-042"
+      ],
+      "count": 1
+    },
+    {
+      "fromThemeId": "TH-05",
+      "toThemeId": "TH-07",
+      "type": "requires",
+      "relationIds": [
+        "REL-005"
+      ],
+      "count": 1
+    },
+    {
+      "fromThemeId": "TH-05",
+      "toThemeId": "TH-14",
+      "type": "requires",
+      "relationIds": [
+        "REL-040"
+      ],
+      "count": 1
+    },
+    {
+      "fromThemeId": "TH-06",
+      "toThemeId": "TH-08",
+      "type": "requires",
+      "relationIds": [
+        "REL-006"
+      ],
+      "count": 1
+    },
+    {
+      "fromThemeId": "TH-06",
+      "toThemeId": "TH-10",
+      "type": "requires",
+      "relationIds": [
+        "REL-009",
+        "REL-043"
+      ],
+      "count": 2
+    },
+    {
+      "fromThemeId": "TH-06",
+      "toThemeId": "TH-14",
+      "type": "requires",
+      "relationIds": [
+        "REL-015"
+      ],
+      "count": 1
+    },
+    {
+      "fromThemeId": "TH-06",
+      "toThemeId": "TH-20",
+      "type": "requires",
+      "relationIds": [
+        "REL-023",
+        "REL-026"
+      ],
+      "count": 2
+    },
+    {
+      "fromThemeId": "TH-07",
+      "toThemeId": "TH-09",
+      "type": "improves",
+      "relationIds": [
+        "REL-037"
+      ],
+      "count": 1
+    },
+    {
+      "fromThemeId": "TH-07",
+      "toThemeId": "TH-10",
+      "type": "requires",
+      "relationIds": [
+        "REL-010"
+      ],
+      "count": 1
+    },
+    {
+      "fromThemeId": "TH-08",
+      "toThemeId": "TH-09",
+      "type": "requires",
+      "relationIds": [
+        "REL-008",
+        "REL-036"
+      ],
+      "count": 2
+    },
+    {
+      "fromThemeId": "TH-08",
+      "toThemeId": "TH-10",
+      "type": "requires",
+      "relationIds": [
+        "REL-011"
+      ],
+      "count": 1
+    },
+    {
+      "fromThemeId": "TH-09",
+      "toThemeId": "TH-11",
+      "type": "requires",
+      "relationIds": [
+        "REL-012"
+      ],
+      "count": 1
+    },
+    {
+      "fromThemeId": "TH-17",
+      "toThemeId": "TH-11",
+      "type": "constructs",
+      "relationIds": [
+        "REL-022",
+        "REL-041"
+      ],
+      "count": 2
+    }
+  ],
+  "layout": {
+    "edges": [
+      {
+        "elementId": "VE-E-REL-001",
+        "relationId": "REL-001"
+      },
+      {
+        "elementId": "VE-E-REL-002",
+        "relationId": "REL-002"
+      },
+      {
+        "elementId": "VE-E-REL-003",
+        "relationId": "REL-003"
+      },
+      {
+        "elementId": "VE-E-REL-004",
+        "relationId": "REL-004"
+      },
+      {
+        "elementId": "VE-E-REL-005",
+        "relationId": "REL-005"
+      },
+      {
+        "elementId": "VE-E-REL-006",
+        "relationId": "REL-006"
+      },
+      {
+        "elementId": "VE-E-REL-007",
+        "relationId": "REL-007"
+      },
+      {
+        "elementId": "VE-E-REL-008",
+        "relationId": "REL-008"
+      },
+      {
+        "elementId": "VE-E-REL-009",
+        "relationId": "REL-009"
+      },
+      {
+        "elementId": "VE-E-REL-010",
+        "relationId": "REL-010"
+      },
+      {
+        "elementId": "VE-E-REL-011",
+        "relationId": "REL-011"
+      },
+      {
+        "elementId": "VE-E-REL-012",
+        "relationId": "REL-012"
+      },
+      {
+        "elementId": "VE-E-REL-013",
+        "relationId": "REL-013"
+      },
+      {
+        "elementId": "VE-E-REL-014",
+        "relationId": "REL-014"
+      },
+      {
+        "elementId": "VE-E-REL-015",
+        "relationId": "REL-015"
+      },
+      {
+        "elementId": "VE-E-REL-016",
+        "relationId": "REL-016"
+      },
+      {
+        "elementId": "VE-E-REL-017",
+        "relationId": "REL-017"
+      },
+      {
+        "elementId": "VE-E-REL-018",
+        "relationId": "REL-018"
+      },
+      {
+        "elementId": "VE-E-REL-019",
+        "relationId": "REL-019"
+      },
+      {
+        "elementId": "VE-E-REL-020",
+        "relationId": "REL-020"
+      },
+      {
+        "elementId": "VE-E-REL-021",
+        "relationId": "REL-021"
+      },
+      {
+        "elementId": "VE-E-REL-022",
+        "relationId": "REL-022"
+      },
+      {
+        "elementId": "VE-E-REL-023",
+        "relationId": "REL-023"
+      },
+      {
+        "elementId": "VE-E-REL-024",
+        "relationId": "REL-024"
+      },
+      {
+        "elementId": "VE-E-REL-025",
+        "relationId": "REL-025"
+      },
+      {
+        "elementId": "VE-E-REL-026",
+        "relationId": "REL-026"
+      },
+      {
+        "elementId": "VE-E-REL-027",
+        "relationId": "REL-027"
+      },
+      {
+        "elementId": "VE-E-REL-028",
+        "relationId": "REL-028"
+      },
+      {
+        "elementId": "VE-E-REL-029",
+        "relationId": "REL-029"
+      },
+      {
+        "elementId": "VE-E-REL-030",
+        "relationId": "REL-030"
+      },
+      {
+        "elementId": "VE-E-REL-031",
+        "relationId": "REL-031"
+      },
+      {
+        "elementId": "VE-E-REL-032",
+        "relationId": "REL-032"
+      },
+      {
+        "elementId": "VE-E-REL-033",
+        "relationId": "REL-033"
+      },
+      {
+        "elementId": "VE-E-REL-034",
+        "relationId": "REL-034"
+      },
+      {
+        "elementId": "VE-E-REL-035",
+        "relationId": "REL-035"
+      },
+      {
+        "elementId": "VE-E-REL-036",
+        "relationId": "REL-036"
+      },
+      {
+        "elementId": "VE-E-REL-037",
+        "relationId": "REL-037"
+      },
+      {
+        "elementId": "VE-E-REL-038",
+        "relationId": "REL-038"
+      },
+      {
+        "elementId": "VE-E-REL-039",
+        "relationId": "REL-039"
+      },
+      {
+        "elementId": "VE-E-REL-040",
+        "relationId": "REL-040"
+      },
+      {
+        "elementId": "VE-E-REL-041",
+        "relationId": "REL-041"
+      },
+      {
+        "elementId": "VE-E-REL-042",
+        "relationId": "REL-042"
+      },
+      {
+        "elementId": "VE-E-REL-043",
+        "relationId": "REL-043"
+      }
+    ],
+    "groups": [
+      {
+        "elementId": "VE-G-TH-01",
+        "height": 394,
+        "themeId": "TH-01",
+        "title": "TH-01 · 数制与数制转换",
+        "width": 600,
+        "x": 80,
+        "y": 80
+      },
+      {
+        "elementId": "VE-G-TH-02",
+        "height": 394,
+        "themeId": "TH-02",
+        "title": "TH-02 · 有符号数与补码运算",
+        "width": 600,
+        "x": 80,
+        "y": 514
+      },
+      {
+        "elementId": "VE-G-TH-03",
+        "height": 394,
+        "themeId": "TH-03",
+        "title": "TH-03 · 常用编码与可靠性编码",
+        "width": 600,
+        "x": 80,
+        "y": 948
+      },
+      {
+        "elementId": "VE-G-TH-04",
+        "height": 394,
+        "themeId": "TH-04",
+        "title": "TH-04 · 逻辑运算与逻辑门",
+        "width": 600,
+        "x": 780,
+        "y": 80
+      },
+      {
+        "elementId": "VE-G-TH-05",
+        "height": 296,
+        "themeId": "TH-05",
+        "title": "TH-05 · 逻辑代数公理与规则",
+        "width": 600,
+        "x": 780,
+        "y": 514
+      },
+      {
+        "elementId": "VE-G-TH-06",
+        "height": 394,
+        "themeId": "TH-06",
+        "title": "TH-06 · 逻辑函数表达与表示",
+        "width": 600,
+        "x": 780,
+        "y": 850
+      },
+      {
+        "elementId": "VE-G-TH-07",
+        "height": 198,
+        "themeId": "TH-07",
+        "title": "TH-07 · 逻辑函数化简",
+        "width": 600,
+        "x": 780,
+        "y": 1284
+      },
+      {
+        "elementId": "VE-G-TH-08",
+        "height": 394,
+        "themeId": "TH-08",
+        "title": "TH-08 · 卡诺图基础与化简",
+        "width": 600,
+        "x": 1480,
+        "y": 80
+      },
+      {
+        "elementId": "VE-G-TH-09",
+        "height": 296,
+        "themeId": "TH-09",
+        "title": "TH-09 · 无关项、或-与式与多输出化简",
+        "width": 600,
+        "x": 1480,
+        "y": 514
+      },
+      {
+        "elementId": "VE-G-TH-10",
+        "height": 296,
+        "themeId": "TH-10",
+        "title": "TH-10 · 组合逻辑分析与设计",
+        "width": 600,
+        "x": 2180,
+        "y": 80
+      },
+      {
+        "elementId": "VE-G-TH-11",
+        "height": 394,
+        "themeId": "TH-11",
+        "title": "TH-11 · 组合逻辑设计实例",
+        "width": 600,
+        "x": 2180,
+        "y": 416
+      },
+      {
+        "elementId": "VE-G-TH-12",
+        "height": 296,
+        "themeId": "TH-12",
+        "title": "TH-12 · 竞争冒险与延迟",
+        "width": 600,
+        "x": 2180,
+        "y": 850
+      },
+      {
+        "elementId": "VE-G-TH-13",
+        "height": 394,
+        "themeId": "TH-13",
+        "title": "TH-13 · 复用器与分配器",
+        "width": 600,
+        "x": 2880,
+        "y": 80
+      },
+      {
+        "elementId": "VE-G-TH-14",
+        "height": 492,
+        "themeId": "TH-14",
+        "title": "TH-14 · 编码器与译码器",
+        "width": 600,
+        "x": 2880,
+        "y": 514
+      },
+      {
+        "elementId": "VE-G-TH-15",
+        "height": 198,
+        "themeId": "TH-15",
+        "title": "TH-15 · 移位器",
+        "width": 600,
+        "x": 2880,
+        "y": 1046
+      },
+      {
+        "elementId": "VE-G-TH-16",
+        "height": 198,
+        "themeId": "TH-16",
+        "title": "TH-16 · 校验器与比较器",
+        "width": 600,
+        "x": 3580,
+        "y": 80
+      },
+      {
+        "elementId": "VE-G-TH-17",
+        "height": 394,
+        "themeId": "TH-17",
+        "title": "TH-17 · 加法器、减法器与乘法器",
+        "width": 600,
+        "x": 3580,
+        "y": 318
+      },
+      {
+        "elementId": "VE-G-TH-18",
+        "height": 198,
+        "themeId": "TH-18",
+        "title": "TH-18 · 二进制与 BCD 转换",
+        "width": 600,
+        "x": 3580,
+        "y": 752
+      },
+      {
+        "elementId": "VE-G-TH-19",
+        "height": 296,
+        "themeId": "TH-19",
+        "title": "TH-19 · 逻辑门器件理论",
+        "width": 600,
+        "x": 3580,
+        "y": 990
+      },
+      {
+        "elementId": "VE-G-TH-20",
+        "height": 394,
+        "themeId": "TH-20",
+        "title": "TH-20 · 可编程逻辑器件与 FPGA",
+        "width": 600,
+        "x": 3580,
+        "y": 1326
+      }
+    ],
+    "nodes": [
+      {
+        "elementId": "VE-N-KU-001",
+        "height": 86,
+        "unitId": "KU-001",
+        "width": 268,
+        "x": 104,
+        "y": 168
+      },
+      {
+        "elementId": "VE-N-KU-002",
+        "height": 86,
+        "unitId": "KU-002",
+        "width": 268,
+        "x": 388,
+        "y": 168
+      },
+      {
+        "elementId": "VE-N-KU-003",
+        "height": 86,
+        "unitId": "KU-003",
+        "width": 268,
+        "x": 104,
+        "y": 266
+      },
+      {
+        "elementId": "VE-N-KU-004",
+        "height": 86,
+        "unitId": "KU-004",
+        "width": 268,
+        "x": 388,
+        "y": 266
+      },
+      {
+        "elementId": "VE-N-KU-005",
+        "height": 86,
+        "unitId": "KU-005",
+        "width": 268,
+        "x": 104,
+        "y": 364
+      },
+      {
+        "elementId": "VE-N-KU-006",
+        "height": 86,
+        "unitId": "KU-006",
+        "width": 268,
+        "x": 104,
+        "y": 602
+      },
+      {
+        "elementId": "VE-N-KU-007",
+        "height": 86,
+        "unitId": "KU-007",
+        "width": 268,
+        "x": 388,
+        "y": 602
+      },
+      {
+        "elementId": "VE-N-KU-008",
+        "height": 86,
+        "unitId": "KU-008",
+        "width": 268,
+        "x": 104,
+        "y": 700
+      },
+      {
+        "elementId": "VE-N-KU-009",
+        "height": 86,
+        "unitId": "KU-009",
+        "width": 268,
+        "x": 388,
+        "y": 700
+      },
+      {
+        "elementId": "VE-N-KU-010",
+        "height": 86,
+        "unitId": "KU-010",
+        "width": 268,
+        "x": 104,
+        "y": 798
+      },
+      {
+        "elementId": "VE-N-KU-011",
+        "height": 86,
+        "unitId": "KU-011",
+        "width": 268,
+        "x": 104,
+        "y": 1036
+      },
+      {
+        "elementId": "VE-N-KU-012",
+        "height": 86,
+        "unitId": "KU-012",
+        "width": 268,
+        "x": 388,
+        "y": 1036
+      },
+      {
+        "elementId": "VE-N-KU-013",
+        "height": 86,
+        "unitId": "KU-013",
+        "width": 268,
+        "x": 104,
+        "y": 1134
+      },
+      {
+        "elementId": "VE-N-KU-014",
+        "height": 86,
+        "unitId": "KU-014",
+        "width": 268,
+        "x": 388,
+        "y": 1134
+      },
+      {
+        "elementId": "VE-N-KU-015",
+        "height": 86,
+        "unitId": "KU-015",
+        "width": 268,
+        "x": 104,
+        "y": 1232
+      },
+      {
+        "elementId": "VE-N-KU-016",
+        "height": 86,
+        "unitId": "KU-016",
+        "width": 268,
+        "x": 388,
+        "y": 1232
+      },
+      {
+        "elementId": "VE-N-KU-017",
+        "height": 86,
+        "unitId": "KU-017",
+        "width": 268,
+        "x": 804,
+        "y": 168
+      },
+      {
+        "elementId": "VE-N-KU-018",
+        "height": 86,
+        "unitId": "KU-018",
+        "width": 268,
+        "x": 1088,
+        "y": 168
+      },
+      {
+        "elementId": "VE-N-KU-019",
+        "height": 86,
+        "unitId": "KU-019",
+        "width": 268,
+        "x": 804,
+        "y": 266
+      },
+      {
+        "elementId": "VE-N-KU-020",
+        "height": 86,
+        "unitId": "KU-020",
+        "width": 268,
+        "x": 1088,
+        "y": 266
+      },
+      {
+        "elementId": "VE-N-KU-021",
+        "height": 86,
+        "unitId": "KU-021",
+        "width": 268,
+        "x": 804,
+        "y": 364
+      },
+      {
+        "elementId": "VE-N-KU-022",
+        "height": 86,
+        "unitId": "KU-022",
+        "width": 268,
+        "x": 1088,
+        "y": 364
+      },
+      {
+        "elementId": "VE-N-KU-023",
+        "height": 86,
+        "unitId": "KU-023",
+        "width": 268,
+        "x": 804,
+        "y": 602
+      },
+      {
+        "elementId": "VE-N-KU-024",
+        "height": 86,
+        "unitId": "KU-024",
+        "width": 268,
+        "x": 1088,
+        "y": 602
+      },
+      {
+        "elementId": "VE-N-KU-025",
+        "height": 86,
+        "unitId": "KU-025",
+        "width": 268,
+        "x": 804,
+        "y": 700
+      },
+      {
+        "elementId": "VE-N-KU-026",
+        "height": 86,
+        "unitId": "KU-026",
+        "width": 268,
+        "x": 1088,
+        "y": 700
+      },
+      {
+        "elementId": "VE-N-KU-027",
+        "height": 86,
+        "unitId": "KU-027",
+        "width": 268,
+        "x": 804,
+        "y": 938
+      },
+      {
+        "elementId": "VE-N-KU-028",
+        "height": 86,
+        "unitId": "KU-028",
+        "width": 268,
+        "x": 1088,
+        "y": 938
+      },
+      {
+        "elementId": "VE-N-KU-029",
+        "height": 86,
+        "unitId": "KU-029",
+        "width": 268,
+        "x": 804,
+        "y": 1036
+      },
+      {
+        "elementId": "VE-N-KU-030",
+        "height": 86,
+        "unitId": "KU-030",
+        "width": 268,
+        "x": 1088,
+        "y": 1036
+      },
+      {
+        "elementId": "VE-N-KU-031",
+        "height": 86,
+        "unitId": "KU-031",
+        "width": 268,
+        "x": 804,
+        "y": 1134
+      },
+      {
+        "elementId": "VE-N-KU-032",
+        "height": 86,
+        "unitId": "KU-032",
+        "width": 268,
+        "x": 804,
+        "y": 1372
+      },
+      {
+        "elementId": "VE-N-KU-033",
+        "height": 86,
+        "unitId": "KU-033",
+        "width": 268,
+        "x": 1088,
+        "y": 1372
+      },
+      {
+        "elementId": "VE-N-KU-034",
+        "height": 86,
+        "unitId": "KU-034",
+        "width": 268,
+        "x": 1504,
+        "y": 168
+      },
+      {
+        "elementId": "VE-N-KU-035",
+        "height": 86,
+        "unitId": "KU-035",
+        "width": 268,
+        "x": 1788,
+        "y": 168
+      },
+      {
+        "elementId": "VE-N-KU-036",
+        "height": 86,
+        "unitId": "KU-036",
+        "width": 268,
+        "x": 1504,
+        "y": 266
+      },
+      {
+        "elementId": "VE-N-KU-037",
+        "height": 86,
+        "unitId": "KU-037",
+        "width": 268,
+        "x": 1788,
+        "y": 266
+      },
+      {
+        "elementId": "VE-N-KU-038",
+        "height": 86,
+        "unitId": "KU-038",
+        "width": 268,
+        "x": 1504,
+        "y": 364
+      },
+      {
+        "elementId": "VE-N-KU-039",
+        "height": 86,
+        "unitId": "KU-039",
+        "width": 268,
+        "x": 1504,
+        "y": 602
+      },
+      {
+        "elementId": "VE-N-KU-040",
+        "height": 86,
+        "unitId": "KU-040",
+        "width": 268,
+        "x": 1788,
+        "y": 602
+      },
+      {
+        "elementId": "VE-N-KU-041",
+        "height": 86,
+        "unitId": "KU-041",
+        "width": 268,
+        "x": 1504,
+        "y": 700
+      },
+      {
+        "elementId": "VE-N-KU-042",
+        "height": 86,
+        "unitId": "KU-042",
+        "width": 268,
+        "x": 2204,
+        "y": 168
+      },
+      {
+        "elementId": "VE-N-KU-043",
+        "height": 86,
+        "unitId": "KU-043",
+        "width": 268,
+        "x": 2488,
+        "y": 168
+      },
+      {
+        "elementId": "VE-N-KU-044",
+        "height": 86,
+        "unitId": "KU-044",
+        "width": 268,
+        "x": 2204,
+        "y": 266
+      },
+      {
+        "elementId": "VE-N-KU-045",
+        "height": 86,
+        "unitId": "KU-045",
+        "width": 268,
+        "x": 2204,
+        "y": 504
+      },
+      {
+        "elementId": "VE-N-KU-046",
+        "height": 86,
+        "unitId": "KU-046",
+        "width": 268,
+        "x": 2488,
+        "y": 504
+      },
+      {
+        "elementId": "VE-N-KU-047",
+        "height": 86,
+        "unitId": "KU-047",
+        "width": 268,
+        "x": 2204,
+        "y": 602
+      },
+      {
+        "elementId": "VE-N-KU-048",
+        "height": 86,
+        "unitId": "KU-048",
+        "width": 268,
+        "x": 2488,
+        "y": 602
+      },
+      {
+        "elementId": "VE-N-KU-050",
+        "height": 86,
+        "unitId": "KU-050",
+        "width": 268,
+        "x": 2204,
+        "y": 700
+      },
+      {
+        "elementId": "VE-N-KU-051",
+        "height": 86,
+        "unitId": "KU-051",
+        "width": 268,
+        "x": 2204,
+        "y": 938
+      },
+      {
+        "elementId": "VE-N-KU-052",
+        "height": 86,
+        "unitId": "KU-052",
+        "width": 268,
+        "x": 2488,
+        "y": 938
+      },
+      {
+        "elementId": "VE-N-KU-053",
+        "height": 86,
+        "unitId": "KU-053",
+        "width": 268,
+        "x": 2204,
+        "y": 1036
+      },
+      {
+        "elementId": "VE-N-KU-054",
+        "height": 86,
+        "unitId": "KU-054",
+        "width": 268,
+        "x": 2488,
+        "y": 1036
+      },
+      {
+        "elementId": "VE-N-KU-055",
+        "height": 86,
+        "unitId": "KU-055",
+        "width": 268,
+        "x": 2904,
+        "y": 168
+      },
+      {
+        "elementId": "VE-N-KU-056",
+        "height": 86,
+        "unitId": "KU-056",
+        "width": 268,
+        "x": 3188,
+        "y": 168
+      },
+      {
+        "elementId": "VE-N-KU-057",
+        "height": 86,
+        "unitId": "KU-057",
+        "width": 268,
+        "x": 2904,
+        "y": 266
+      },
+      {
+        "elementId": "VE-N-KU-058",
+        "height": 86,
+        "unitId": "KU-058",
+        "width": 268,
+        "x": 3188,
+        "y": 266
+      },
+      {
+        "elementId": "VE-N-KU-059",
+        "height": 86,
+        "unitId": "KU-059",
+        "width": 268,
+        "x": 2904,
+        "y": 364
+      },
+      {
+        "elementId": "VE-N-KU-060",
+        "height": 86,
+        "unitId": "KU-060",
+        "width": 268,
+        "x": 2904,
+        "y": 602
+      },
+      {
+        "elementId": "VE-N-KU-061",
+        "height": 86,
+        "unitId": "KU-061",
+        "width": 268,
+        "x": 3188,
+        "y": 602
+      },
+      {
+        "elementId": "VE-N-KU-062",
+        "height": 86,
+        "unitId": "KU-062",
+        "width": 268,
+        "x": 2904,
+        "y": 700
+      },
+      {
+        "elementId": "VE-N-KU-063",
+        "height": 86,
+        "unitId": "KU-063",
+        "width": 268,
+        "x": 3188,
+        "y": 700
+      },
+      {
+        "elementId": "VE-N-KU-064",
+        "height": 86,
+        "unitId": "KU-064",
+        "width": 268,
+        "x": 2904,
+        "y": 798
+      },
+      {
+        "elementId": "VE-N-KU-065",
+        "height": 86,
+        "unitId": "KU-065",
+        "width": 268,
+        "x": 3188,
+        "y": 798
+      },
+      {
+        "elementId": "VE-N-KU-066",
+        "height": 86,
+        "unitId": "KU-066",
+        "width": 268,
+        "x": 2904,
+        "y": 896
+      },
+      {
+        "elementId": "VE-N-KU-067",
+        "height": 86,
+        "unitId": "KU-067",
+        "width": 268,
+        "x": 2904,
+        "y": 1134
+      },
+      {
+        "elementId": "VE-N-KU-068",
+        "height": 86,
+        "unitId": "KU-068",
+        "width": 268,
+        "x": 3604,
+        "y": 168
+      },
+      {
+        "elementId": "VE-N-KU-069",
+        "height": 86,
+        "unitId": "KU-069",
+        "width": 268,
+        "x": 3888,
+        "y": 168
+      },
+      {
+        "elementId": "VE-N-KU-070",
+        "height": 86,
+        "unitId": "KU-070",
+        "width": 268,
+        "x": 3604,
+        "y": 406
+      },
+      {
+        "elementId": "VE-N-KU-071",
+        "height": 86,
+        "unitId": "KU-071",
+        "width": 268,
+        "x": 3888,
+        "y": 406
+      },
+      {
+        "elementId": "VE-N-KU-072",
+        "height": 86,
+        "unitId": "KU-072",
+        "width": 268,
+        "x": 3604,
+        "y": 504
+      },
+      {
+        "elementId": "VE-N-KU-074",
+        "height": 86,
+        "unitId": "KU-074",
+        "width": 268,
+        "x": 3888,
+        "y": 504
+      },
+      {
+        "elementId": "VE-N-KU-075",
+        "height": 86,
+        "unitId": "KU-075",
+        "width": 268,
+        "x": 3604,
+        "y": 602
+      },
+      {
+        "elementId": "VE-N-KU-076",
+        "height": 86,
+        "unitId": "KU-076",
+        "width": 268,
+        "x": 3888,
+        "y": 602
+      },
+      {
+        "elementId": "VE-N-KU-077",
+        "height": 86,
+        "unitId": "KU-077",
+        "width": 268,
+        "x": 3604,
+        "y": 840
+      },
+      {
+        "elementId": "VE-N-KU-078",
+        "height": 86,
+        "unitId": "KU-078",
+        "width": 268,
+        "x": 3604,
+        "y": 1078
+      },
+      {
+        "elementId": "VE-N-KU-079",
+        "height": 86,
+        "unitId": "KU-079",
+        "width": 268,
+        "x": 3888,
+        "y": 1078
+      },
+      {
+        "elementId": "VE-N-KU-080",
+        "height": 86,
+        "unitId": "KU-080",
+        "width": 268,
+        "x": 3604,
+        "y": 1176
+      },
+      {
+        "elementId": "VE-N-KU-081",
+        "height": 86,
+        "unitId": "KU-081",
+        "width": 268,
+        "x": 3888,
+        "y": 1176
+      },
+      {
+        "elementId": "VE-N-KU-082",
+        "height": 86,
+        "unitId": "KU-082",
+        "width": 268,
+        "x": 3604,
+        "y": 1414
+      },
+      {
+        "elementId": "VE-N-KU-083",
+        "height": 86,
+        "unitId": "KU-083",
+        "width": 268,
+        "x": 3888,
+        "y": 1414
+      },
+      {
+        "elementId": "VE-N-KU-084",
+        "height": 86,
+        "unitId": "KU-084",
+        "width": 268,
+        "x": 3604,
+        "y": 1512
+      },
+      {
+        "elementId": "VE-N-KU-085",
+        "height": 86,
+        "unitId": "KU-085",
+        "width": 268,
+        "x": 3888,
+        "y": 1512
+      },
+      {
+        "elementId": "VE-N-KU-086",
+        "height": 86,
+        "unitId": "KU-086",
+        "width": 268,
+        "x": 3604,
+        "y": 1610
+      }
+    ],
+    "schemaVersion": "midterm-layout-1"
+  },
+  "counts": {
+    "units": 84,
+    "themes": 20,
+    "relations": 43
+  },
+  "requirementGroups": [
+    {
+      "id": "G1",
+      "targetUnitId": "KU-044",
+      "mode": "any",
+      "unitIds": [
+        "KU-033",
+        "KU-035"
+      ],
+      "relationIds": [
+        "REL-010",
+        "REL-011"
+      ],
+      "value": "代数化简与卡诺图是通用设计的两条可替代化简路线，不能解释为共同必需。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C02",
+          "pdfPages": [
+            52,
+            53,
+            54,
+            55,
+            56,
+            57,
+            58,
+            59,
+            60
+          ],
+          "visualStatus": "verified",
+          "note": "代数化简路线",
+          "versionId": "VER-SRC-C02-1c152428693e"
+        },
+        {
+          "sourceId": "SRC-C03",
+          "pdfPages": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16
+          ],
+          "visualStatus": "verified",
+          "note": "卡诺图路线",
+          "versionId": "VER-SRC-C03-8bd0e5dc8fe3"
+        },
+        {
+          "sourceId": "SRC-C04",
+          "pdfPages": [
+            19,
+            20
+          ],
+          "visualStatus": "verified",
+          "note": "组合设计流程",
+          "versionId": "VER-SRC-C04-f29340849838"
+        }
+      ]
+    }
+  ],
+  "conditions": {
+    "KU-044": {
+      "required": [
+        "KU-029"
+      ],
+      "groups": [
+        "G1"
+      ]
+    }
+  }
+}

@@ -8,11 +8,15 @@ import threading
 import uuid
 import math
 import re
+import time
+from contextlib import contextmanager
+from datetime import datetime,timezone
 
 from .knowledge import KnowledgeCatalog
 from .search import CourseSearch
 from .material_sources import MaterialSourceLibrary
 from .storage import CourseStore, StoreError
+from .directory_authority import writer_admission
 
 
 def inside(root: Path, relative: str) -> Path:
@@ -23,6 +27,11 @@ def inside(root: Path, relative: str) -> Path:
 
 
 def open_manifest(root: Path):
+    with writer_admission(root):
+        return _open_manifest(root)
+
+
+def _open_manifest(root: Path):
     path = root / "课程.json"
     if not path.exists():
         manifest = {
@@ -61,6 +70,14 @@ class CourseService:
                     "sources.read", "search.keyword"]
 
     def __init__(self, root: Path, *, catalog=None):
+        with writer_admission(root):
+            self._initialize(root,catalog=catalog)
+
+    def _initialize(self, root: Path, *, catalog=None):
+        self._admissions=threading.Condition(threading.RLock())
+        self._admission_local=threading.local()
+        self._admission_count=0
+        self._migration_stopping=False
         self.root = Path(root).resolve()
         self.manifest = open_manifest(self.root)
         self.catalog = catalog or KnowledgeCatalog(
@@ -175,7 +192,8 @@ class CourseService:
                 type(camera.get(k)) not in (int, float) or not math.isfinite(camera[k])
                 for k in ("x", "y", "scale")
             ) or not .005 <= camera["scale"] <= 10:
-                raise StoreError("invalid_content", "阅读视口无效")
+                raise StoreError("invalid_content", "阅读视口无效",
+                                 {"namespace": "reading", "key": key, "field": "camera"})
         if not isinstance(value.get("mode", "overview"), str) or value.get("mode", "overview") not in {"overview", "units", "detail"}:
             raise StoreError("invalid_content", "未知显示深度")
 
@@ -224,7 +242,67 @@ class CourseService:
         if value.get("status") not in {"needs-review", "consistent"}:
             raise StoreError("invalid_content", "未知交互核对状态")
 
-    def apply_command(self, command):
+    @contextmanager
+    def admission(self):
+        depth=getattr(self._admission_local,'depth',0)
+        with self._admissions:
+            if not depth:
+                if self._migration_stopping:
+                    raise StoreError('save_failed','课程正在迁移保存并关闭，不再接纳新写入')
+                self._admission_count+=1
+            self._admission_local.depth=depth+1
+        try:
+            yield
+        finally:
+            self._admission_local.depth=depth
+            if not depth:
+                with self._admissions:
+                    self._admission_count-=1
+                    self._admissions.notify_all()
+
+    def migration_state(self):
+        with self._admissions:
+            return {'inflight':self._admission_count,'quiescing':self._migration_stopping}
+
+    def prepare_migration(self,request):
+        if not isinstance(request.get('operationId'),str) or not request['operationId'] or type(request.get('confirmedSequence')) is not int or request['confirmedSequence']<0:
+            raise StoreError('invalid_parameter','迁移保存屏障缺少原操作身份或实际确认游标')
+        try:
+            with self._admissions:
+                self._migration_stopping=True
+                deadline=time.monotonic()+30
+                while self._admission_count:
+                    if time.monotonic()>deadline:
+                        raise StoreError('save_failed','在途保存尚未完成，未关闭旧课程；请保留输入并重试')
+                    self._admissions.wait(.1)
+            if self._agent:
+                self._agent.close()
+                self._agent=None
+            with self.store._lock:
+                snapshot=self.store.snapshot()
+                if snapshot['sequence']<request['confirmedSequence']:
+                    raise StoreError('save_failed','当前数据库未覆盖窗口确认游标，未关闭课程')
+                self.store._writes_frozen=True
+            receipt={'schema':'yizhi-legacy-save-barrier-1','operationId':request['operationId'],'sourceDirectory':str(self.root),'courseId':self.manifest['courseId'],'generation':snapshot['generation'],'sequence':snapshot['sequence'],'confirmedSequence':request['confirmedSequence'],'saved':True,'phase':'quiesced','stoppedAt':datetime.now(timezone.utc).isoformat()}
+            path=self.root/'.review-board/migration-barrier.json'
+            temp=path.with_name(path.name+'.'+str(uuid.uuid4())+'.partial')
+            with temp.open('x') as out:
+                json.dump(receipt,out,ensure_ascii=False);out.flush();os.fsync(out.fileno())
+            os.replace(temp,path)
+            fd=os.open(path.parent,os.O_RDONLY)
+            try:os.fsync(fd)
+            finally:os.close(fd)
+            return receipt
+        except BaseException:
+            with self._admissions:self._migration_stopping=False
+            self.store._writes_frozen=False
+            raise
+
+    def apply_command(self,command):
+        with self.admission():
+            return self._apply_command(command)
+
+    def _apply_command(self, command):
         if not isinstance(command, dict):
             raise StoreError("invalid_parameter", "命令必须是对象")
         changes = command.get("changes")
@@ -259,7 +337,15 @@ class CourseService:
                     if namespace not in {"notes", "annotations", "layout", "editingDrafts"}:
                         raise StoreError("capability_unavailable", "此类删除尚未接入")
                 else:
-                    self._validators[namespace](key, change.get("value"))
+                    try:
+                        self._validators[namespace](key, change.get("value"))
+                    except StoreError as exc:
+                        if exc.code == "invalid_content" and exc.details == {
+                            "namespace": "reading", "key": "default", "field": "camera"
+                        }:
+                            exc.details.update(operationId=command.get("operationId"),
+                                               rejectedBeforeCommit=True)
+                        raise
             return self.store.apply(command)
 
     def close(self):

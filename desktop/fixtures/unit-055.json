@@ -1,0 +1,498 @@
+{
+  "id": "KU-055",
+  "themeId": "TH-13",
+  "kind": "concept",
+  "name": "MUX 功能与 2:1/4:1 表达式",
+  "aliases": [
+    "复用器",
+    "数据选择器",
+    "多路选择器",
+    "MUX"
+  ],
+  "outcome": "能写出 2:1 和 4:1 MUX 的选择表达式，并由选择端判断输出哪一路数据。",
+  "summary": "MUX 把多路数据中的一路送到公共输出；选择端编码决定输出通道。",
+  "internals": [
+    {
+      "kind": "formula",
+      "text": "2:1：Y=I0·S′+I1·S；4:1：Y=S1′S0′I0+S1′S0I1+S1S0′I2+S1S0I3"
+    },
+    {
+      "kind": "condition",
+      "text": "S=0 输出 I0，S=1 输出 I1（2:1）"
+    }
+  ],
+  "questionTypes": [
+    "逻辑设计"
+  ],
+  "sourceRefs": [
+    {
+      "sourceId": "SRC-C05",
+      "pdfPages": [
+        4
+      ],
+      "visualStatus": "verified",
+      "note": "MUX 功能与 2:1/4:1 表达式：MUX 功能、2:1 与 4:1 表达式",
+      "versionId": "VER-SRC-C05-ad2a56210ce2"
+    },
+    {
+      "sourceId": "SRC-C05",
+      "pdfPages": [
+        5
+      ],
+      "visualStatus": "verified",
+      "note": "MUX 功能与 2:1/4:1 表达式：2:1 MUX 的电路、真值表与逻辑方程；页内 assign 语句属 HDL 排除项",
+      "versionId": "VER-SRC-C05-ad2a56210ce2"
+    },
+    {
+      "sourceId": "SRC-C05",
+      "pdfPages": [
+        11
+      ],
+      "visualStatus": "verified",
+      "note": "MUX 功能与 2:1/4:1 表达式：MUX 功能、2:1 与 4:1 表达式",
+      "versionId": "VER-SRC-C05-ad2a56210ce2"
+    }
+  ],
+  "rating": {
+    "stars": 5,
+    "rationale": "习题课解答例题直接考查：【8】；作业也直接考查：第 2 题。",
+    "evidence": {
+      "exerciseExamples": [
+        {
+          "questionId": "Q-117",
+          "label": "【8】",
+          "basis": "official-solution"
+        }
+      ],
+      "homeworkDirect": [
+        {
+          "questionId": "Q-089",
+          "label": "第 2 题",
+          "basis": "stem"
+        }
+      ],
+      "support": [],
+      "referenceItems": [
+        {
+          "id": "REF-006",
+          "kind": "device-summary",
+          "label": "74HC153 双 4 选 1 复用器"
+        }
+      ]
+    },
+    "supportAdjustment": null
+  },
+  "reading": {
+    "schemaVersion": "review-reading-1",
+    "revision": 1,
+    "status": "complete",
+    "blocks": [
+      {
+        "id": "RB-KU-055-core",
+        "kind": "paragraph",
+        "role": "core",
+        "payload": {
+          "text": "复用器（MUX，也称数据选择器）根据选择端的取值，把多路数据中的一路送到公共输出。2 选 1 有 1 位选择端；4 选 1 有 2 位选择端，S1 是高位、S0 是低位。"
+        },
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-C05",
+            "versionId": "VER-SRC-C05-ad2a56210ce2",
+            "pdfPages": [
+              4
+            ],
+            "visualStatus": "verified",
+            "note": "2:1 MUX 功能、真值表和表达式"
+          },
+          {
+            "sourceId": "SRC-C05",
+            "versionId": "VER-SRC-C05-ad2a56210ce2",
+            "pdfPages": [
+              11
+            ],
+            "visualStatus": "verified",
+            "note": "4:1 MUX 位序、功能表和表达式"
+          }
+        ]
+      },
+      {
+        "id": "RB-KU-055-formula-2",
+        "kind": "formula",
+        "role": "core",
+        "payload": {
+          "latex": "Y=\\overline{S}I_0+SI_1",
+          "caption": "2 选 1：S=0 输出 I0，S=1 输出 I1。"
+        },
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-C05",
+            "versionId": "VER-SRC-C05-ad2a56210ce2",
+            "pdfPages": [
+              4
+            ],
+            "visualStatus": "verified",
+            "note": "2:1 MUX 功能、真值表和表达式"
+          }
+        ]
+      },
+      {
+        "id": "RB-KU-055-formula-4",
+        "kind": "formula",
+        "role": "core",
+        "payload": {
+          "latex": "Y=\\overline{S_1}\\,\\overline{S_0}I_0+\\overline{S_1}S_0I_1+S_1\\overline{S_0}I_2+S_1S_0I_3",
+          "caption": "4 选 1：选择码 00、01、10、11 依次选择 I0、I1、I2、I3；这不是卡诺图的格雷列顺序。"
+        },
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-C05",
+            "versionId": "VER-SRC-C05-ad2a56210ce2",
+            "pdfPages": [
+              11
+            ],
+            "visualStatus": "verified",
+            "note": "4:1 MUX 位序、功能表和表达式"
+          }
+        ]
+      },
+      {
+        "id": "RB-KU-055-diagram",
+        "kind": "interactive",
+        "role": "core",
+        "payload": {
+          "component": "mux",
+          "config": {
+            "selectBits": [
+              "S1",
+              "S0"
+            ],
+            "dataSignals": [
+              "z",
+              "¬z",
+              "0",
+              "1"
+            ]
+          },
+          "inputs": {
+            "S1": 0,
+            "S0": 1,
+            "z": 0
+          },
+          "bindings": {
+            "formula": "RB-KU-055-formula-4",
+            "figure": "dataSignals",
+            "output": "Y"
+          }
+        },
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-C05",
+            "versionId": "VER-SRC-C05-ad2a56210ce2",
+            "pdfPages": [
+              11
+            ],
+            "visualStatus": "verified",
+            "note": "4:1 MUX 位序、功能表和表达式"
+          }
+        ]
+      },
+      {
+        "id": "RB-KU-055-example",
+        "kind": "example",
+        "role": "material",
+        "payload": {
+          "title": "例题 · 选择码为 01 时的输出",
+          "problem": "沿用交互图的接线 I0=z、I1=¬z、I2=0、I3=1，求 S1S0=01 时的输出。",
+          "answerNature": "authored-example"
+        },
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-C05",
+            "versionId": "VER-SRC-C05-ad2a56210ce2",
+            "pdfPages": [
+              11
+            ],
+            "visualStatus": "verified",
+            "note": "4:1 MUX 位序、功能表和表达式"
+          }
+        ],
+        "children": [
+          {
+            "id": "RB-KU-055-example-solution",
+            "kind": "steps",
+            "role": "material",
+            "payload": {
+              "items": [
+                "选择码按普通二进制排列，01 对应编号 1 的通道，因此 Y=I1。",
+                "I1 接 ¬z，所以 Y=¬z。",
+                "z=0 时输出 1；z=1 时输出 0。其余数据端不影响本次输出。"
+              ]
+            },
+            "sourceRefs": []
+          }
+        ]
+      },
+      {
+        "id": "RB-KU-055-practice",
+        "kind": "exercise",
+        "role": "material",
+        "payload": {
+          "title": "练习 · 换一个选择码",
+          "problem": "保持相同接线，令 S1S0=10，分别取 z=0 和 z=1，输出是否变化？",
+          "hint": "先确定 10 选中的数据端，再看它接的是变量还是固定电平。",
+          "answerNature": "self-test"
+        },
+        "sourceRefs": [],
+        "children": [
+          {
+            "id": "RB-KU-055-practice-answer",
+            "kind": "paragraph",
+            "role": "material",
+            "payload": {
+              "text": "10 选中 I2，而 I2 固定为 0，所以两种情况的输出都为 0。未选中数据端 z 的变化不会影响当前输出。"
+            },
+            "sourceRefs": []
+          }
+        ]
+      }
+    ],
+    "coverage": [
+      {
+        "goal": "能写出 2:1/4:1 MUX 表达式，并按选择端位序判断输出通道。",
+        "coreBlockIds": [
+          "RB-KU-055-core",
+          "RB-KU-055-formula-2",
+          "RB-KU-055-formula-4",
+          "RB-KU-055-diagram"
+        ],
+        "materials": [
+          {
+            "kind": "figure",
+            "status": "verified",
+            "blockIds": [
+              "RB-KU-055-diagram"
+            ]
+          },
+          {
+            "kind": "method",
+            "status": "verified",
+            "blockIds": [
+              "RB-KU-055-formula-4"
+            ]
+          },
+          {
+            "kind": "example",
+            "status": "verified",
+            "blockIds": [
+              "RB-KU-055-example"
+            ]
+          },
+          {
+            "kind": "exercise",
+            "status": "verified",
+            "blockIds": [
+              "RB-KU-055-practice"
+            ]
+          }
+        ],
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-C05",
+            "versionId": "VER-SRC-C05-ad2a56210ce2",
+            "pdfPages": [
+              4
+            ],
+            "visualStatus": "verified",
+            "note": "2:1 MUX 功能、真值表和表达式"
+          },
+          {
+            "sourceId": "SRC-C05",
+            "versionId": "VER-SRC-C05-ad2a56210ce2",
+            "pdfPages": [
+              11
+            ],
+            "visualStatus": "verified",
+            "note": "4:1 MUX 位序、功能表和表达式"
+          }
+        ],
+        "visualStatus": "verified",
+        "readingStatus": "passed",
+        "note": "已查看 C05 P4/P11 原页，核对 S1 高位、S0 低位、选择码顺序和两类表达式；交互输入将逐组合复核。"
+      }
+    ]
+  },
+  "theme": {
+    "id": "TH-13",
+    "lessonId": "L05",
+    "name": "复用器与分配器",
+    "coreOutcome": "能使用 MUX 选择数据、用 MUX 实现逻辑函数，并说明 MUX/DMUX 的扩展与数据传输。",
+    "sourceRefs": [
+      {
+        "sourceId": "SRC-C05",
+        "pdfPages": [
+          4,
+          5,
+          8,
+          9,
+          11,
+          13,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          24,
+          25
+        ],
+        "visualStatus": "verified",
+        "note": "主题范围页；具体单元拆分见 units",
+        "versionId": "VER-SRC-C05-ad2a56210ce2"
+      }
+    ],
+    "rating": {
+      "stars": 5,
+      "rationale": "主题核心的 MUX 功能、分析、实现与器件在基本题型、解答例题和作业中均有证据。"
+    }
+  },
+  "questions": [
+    {
+      "id": "MAP-148",
+      "questionId": "Q-089",
+      "unitId": "KU-055",
+      "role": "direct",
+      "basis": "stem",
+      "note": "按 2:1 MUX 选择表达式逐级代入",
+      "question": {
+        "id": "Q-089",
+        "sourceId": "SRC-HW05",
+        "label": "第 2 题",
+        "kind": "homework",
+        "taskSummary": "写出由两个 2:1 MUX 构成电路的输出逻辑函数表达式 L。",
+        "questionTypes": [
+          "逻辑分析"
+        ],
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-HW05",
+            "pdfPages": [
+              2
+            ],
+            "visualStatus": "verified",
+            "note": "原作业第 2 题 MUX 电路",
+            "versionId": "VER-SRC-HW05-330710a40ab2"
+          }
+        ],
+        "hasOfficialAnswer": false
+      },
+      "unit": {
+        "id": "KU-055",
+        "name": "MUX 功能与 2:1/4:1 表达式",
+        "kind": "concept",
+        "themeId": "TH-13",
+        "themeName": "复用器与分配器",
+        "stars": 5,
+        "questionTypes": [
+          "逻辑设计"
+        ]
+      }
+    },
+    {
+      "id": "MAP-192",
+      "questionId": "Q-117",
+      "unitId": "KU-055",
+      "role": "direct",
+      "basis": "official-solution",
+      "note": "识别为 4:1 MUX",
+      "question": {
+        "id": "Q-117",
+        "sourceId": "SRC-EX07",
+        "label": "【8】",
+        "kind": "exercise-example",
+        "taskSummary": "分析给定电路并说明其功能。",
+        "questionTypes": [
+          "逻辑分析"
+        ],
+        "sourceRefs": [
+          {
+            "sourceId": "SRC-EX07",
+            "pdfPages": [
+              14
+            ],
+            "visualStatus": "verified",
+            "note": "习题课第 14 页【8】及答案",
+            "versionId": "VER-SRC-EX07-94ba9b89b204"
+          }
+        ],
+        "hasOfficialAnswer": true,
+        "stem": "分析下图的逻辑电路，说明其功能。",
+        "solution": "官方答案：F=¬A1·¬A0·X0 + ¬A1·A0·X1 + A1·¬A0·X2 + A1·A0·X3。A1、A0 为选择控制输入：00 时 F=X0，01 时 F=X1，10 时 F=X2，11 时 F=X3，所以这是四选一数据选择器。",
+        "answerNature": "official-solution"
+      },
+      "unit": {
+        "id": "KU-055",
+        "name": "MUX 功能与 2:1/4:1 表达式",
+        "kind": "concept",
+        "themeId": "TH-13",
+        "themeName": "复用器与分配器",
+        "stars": 5,
+        "questionTypes": [
+          "逻辑设计"
+        ]
+      }
+    }
+  ],
+  "relations": [
+    {
+      "id": "REL-013",
+      "fromUnitId": "KU-055",
+      "toUnitId": "KU-056",
+      "type": "requires",
+      "directed": true,
+      "value": "用 MUX 实现函数前要先理解选择端如何选中通道，才能正确对应选择变量与数据端的 0、1、原变量或反变量。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C05",
+          "pdfPages": [
+            4,
+            5,
+            17,
+            18,
+            19,
+            20
+          ],
+          "visualStatus": "verified",
+          "note": "MUX 选择规则与函数实现",
+          "versionId": "VER-SRC-C05-ad2a56210ce2"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    },
+    {
+      "id": "REL-014",
+      "fromUnitId": "KU-055",
+      "toUnitId": "KU-057",
+      "type": "constructs",
+      "directed": true,
+      "value": "三个 2:1 MUX 构成 4:1 能直接展示两级选择如何扩展通道数，而不是只背 74 系列型号。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C05",
+          "pdfPages": [
+            4,
+            5,
+            13
+          ],
+          "visualStatus": "verified",
+          "note": "二选一 MUX 构造四选一 MUX",
+          "versionId": "VER-SRC-C05-ad2a56210ce2"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    }
+  ]
+}

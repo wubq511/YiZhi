@@ -13,6 +13,7 @@ import math
 import sqlite3
 import threading
 import uuid
+from .directory_authority import course_root,writer_admission
 
 
 class StoreError(Exception):
@@ -73,6 +74,11 @@ def _json(value):
 
 class CourseStore:
     def __init__(self, db_path, course_id):
+        self._course_root=course_root(db_path)
+        with writer_admission(self._course_root):
+            self._initialize(db_path,course_id)
+
+    def _initialize(self, db_path, course_id):
         _string(course_id, "courseId")
         self.course_id = course_id
         self._lock = threading.RLock()
@@ -131,7 +137,21 @@ class CourseStore:
 
     @contextmanager
     def _transaction(self, write=False):
+        if write:
+            if getattr(self,'_writes_frozen',False):
+                raise StoreError('save_failed','课程已完成迁移保存屏障，旧连接不再接纳写入')
+            with writer_admission(self._course_root):
+                with self._unchecked_transaction(write=True) as db:
+                    yield db
+        else:
+            with self._unchecked_transaction() as db:
+                yield db
+
+    @contextmanager
+    def _unchecked_transaction(self, write=False):
         with self._lock:
+            if write and getattr(self,'_writes_frozen',False):
+                raise StoreError('save_failed','课程已完成迁移保存屏障，旧连接不再接纳写入')
             if self._connection is None:
                 raise StoreError("save_failed", "Course store is closed")
             db = self._connection

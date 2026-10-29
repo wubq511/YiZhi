@@ -13,9 +13,9 @@ function mount({drafts={},generation=7,semanticRevision=3,dropFirst=true}={}) {
     addEventListener(){},notify(){}};
   const board={persistence,getState:()=>({selected:'KU-055'}),refreshContent:async()=>{},toast(){},flush:async()=>{}};
   let ready;
-  const root={style:{setProperty(){}},getBoundingClientRect:()=>({height:45})};
+  const root={append(){},style:{setProperty(){}},getBoundingClientRect:()=>({height:45})};
   const viewport={style:{setProperty(){}},getBoundingClientRect:()=>({left:200,width:800})};
-  const document={querySelector:selector=>selector==='#viewport'?viewport:root,
+  const document={body:root,createElement:()=>({setAttribute(){}}),querySelector:selector=>selector==='#viewport'?viewport:root,
     querySelectorAll:()=>[],getElementById:()=>root,addEventListener(){}};
   const window={ReviewBoard:board,addEventListener:(name,callback)=>{if(name==='review-board-ready')ready=callback;}};
   const fetch=async(path,options)=>{

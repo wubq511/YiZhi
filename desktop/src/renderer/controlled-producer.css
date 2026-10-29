@@ -1,0 +1,16 @@
+.controlled-producer { position: relative; font: 14px/1.7 system-ui, sans-serif; overflow-wrap: anywhere; }
+.producer-panel { position: absolute; z-index: 10; top: calc(100% + 12px); left: 0;
+  width: min(380px, calc(100vw - 40px)); max-height: min(660px, calc(100dvh - 150px)); overflow: auto;
+  padding: 16px; background: #fff; border: 1px solid #e5e5eb; border-radius: 8px; }
+.controlled-producer summary { cursor: pointer; }
+.controlled-producer p { margin: 12px 0; }
+.producer-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.controlled-producer button { font: inherit; white-space: normal; }
+.controlled-producer label { display: block; margin-top: 16px; }
+.controlled-producer textarea { display: block; box-sizing: border-box; width: 100%; resize: vertical; margin-top: 8px;
+  font: inherit; line-height: 1.7; color: #27343e; background: #fffdf8; border: 1px solid #d8dee3; border-radius: 6px; padding: 8px; }
+.controlled-producer :focus-visible { outline: 2px solid #6965c7; outline-offset: 3px; }
+.controlled-producer [role="status"] { color: #41627e; }
+.controlled-producer button:disabled { opacity: .55; cursor: default; }
+@media (max-width: 760px) { .controlled-producer { position: static; }
+  .producer-panel { position: fixed; top: 110px; left: 20px; } }

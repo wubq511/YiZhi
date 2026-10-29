@@ -1,0 +1,9 @@
+{
+  "source": "courses/digital-logic/期中/数据/知识地图.json",
+  "sourceSha256": "223f55f8f4ddac71f0036274778ab25de0f40f2cf8fdd9745a8b2cb85d1c1564",
+  "query": "python3 tools/digital-logic/知识地图.py get KU-001",
+  "unitId": "KU-001",
+  "payloadSha256": "664d3fe0d4b71b65f297fcda4fdcfbc8c53bb6dd5ea203bc77aa203cfa67a39a",
+  "scope": "Unmodified complete get result for one unit, including reading, theme, sources, question mappings and relations. No original resources or personal state copied.",
+  "editableBlockId": "RB-TH-01-01-what-is-positional-notation"
+}

@@ -136,6 +136,31 @@
     Object.assign(board,{getEntity,applyContent,applyPersonal,undo,redo,showHistory});
     board.editing=window.ReviewEditing?.mount(host);
     board.agent=window.ReviewAgent?.mount(board);
+    const migrate=document.createElement('button'),migrationStatus=document.createElement('p');
+    migrate.textContent='保存并停止旧课程';migrationStatus.setAttribute('role','status');migrationStatus.setAttribute('aria-label','迁移准备状态');
+    migrationStatus.hidden=true;document.querySelector('.header-actions').append(migrate);document.body.append(migrationStatus);
+    let composing=false,migrationOperation=null;
+    document.addEventListener('compositionstart',()=>{composing=true;},true);document.addEventListener('compositionend',()=>{composing=false;},true);
+    migrate.onclick=async()=>{
+      migrationStatus.hidden=false;migrationStatus.setAttribute('role','status');
+      if(composing){migrationStatus.setAttribute('role','alert');migrationStatus.textContent='中文候选输入尚未完成，请完成后再停止课程。';return;}
+      document.body.inert=true;migrationStatus.textContent='正在确认最新输入并停止旧课程…';
+      try{
+        await board.editing?.flush();await board.agent?.flush();
+        const deadline=Date.now()+15000;
+        while(persistence.busy){if(Date.now()>deadline)throw new Error('在途保存尚未确认');await new Promise(r=>setTimeout(r,20));}
+        await board.flush();
+        if(persistence.problem&&!await persistence.retry())throw new Error('最新输入尚未确认：'+(persistence.problem?.message||'请先处理保存问题'));
+        while(persistence.busy||persistence.hasPending()){
+          if(persistence.problem||Date.now()>deadline)throw new Error('最新输入尚未确认，请重试保存');
+          if(!persistence.busy)await persistence.flush();else await new Promise(r=>setTimeout(r,20));
+        }
+        migrationOperation||='MIGRATION-BARRIER-'+crypto.randomUUID();
+        const receipt=await json('/api/v1/migration/prepare',{operationId:migrationOperation,confirmedSequence:persistence.sequence});
+        if(receipt.saved!==true)throw new Error('停止完成事实尚未确认');
+        migrationStatus.textContent='旧课程已停止，最新输入已确认。请在绎知中选择此课程文件夹迁移。';
+      }catch(error){document.body.inert=false;migrationStatus.setAttribute('role','alert');migrationStatus.textContent='课程尚未停止：'+error.message+'。输入仍保留，请重试。';}
+    };
     const viewport=document.querySelector('#viewport'),editingRoot=document.querySelector('[data-review-editing-root]');
     const positionTools=()=>{
       if(!editingRoot)return;

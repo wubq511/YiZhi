@@ -1,0 +1,77 @@
+import { historyClient } from '../history-api';
+import { backupBridge } from '../backup-api';
+import { migrationClient } from '../migration-api';
+import { retentionClient } from '../retention-api';
+import { courseRestoreClient } from '../course-restore-api';
+import { descriptionClient } from '../description-api';
+import { drawingClient } from '../drawing-api';
+import { exchangeBridge } from '../exchange-api';
+import { searchClient } from '../search-api';
+import { annotationClient } from '../annotation-api';
+import {extensionsClient} from '../extensions-api';
+import { experimentsClient } from '../experiments-api';
+import { agentClient } from '../agent-api';
+import { contextBridge, ipcRenderer } from 'electron';
+import type { DesktopBridge } from '../shared';
+import { parsingBridge } from '../parsing-api';
+import { relationClient } from '../relation-api';
+import { commandClient } from '../command-api';
+import { sourceBridge } from '../sources-api';
+async function invoke(channel: string, argument?: unknown) {
+  try { return await ipcRenderer.invoke(channel, argument); }
+  catch (error) {
+    // Remove Electron transport decoration; keep the meaningful course/storage error.
+    throw new Error((error as Error).message.replace(/^Error invoking remote method '[^']+': (?:Error: )?/, ''));
+  }
+}
+const bridge: DesktopBridge = {
+  upgrade:{info:r=>invoke('upgrade:info',r),choose:r=>invoke('upgrade:choose',r),chooseRecover:()=>invoke('upgrade:chooseRecover')},
+  courseFormat:{inspect:()=>invoke('courseFormat:inspect'),readUnit:r=>invoke('courseFormat:readUnit',r),exportText:r=>invoke('courseFormat:exportText',r)},
+  backup:backupBridge(invoke),
+  migration:{...migrationClient(invoke),stage:p=>invoke('migration:stage',p),chooseDirectory:kind=>invoke('migration:chooseDirectory',kind),openDirectory:directory=>invoke('migration:openDirectory',directory),currentDirectory:()=>invoke('migration:currentDirectory')},
+  retention:(()=>{const {resourceLease:_,resourceLeases:__,...bridge}=retentionClient(invoke);return bridge;})(),
+  courseRestore:courseRestoreClient(invoke),
+  formalHistory: historyClient(invoke),
+  description: descriptionClient(invoke),
+  drawings: drawingClient(invoke),
+  exchange: exchangeBridge(invoke),
+  search: searchClient(invoke),
+  annotations: annotationClient(invoke),
+  extensions: (() => { const {resource, ...api}=extensionsClient(invoke); return api; })(),
+  experiments: experimentsClient(invoke),
+  agent: { ...agentClient(invoke), status: () => invoke('agent:status'), reconcile: request => invoke('agent:reconcile',request), retryDelivery: request => invoke('agent:retryDelivery', request),
+    generationCandidates: request => invoke('agent:generationCandidates',request) },
+  parsing: parsingBridge(invoke),
+  sources: sourceBridge(invoke),
+  commands: commandClient(invoke),
+  relations: relationClient(invoke),
+  open: () => invoke('course:open'),
+  graph: sessionId => invoke('course:graph', sessionId),
+  readUnit: (sessionId, unitId) => ipcRenderer.invoke('course:read-unit', sessionId, unitId),
+  setLayout: (sessionId, updates) => ipcRenderer.invoke('course:set-layout', sessionId, updates),
+  projectLayout: (sessionId, sizes, fixed) => ipcRenderer.invoke('course:project-layout', sessionId, sizes, fixed),
+  readingState: sessionId => invoke('course:reading-state', sessionId),
+  setReadingState: (sessionId, state) => ipcRenderer.invoke('course:set-reading-state', sessionId, state),
+  reviewStates: sessionId => invoke('course:review-states', sessionId),
+  setReviewStatus: (sessionId, unitId, status) => invoke('course:set-review-status', { sessionId, unitId, status }),
+  confirmReviewPrompt: (sessionId, promptId, adjust) => invoke('course:confirm-review-prompt', { sessionId, promptId, adjust }),
+  save: command => invoke('course:save', command),
+  saveDraft: input => invoke('course:saveDraft', input),
+  commitEdit: command => invoke('course:commitEdit', command),
+  queryOperation: (sessionId, operationId) => invoke('course:queryOperation', { sessionId, operationId }),
+  readEvents: (sessionId, after, limit = 64) => invoke('course:readEvents', { sessionId, after, limit }),
+  read: (sessionId, unitId) => invoke('course:read', { sessionId, unitId }),
+  onCloseCancelled(listener) {const handler=()=>listener();ipcRenderer.on('window:close-cancelled',handler);return ()=>ipcRenderer.removeListener('window:close-cancelled',handler);},
+  onGenerationChanged(listener){const handler=()=>listener();ipcRenderer.on('course:generation-changed',handler);return()=>ipcRenderer.removeListener('course:generation-changed',handler);},
+  onCloseRequested(listener) {
+    const handler = async (_event: Electron.IpcRendererEvent, requestId: number) => {
+      let saved = false;
+      try { saved = await listener(); } catch { /* Keep the editor and input if flush failed. */ }
+      ipcRenderer.send('window:close-result', { requestId, saved });
+    };
+    ipcRenderer.on('window:prepare-close', handler);
+    return () => { ipcRenderer.removeListener('window:prepare-close', handler); };
+  },
+};
+contextBridge.exposeInMainWorld('yizhi', bridge);
+if (process.argv.includes('--yizhi-observe')) contextBridge.exposeInMainWorld('yizhiObservationEnabled', true);

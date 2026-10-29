@@ -1,0 +1,27 @@
+.search-panel { position:fixed; z-index:40; top:76px; right:12px; bottom:12px; width:420px; max-width:calc(100vw - 24px); overflow:auto; background:#fff; color:#27343e; border:1px solid var(--border); border-radius:11px; padding:18px; font:14px/1.65 system-ui,sans-serif; }
+.search-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:20px; }
+.search-heading h2 { margin:0; font-size:21px; }
+.search-input { display:grid; gap:6px; }
+.search-input input { width:100%; min-width:0; padding:10px; color:#27343e; background:#f8f8fa; border:1px solid var(--border); border-radius:9px; font:inherit; }
+.search-input input::placeholder { color:#687080; }
+.search-input input:focus { background:#fff; outline:2px solid var(--purple); outline-offset:2px; }
+.search-scopes { display:flex; flex-wrap:wrap; gap:8px 16px; margin:16px 0; padding:0; border:0; }
+.search-scopes legend { margin-bottom:6px; }
+.search-scopes label { display:flex; align-items:center; gap:4px; }
+.search-scopes input { accent-color:var(--purple); }
+.search-index, .search-coverage { color:#626b79; font-size:13px; }
+.search-index button { display:block; margin-top:8px; }
+.search-coverage { margin:16px 0; }
+.search-coverage p, .search-result details p { overflow-wrap:anywhere; }
+.search-error { color:#a13737; }
+.search-result { border-top:1px solid var(--border); padding:18px 0; }
+.search-result h3 { font-size:16px; margin:4px 0 10px; }
+.search-result-kind { margin:0; color:#626b79; font-size:12px; }
+.search-excerpt { white-space:pre-wrap; overflow-wrap:anywhere; margin:0 0 12px; }
+.search-result details { color:#626b79; font-size:12px; margin-bottom:12px; }
+[data-search-current="true"] { outline:2px solid var(--purple); outline-offset:4px; background:#eeedff; }
+.search-panel ::selection { background:#eeedff; color:#27343e; }
+@media(max-width:760px) { .search-panel { top:10px; right:10px; bottom:10px; width:calc(100vw - 20px); max-width:none; } }
+
+.source-search-highlight { background:#eeedff; color:#27343e !important; }
+.unit-aliases { display:flex; flex-wrap:wrap; gap:4px 12px; color:#626b79; font:14px/1.65 system-ui,sans-serif; margin-bottom:12px; }

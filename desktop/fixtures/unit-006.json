@@ -1,0 +1,488 @@
+{
+  "aliases": [
+    "模",
+    "补数",
+    "2 的补码"
+  ],
+  "id": "KU-006",
+  "internals": [
+    {
+      "kind": "formula",
+      "text": "N_补=2^n-N（n 位二进制）；N_补=N_反+1"
+    },
+    {
+      "kind": "condition",
+      "text": "求补码时先求反码再加 1；模 2^n 运算舍弃的是离开最高位的 Cout，不是“符号位进位”"
+    },
+    {
+      "kind": "example",
+      "text": "模 12 时钟中 7 的补码是 5，9-7 可写成 9+5 并舍去 12"
+    }
+  ],
+  "kind": "concept",
+  "name": "模运算与补码原理",
+  "outcome": "能解释模与补数的关系，说明减去一个数为何可换成加上它的补码。",
+  "questionTypes": [
+    "数制转换"
+  ],
+  "rating": {
+    "evidence": {
+      "exerciseExamples": [],
+      "homeworkDirect": [],
+      "referenceItems": [
+        {
+          "id": "REF-001",
+          "kind": "basic-type-list",
+          "label": "二进制基本题型（习题课 P2）"
+        }
+      ],
+      "support": [
+        {
+          "basis": "agent-analysis",
+          "label": "1.21(a)",
+          "questionId": "Q-014"
+        },
+        {
+          "basis": "agent-analysis",
+          "label": "1.21(c)",
+          "questionId": "Q-015"
+        }
+      ]
+    },
+    "rationale": "习题课参考条目 REF-001 直接相关，课件有相应讲解；尚无独立例题或作业直接证据。",
+    "stars": 4,
+    "supportAdjustment": null
+  },
+  "reading": {
+    "blocks": [
+      {
+        "id": "RB-KU-006-core-clock",
+        "kind": "paragraph",
+        "payload": {
+          "text": "补码的想法可以从对表得到。钟面只有 12 个数：9 点往回拨 7 小时落在 2 点，9 点往前拨 5 小时同样落在 2 点——9−7=2，9+5=14，而 14 超出 12 后又绕回 2。课件把 12 称为模，即系统的计数范围；7+5=12，所以课件说「7 是 5 对于模 12 的补码」，反过来 5 也是 7 的补码。于是在模 12 的系统里要减去 7，可以改成加上它的补码 5，再忽略多绕的那一圈。"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "模 12 时钟：9−7=2 与 9+5=14 同位，模=系统的计数范围",
+            "pdfPages": [
+              25
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-KU-006-core-modulo",
+        "kind": "paragraph",
+        "payload": {
+          "text": "二进制系统同理。n 位二进制数共有 2^n 个码字，从 0 数到 2^n−1 之后再加 1 就回到 0，所以 n 位二进制加法天然按模 2^n 进行：4 位系统里 0111+1001=1 0000，和达到 16（模）后归零，多出来的第 5 位是离开最高位的进位。课件用 4 位二进制转盘演示同一个道理：1100−0111=0101（12−7=5），而 1100+1001（7 的补码，16−7=9）=1 0101（12+9=21），把第 5 位舍弃，两种算法都读到 0101=5。这就是本单元的核心结论：在舍弃进位的情况下，减去某数可以用加上它的补码代替。两个使用边界要记住：其一，舍弃的必须是离开最高位、恰好对应一整圈 2^n 的进位，丢别的位没有这个含义；其二，参与运算的数必须约定同一位宽，1100按无符号数读作12，按4位补码却读作−4，模运算中的码字和值的解释必须区分。"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "4 位二进制转盘：1100−0111=0101 与 1100+1001=1 0101，核心句原页",
+            "pdfPages": [
+              25
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          },
+          {
+            "note": "同页复现 12−7 例并给出 16−7=9 的竖式",
+            "pdfPages": [
+              26
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-KU-006-formula",
+        "kind": "formula",
+        "payload": {
+          "caption": "n 位二进制数 N（0<N<2^n）的三个公式：2 的补码、1 的补码（反码）及两者关系。按 2^n−N 求补码要先做一次减法，如 10000−0111=1001（16−7=9）；改走反码路线则全程不用减法，见下方提示。",
+          "latex": "(N)_{\\text{补}}=2^{n}-N,\\qquad (N)_{\\text{反}}=(2^{n}-1)-N,\\qquad (N)_{\\text{补}}=(N)_{\\text{反}}+1"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "三公式框图与 10000−0111=1001、1111−0111=1000 再+1=1001 的推导",
+            "pdfPages": [
+              26
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-KU-006-callout-roundtrip",
+        "kind": "callout",
+        "payload": {
+          "text": "求补码时还有减法？！课件特意标出这个疑问：(N)补=2^n−N 本身是一次减法，用它求补码就绕回了减法。出路是拆开：2^n−N=(2^n−1)−N+1，其中 2^n−1 是全 1 数（4 位即 1111），全 1 数减 N 不发生任何借位，等价于把 N 逐位取反——这就是反码公式 (N)反=(2^n−1)−N；然后反码加 1 得补码。例：16−7 拆成 1111−0111=1000，再加 1 得 1001。全程只用「逐位取反」和「加 1」两种电路最擅长的操作，这正是硬件愿意用补码做减法的原因。",
+          "tone": "amber"
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "「求补码时还有减法？！」引导框与反码+1 推导",
+            "pdfPages": [
+              26
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "id": "RB-KU-006-steps",
+        "kind": "steps",
+        "payload": {
+          "items": [
+            "对齐位宽：把被减数和减数都写成同一位宽的 n 位二进制数。",
+            "求减数的反码：用全 1 数（n 位全为 1）减去减数。这一步不发生借位，等价于逐位取反。",
+            "求减数的补码：反码加 1。若减数为0，逐位取反加1会产生第n+1位进位；截断为n位后，0的模2ⁿ补数仍是0。",
+            "把被减数与减数的补码相加。",
+            "去掉离开最高位的进位，剩下的 n 位就是差。这一步对应模 2^n 运算中舍去整圈，是方法成立的条件，不是可有可无的技巧。"
+          ]
+        },
+        "role": "core",
+        "sourceRefs": [
+          {
+            "note": "四步代价：①求减数(7)的反码 ②求减数的补码(=反码+1) ③被减数+减数补码 ④去掉最高位进位",
+            "pdfPages": [
+              27
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-KU-006-example-12-7-solution",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "求 0111（7）的补码：反码 1111−0111=1000，加 1 得 1001。1001 读作 9，恰为 16−7，与定义式一致。",
+                "列加法：1100+1001=1 0101。十进制对照：12+9=21=16+5。",
+                "第 5 位的 1 是离开最高位的进位，对应转满一整圈的模 16，舍弃，剩下 0101。",
+                "读回 0101=5，与 12−7=5 一致。再验证补码的含义：0111+1001=1 0000，7 与它的补码 9 相加在模 16 下恰好回到 0，所以加上 1001 起到「−7」的作用。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-KU-006-example-12-7",
+        "kind": "example",
+        "payload": {
+          "answerNature": "authored-example",
+          "problem": "在 4 位二进制系统中计算 1100−0111（12−7）。写出减数 0111 的补码，列加法竖式，指出舍弃的进位，并读出结果。",
+          "title": "例题 · 12−7 的 4 位补码加法"
+        },
+        "role": "material",
+        "sourceRefs": [
+          {
+            "note": "例题取自 P25 的 12−7 主例，补码求法与四步对应 P26/P27",
+            "pdfPages": [
+              25,
+              26,
+              27
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ]
+      },
+      {
+        "children": [
+          {
+            "id": "RB-KU-006-practice-13-6-answer",
+            "kind": "steps",
+            "payload": {
+              "items": [
+                "求 0110（6）的补码：反码 1111−0110=1001，加 1 得 1010。1010 读作 10，恰为 16−6。",
+                "列加法：1101+1010=1 0111。十进制对照：13+10=23=16+7。",
+                "舍弃离开最高位的进位，剩下 0111。",
+                "读回 0111=7，与 13−6=7 一致，方法正确。"
+              ]
+            },
+            "role": "material",
+            "sourceRefs": []
+          }
+        ],
+        "id": "RB-KU-006-practice-13-6",
+        "kind": "exercise",
+        "payload": {
+          "answerNature": "self-test",
+          "hint": "0110 的补码等于 16−6；也可以先写反码 1111−0110 再加 1。加出结果后先别急着丢位，看清丢的是哪一位、为什么可以丢。",
+          "problem": "在 4 位二进制系统中计算 1101−0110（13−6）：写出 0110 的反码与补码，列加法竖式，指出舍弃的进位，并给出差的二进制与十进制结果。",
+          "title": "练习 · 模 16 下的 13−6"
+        },
+        "role": "material",
+        "sourceRefs": []
+      }
+    ],
+    "coverage": [
+      {
+        "coreBlockIds": [
+          "RB-KU-006-core-clock",
+          "RB-KU-006-core-modulo",
+          "RB-KU-006-formula",
+          "RB-KU-006-callout-roundtrip",
+          "RB-KU-006-steps"
+        ],
+        "goal": "能解释模与补数的关系，说明减去一个数为何可换成加上它的补码。",
+        "materials": [
+          {
+            "kind": "figure",
+            "reason": "时钟与转盘类比已在 core 段落文字化表达，不引入额外交互组件。",
+            "status": "not-applicable"
+          },
+          {
+            "blockIds": [
+              "RB-KU-006-steps"
+            ],
+            "kind": "method",
+            "status": "verified"
+          },
+          {
+            "blockIds": [
+              "RB-KU-006-example-12-7"
+            ],
+            "kind": "example",
+            "status": "verified"
+          },
+          {
+            "blockIds": [
+              "RB-KU-006-practice-13-6"
+            ],
+            "kind": "exercise",
+            "status": "verified"
+          }
+        ],
+        "note": "已查看 C01 P25/P26/P27 原页：核对模 12 时钟例（9−7↔9+5）、4 位转盘 1100−0111=0101 与 1100+1001=1 0101、三公式及 16−7=9 的反码加 1 推导、四步代价原文。例题 12−7 与练习 13−6 均按模定义独立枚举核对。KU-006 无 direct 正式题目映射，questionUpdates 为空。",
+        "readingStatus": "passed",
+        "sourceRefs": [
+          {
+            "note": "模 12 时钟与 4 位转盘、12−7 主例",
+            "pdfPages": [
+              25
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          },
+          {
+            "note": "三公式与反码+1 推导",
+            "pdfPages": [
+              26
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          },
+          {
+            "note": "减转加四步代价",
+            "pdfPages": [
+              27
+            ],
+            "sourceId": "SRC-C01",
+            "versionId": "VER-SRC-C01-42c5e893c129",
+            "visualStatus": "verified"
+          }
+        ],
+        "visualStatus": "verified"
+      }
+    ],
+    "revision": 1,
+    "schemaVersion": "review-reading-1",
+    "status": "complete"
+  },
+  "sourceRefs": [
+    {
+      "note": "模运算与补码原理：模、补码与减法转加法的代价",
+      "pdfPages": [
+        25,
+        26,
+        27
+      ],
+      "sourceId": "SRC-C01",
+      "versionId": "VER-SRC-C01-42c5e893c129",
+      "visualStatus": "verified"
+    }
+  ],
+  "summary": "在模 2^n 的系统中，减法可转换为加上减数的补码；离开最高位的进位可按模运算舍弃，溢出另行判断。",
+  "themeId": "TH-02",
+  "theme": {
+    "id": "TH-02",
+    "lessonId": "L01",
+    "name": "有符号数与补码运算",
+    "coreOutcome": "能写出正负数的原码、反码、补码，并用补码完成加减与溢出判断。",
+    "sourceRefs": [
+      {
+        "sourceId": "SRC-C01",
+        "pdfPages": [
+          22,
+          23,
+          25,
+          26,
+          27,
+          35,
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42,
+          43,
+          44,
+          45
+        ],
+        "visualStatus": "verified",
+        "note": "主题范围页；具体单元拆分见 units",
+        "versionId": "VER-SRC-C01-42c5e893c129"
+      }
+    ],
+    "rating": {
+      "stars": 5,
+      "rationale": "主题核心的原反补码与补码运算被习题课明确列出，并被多次作业直接考查。"
+    }
+  },
+  "questions": [
+    {
+      "id": "MAP-016",
+      "questionId": "Q-014",
+      "unitId": "KU-006",
+      "role": "support",
+      "basis": "agent-analysis",
+      "note": "补码的模与负数表示原理",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-014",
+        "kind": "homework",
+        "label": "1.21(a)",
+        "parentId": "Q-013",
+        "questionTypes": [
+          "数制转换"
+        ],
+        "solution": "据题干推导（原作业无官方答案）：最高位是符号位，1010 的符号位为 1，是负数。按 4 位补码读回：数值位 010 逐位取反得 101，加 1 得 110=6，读作 −6；或把 1010 当无符号码值 10，10−2^4=10−16=−6。答案：−6。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "教材 P23 的 1.21(a)",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "将 1010₂ 按 4 位补码解释为十进制。",
+        "taskSummary": "将 1010₂ 按 4 位补码解释为十进制。"
+      },
+      "unit": {
+        "id": "KU-006",
+        "name": "模运算与补码原理",
+        "kind": "concept",
+        "themeId": "TH-02",
+        "themeName": "有符号数与补码运算",
+        "stars": 4,
+        "questionTypes": [
+          "数制转换"
+        ]
+      }
+    },
+    {
+      "id": "MAP-018",
+      "questionId": "Q-015",
+      "unitId": "KU-006",
+      "role": "support",
+      "basis": "agent-analysis",
+      "note": "补码的模与负数表示原理",
+      "question": {
+        "answerNature": "derived-solution",
+        "hasOfficialAnswer": false,
+        "id": "Q-015",
+        "kind": "homework",
+        "label": "1.21(c)",
+        "parentId": "Q-013",
+        "questionTypes": [
+          "数制转换"
+        ],
+        "solution": "据题干推导（原作业无官方答案）：最高位符号位为 0，是正数；正数补码读数与无符号数值相同，数值位 1110000=112。答案：+112。",
+        "sourceId": "SRC-HW01",
+        "sourceRefs": [
+          {
+            "note": "教材 P23 的 1.21(c)",
+            "pdfPages": [
+              1,
+              3
+            ],
+            "sourceId": "SRC-HW01",
+            "versionId": "VER-SRC-HW01-dc627c3cb036",
+            "visualStatus": "verified"
+          }
+        ],
+        "stem": "将 01110000₂ 按 8 位补码解释为十进制。",
+        "taskSummary": "将 01110000₂ 按 8 位补码解释为十进制。"
+      },
+      "unit": {
+        "id": "KU-006",
+        "name": "模运算与补码原理",
+        "kind": "concept",
+        "themeId": "TH-02",
+        "themeName": "有符号数与补码运算",
+        "stars": 4,
+        "questionTypes": [
+          "数制转换"
+        ]
+      }
+    }
+  ],
+  "relations": [
+    {
+      "id": "REL-001",
+      "fromUnitId": "KU-006",
+      "toUnitId": "KU-007",
+      "type": "requires",
+      "directed": true,
+      "value": "先理解模 2^n 与补数，才能解释补码表示及后续减法转加法，而非只背取反加一。",
+      "sourceRefs": [
+        {
+          "sourceId": "SRC-C01",
+          "pdfPages": [
+            25,
+            26,
+            27,
+            35,
+            36,
+            37,
+            38
+          ],
+          "visualStatus": "verified",
+          "note": "模与补数到补码表示",
+          "versionId": "VER-SRC-C01-42c5e893c129"
+        }
+      ],
+      "view": "main",
+      "status": "approved"
+    }
+  ]
+}

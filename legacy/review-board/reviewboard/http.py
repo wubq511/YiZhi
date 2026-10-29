@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from socketserver import TCPServer
 import json
 import mimetypes
 from pathlib import Path
 import urllib.parse
+import threading
 
 from .service import inside
 from .paths import EXPERIMENTS_ROOT
@@ -23,6 +25,12 @@ class CourseHTTPServer(ThreadingHTTPServer):
         self.app_root = Path(app_root)
         self.instance_id = instance_id
         super().__init__(address, CourseHandler)
+
+    def server_bind(self):
+        # HTTPServer resolves a reverse hostname before listen(). This loopback
+        # service only needs its bound address, even when name service is offline.
+        TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
 
 
 class CourseHandler(BaseHTTPRequestHandler):
@@ -53,6 +61,9 @@ class CourseHandler(BaseHTTPRequestHandler):
         path = urllib.parse.unquote(parsed.path)
         params = urllib.parse.parse_qs(parsed.query)
         service = self.server.service
+        if path=="/api/v1/migration/state":
+            self._json(service.migration_state())
+            return
         try:
             if path == "/api/v1/health":
                 return self._json({"status": "running", "courseId": service.manifest["courseId"],
@@ -118,9 +129,18 @@ class CourseHandler(BaseHTTPRequestHandler):
             self._error(exc)
 
     def do_POST(self):
+        if urllib.parse.urlsplit(self.path).path=='/api/v1/migration/prepare':
+            return self._do_POST()
+        try:
+            with self.server.service.admission():
+                return self._do_POST()
+        except StoreError as exc:
+            self._error(exc)
+
+    def _do_POST(self):
         try:
             path = urllib.parse.urlsplit(self.path).path
-            if path not in {"/api/v1/commands", "/api/v1/source-selections",
+            if path not in {"/api/v1/migration/prepare", "/api/v1/commands", "/api/v1/source-selections",
                             "/api/v1/agent/requests", "/api/v1/agent/conversations",
                             "/api/v1/agent/control", "/api/v1/agent/prompts",
                             "/api/v1/agent/material-updates",
@@ -143,6 +163,11 @@ class CourseHandler(BaseHTTPRequestHandler):
                                  parse_constant=lambda _: (_ for _ in ()).throw(ValueError("非法数字")))
             if not isinstance(command, dict):
                 raise StoreError("invalid_parameter", "请求必须是对象")
+            if path=="/api/v1/migration/prepare":
+                result=self.server.service.prepare_migration(command)
+                self._json(result)
+                threading.Thread(target=self.server.shutdown,daemon=True).start()
+                return
             if path == "/api/v1/source-selections":
                 if not isinstance(command, dict):
                     raise StoreError("invalid_parameter", "原文选择必须是对象")
