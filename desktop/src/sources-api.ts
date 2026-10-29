@@ -80,4 +80,4 @@ export function sourceBridge(invoke: (action: string, payload: any) => Promise<a
 }
 
 /** Host-only scheduling seam; validates real bytes before holding publication. */
-export interface SourceScheduling { beforePublish?: SharedArrayBuffer }
+export interface SourceScheduling { beforePublish?: SharedArrayBuffer; afterPublish?: SharedArrayBuffer }

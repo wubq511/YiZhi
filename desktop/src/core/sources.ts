@@ -1,3 +1,4 @@
+import {retainResourcePublication} from './retention-resources';
 import { randomUUID, createHash } from 'node:crypto';
 import { basename, join } from 'node:path';
 import { constants, openSync, closeSync, readSync, lstatSync } from 'node:fs';
@@ -25,9 +26,9 @@ export class Sources {
       CREATE TABLE IF NOT EXISTS source_intents(id TEXT PRIMARY KEY, version_id TEXT NOT NULL REFERENCES source_versions(id), payload TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS source_reading(id INTEGER PRIMARY KEY CHECK(id=1), session_id TEXT NOT NULL, seq INTEGER NOT NULL, payload TEXT NOT NULL);`);
   }
-  private async stageGate() {
-    if (!this.scheduling?.beforePublish) return;
-    const gate=new Int32Array(this.scheduling.beforePublish); Atomics.store(gate,0,1);
+  private async stageGate(phase:'beforePublish'|'afterPublish'='beforePublish') {
+    if (!this.scheduling?.[phase]) return;
+    const gate=new Int32Array(this.scheduling[phase]!); Atomics.store(gate,0,1);
     while(Atomics.load(gate,0)===1) await new Promise(r=>setTimeout(r,5));
   }
   private generation() { return Number(this.db.prepare("SELECT value FROM metadata WHERE key='generation'").get()!.value); }
@@ -134,6 +135,7 @@ export class Sources {
         }
         await this.stageGate();
       },undefined,()=>this.eligible(command));
+      await this.stageGate('afterPublish');
       version = { sourceId: command.sourceId ?? randomUUID(), versionId: randomUUID(),
         sha256: resource.sha256, byteLength: resource.byteLength, mediaType, pdfPages,
         originalName: basename(command.path), title: command.title, importedAt: new Date().toISOString() };
@@ -317,9 +319,10 @@ export class Sources {
       const {sessionId:_,...body}=payload,digest=createHash('sha256').update(JSON.stringify([action,body])).digest('hex');
       const old=this.stages.get(payload.operationId);
       if(old){if(old.digest!==digest)throw new Error('同一操作不能换用不同内容');return old.promise;}
+      const release=retainResourcePublication(this.db);
       const promise=action==='sources:importFile'?this.importFile(payload):this.repairFile(payload);
       this.stages.set(payload.operationId,{digest,promise});
-      try{return await promise;}finally{this.stages.delete(payload.operationId);}
+      try{return await promise;}finally{this.stages.delete(payload.operationId);release();}
     }
     if (action === 'sources:list') return this.list(payload.sessionId);
     if (action === 'sources:getVersion') return this.version(payload.versionId);

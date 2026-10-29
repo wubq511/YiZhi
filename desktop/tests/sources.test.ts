@@ -295,3 +295,25 @@ test('exact-hash repair stages outside other course saves and rechecks the share
     assert.equal((await core.sources.list(c)).versions.length,1);
   }finally{releaseSource(gate);await pending?.catch(()=>{});await core.close();await rm(root,{recursive:true,force:true});}
 });
+
+
+test('retention cannot sweep an old identical orphan between source publication and durable registration',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-source-publication-root-')),gate=new SharedArrayBuffer(4),directory=join(root,'course');
+ const core=new CourseService(resolve('dist/worker.cjs'),{sourceScheduling:{afterPublish:gate},retentionScheduling:{manual:true}});let pending:Promise<any>|undefined;
+ try{
+  const c=await core.open(directory),path=join(root,'real.pdf');await sourceFixture(path);
+  const {createHash}=await import('node:crypto'),{mkdir,utimes}=await import('node:fs/promises'),bytes=await readFile(path),hash=createHash('sha256').update(bytes).digest('hex');
+  await mkdir(join(directory,'resources'),{recursive:true});await writeFile(join(directory,'resources',hash),bytes);await utimes(join(directory,'resources',hash),new Date('2000-01-01'),new Date('2000-01-01'));
+  pending=core.sources.importFile({...c,operationId:'reused-old-resource',path,title:'Old identical bytes'});await sourceStage(gate);
+  assert.equal((await core.sources.list(c)).versions.length,0);
+  const phases=[];for(let i=0;i<40;i++){const result=await core.retention.run({...c,limit:64});phases.push(result.phase);if(['resources','resources-pinned','idle'].includes(result.phase))break;}
+  assert.ok(phases.some(phase=>['resources','resources-pinned','idle'].includes(phase)),JSON.stringify(phases));
+  assert.deepEqual(await readFile(join(directory,'resources',hash)),bytes,'active source publication remains a live retention root');
+  releaseSource(gate);const receipt=await pending;
+  assert.equal((await core.sources.page({...c,versionId:receipt.version.versionId,pdfPageIndex:0})).projection.text,'Original course evidence\nSecond line of evidence');
+  const orphan='e'.repeat(64);await writeFile(join(directory,'resources',orphan),'discarded');await utimes(join(directory,'resources',orphan),new Date('2000-01-01'),new Date('2000-01-01'));
+  let removed=0;for(let i=0;i<4;i++)removed+=(await core.retention.run({...c,limit:64})).removed;
+  assert.equal(removed,1,'publication protection releases after durable registration');
+  assert.deepEqual(await readFile(join(directory,'resources',hash)),bytes);
+ }finally{releaseSource(gate);await pending?.catch(()=>{});await core.close();await rm(root,{recursive:true,force:true});}
+});

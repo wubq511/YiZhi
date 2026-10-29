@@ -3,6 +3,12 @@ import { readdirSync,lstatSync,unlinkSync,existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { declaredResourceRoots as enumerateDeclared } from './resource-roots';
 import type { BackupResource } from '../backup-api';
+const publishers=new WeakMap<DatabaseSync,number>();
+/** Worker-local publication lifetime. A crashed publisher cannot leave a persistent lease behind. */
+export function retainResourcePublication(db:DatabaseSync) {
+ publishers.set(db,(publishers.get(db)??0)+1);let released=false;
+ return ()=>{if(!released){released=true;const count=(publishers.get(db)??1)-1;if(count)publishers.set(db,count);else publishers.delete(db);}};
+}
 type RootCheck=(db:DatabaseSync,sha256:string)=>boolean;
 const extraRoots=new Map<string,RootCheck>();
 const extraEnumerators=new Map<string,(db:DatabaseSync)=>BackupResource[]>();
@@ -51,6 +57,7 @@ export class RetentionResources {
   return false;
  }
  run(limit:number,cutoff:string){
+  if(publishers.has(this.db))return {phase:'resources-pinned',pending:false,removed:0};
   if(this.db.prepare("SELECT 1 FROM retention_resource_leases WHERE state='active' LIMIT 1").get())return {phase:'resources-pinned',pending:false,removed:0};
   // A parser publishes immutable bytes before Core registers its ArtifactRef.
   if(this.db.prepare("SELECT 1 FROM parse_tasks WHERE json_extract(payload,'$.status')='running' LIMIT 1").get())return {phase:'resources-pinned',pending:false,removed:0};
