@@ -1,3 +1,4 @@
+import { observation } from '../acceptance-observation';
 import { historyTimestamp } from './history-clock';
 import { objectVersions, unitChanges } from './history-objects';
 import { changedCouplings } from './consistency-links';
@@ -44,6 +45,12 @@ export class CommandGroups {
     db.exec("UPDATE cg_bases SET read_values='[]' WHERE attempt_id IN (SELECT id FROM cg_attempts WHERE status<>'running')");
     if (!db.prepare('PRAGMA table_info(cg_bases)').all().some(r => r.name === 'unit_id')) db.exec("ALTER TABLE cg_bases ADD COLUMN unit_id TEXT NOT NULL DEFAULT 'KU-001'");
     if (!db.prepare('PRAGMA table_info(cg_bases)').all().some(r => r.name === 'domain_basis')) db.exec('ALTER TABLE cg_bases ADD COLUMN domain_basis TEXT');
+    db.exec(`CREATE TABLE IF NOT EXISTS cg_dirty_units(id TEXT PRIMARY KEY);
+      CREATE TABLE IF NOT EXISTS cg_block_units(id TEXT PRIMARY KEY,unit_id TEXT NOT NULL);
+      CREATE INDEX IF NOT EXISTS cg_block_units_unit ON cg_block_units(unit_id);
+      INSERT OR IGNORE INTO cg_dirty_units SELECT id FROM units;`);
+    for (const action of ['INSERT','UPDATE','DELETE']) db.exec(`CREATE TRIGGER IF NOT EXISTS cg_units_${action} AFTER ${action} ON units BEGIN
+      INSERT OR IGNORE INTO cg_dirty_units VALUES(${action === 'DELETE' ? 'old' : 'new'}.id); END`);
     this.observe();
   }
   protect(input: EditorProtection) {
@@ -94,26 +101,32 @@ export class CommandGroups {
     syncAnnotations(this.db);
     const changed = new Set<string>();
     const memberships = new Map<string, string[]>();
+    const dirty = json(this.db.prepare('SELECT id FROM cg_dirty_units').all().map(r => String(r.id)));
+    const previousIds = this.db.prepare('SELECT id FROM cg_block_units WHERE unit_id IN(SELECT value FROM json_each(?))').all(dirty).map(r => String(r.id));
+    const present = new Set<string>();
+    let unitId = '';
     const walk = (blocks: ReadingBlock[], parentId: string) => {
       this.put(`structure:${parentId}`, 'structure', { blockIds: blocks.map(block => block.id) });
       for (const block of blocks) {
         const { children, ...self } = block;
-        memberships.set(block.id, []);
+        memberships.set(block.id, []); present.add(block.id);
+        this.db.prepare('INSERT INTO cg_block_units VALUES(?,?) ON CONFLICT(id) DO UPDATE SET unit_id=excluded.unit_id').run(block.id,unitId);
         const old = this.db.prepare('SELECT value FROM cg_objects WHERE id=?').get(block.id);
         if (old && String(old.value) !== json(self)) changed.add(block.id);
         this.put(block.id, 'block', self);
         walk(children ?? [], block.id);
       }
     };
-    for (const row of this.db.prepare('SELECT payload FROM units').all()) { const unit: CourseUnit = parse(row.payload); walk(unit.reading.blocks, unit.id); }
-    for (const row of this.db.prepare("SELECT id,value FROM cg_objects WHERE kind='block'").all()) if (!memberships.has(String(row.id))) {
+    for (const row of this.db.prepare('SELECT payload FROM units WHERE id IN(SELECT value FROM json_each(?))').all(dirty)) { observation.count('commands.unitsObserved'); const unit: CourseUnit = parse(row.payload); unitId=unit.id; walk(unit.reading.blocks, unit.id); }
+    for (const id of previousIds) if (!present.has(id)) {
+      const row=this.db.prepare('SELECT id,value FROM cg_objects WHERE id=?').get(id)!;
       this.put(String(row.id), 'block', { id: String(row.id), retired: true });
       if (!parse(row.value).retired) { changed.add(String(row.id)); this.put(`structure:${row.id}`, 'structure', {blockIds:[]}); }
     }
     for (const row of this.db.prepare("SELECT id, value FROM cg_objects WHERE kind IN ('reference', 'dependency')").all()) {
       const relation = parse(row.value);
       for (const id of new Set([relation.sourceBlockId, relation.dependentBlockId, relation.fromBlockId, relation.toBlockId])) {
-        if (id) memberships.get(id)?.push(String(row.id));
+        if (id) { if (!memberships.has(id)) memberships.set(id,[]); memberships.get(id)!.push(String(row.id)); }
       }
     }
     for (const [id, relationIds] of memberships) this.put(`relations:${id}`, 'structure', { relationIds: relationIds.sort() });
@@ -126,6 +139,7 @@ export class CommandGroups {
         invalidated.push({ objectId: String(row.id), before, after, beforeVersion: Number(row.version), afterVersion: Number(row.version) + 1 });
       }
     }
+    this.db.prepare('DELETE FROM cg_dirty_units WHERE id IN(SELECT value FROM json_each(?))').run(dirty);
     return invalidated;
   }
   private object(id: string): CommandObject {

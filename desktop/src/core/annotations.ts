@@ -1,3 +1,4 @@
+import { observation } from '../acceptance-observation';
 import { historyTimestamp } from './history-clock';
 import { createHash, randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
@@ -9,13 +10,13 @@ import { transaction, appendEvent, readDrafts } from './save-store';
 const json = JSON.stringify;
 const parse = (v: unknown) => JSON.parse(String(v));
 const hash = (v: unknown) => createHash('sha256').update(json(v)).digest('hex');
-const version = (b: ReadingBlock) => hash(b);
+const version = (b: ReadingBlock) => { observation.count('annotations.blockHashes'); return hash(b); };
 interface Head { block: ReadingBlock; version: string }
 interface Step { before: Head[]; after: Head[]; proof?: ContentPatch }
 interface Stored { note: PersonalNote; lineage: AnchorLocation[][] }
-function heads(unit: CourseUnit): Head[] {
+function heads(unit: CourseUnit, previous = new Map<string, Head>()): Head[] {
   const result: Head[] = [];
-  const walk = (bs: ReadingBlock[]) => { for (const b of bs) { if (['paragraph', 'formula'].includes(b.kind)) result.push({ block: b, version: version(b) }); walk(b.children ?? []); } };
+  const walk = (bs: ReadingBlock[]) => { for (const b of bs) { if (['paragraph', 'formula'].includes(b.kind)) result.push(previous.has(b.id) && equal(previous.get(b.id)!.block, b) ? previous.get(b.id)! : { block: b, version: version(b) }); walk(b.children ?? []); } };
   walk(unit.reading.blocks); return result;
 }
 export function initializeAnnotations(db: DatabaseSync) {
@@ -25,6 +26,22 @@ export function initializeAnnotations(db: DatabaseSync) {
     CREATE TABLE IF NOT EXISTS personal_notes(id TEXT PRIMARY KEY, value TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS annotation_operations(id TEXT PRIMARY KEY, digest TEXT NOT NULL, result TEXT NOT NULL);`);
   if (!db.prepare("PRAGMA table_info(annotation_versions)").all().some(r => r.name === "unit_id")) db.exec("ALTER TABLE annotation_versions ADD COLUMN unit_id TEXT NOT NULL DEFAULT 'KU-001'");
+  if (!db.prepare('PRAGMA table_info(annotation_heads)').all().some(r => r.name === 'unit_id')) db.exec("ALTER TABLE annotation_heads ADD COLUMN unit_id TEXT NOT NULL DEFAULT ''");
+  db.exec(`CREATE INDEX IF NOT EXISTS annotation_heads_unit ON annotation_heads(unit_id);
+    CREATE TABLE IF NOT EXISTS annotation_dirty_units(id TEXT PRIMARY KEY);
+    CREATE TABLE IF NOT EXISTS annotation_note_blocks(block_id TEXT NOT NULL,note_id TEXT NOT NULL,PRIMARY KEY(block_id,note_id));
+    CREATE INDEX IF NOT EXISTS annotation_note_blocks_note ON annotation_note_blocks(note_id);`);
+  for (const action of ['INSERT','UPDATE','DELETE']) db.exec(`CREATE TRIGGER IF NOT EXISTS annotation_units_${action} AFTER ${action} ON units BEGIN
+    INSERT OR IGNORE INTO annotation_dirty_units VALUES(${action === 'DELETE' ? 'old' : 'new'}.id); END`);
+  const noteBlocks = (ref: string) => `SELECT json_extract(f.value,'$.blockId'),${ref}.id FROM json_each(${ref}.value,'$.note.current.fragments') f
+    UNION SELECT json_extract(f.value,'$.blockId'),${ref}.id FROM json_each(${ref}.value,'$.lineage') l,json_each(l.value) f`;
+  for (const action of ['INSERT','UPDATE']) db.exec(`CREATE TRIGGER IF NOT EXISTS annotation_notes_${action} AFTER ${action} ON personal_notes BEGIN
+    DELETE FROM annotation_note_blocks WHERE note_id=new.id;
+    INSERT OR IGNORE INTO annotation_note_blocks ${noteBlocks('new')}; END`);
+  db.exec(`CREATE TRIGGER IF NOT EXISTS annotation_notes_DELETE AFTER DELETE ON personal_notes BEGIN DELETE FROM annotation_note_blocks WHERE note_id=old.id; END;
+    INSERT OR IGNORE INTO annotation_note_blocks SELECT json_extract(f.value,'$.blockId'),n.id FROM personal_notes n,json_each(n.value,'$.note.current.fragments') f;
+    INSERT OR IGNORE INTO annotation_note_blocks SELECT json_extract(f.value,'$.blockId'),n.id FROM personal_notes n,json_each(n.value,'$.lineage') l,json_each(l.value) f;
+    INSERT OR IGNORE INTO annotation_dirty_units SELECT id FROM units;`);
   syncAnnotations(db);
 }
 function replaceRange(location: AnchorLocation, from: number, to: number, size: number): AnchorLocation {
@@ -126,30 +143,44 @@ function advance(stored: Stored, step: Step, all: Head[], intermediate = false) 
 }
 /** Invoked on the SAME SQLite transaction as every formal write, including producer groups. */
 export function syncAnnotations(db: DatabaseSync, proof?: ContentPatch) {
-  const rows = db.prepare('SELECT id,payload,revision FROM units').all();
+  const dirty = db.prepare('SELECT id FROM annotation_dirty_units').all().map(r => String(r.id));
+  if (!dirty.length) return;
+  const ids = json(dirty);
+  const old: Head[] = db.prepare("SELECT value FROM annotation_heads WHERE unit_id='' OR unit_id IN(SELECT value FROM json_each(?))").all(ids).map(r => parse(r.value));
+  const previous = new Map(old.map(h => [h.block.id,h]));
   const ownership = new Map<string, { unitId: string; revision: number }>();
-  const all = rows.flatMap(row => heads(parse(row.payload)).map(head => {
-    ownership.set(head.block.id, { unitId: String(row.id), revision: Number(row.revision) }); return head;
-  }));
-  const old: Head[] = db.prepare('SELECT value FROM annotation_heads').all().map(r => parse(r.value));
-  if (equal(old.map(h => [h.block.id, h.version]).sort(), all.map(h => [h.block.id, h.version]).sort())) return;
-  const step: Step = { before: old.filter(h => !all.some(n => n.block.id === h.block.id && n.version === h.version)),
-    after: all.filter(h => !old.some(n => n.block.id === h.block.id && n.version === h.version)), proof };
-  // Structural proofs need unchanged merge/split partners too, but unchanged bodies aren't duplicated in storage.
-  if (proof?.correspondence.length) {
-    const ids = new Set(proof.correspondence.flatMap(c => [c.sourceId, c.targetId]));
-    step.before = old.filter(h => ids.has(h.block.id) || step.before.includes(h));
-    step.after = all.filter(h => ids.has(h.block.id) || step.after.includes(h));
+  const all = db.prepare('SELECT id,payload,revision FROM units WHERE id IN(SELECT value FROM json_each(?))').all(ids).flatMap(row => {
+    observation.count('annotations.unitsRead');
+    return heads(parse(row.payload),previous).map(head => {
+      ownership.set(head.block.id,{unitId:String(row.id),revision:Number(row.revision)}); return head;
+    });
+  });
+  const next = new Map(all.map(h => [h.block.id,h]));
+  const step: Step = { before: old.filter(h => next.get(h.block.id)?.version !== h.version),
+    after: all.filter(h => previous.get(h.block.id)?.version !== h.version), proof };
+  if (step.before.length || step.after.length) {
+    if (proof?.correspondence.length) {
+      const partners = new Set(proof.correspondence.flatMap(c => [c.sourceId,c.targetId]));
+      step.before = old.filter(h => partners.has(h.block.id) || step.before.includes(h));
+      step.after = all.filter(h => partners.has(h.block.id) || step.after.includes(h));
+    }
+    const insert = db.prepare('INSERT OR IGNORE INTO annotation_versions(block_id,version,revision,block,unit_id) VALUES(?,?,?,?,?)');
+    for (const h of step.after) { const owner=ownership.get(h.block.id)!; insert.run(h.block.id,h.version,owner.revision,json(h.block),owner.unitId); }
+    db.prepare('INSERT INTO annotation_steps(value) VALUES(?)').run(json(step));
   }
-  const insert = db.prepare('INSERT OR IGNORE INTO annotation_versions(block_id,version,revision,block,unit_id) VALUES(?,?,?,?,?)');
-  for (const h of all) { const owner = ownership.get(h.block.id)!; insert.run(h.block.id, h.version, owner.revision, json(h.block), owner.unitId); }
-  db.prepare('INSERT INTO annotation_steps(value) VALUES(?)').run(json(step));
-  for (const r of db.prepare('SELECT * FROM personal_notes').all()) {
-    const stored: Stored = parse(r.value); advance(stored, step, all);
-    db.prepare('UPDATE personal_notes SET value=? WHERE id=?').run(json(stored), String(r.id));
+  const put = db.prepare('INSERT INTO annotation_heads(id,value,unit_id) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value,unit_id=excluded.unit_id');
+  for (const h of all) if (previous.get(h.block.id)?.version !== h.version || db.prepare("SELECT 1 FROM annotation_heads WHERE id=? AND unit_id='' ").get(h.block.id)) put.run(h.block.id,json(h),ownership.get(h.block.id)!.unitId);
+  for (const h of old) if (!next.has(h.block.id)) db.prepare('DELETE FROM annotation_heads WHERE id=?').run(h.block.id);
+  const affected = json([...new Set([...step.before,...step.after].map(h => h.block.id))]);
+  for (const r of db.prepare('SELECT id,value FROM personal_notes WHERE id IN(SELECT note_id FROM annotation_note_blocks WHERE block_id IN(SELECT value FROM json_each(?)))').all(affected)) {
+    const stored: Stored = parse(r.value);
+    const lineageIds = json([...new Set([...stored.lineage.flat(),...stored.note.current.fragments].map(l => l.blockId))]);
+    const currentHeads: Head[] = db.prepare('SELECT value FROM annotation_heads WHERE id IN(SELECT value FROM json_each(?))').all(lineageIds).map(h => parse(h.value));
+    advance(stored,step,currentHeads);
+    const value=json(stored);
+    if (value !== String(r.value)) db.prepare('UPDATE personal_notes SET value=? WHERE id=?').run(value,String(r.id));
   }
-  db.exec('DELETE FROM annotation_heads');
-  for (const h of all) db.prepare('INSERT INTO annotation_heads VALUES(?,?)').run(h.block.id, json(h));
+  db.prepare('DELETE FROM annotation_dirty_units WHERE id IN(SELECT value FROM json_each(?))').run(ids);
 }
 export class Annotations {
   constructor(private db: DatabaseSync) { initializeAnnotations(db); }

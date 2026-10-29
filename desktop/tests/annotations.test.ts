@@ -167,3 +167,30 @@ test('active B annotation follows its own proven edit and cross-unit reassociati
     assert.deepEqual((await core.read(a.sessionId)).unit, a.unit);
   } finally { await core.close(); await rm(root, { recursive: true, force: true }); }
 });
+
+
+test('ordinary save hashes only changed annotation blocks and never rewrites unrelated notes', async () => {
+  const { DatabaseSync } = await import('node:sqlite');
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-local-annotation-save-'));
+  const core = new CourseService(resolve('dist/worker.cjs'), { observe: true });
+  let guard: InstanceType<typeof DatabaseSync> | undefined;
+  try {
+    const a = await core.open(root), b = await core.read(a.sessionId, 'KU-057');
+    const target = a.unit.reading.blocks[0];
+    const untouched = a.unit.reading.blocks.filter(x => x.kind === 'paragraph')[1];
+    const note = await core.annotations.create({ sessionId: a.sessionId, operationId: 'untouched-note', selection: selection(a, [untouched]), text: '无需重建的笔记' });
+    const other = await core.annotations.create({ sessionId: a.sessionId, operationId: 'other-unit-note', selection: selection(b), text: '另一单元的笔记' });
+    guard = new DatabaseSync(join(root, 'course.sqlite'));
+    guard.exec("CREATE TRIGGER no_unrelated_note_update BEFORE UPDATE ON personal_notes BEGIN SELECT RAISE(ABORT, 'unrelated note was rewritten'); END");
+    const before = await core.observe();
+    const request = { sessionId: a.sessionId, operationId: 'local-save', inputSeq: 1, baseRevision: a.revision, complete: true, changes: [{ blockId: target.id, text: '只修改当前段落' }] };
+    const receipt = await core.commitEdit(request);
+    const after = await core.observe();
+    assert.ok(after.counters['annotations.blockHashes'].count - before.counters['annotations.blockHashes'].count <= 2, 'hash work is bounded by the changed block, not course size');
+    assert.equal(after.counters['annotations.unitsRead'].count - before.counters['annotations.unitsRead'].count, 1);
+    assert.equal(after.counters['commands.unitsObserved'].count - before.counters['commands.unitsObserved'].count, 1, 'save observes only the changed unit');
+    assert.deepEqual(await core.annotations.list({ sessionId: a.sessionId }), [note, other]);
+    assert.deepEqual(await core.commitEdit(request), receipt);
+    assert.deepEqual((await core.read(a.sessionId, b.unit.id)).unit, b.unit);
+  } finally { guard?.close(); await core.close(); await rm(root, { recursive: true, force: true }); }
+});
