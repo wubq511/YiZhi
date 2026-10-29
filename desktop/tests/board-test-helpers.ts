@@ -57,6 +57,23 @@ export async function revealBoardControl(page: Page, target: Locator) {
   throw new Error(`画板控件未进入视野：${JSON.stringify(await target.boundingBox())}`);
 }
 
+/** A camera assertion starts after the current range's real reads and measured layout settle. */
+export async function waitForReadingLayout(page:Page) {
+  await page.evaluate(()=>document.fonts.ready);
+  let previous='',stable=0;
+  await expect.poll(async()=>{
+    const sample=await page.evaluate(()=>{
+      const observation=(window as any).__yizhiObservation();
+      if(!observation)throw new Error('Reading layout readiness requires passive observation');
+      return {board:document.querySelector('main.board')?.getBoundingClientRect().toJSON(),pending:(observation['reading.pendingReads']?.current??0)+(observation['measurement.pending']?.current??0)+(observation['layout.scheduledFrames']?.current??0),
+        reads:observation['reading.rangeReads']?.count??0,measurements:observation['measurement.callbacks']?.count??0,
+        geometry:[...document.querySelectorAll<HTMLElement>('article[data-unit-id]')].map(el=>({id:el.dataset.unitId,rect:el.getBoundingClientRect().toJSON()}))};
+    });
+    const current=JSON.stringify(sample);stable=sample.pending===0&&current===previous?stable+1:0;previous=current;
+    return stable;
+  },{message:'Current reading range has no pending reads or measurements and stable geometry'}).toBeGreaterThanOrEqual(2);
+}
+
 /** Read the actual inline transform components without CSSOM string serialization.
  * style.transform rounds to six significant digits; even DOMMatrix's typed conversion
  * uses float32. The translate/scale CSS numeric values retain the original doubles.

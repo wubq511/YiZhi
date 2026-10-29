@@ -9,7 +9,9 @@ test('returning to an uncached unit with the same saved camera preserves visible
  const root=await mkdtemp(join(tmpdir(),'yizhi-range-return-')),course=join(root,'course'),core=new CourseService(resolve('dist/worker.cjs'));
  let app:Awaited<ReturnType<typeof electron.launch>>|undefined,failure:unknown;
  try{
-  const c=await core.open(course),graph=await core.graph(c.sessionId),b=graph.layout.nodes.find(n=>n.unitId==='KU-057')!;
+  const c=await core.open(course),b={unitId:'KU-057',x:20000,y:20000,width:650};
+  // Isolate this camera/cache scenario from neighboring bodies' measured growth.
+  await core.setLayout(c.sessionId,[b]);
   const camera={x:40-b.x*.85,y:100-b.y*.85,zoom:.85};
   await core.setReadingState(c.sessionId,{unitId:'KU-001',pinnedUnitId:'KU-001',expanded:{},scrollTop:0,camera,
    returnStack:[{unitId:'KU-035',blockId:'',scrollTop:0,camera}]});

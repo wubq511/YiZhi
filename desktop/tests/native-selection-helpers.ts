@@ -1,4 +1,4 @@
-import type { Page, Locator } from '@playwright/test';
+import { expect, type Page, type Locator } from '@playwright/test';
 
 /** Measure native glyphs/hit testing without installing a DOM or editor selection. */
 export async function nativeTextPoints(paragraph: Locator) {
@@ -35,8 +35,14 @@ export async function nativeSelection(page: Page, paragraph: Locator) {
 
 
 /** Consume native pointer segments on successive paints; keep the button down for the caller's native-range assertion. */
-export async function nativeDragText(page: Page, from: { x: number; y: number }, to: { x: number; y: number }, steps: number) {
+export async function nativeDragText(page: Page, from: { x: number; y: number; offset:number }, to: { x: number; y: number }, steps: number) {
   await page.mouse.move(from.x, from.y); await page.mouse.down({ clickCount: 1 });
+  // Protocol acknowledgement can precede the native caret update. Observe the
+  // actual start before moving; never install or restore a DOM selection here.
+  await expect.poll(()=>page.evaluate(({x,y,offset})=>{
+    const hit=document.caretRangeFromPoint(x,y),selection=getSelection();
+    return !!hit&&selection?.isCollapsed&&selection.anchorNode===hit.startContainer&&selection.anchorOffset===offset;
+  },from)).toBe(true);
   for (let step = 1; step <= steps; step++) {
     await page.mouse.move(from.x + (to.x - from.x) * step / steps, from.y + (to.y - from.y) * step / steps);
     await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => done())));

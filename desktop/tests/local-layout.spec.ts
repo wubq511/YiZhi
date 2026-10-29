@@ -114,6 +114,8 @@ test('manual width and drag remain after collapse and reopen without replacing t
     await expect.poll(() => page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return (await b.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-001').x; })).toBeGreaterThan(180);
     const saved = await page.evaluate(async () => { const bridge = (window as any).yizhi; const c = await bridge.open(); return (await bridge.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-001'); });
     expect(saved.width).toBe(674); expect(saved.x).toBeGreaterThan(180);
+    await expect.poll(async()=>(await page.locator('.reading-layer').first().boundingBox())!.x).toBeCloseTo(duringDrag.x,1);
+    await expect.poll(async()=>(await page.locator('.reading-layer').first().boundingBox())!.y).toBeCloseTo(duringDrag.y,1);
     expect(await editor.evaluate(el => el.closest('.tiptap') === (window as any).savedEditor)).toBe(true);
     expect(await page.evaluate(() => getSelection()?.toString())).toBe(selection);
     await expect(editor).toHaveText('局部布局保持这个编辑实例与输入');

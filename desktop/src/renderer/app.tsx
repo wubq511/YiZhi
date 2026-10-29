@@ -242,18 +242,24 @@ function App() {
     },
   }, setFollowState), [flow, pinchFrame]);
   useEffect(() => () => camera.dispose(), [camera]);
-  const layoutMetadata=useRef<import('../layout').LayoutNode[]>([]),rangeAnchorRef=useRef<import('../layout').LayoutPlacement|undefined>(undefined);
-  const readingAnchor=useMemo(()=>{
+  const layoutMetadata=useRef<import('../layout').LayoutNode[]>([]),rangeAnchorRef=useRef<string|undefined>(undefined);
+  const navigationAnchorRef=useRef<string|undefined>(undefined);
+  const readingAnchorId=useMemo(()=>{
     if(!cameraReady||viewport.zoom<.55)return undefined;
     const x=(40-viewport.x)/viewport.zoom,y=(100-viewport.y)/viewport.zoom;
     const nodes=layoutMetadata.current.length?layoutMetadata.current:graph?.layout.nodes??[];
-    const previous=nodes.find(n=>n.unitId===rangeAnchorRef.current?.unitId);
-    if(previous&&viewport.x+(previous.x+previous.width)*viewport.zoom>0&&viewport.x+previous.x*viewport.zoom<(boardRef.current?.clientWidth??800)&&viewport.y+(previous.y+previous.height)*viewport.zoom>0&&viewport.y+previous.y*viewport.zoom<(boardRef.current?.clientHeight??600))return rangeAnchorRef.current;
+    const visible=(n:import('../layout').LayoutNode)=>viewport.x+(n.x+n.width)*viewport.zoom>0&&viewport.x+n.x*viewport.zoom<(boardRef.current?.clientWidth??800)&&viewport.y+(n.y+n.height)*viewport.zoom>0&&viewport.y+n.y*viewport.zoom<(boardRef.current?.clientHeight??600);
+    if(navigationAnchorRef.current){
+      const target=nodes.find(n=>n.unitId===navigationAnchorRef.current);
+      if(target&&visible(target)){navigationAnchorRef.current=undefined;return rangeAnchorRef.current=target.unitId;}
+    }
+    const previous=nodes.find(n=>n.unitId===rangeAnchorRef.current);
+    if(previous&&visible(previous))return rangeAnchorRef.current;
     const distance=(n:import('../layout').LayoutNode)=>Math.hypot(Math.max(n.x-x,0,x-n.x-n.width),Math.max(n.y-y,0,y-n.y-n.height));
     const anchor=[...nodes].sort((a,b)=>distance(a)-distance(b)||Math.hypot(a.x-x,a.y-y)-Math.hypot(b.x-x,b.y-y))[0];
-    return rangeAnchorRef.current=anchor?{unitId:anchor.unitId,x:anchor.x,y:anchor.y,width:anchor.width>=360?anchor.width:650}:undefined;
-  },[viewport,cameraReady,graph]);
-  const local = useLocalLayout(graph, selected?.id, camera, viewport.zoom >= .55, cameraReady,readingAnchor);
+    return rangeAnchorRef.current=anchor?.unitId;
+  },[viewport,cameraReady,graph,selected?.id]);
+  const local = useLocalLayout(graph, selected?.id, camera, viewport.zoom >= .55, cameraReady,readingAnchorId);
   layoutMetadata.current=local.placements;
   const [readingBounds,setReadingBounds]=useState({width:0,height:0});
   useEffect(()=>{const board=boardRef.current;if(!board)return;const update=()=>setReadingBounds({width:board.clientWidth,height:board.clientHeight});const observer=new ResizeObserver(update);observer.observe(board);update();return()=>observer.disconnect();},[course?.sessionId]);
@@ -262,9 +268,10 @@ function App() {
     if(!cameraReady||viewport.zoom<.55)return [];
     const margin=100,left=(-viewport.x-margin)/viewport.zoom,top=(-viewport.y-margin)/viewport.zoom,right=(readingBounds.width-viewport.x+margin)/viewport.zoom,bottom=(readingBounds.height-viewport.y+margin)/viewport.zoom;
 
-    return local.placements.filter(n=>n.x+(n.width>=360?n.width:650)>=left&&n.x<=right&&n.y+n.height>=top&&n.y<=bottom).sort((a,b)=>Number(b.unitId===readingAnchor?.unitId)-Number(a.unitId===readingAnchor?.unitId)||a.y-b.y||a.x-b.x).map(n=>n.unitId);
-  },[cameraReady,viewport,readingBounds,local.placements,readingAnchor]);
+    return local.placements.filter(n=>n.x+(n.width>=360?n.width:650)>=left&&n.x<=right&&n.y+n.height>=top&&n.y<=bottom).sort((a,b)=>Number(b.unitId===readingAnchorId)-Number(a.unitId===readingAnchorId)||a.y-b.y||a.x-b.x).map(n=>n.unitId);
+  },[cameraReady,viewport,readingBounds,local.placements,readingAnchorId]);
   const rangeKey=readingRange.join(','),rangeDemand=useRef<string[]>([]),rangePump=useRef<Promise<void>|undefined>(undefined),mountedRef=useRef(mounted);mountedRef.current=mounted;
+  const pendingRangeReads=useMemo(()=>observation.resource('reading.pendingReads'),[]);
   const selectedRef=useRef(selected?.id);selectedRef.current=selected?.id;
   const protectedReadingUnits=(activeId=selectedRef.current)=>[...new Set(['KU-001',activeId,...heldReadingRef.current,mutationUnitRef.current].filter((id):id is string=>!!id))];
   const cacheUnit=useCallback((unit:CourseUnit,activeId=selectedRef.current)=>{
@@ -285,16 +292,18 @@ function App() {
         const sessionId=sessionRef.current,id=rangeDemand.current.find(id=>!failed.has(id)&&!mountedRef.current.some(u=>u.id===id));
         if(!id)break;
         try{
+          pendingRangeReads.set(1);
           observation.count('reading.rangeReads');
           const unit=await window.yizhi.readUnit(sessionId,id);
           if(sessionRef.current!==sessionId||!rangeDemand.current.includes(id))continue;
           cacheUnit(unit);
         }catch(error){failed.add(id);if(sessionRef.current===sessionId&&rangeDemand.current.includes(id))setReadError((error as Error).message);}
+        finally{pendingRangeReads.set(0);}
       }
     };
     if(!rangePump.current){const work=run();rangePump.current=work;void work.finally(()=>{if(rangePump.current===work)rangePump.current=undefined;});}
   },[course?.sessionId,rangeKey,heldReading.join(','),mutationUnit,selected?.id,cacheUnit]);
-  useEffect(()=>()=>{rangeDemand.current=[];},[]);
+  useEffect(()=>()=>{rangeDemand.current=[];pendingRangeReads.close();},[]);
   const placementsRef = useRef(local.placements); placementsRef.current = local.placements;
   const [layoutSave, setLayoutSave] = useState<'saved' | 'pending' | 'error'>('saved');
   type PendingPlacement = { request: import('../drawing-api').PlacementChange & {sessionId:string}; done(edit: import('../drawing-api').PlacementEdit):void };
@@ -318,7 +327,8 @@ function App() {
   const placement=(node:LayoutPlacement):LayoutPlacement=>({unitId:node.unitId,x:node.x,y:node.y,width:node.width});
   const enqueuePlacement=(before:LayoutPlacement,after:LayoutPlacement,done:(edit:import('../drawing-api').PlacementEdit)=>void)=>{
     if(!course)return;
-    if(before.x!==after.x||before.y!==after.y)local.manual(after.unitId);
+    const current=placementsRef.current.find(node=>node.unitId===after.unitId);
+    local.manual(before.x!==after.x||before.y!==after.y?after:{...after,x:current?.x??after.x,y:current?.y??after.y});
     setGraph(current=>current&&({...current,layout:{...current.layout,nodes:current.layout.nodes.map(node=>node.unitId===after.unitId?{...node,...after}:node)}}));
     const request={sessionId:course.sessionId,operationId:crypto.randomUUID(),before:placement(before),after:placement(after)};
     layoutPending.current.push({request,done});saveLayout();return request;
@@ -423,6 +433,7 @@ function App() {
 
     catch (error) { setSelected(undefined); setReadError((error as Error).message); }
     pinchFrame.cancel();
+    navigationAnchorRef.current=nextState?.camera?undefined:id;
     if (nextState?.camera) await flow.setViewport(nextState.camera, { duration: 0 });
     else await flow.setCenter(position.x + 325, position.y + 250, { zoom: 0.85, duration: 0 });
   };
@@ -439,7 +450,9 @@ function App() {
           await local.waitForMeasurements([...new Set([reading.unitId, ...(reading.pinnedUnitId || reading.modification ? ['KU-001'] : [])])]);
           if (reading.camera) await flow.setViewport(reading.camera, { duration: 0 });
         }
-        else await flow.fitView({ duration: 0 });
+        // Overview nodes already carry authoritative layout dimensions. Fitting
+        // those bounds must not wait for offscreen graph DOM measurements.
+        else await flow.fitBounds(flow.getNodesBounds(flow.getNodes()), { duration: 0 });
         // Expose navigation after the restored viewport reaches the DOM, so initial
         // placement cannot overwrite an early student gesture or navigation.
         requestAnimationFrame(() => setCameraReady(true));
