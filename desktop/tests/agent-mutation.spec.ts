@@ -11,7 +11,7 @@ test('small actual Electron window follows real tool groups, keeps student takeo
  try{
   let page=await app.firstWindow();await resizeBoardWindow(app,page);
   await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();
-  await page.getByRole('button',{name:'Agent · 学习对话',exact:true}).click();
+  await page.getByRole('button',{name:'学习对话',exact:true}).click();
   await expect(page.getByText('本机 Codex CLI · 已连接',{exact:true})).toBeVisible();
   await page.getByLabel('Agent 请求方式').selectOption('modify');
   await page.getByRole('textbox',{name:'学习对话草稿'}).fill('受控协议竞争回归，不是真实Agent验收');
@@ -37,13 +37,15 @@ test('small actual Electron window follows real tool groups, keeps student takeo
   await page.getByRole('button',{name:'收起对话',exact:true}).click();
   const summary=page.locator('[data-agent-unit="KU-001"] details summary').first();await revealBoardControl(page,summary);await summary.click();await summary.click();
   expect((await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return b.graph(c.sessionId);})).layout.nodes.find((n:any)=>n.unitId==='KU-001')).toEqual(baseline);
-  await page.getByRole('button',{name:'Agent · 学习对话',exact:true}).click();
+  await page.getByRole('button',{name:'学习对话',exact:true}).click();
   await page.getByRole('button',{name:'停止任务',exact:true}).click();
   await expect(page.getByRole('status',{name:'回答状态'})).toContainText('已停止');
   await app.close();app=await launch();page=await app.firstWindow();await resizeBoardWindow(app,page);
-  await page.getByRole('button',{name:'Agent · 学习对话',exact:true}).click();await expect(page.getByRole('status',{name:'回答状态'})).toContainText('已停止');
+  await page.getByRole('button',{name:'学习对话',exact:true}).click();await expect(page.getByRole('status',{name:'回答状态'})).toContainText('已停止');
   expect((await page.evaluate(()=>(window as any).yizhi.open())).unit).toEqual(actual.unit);
+  await page.getByRole('button',{name:'课程目录',exact:true}).click();
   await page.getByRole('button',{name:'非十进制与十进制互转',exact:true}).click();
+  await page.getByRole('button',{name:'学习对话',exact:true}).click();
   await page.getByRole('button',{name:'查看实际修改',exact:true}).click();
   await expect.poll(()=>page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return (await b.readingState(c.sessionId)).unitId;})).toBe('KU-001');
   if(process.env.YIZHI_EVIDENCE_DIR)await page.screenshot({path:join(process.env.YIZHI_EVIDENCE_DIR,'t17-controlled-small-reopen.png')});

@@ -80,7 +80,7 @@ test('real persisted overlapping versions expose only the conflict and the stude
     await expect(conflict).toContainText('学生的真实已保存草稿');
     await page.setViewportSize({ width: 700, height: 700 });
     // Viewport emulation only; not physical input/device acceptance.
-    const closeDirectory = page.getByRole('button', { name: '关闭目录', exact: true });
+    const closeDirectory = page.getByRole('button', { name: '收起目录', exact: true });
     await expect(closeDirectory).toBeVisible();
     await closeDirectory.click();
     await conflict.scrollIntoViewIfNeeded();

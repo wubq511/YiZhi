@@ -1,3 +1,13 @@
+import { createPortal } from 'react-dom';
+import { ShellPanels, PanelDock, usePanels } from './shell/panels';
+import { NavigationRail } from './shell/navigation';
+import { CourseMenu } from './shell/course-menu';
+import { SaveIndicator, useSaveReport, resetSaves, reportSave } from './shell/save-status';
+import { CanvasToolbar, CanvasNavigation } from './shell/canvas-toolbar';
+import { Button } from './components/ui/button';
+import { MessageCircle, ChevronRight, X, ArrowLeft, Circle, CircleCheck, CircleAlert } from 'lucide-react';
+import type { DrawingToolState } from './drawings';
+import type { AnnotationSelection } from '../annotation-api';
 import { observation } from '../acceptance-observation';
 import { BackupPanel } from './backup-panel';
 import { ReadonlyCourse } from './readonly-course';
@@ -39,7 +49,13 @@ import type { SourceCitation } from '../sources-api';
 import { ReviewControls } from './review-controls';
 import type { ReviewSnapshot, ReviewStatus } from '../shared';
 
+import './shell/workspace-shell.css';
+
 declare global { interface Window { yizhi: DesktopBridge } }
+
+function visibleError(message: string) {
+  return message.replace(/^Error invoking remote method '[^']+': (?:Error: )?/, '').split(/\n\s*at\s/)[0];
+}
 
 function RoughFrame({ id }: { id: string }) {
   const ref = useRef<SVGSVGElement>(null);
@@ -138,14 +154,18 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
   } }, [mounted,cachedBodies]);
   const [readError, setReadError] = useState<string>();
   const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 0.1 });
-  const [directory, setDirectory] = useState(true);
+  const shell = usePanels();
+  const directory = shell.visibleLeft === 'directory';
+  const setDirectory = (open: boolean) => shell.set('directory', open);
+  const backupPanel = useRef<{open():void}>(null), retentionPanel = useRef<{open():void}>(null), restorePanel = useRef<{open():void}>(null);
+  const [drawingTool, setDrawingTool] = useState<DrawingToolState>({space:'board',pending:false});
+  const capturedSelection = useRef<AnnotationSelection | undefined>(undefined);
   const [directoryTheme, setDirectoryTheme] = useState<string>();
   const [narrow, setNarrow] = useState(() => matchMedia('(max-width: 760px)').matches);
-  const directoryButton = useRef<HTMLButtonElement>(null);
   const navRef = useRef<HTMLElement>(null);
   useEffect(() => { const media = matchMedia('(max-width: 760px)'); const update = () => setNarrow(media.matches); media.addEventListener('change', update); return () => media.removeEventListener('change', update); }, []);
   useEffect(() => { if (cameraReady && narrow && directory) navRef.current?.querySelector<HTMLButtonElement>('button')?.focus(); }, [narrow, directory, cameraReady]);
-  const closeDirectory = () => { setDirectory(false); requestAnimationFrame(() => directoryButton.current?.focus()); };
+  const closeDirectory = () => setDirectory(false);
   const trap = (event: KeyboardEvent<HTMLElement>, close: () => void) => {
     if (!narrow) return;
     if (event.key === 'Escape') { event.preventDefault(); close(); return; }
@@ -158,17 +178,14 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
   const [minimap, setMinimap] = useState(true);
   const [tool, setTool] = useState<"read" | "select" | "hand">("read");
   const historyPanel=useRef<HistoryPanelHandle>(null);
-  const [searchOpen, setSearchOpen] = useState(false);
-  useEffect(() => { if (narrow && searchOpen) setDirectory(false); }, [narrow, searchOpen]);
+
   const searchOrigin = useRef<(() => Promise<void>) | undefined>(undefined);
   const [searchReturn, setSearchReturn] = useState<(() => Promise<void>)>();
   const [sourceOpen, setSourceOpen] = useState(false);
-  const [sourcesOpen, setSourcesOpen] = useState(false);
-  const [agentOpen, setAgentOpen] = useState(false);
+  const sourcesOpen = shell.visibleLeft === 'sources';
   const agentPanel = useRef<AgentPanelHandle>(null);
   const drawingPanel = useRef<DrawingHandle>(null);
   const notesPanel = useRef<AnnotationPanelHandle>(null);
-  const [notesOpen, setNotesOpen] = useState(false);
   const sourcesPanel = useRef<SourcePanelHandle>(null);
   const [sourceCitations, setSourceCitations] = useState<SourceCitation[]>([]);
   const sourceTrigger = useRef<HTMLButtonElement | null>(null);
@@ -177,9 +194,8 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
   useEffect(() => { if (sourceOpen) sourceDialog.current?.querySelector<HTMLButtonElement>('button')?.focus(); }, [sourceOpen]);
   const [relationsOpen, setRelationsOpen] = useState(false);
   const [relationFocus, setRelationFocus] = useState<string>();
-  const relationButton = useRef<HTMLButtonElement>(null);
   const relationPanel = useRef<HTMLElement>(null);
-  const closeRelations = () => { setRelationsOpen(false); requestAnimationFrame(() => relationButton.current?.focus()); };
+  const closeRelations = () => { setRelationsOpen(false); requestAnimationFrame(() => document.querySelector<HTMLButtonElement>('.canvas-toolbar [aria-label="关系"]')?.focus()); };
   useEffect(() => { if (narrow && relationsOpen) { setDirectory(false); relationPanel.current?.querySelector<HTMLButtonElement>('button')?.focus(); } }, [narrow, relationsOpen]);
   const [relationView, setRelationView] = useState("main");
   const [course, setCourse] = useState<OpenedCourse>();
@@ -355,6 +371,7 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
   };
   const composing = useRef(false);
   const load = async () => {
+    resetSaves();
     setLoadError(undefined);
     setReadonlyReport(undefined);
     setCameraReady(false);
@@ -367,7 +384,7 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
       if (savedReading?.pinnedUnitId === 'KU-001' || savedReading?.modification) setMounted([opened.unit]);
       if (savedReading?.modification) { workTarget.current = savedReading.modification.targetId; camera.restore(savedReading.modification.ended); }
       setGraph(loadedGraph); setReview(reviewSnapshot); readingRef.current = savedReading; restored.current = false; setReading(savedReading);
-    } catch (error) { setLoadError((error as Error).message);try{const report=await window.yizhi.courseFormat.inspect();if(!report.writable)setReadonlyReport(report);}catch{/* The original open error remains visible. */} }
+    } catch (error) { setLoadError('课程暂时无法打开。请确认课程文件夹仍在原位置，并重新打开；原有内容会保留。');try{const report=await window.yizhi.courseFormat.inspect();if(!report.writable)setReadonlyReport(report);}catch{/* The original open error remains visible. */} }
   };
   useEffect(() => { void load(); return () => channel.current?.dispose(); }, []);
   useEffect(()=>window.yizhi.onCloseCancelled(()=>{document.body.inert=false;setClosing(false);}),[]);
@@ -430,7 +447,10 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
     pinchFrame.cancel();
     navigationAnchorRef.current=nextState?.camera?undefined:id;
     if (nextState?.camera) await flow.setViewport(nextState.camera, { duration: 0 });
-    else await flow.setCenter(position.x + 325, position.y + 250, { zoom: 0.85, duration: 0 });
+    else {
+      const zoom = .85, width = position.width >= 360 ? position.width : 650;
+      await flow.setViewport({x:Math.max(24,((boardRef.current?.clientWidth ?? 800)-width*zoom)/2)-position.x*zoom,y:100-position.y*zoom,zoom},{duration:0});
+    }
   };
   const go = (id: string, nextState?: ReadingState): Promise<void> => {
     const pending = navigate(id, nextState); navigation.current = pending; return pending;
@@ -513,20 +533,33 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
     }
     return [...groups.entries()].map(([id, group]) => ({ id, source: group.source, target: group.target, label: `${group.type} · ${group.count} 条已有关系`, markerEnd: group.directed ? { type: MarkerType.ArrowClosed } : undefined, animated: false }));
   }, [graph, relationView, unitDetail]);
+  const reviewSequences = useRef(new Map<string, number>());
   const changeReview = async (unitId: string, status: ReviewStatus) => {
     if (!course) return;
-    try { setReview(await window.yizhi.setReviewStatus(course.sessionId, unitId, status)); }
-    catch (error) { setReadError((error as Error).message); }
+    const id = `review:${unitId}`, sequence = (reviewSequences.current.get(id) ?? 0) + 1;
+    reviewSequences.current.set(id, sequence);
+    const label = `复习状态 · ${graph?.nodes.find(n => n.id === unitId)?.name ?? unitId}`;
+    reportSave(id, {label, status:'saving'});
+    try {
+      setReview(await window.yizhi.setReviewStatus(course.sessionId, unitId, status));
+      if (reviewSequences.current.get(id) === sequence) reportSave(id, {label,status:'saved'});
+    } catch {
+      if (reviewSequences.current.get(id) === sequence) reportSave(id, {label,status:'error',detail:'复习状态未保存，当前选择可重试。',retry:()=>changeReview(unitId,status)});
+    }
   };
   const confirmReview = async (promptId: string, adjust: boolean) => {
     if (!course) return;
+    const id=`review-prompt:${promptId}`, label='复习状态确认';
+    reportSave(id,{label,status:'saving'});
     try {
-      const outcome = await window.yizhi.confirmReviewPrompt(course.sessionId, promptId, adjust);
+      const outcome=await window.yizhi.confirmReviewPrompt(course.sessionId,promptId,adjust);
       setReview(await window.yizhi.reviewStates(course.sessionId));
-      if (outcome === 'stale') setReadError('复习状态或正文已变化，旧确认已失效。');
-    } catch (error) { setReadError((error as Error).message); }
+      reportSave(id,{label,status:'saved'});
+      if(outcome==='stale')setReadError('复习状态或正文已变化，旧确认已失效。');
+    } catch { reportSave(id,{label,status:'error',detail:'复习状态确认未保存。',retry:()=>confirmReview(promptId,adjust)}); }
   };
   const captureSearchScene = () => {
+    const shellScene = shell.capture();
     const original = structuredClone(readingRef.current), originalCamera = flow.getViewport();
     const selection = getSelection(), range = selection?.rangeCount ? selection.getRangeAt(0).cloneRange() : undefined;
     const focused = document.activeElement as HTMLElement | null;
@@ -534,19 +567,21 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
     const details = [...document.querySelectorAll<HTMLDetailsElement>('details')].map(el => ({ el, open: el.open }));
     const sourceScene = sourcesPanel.current?.capture(), noteScene = notesPanel.current?.capture(), agentScene = agentPanel.current?.capture();
     const restore = async () => {
+      const activation = shell.restore(shellScene);
       continuous.current?.clearSearch();
       for (const input of unitInputs.current.values()) input.editor()?.clearSearch();
-      if (sourceScene) await sourcesPanel.current?.restore(sourceScene);
-      if (noteScene) await notesPanel.current?.restore(noteScene);
-      if (agentScene) await agentPanel.current?.restore(agentScene);
+      if (sourceScene) await sourcesPanel.current?.restore(sourceScene, false);
+      if (noteScene) await notesPanel.current?.restore(noteScene, false);
+      if (agentScene) await agentPanel.current?.restore(agentScene, false);
+      await paintFrame();
       if (original) { await go(original.unitId, { ...original, camera: originalCamera }); await local.waitForMeasurements([original.unitId]); }
       else { persist({ unitId: 'KU-001', expanded: {}, returnStack: [], scrollTop: 0, camera: originalCamera }); setSelected(undefined); }
       for (const { el, open } of details) if (el.isConnected) el.open = open;
       await paintFrame(); await flow.setViewport(originalCamera, { duration: 0 });
       document.querySelectorAll('[data-search-current]').forEach(el => el.removeAttribute('data-search-current'));
-      if (focused?.isConnected) { focused.focus({ preventScroll: true }); if (inputSelection && (focused instanceof HTMLTextAreaElement || focused instanceof HTMLInputElement)) focused.setSelectionRange(inputSelection.start, inputSelection.end); }
+      if (shell.activity() === activation && focused?.isConnected) { focused.focus({ preventScroll: true }); if (inputSelection && (focused instanceof HTMLTextAreaElement || focused instanceof HTMLInputElement)) focused.setSelectionRange(inputSelection.start, inputSelection.end); }
       if (range?.startContainer.isConnected && range.endContainer.isConnected) { const next = getSelection(); next?.removeAllRanges(); next?.addRange(range); }
-      setSearchReturn(undefined);
+      setSearchReturn(current => current === restore ? undefined : current);
     };
     return restore;
   };
@@ -612,19 +647,39 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
         if(!await flushExtensions(course.sessionId)||!await flushBuiltinExperiments(window.yizhi,course.sessionId))throw new Error('实验现场尚未确认，请先保存或恢复最近确认现场。');
         if(!await channel.current?.flush()||!await flushUnitInputs(true)||continuous.current&&!await continuous.current.finish())throw new Error('当前输入尚未持久保留，请先重试保存。');
   };
-  const status = { draft: '草稿已保留', saved: '已保存', pending: '待保存', saving: '正在保存…', error: '未保存' }[state.status];
+  const captureSelection = () => {
+    const editor = selected?.id && selected.id !== course?.unit.id ? unitInputs.current.get(selected.id)?.editor() : continuous.current;
+    const captured = editor?.captureAnnotation();
+    if (captured?.fragments.length) capturedSelection.current = captured;
+    updateReadingProtection();
+  };
+  const chooseTool = (next: typeof tool) => { setTool(next); drawingPanel.current?.select(next === 'select'); };
+  useEffect(() => {
+    const key = (event: globalThis.KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k' && !event.isComposing) {
+        event.preventDefault(); captureSelection(); searchOrigin.current = captureSearchScene(); shell.set('search', true);
+        requestAnimationFrame(() => document.querySelector<HTMLInputElement>('[aria-label="查找已有内容"]')?.focus());
+      }
+    };
+    document.addEventListener('keydown', key); return () => document.removeEventListener('keydown', key);
+  });
+  useSaveReport('body', { label: '正文', status: state.status, detail: state.error, retry: () => channel.current?.flush() });
+  useSaveReport('layout', { label: '布局', status: layoutSave, retry: saveLayout });
+  useSaveReport('reading', { label: '阅读位置', status: readingSave, retry: () => { if (readingRef.current) { readingFailed.current = false; persist(readingRef.current); } } });
   if(!course&&readonlyReport)return <><header className="app-header"><strong className="brand">绎知</strong><span>兼容范围只读 · 拒绝写入</span><button onClick={()=>void load()}>重新核对版本</button></header><ReadonlyCourse report={readonlyReport}/></>;
   return <>
-    <header className="app-header" inert={sourceOpen || (narrow && (directory || relationsOpen || sourcesOpen || agentOpen || notesOpen || searchOpen))}><strong className="brand">绎知</strong><span>数字逻辑 · 期中复习</span>
-      {course?.courseFormat===2&&<span role="status" aria-label="课程格式">课程已升级</span>}
-      {course&&<BackupPanel sessionId={course.sessionId} prepare={prepareCourseSnapshot} onReturn={()=>{if(narrow)setDirectory(false);}}/>}
-      {course&&<RetentionPanel key={course.sessionId} sessionId={course.sessionId} onReturn={()=>{if(narrow)setDirectory(false);}} prepare={async()=>{
+    <header className="app-header">
+      <CourseMenu backup={() => backupPanel.current?.open()} history={() => historyPanel.current?.open()} restore={() => restorePanel.current?.open()} settings={() => retentionPanel.current?.open()}/>
+      <SaveIndicator ready={!!course}/>
+      <Button variant="ghost" className="agent-entry" aria-label="学习对话" aria-expanded={shell.visibleAgent} onPointerDown={captureSelection} onClick={() => { captureSelection(); shell.set('agent', !shell.visibleAgent); }}><MessageCircle size={19}/><span>学习对话</span></Button>
+      {course&&<BackupPanel ref={backupPanel} sessionId={course.sessionId} prepare={prepareCourseSnapshot} onReturn={()=>{if(narrow)setDirectory(false);}}/>}
+      {course&&<RetentionPanel ref={retentionPanel} key={course.sessionId} sessionId={course.sessionId} onReturn={()=>{if(narrow)setDirectory(false);}} prepare={async()=>{
         if(composing.current)throw new Error('请先完成中文候选输入，再管理历史与空间。');
         const saved=await channel.current?.flush(),progress=channel.current?.progress();
         if(!saved&&(!progress||progress.durableInputSeq<progress.inputSeq))throw new Error('当前输入尚未保留，请先重试保存。');
         if(continuous.current&&!await continuous.current.finish()||!await flushUnitInputs(true))throw new Error('当前单元输入尚未保留，请先重试保存。');
       }}/>}
-      {course&&graph&&<CourseRestorePanel sessionId={course.sessionId} courseId={course.courseId} units={graph.nodes.map(n=>({id:n.id,name:n.name}))} prepare={prepareCourseSnapshot}/>}
+      {course&&graph&&<CourseRestorePanel ref={restorePanel} sessionId={course.sessionId} courseId={course.courseId} units={graph.nodes.map(n=>({id:n.id,name:n.name}))} prepare={prepareCourseSnapshot}/>}
       {course&&graph&&<HistoryPanel ref={historyPanel} sessionId={course.sessionId} units={graph.nodes.map(n=>({id:n.id,name:n.name}))} prepare={async()=>{
         if(composing.current)throw new Error('请先完成中文候选输入，再查看或恢复历史。');
         const saved=await channel.current?.flush();
@@ -647,9 +702,8 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
         const updated=await Promise.all(mounted.map(u=>window.yizhi.readUnit(course.sessionId,u.id)));setMounted(updated);
         setSelected(previous=>updated.find(u=>u.id===previous?.id)??previous);setGraph(await window.yizhi.graph(course.sessionId));
       }}/>}
-      {course && <SearchPanel sessionId={course.sessionId} narrow={narrow} beforeOpen={() => { searchOrigin.current = captureSearchScene(); }} onOpenChange={value => { setSearchOpen(value); if (value && narrow) setDirectory(false); }} locate={locateSearch} />}
-      {searchReturn && <button onClick={() => void searchReturn().catch(e => setReadError(e.message))}>返回搜索前位置</button>}
-      {course && <AnnotationPanel ref={notesPanel} sessionId={course.sessionId} narrow={narrow} prepare={async () => !!await channel.current?.flush() && await flushUnitInputs()} onOpenChange={value => { setNotesOpen(value); if (value && narrow) setDirectory(false); }} locate={async note => {
+      {course && <SearchPanel sessionId={course.sessionId} narrow={narrow} locate={locateSearch} />}
+      {course && <AnnotationPanel ref={notesPanel} sessionId={course.sessionId} narrow={narrow} prepare={async () => !!await channel.current?.flush() && await flushUnitInputs()} locate={async note => {
         if (!await channel.current?.flush() || !await flushUnitInputs(true)) throw new Error('请先完成当前输入，再定位批注。');
         const unitId = note.current.unitId ?? note.original.unitId;
         if (selected?.id !== unitId) await go(unitId);
@@ -661,7 +715,7 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
         const latest = (await window.yizhi.annotations.list({ sessionId: course.sessionId })).find(item => item.id === note.id);
         if (latest) await editor.revealAnnotation(latest);
       }} />}
-      {course && <SourcePanel ref={sourcesPanel} sessionId={course.sessionId} narrow={narrow} target={selected ? { unitId: selected.id } : undefined} onOpenChange={setSourcesOpen} onCitationsChange={setSourceCitations} onQuestion={citation => agentPanel.current?.attachCitation(citation)} />}
+      {course && <SourcePanel ref={sourcesPanel} sessionId={course.sessionId} narrow={narrow} target={selected ? { unitId: selected.id } : undefined} onCitationsChange={setSourceCitations} onQuestion={citation => agentPanel.current?.attachCitation(citation)} />}
       {course && <AgentPanel ref={agentPanel} sessionId={course.sessionId} narrow={narrow} target={{ unitId: selected?.id ?? course.unit.id }} targetName={selected?.name ?? course.unit.name} anchorUnitId={course.unit.id} sourceOpen={sourcesOpen} prepareMutation={async()=>{ if(composing.current)throw new Error('请先完成中文候选输入。');if(!await channel.current?.flush() || !await flushUnitInputs())throw new Error('请先重试保存当前输入。'); }} onMutation={async(task,phase)=>{
         const generatedUnitId=task.snapshot.generationSpec?.unitId;
         const displayedUnitId=generatedUnitId&&(phase==='view'||task.progress?.stage==='committed')?generatedUnitId:task.snapshot.target.unitId;
@@ -687,7 +741,7 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
         }
         else if(phase==='finish'){mutationUnitRef.current=undefined;setMutationUnit(undefined);camera.finish();if(readingRef.current)persist({...readingRef.current,modification:{targetId:workTarget.current,ended:true}});}
         else requestAnimationFrame(()=>camera.updated());
-      }} onOpenChange={value => { setAgentOpen(value); if (value && narrow) setDirectory(false); }} openCitation={citation => sourcesPanel.current?.openCitation(citation)} />}
+      }} openCitation={citation => sourcesPanel.current?.openCitation(citation)} />}
       {!cameraReady && !loadError && <span role="status" aria-label="画板定位">{course?'正在定位画板…':'正在打开课程…'}</span>}
 
       {course && Accessory && <Accessory course={course} narrow={narrow} onOpenChange={setAccessoryOpen} started={async () => {
@@ -707,27 +761,28 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
         setCourse(current);
         setMounted(previous => previous.map(item => item.id === current.unit.id ? current.unit : item));
       }} settled={() => { accessoryRunning.current = false; setAccessoryBusy(false); }} />}
-      <div className="save-area" inert={narrow && accessoryOpen}><span role="status" aria-label="布局状态" className={layoutSave === 'error' ? 'layout-save-error' : ''}>{layoutSave === 'saved' ? '布局已保存' : layoutSave === 'pending' ? '正在保存布局' : '布局未保存'}</span>{layoutSave === 'error' && <button onClick={saveLayout}>重试保存布局</button>}<span role="status" aria-label="阅读状态">{readingSave === "error" ? "阅读位置未保存" : readingSave === "pending" ? "正在保存阅读位置" : "阅读位置已保存"}</span>{readingSave === "error" && <button onClick={() => { if (readingRef.current) { readingFailed.current = false; persist(readingRef.current); } }}>重试保存阅读位置</button>}<span role="status" aria-label="保存状态" aria-live="polite" className={state.status}>{course ? status : '正在打开课程…'}</span>
-
-        {state.status === 'error' && <button onClick={() => void channel.current?.flush()}>重试保存</button>}
-      </div>
     </header>
     {inputRecovery?.unconfirmedTail && <div className="save-error" role="status">{inputRecovery.detail}</div>}
-    {state.error && <div className="save-error" role="alert">{state.error}{!state.error.includes('冲突部分') && ' 输入仍保留，请重试保存。'}</div>}
-    <div className="workspace board-workspace" inert={(!cameraReady && !loadError) || (narrow && (sourcesOpen || agentOpen || notesOpen || searchOpen))} aria-busy={!cameraReady && !loadError}>
-      {directory && <nav ref={navRef} inert={sourceOpen || (narrow && (relationsOpen || accessoryOpen))} aria-label="课程目录" onKeyDown={event => trap(event, closeDirectory)}><h2>课程目录</h2>{narrow && <button onClick={closeDirectory}>关闭目录</button>}
-        <label className="review-filter">复习状态筛选 <select aria-label="复习状态筛选" value={reviewFilter} onChange={event => setReviewFilter(event.target.value as typeof reviewFilter)}><option value="all">全部单元</option><option value="pending">待复习</option><option value="weak">薄弱</option><option value="mastered">已掌握</option></select></label>
-        {graph?.groups.map(group => { const counts = review?.themes[group.id]; const matches = graph.nodes.filter(node => node.themeId === group.id && (reviewFilter === 'all' ? (directoryTheme ?? selected?.theme.id) === group.id : review?.units[node.id]?.status === reviewFilter)); return <div key={group.id}><button aria-label={group.name} className="directory-theme" onClick={() => { setDirectoryTheme(group.id); const first = matches[0] ?? graph.nodes.find(node => node.themeId === group.id); if (first) { void go(first.id); if (narrow) closeDirectory(); } }}>{group.name}{counts ? <span aria-hidden="true"> · 待复习 {counts.pending} / 薄弱 {counts.weak} / 已掌握 {counts.mastered}</span> : ''}</button>{matches.map(node => <button aria-label={node.name} className="directory-unit" key={node.id} onClick={() => { void go(node.id); if (narrow) closeDirectory(); }}>{node.name}{review ? <span aria-hidden="true"> · {{ pending: '待复习', weak: '薄弱', mastered: '已掌握' }[review.units[node.id]?.status ?? 'pending']}</span> : ''}</button>)}</div>; })}</nav>}
-      <main onWheelCapture={event => { if (!((event.target as HTMLElement).closest('.board-tools, .relations-panel, .source-dialog, input, select, textarea, .mux, .builtin-formula-editor, math-field'))) camera.takeover(); }} onPointerDownCapture={event => { pinchFrame.cancel(); const target = event.target as HTMLElement; if (target.closest('.react-flow__pane, .react-flow__minimap, .board-tools')) camera.takeover(); }} ref={boardRef} className="board" aria-label="知识画板" role="region" inert={narrow && ((directory && !relationsOpen) || accessoryOpen)}>
+    {state.error && <div className="save-error" role="alert">{visibleError(state.error)}{!state.error.includes('冲突部分') && ' 输入仍保留，请重试保存。'}</div>}
+    <div className="workspace board-workspace" aria-busy={!cameraReady && !loadError}>
+      <NavigationRail beforeOpen={id => { captureSelection(); if (id === 'search' && shell.visibleLeft !== 'search') searchOrigin.current = captureSearchScene(); }}/>
+      <PanelDock side="left">
+      <nav ref={navRef} className="directory-panel" hidden={!directory} inert={!directory || sourceOpen} aria-label="课程目录" onKeyDown={event => { if (event.key === 'Escape') closeDirectory(); }}>
+        <div className="panel-heading"><h2>课程目录</h2><button className="panel-close" aria-label="收起目录" onClick={closeDirectory}><X size={18}/></button></div>
+        <label className="review-filter"><span className="sr-only">复习状态筛选</span><select aria-label="复习状态筛选" value={reviewFilter} onChange={event => setReviewFilter(event.target.value as typeof reviewFilter)}><option value="all">全部单元</option><option value="pending">待复习</option><option value="weak">薄弱</option><option value="mastered">已掌握</option></select></label>
+        {graph?.groups.map(group => { const counts = review?.themes[group.id]; const matches = graph.nodes.filter(node => node.themeId === group.id && (reviewFilter === 'all' ? (directoryTheme ?? selected?.theme.id) === group.id : review?.units[node.id]?.status === reviewFilter)); return <div key={group.id}><button aria-label={group.name} className="directory-theme" aria-expanded={(directoryTheme ?? selected?.theme.id) === group.id} onClick={() => { setDirectoryTheme(group.id); const first = matches[0] ?? graph.nodes.find(node => node.themeId === group.id); if (first) { void go(first.id); if (narrow) closeDirectory(); } }}><ChevronRight size={15}/><span className="directory-title">{group.name}</span>{counts ? <span className="directory-count" aria-label={`${counts.mastered} 个已掌握`}>{counts.mastered}/{counts.pending+counts.weak+counts.mastered}</span> : ''}</button>{matches.map(node => <button aria-label={node.name} aria-describedby={`review-state-${node.id}`} className="directory-unit" aria-current={selected?.id === node.id ? "page" : undefined} key={node.id} onClick={() => { void go(node.id); if (narrow) closeDirectory(); }}><span className="directory-title">{node.name}</span>{review ? <span id={`review-state-${node.id}`} className={`directory-status status-${review.units[node.id]?.status ?? "pending"}`} title={{pending:'待复习',weak:'薄弱',mastered:'已掌握'}[review.units[node.id]?.status ?? 'pending']}><span className="sr-only">{{pending:'待复习',weak:'薄弱',mastered:'已掌握'}[review.units[node.id]?.status ?? 'pending']}</span>{review.units[node.id]?.status === 'mastered' ? <CircleCheck size={13} aria-hidden="true"/> : review.units[node.id]?.status === 'weak' ? <CircleAlert size={13} aria-hidden="true"/> : <Circle size={5} aria-hidden="true"/>}</span> : ''}</button>)}</div>; })}</nav></PanelDock>
+      <main onWheelCapture={event => { if (!((event.target as HTMLElement).closest('.board-tools, .relations-panel, .source-dialog, input, select, textarea, .mux, .builtin-formula-editor, math-field'))) camera.takeover(); }} onPointerDownCapture={event => { pinchFrame.cancel(); const target = event.target as HTMLElement; if (target.closest('.react-flow__pane, .react-flow__minimap, .board-tools')) camera.takeover(); }} ref={boardRef} className="board" aria-label="知识画板" role="region" inert={(narrow && (!!shell.visibleLeft || shell.visibleAgent || accessoryOpen)) || !cameraReady && !loadError}>
         <div className="board-background" inert={sourceOpen || (narrow && relationsOpen)}><ReactFlow onlyRenderVisibleElements nodes={nodes} edges={edges} onInit={() => setNodesReady(true)} onEdgeClick={(_event, edge) => { setRelationFocus(edge.id); setRelationsOpen(true); }} minZoom={0.04} maxZoom={2} nodesDraggable={false} panOnScroll zoomOnScroll={false} zoomOnPinch panOnDrag={tool === "select" ? [1] : [0, 1]} selectionOnDrag={tool === "select"} panActivationKeyCode="Space" onMoveStart={event => { if (event) { pinchFrame.cancel(); camera.takeover(); } }} onMove={(event, next) => { updateReadingProtection(); if (event) camera.takeover(); setViewport(next); }} onMoveEnd={(_event, next) => { const current = readingRef.current; if (current) persist({ ...current, camera: next }); }} onNodeClick={(_event, node) => { const first = graph?.nodes.find(item => item.id === node.id || item.themeId === node.id); if (first) void go(first.id); }}>
 
 
 
-          {minimap && <MiniMap ariaLabel="小地图" nodeColor="#7798bc" nodeStrokeColor="#345d88" maskColor="rgba(105,101,219,.12)" pannable zoomable />}
+          {minimap && boardRef.current && createPortal(<MiniMap ariaLabel="小地图" style={{width:narrow?150:190,height:narrow?95:120}} nodeColor="#7798bc" nodeStrokeColor="#345d88" maskColor="rgba(105,101,219,.12)" pannable zoomable />, boardRef.current)}
         </ReactFlow>
-        <div className="board-tools">{reading?.returnStack.length ? <button onClick={() => { const previous = reading.returnStack[reading.returnStack.length - 1]; void go(previous.unitId, { ...reading, unitId: previous.unitId, scrollTop: previous.scrollTop, camera: previous.camera, returnStack: reading.returnStack.slice(0, -1) }); }}>返回引用位置</button> : null}<button ref={directoryButton} onClick={() => setDirectory(!directory)}>{directory ? '收起目录' : '展开目录'}</button><button onClick={() => setMinimap(!minimap)}>{minimap ? '收起小地图' : '展开小地图'}</button><button onClick={() => { camera.takeover(); void flow.fitView({ duration: 0 }); }}>全图</button><button aria-pressed={tool === "read"} onClick={() => setTool("read")}>阅读工具</button><button aria-pressed={tool === "select"} onClick={() => setTool("select")}>选择工具</button><button aria-pressed={tool === "hand"} onClick={() => setTool("hand")}>手形工具</button><button ref={relationButton} onClick={() => setRelationsOpen(!relationsOpen)}>{relationsOpen ? "关闭关系" : "查看关系"}</button><label>关系 <select aria-label="关系范围" value={relationView} onChange={event => setRelationView(event.target.value)}><option value="main">主关系</option><option value="auxiliary">辅助关系</option><option value="all">全部关系</option></select></label></div>
+        <CanvasToolbar tool={tool} chooseTool={chooseTool} drawing={drawingTool} capture={captureSelection} chooseDrawing={kind => drawingPanel.current?.choose(kind)} changeSpace={space => drawingPanel.current?.setSpace(space)} manageDrawings={() => drawingPanel.current?.manage()} highlight={() => { const selection = capturedSelection.current; if (selection?.fragments.length) { void drawingPanel.current?.highlight(selection); capturedSelection.current = undefined; } else drawingPanel.current?.choose('highlighter'); }} relations={() => setRelationsOpen(true)} relationView={relationView} changeRelations={setRelationView}/>
+        <CanvasNavigation minimap={minimap} toggle={() => setMinimap(!minimap)} zoom={viewport.zoom} zoomIn={() => { camera.takeover(); void flow.zoomIn({duration:0}); }} zoomOut={() => { camera.takeover(); void flow.zoomOut({duration:0}); }} fit={() => { camera.takeover(); pinchFrame.cancel(); void flow.fitBounds(flow.getNodesBounds(flow.getNodes()),{duration:0}); }}/>
+        {(searchReturn || !!reading?.returnStack.length) && <div className="reading-return"><Button variant="outline" onClick={() => { if (searchReturn) void searchReturn().catch(e => setReadError(e.message)); else if (reading?.returnStack.length) { const previous = reading.returnStack.at(-1)!; void go(previous.unitId, {...reading,unitId:previous.unitId,scrollTop:previous.scrollTop,camera:previous.camera,returnStack:reading.returnStack.slice(0,-1)}); } }}><ArrowLeft size={16}/>{searchReturn ? '返回搜索前位置' : '返回引用位置'}</Button></div>}
         {loadError && <div className="load-error" role="alert"><h1>课程未打开</h1><p>{loadError}</p><button onClick={() => void load()}>重新打开课程</button></div>}
-        {readError && <div className="read-error" role="status">{readError}</div>}
+        {readError && <div className="read-error" role="status">{visibleError(readError)}</div>}
         {course && mounted.filter(unit=>unit.id===selected?.id||unit.id==='KU-001'||readingRange.includes(unit.id)||heldReading.includes(unit.id)||unit.id===mutationUnit).map(unit => { const position = local.placements.find(node => node.unitId === unit.id); if (!position) return null; return <div key={unit.id} className="reading-layer" data-unit-id={unit.id} style={{ width: position.width >= 360 ? position.width : 650, transform: `translate(${viewport.x + position.x * viewport.zoom}px, ${viewport.y + position.y * viewport.zoom}px) scale(${viewport.zoom})`, visibility: viewport.zoom >= 0.55 ? 'visible' : 'hidden' }}>
           <ReadingSurface id={unit.id} name={unit.name} position={position} baseline={graph!.layout.nodes.find(node => node.unitId === unit.id)!} active={selected?.id === unit.id} articleRef={articleRef} measure={local.measure} gesture={local.gesture} commit={place} takeover={() => camera.takeover()}>
             <RoughFrame id={unit.id} />
@@ -736,6 +791,7 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
             {unit.id==='KU-001'&&!course.contentScope&&<ExtensionExperiment sessionId={course.sessionId} active={viewport.zoom>=0.55&&selected?.id===unit.id} disabled={closing}/>}
             <SourceReferences citations={sourceCitations.filter(citation => citation.target?.unitId === unit.id)} onOpen={citation => sourcesPanel.current?.openCitation(citation)} />
             {unit.id === 'KU-001' && channel.current ? <ContinuousUnitEditor course={course} channel={channel.current} disabled={closing || accessoryBusy || !cameraReady} saveError={state.status === 'error'}
+              question={(selection, intent) => agentPanel.current?.askSelection({unitId:selection.unitId,blockId:selection.fragments[0]?.blockId,selectedText:selection.fragments.map(f=>f.quote).join('\n')}, intent)}
               highlight={selection => { void drawingPanel.current?.highlight(selection); }}
               annotate={selection => { void notesPanel.current?.create(selection); }}
               composition={active => { composing.current = active; }} controller={instance => { continuous.current = instance; }}
@@ -752,7 +808,8 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
                 }}
                 updated={snapshot => setMounted(previous => previous.map(item => item.id === snapshot.unit.id ? snapshot.unit : item))}
                 composition={active => { composing.current = active; }}
-                highlight={selection => { void drawingPanel.current?.highlight(selection); }}
+                question={(selection, intent) => agentPanel.current?.askSelection({unitId:selection.unitId,blockId:selection.fragments[0]?.blockId,selectedText:selection.fragments.map(f=>f.quote).join('\n')}, intent)}
+              highlight={selection => { void drawingPanel.current?.highlight(selection); }}
                 annotate={selection => { void notesPanel.current?.create(selection); }}
               renderBlock={block => <ReadingBoundary><Block block={block} experiment={{ editLinkedFormula: blockId=>{void editLinkedFormula(unit.id,blockId);}, contentScope: course.contentScope, resourceAssets: course.resourceAssets, unitId: unit.id, sessionId: course.sessionId, active: viewport.zoom >= 0.55 && selected?.id === unit.id, disabled: closing, composition: active => { composing.current = active; } }} reading={reading} updateReading={updateReading}
                 onSource={button => { sourceTrigger.current = button; if ((course.contentScope || button.dataset.sourceRegistered) && button.dataset.sourceVersion) sourcesPanel.current?.openVersion(button.dataset.sourceVersion, Number(button.dataset.sourcePage ?? 1) - 1); else setSourceOpen(true); }} onReference={(id, blockId) => { const current = readingRef.current!;
@@ -765,16 +822,17 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
             <footer>来源：既有数字逻辑课程单元的独立副本。编辑保留原有知识身份。</footer>
           </ReadingSurface>
         </div>; })}</div>
-        {course && <div inert={sourceOpen||(narrow&&relationsOpen)}><Drawings ref={drawingPanel} sessionId={course.sessionId} viewport={viewport} takeover={()=>camera.takeover()} pan={(dx,dy)=>camera.pan(dx,dy)} prepare={async()=>!!await channel.current?.flush() && await flushUnitInputs()} paint={notes=>{void continuous.current?.paintDrawings(notes);for(const input of unitInputs.current.values())void input.editor()?.paintDrawings(notes);}} contentKey={`${course.revision}:${mounted.map(u=>u.id).join(',')}`} waitLayout={async()=>{await layoutWrites.current;return !layoutPending.current.length;}} restorePlacement={enqueuePlacement}  /></div>}
+        {course && <div inert={sourceOpen||(narrow&&relationsOpen)}><Drawings onToolChange={setDrawingTool} ref={drawingPanel} sessionId={course.sessionId} viewport={viewport} takeover={()=>camera.takeover()} pan={(dx,dy)=>camera.pan(dx,dy)} prepare={async()=>!!await channel.current?.flush() && await flushUnitInputs()} paint={notes=>{void continuous.current?.paintDrawings(notes);for(const input of unitInputs.current.values())void input.editor()?.paintDrawings(notes);}} contentKey={`${course.revision}:${mounted.map(u=>u.id).join(',')}`} waitLayout={async()=>{await layoutWrites.current;return !layoutPending.current.length;}} restorePlacement={enqueuePlacement}  /></div>}
         {followState !== 'idle' && <div className="follow-control"><span role="status" aria-label="修改跟随">{followState === 'following' ? '正在跟随修改' : followState === 'paused' ? '已由你控制视野' : '修改已结束'}</span>{followState !== 'following' && <button onClick={() => { camera.resume(); }}>{followState === 'finished' ? '查看修改结果' : '返回并继续跟随'}</button>}</div>}
 
         {relationsOpen && graph && course && <RelationsPanel graph={graph} sessionId={course.sessionId} view={relationView} narrow={narrow} panelRef={relationPanel} onClose={closeRelations} onKeyDown={event => trap(event, closeRelations)} onGraph={setGraph} focusId={relationFocus} />}
         {sourceOpen && <section ref={sourceDialog} className="source-dialog" role="dialog" aria-modal="true" aria-label="TI 74153 原页" onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); closeSource(); } else if (event.key === 'Tab') { event.preventDefault(); sourceDialog.current?.querySelector<HTMLButtonElement>('button')?.focus(); } }}><button onClick={closeSource}>返回正文</button><h2>TI 74153 原页 · 第 1 页</h2><img src="./ti74153-1.png" alt="TI 74153 手册第 1 页" /></section>}
       </main>
+      <PanelDock side="agent"/>
     </div>
   </>;
 }
-export function Workspace({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAccessoryProps>}){const [epoch,setEpoch]=useState(0);useEffect(()=>window.yizhi.onGenerationChanged(()=>setEpoch(n=>n+1)),[]);return <ReactFlowProvider key={epoch}><App Accessory={Accessory} /></ReactFlowProvider>;}
+export function Workspace({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAccessoryProps>}){const [epoch,setEpoch]=useState(0);useEffect(()=>window.yizhi.onGenerationChanged(()=>setEpoch(n=>n+1)),[]);return <ShellPanels key={epoch}><ReactFlowProvider><App Accessory={Accessory} /></ReactFlowProvider></ShellPanels>;}
 
 import './acceptance';
 

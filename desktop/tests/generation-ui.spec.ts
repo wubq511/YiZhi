@@ -1,3 +1,4 @@
+import { sourceAction } from './shell-actions';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { cp, mkdtemp, rm, chmod } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -16,13 +17,13 @@ test('generation request fixes a confirmed source page while the composer stays 
     const page=await app.firstWindow();
     await app.evaluate(({dialog},selected)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[selected]});},path);
     await page.getByRole('button',{name:'原文资料',exact:true}).click();
-    await page.getByRole('button',{name:'导入资料',exact:true}).click();
+    await sourceAction(page, '导入资料');
     await expect(page.getByRole('status',{name:'原文状态'})).toHaveText('原页已载入');
     await page.getByText('解析此资料',{exact:true}).click();
     await page.getByRole('button',{name:'开始解析此版本',exact:true}).click();
     await expect(page.getByRole('status',{name:'解析进度'})).toContainText('已完成 · 已确认 2 / 2 页');
     await page.getByRole('button',{name:'返回画板',exact:true}).click();
-    await page.getByRole('button',{name:'Agent · 学习对话',exact:true}).click();
+    await page.getByRole('button',{name:'学习对话',exact:true}).click();
     await page.getByRole('combobox',{name:'Agent 请求方式'}).selectOption('generate');
     const source=page.getByRole('combobox',{name:'生成来源 PDF'});
     await expect(source.locator('option')).toHaveCount(2);
@@ -87,7 +88,7 @@ test('a controlled unfinished source candidate stays readable after reopen with 
   const app=await electron.launch({args:[resolve('.'),`--course=${directory}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile'),YIZHI_CODEX_PATH:fixture,YIZHI_FIXTURE_MODE:'steer-retry'}});
   try{
     const page=await app.firstWindow();
-    await page.getByRole('button',{name:'Agent · 学习对话',exact:true}).click();
+    await page.getByRole('button',{name:'学习对话',exact:true}).click();
     const progress=page.getByRole('region',{name:'小主题生产进度'});
     await expect(progress).toContainText('已确认：暂无；待完成：完整讲解、追加练习');
     await expect(page.getByRole('button',{name:'继续剩余工作',exact:true})).toBeVisible();

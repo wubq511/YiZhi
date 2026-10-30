@@ -62,7 +62,7 @@ test('working composer defaults to steer, shows failed delivery retry, and queue
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root,'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root,'profile'), YIZHI_CODEX_PATH: fixture, YIZHI_FIXTURE_MODE: 'steer-retry' } });
   try {
     const page = await app.firstWindow(); await resizeBoardWindow(app,page);
-    await page.getByRole('button', {name:'Agent · 学习对话',exact:true}).click();
+    await page.getByRole('button', {name:'学习对话',exact:true}).click();
     const input = page.getByRole('textbox',{name:'学习对话草稿'});
     await input.fill('解释位权'); await page.getByRole('button',{name:'发送问题',exact:true}).click();
     await expect(page.getByRole('status',{name:'回答状态'})).toContainText('正在回答');

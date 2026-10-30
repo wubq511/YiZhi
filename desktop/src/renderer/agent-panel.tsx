@@ -1,26 +1,29 @@
+import { PanelPortal, useDockPanel } from './shell/panels';
+import { useSaveReport } from './shell/save-status';
+import { X } from 'lucide-react';
 import type { AgentIntent } from '../agent-mutation-api';
 import type { SearchHit } from '../search-api';
 import { paintFrame, highlightSearch, waitForSearchElement } from './search-location';
 
 import { AgentProse } from './agent-prose';
 import { forwardRef, useEffect, useLayoutEffect, useImperativeHandle, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import type { AgentTask, Conversation, ConversationView, ExecutorStatus, QuestionTarget, SubmitQuestion } from '../agent-api';
 import type { SourceCitation } from '../sources-api';
 import { GenerationTask } from './generation-task';
 import { GenerationSource, type GenerationSourceChoice } from './generation-source';
 import './agent-panel.css';
 export interface AgentScene { open: boolean; conversationId: string | null; scrollTop: number }
-export interface AgentPanelHandle { capture(): AgentScene; restore(scene: AgentScene): Promise<void>; openSearch(hit: SearchHit): Promise<void>; flush(): Promise<boolean>; attachCitation(citation: SourceCitation): void }
+export interface AgentPanelHandle { askSelection(target: QuestionTarget, intent: 'question' | 'modify'): void;  capture(): AgentScene; restore(scene: AgentScene, restoreVisibility?: boolean): Promise<void>; openSearch(hit: SearchHit): Promise<void>; flush(): Promise<boolean>; attachCitation(citation: SourceCitation): void }
 const taskLabel: Record<AgentTask['status'], string> = { queued: '已排队 · 等待当前处理结束', waiting: '等待整合 · 任务尚未完成', stopping: '正在停止 · 已撤销后续提交资格', stopped: '已停止 · 已提交部分保留', running: '正在回答', completed: '回答已完成', failed: '回答失败', interrupted: '回答已中断', unknown: '执行结果未知', partial: '部分完成 · 已提交组保留', pending: '待处理 · 候选尚未正式保存' };
 
 export const AgentPanel = forwardRef<AgentPanelHandle, {
   sessionId: string; narrow: boolean; target: QuestionTarget; targetName: string; anchorUnitId:string; sourceOpen: boolean;
   prepareMutation(): Promise<void>; onMutation(task: AgentTask, phase: 'start' | 'progress' | 'finish' | 'view'): Promise<void>;
-  onOpenChange(open: boolean): void; openCitation(citation: SourceCitation): void;
-}>(function AgentPanel({ sessionId, narrow, target, targetName, anchorUnitId, sourceOpen, onOpenChange, openCitation, prepareMutation, onMutation }, ref) {
+  openCitation(citation: SourceCitation): void;
+}>(function AgentPanel({ sessionId, narrow, target, targetName, anchorUnitId, sourceOpen, openCitation, prepareMutation, onMutation }, ref) {
   const api = window.yizhi.agent;
-  const [open, setOpen] = useState(false), [conversations, setConversations] = useState<Conversation[]>([]);
+  const { open, setOpen } = useDockPanel('agent');
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [view, setView] = useState<ConversationView>(), [executor, setExecutor] = useState<ExecutorStatus>();
   const [intent, setIntent] = useState<AgentIntent>('question');
   const [messageMode, setMessageMode] = useState<'steer' | 'queue'>('steer');
@@ -29,10 +32,13 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
   const [model, setModel] = useState(''), [generation, setGeneration] = useState(1);
   const [attachments, setAttachments] = useState<SourceCitation[]>([]), [selection, setSelection] = useState<QuestionTarget>();
   const [generationSource,setGenerationSource]=useState<GenerationSourceChoice|null>(null);
+  const [fixedTargetName, setFixedTargetName] = useState('');
+  const targetId = selection?.unitId ?? attachments.at(-1)?.target?.unitId ?? target.unitId;
+  useEffect(() => { let live=true; setFixedTargetName(''); void window.yizhi.readUnit(sessionId,targetId).then(unit=>{if(live)setFixedTargetName(unit.name);}).catch(()=>{}); return()=>{live=false;}; }, [sessionId,targetId]);
   const [generatedTarget,setGeneratedTarget]=useState<{unitId:string;themeId:string;themeName:string;sourceId:string}|null>(null);
   const [updateGenerated,setUpdateGenerated]=useState(false);
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [draftState, setDraftState] = useState('草稿已保存');
-  const trigger = useRef<HTMLButtonElement>(null), panel = useRef<HTMLElement>(null), composer = useRef<HTMLTextAreaElement>(null);
+  const panel = useRef<HTMLElement>(null), composer = useRef<HTMLTextAreaElement>(null);
   const chosenTarget = useRef<QuestionTarget | undefined>(undefined), chosenCitations = useRef<SourceCitation[]>([]);
   const current = useRef<string | null>(null), draft = useRef(''), seq = useRef(0), composing = useRef(false);
   const writes = useRef(Promise.resolve()), failed = useRef(false), dirty = useRef(false);
@@ -98,13 +104,6 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
     requestAnimationFrame(() => composer.current?.focus());
     return () => { cancelled = true; clearInterval(interval); };
   }, [open, sessionId]);
-  const wasOpen = useRef(false);
-  // Return focus only after the closed state and parent's inert state have committed.
-  useLayoutEffect(() => {
-    onOpenChange(open);
-    if (!open && wasOpen.current) requestAnimationFrame(() => trigger.current?.focus({ preventScroll: true }));
-    wasOpen.current = open;
-  }, [open]);
   useEffect(()=>{setGeneratedTarget(null);setUpdateGenerated(false);setGenerationSource(null);},[sessionId,target.unitId]);
   useEffect(()=>{
     if(intent!=='generate')return;
@@ -130,9 +129,9 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
     document.addEventListener('mouseup', capture); document.addEventListener('keyup', capture);
     return () => { document.removeEventListener('mouseup', capture); document.removeEventListener('keyup', capture); };
   }, []);
-  useImperativeHandle(ref, () => ({ flush,
+  useImperativeHandle(ref, () => ({ flush, askSelection(next, action) { chosenTarget.current = next; setSelection(next); intentRef.current = action; setIntent(action); markDirty(); setOpen(true); requestAnimationFrame(() => composer.current?.focus()); },
     capture: () => ({ open, conversationId: current.current, scrollTop: panel.current?.scrollTop ?? 0 }),
-    async restore(scene) { if (!await flush()) throw new Error('对话草稿尚未保存'); if (scene.conversationId) await loadConversation(scene.conversationId); setOpen(scene.open); await paintFrame(); if (panel.current) panel.current.scrollTop = scene.scrollTop; },
+    async restore(scene, restoreVisibility = true) { if (!await flush()) throw new Error('对话草稿尚未保存'); if (scene.conversationId) await loadConversation(scene.conversationId); if (restoreVisibility) setOpen(scene.open); await paintFrame(); if (panel.current) panel.current.scrollTop = scene.scrollTop; },
     async openSearch(hit) {
       if (!await flush()) throw new Error('对话草稿尚未保存');
       const latest = await api.get({ sessionId, conversationId: hit.conversationId! });
@@ -166,9 +165,10 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
     draft.current = ''; if (composer.current) composer.current.value = ''; dirty.current = false;
     chosenTarget.current = undefined; chosenCitations.current = []; setAttachments([]); setSelection(undefined); await refresh();
   };
+  useSaveReport('agent-draft', { label: '对话草稿', status: draftState === '草稿未保存' ? 'error' : draftState === '草稿已保存' ? 'saved' : 'pending', detail: error, retry: () => { failed.current = false; return flush(); } });
+  useSaveReport('agent-request', {label:'对话请求',status:busy?'saving':retrySubmit.current&&error?'error':'saved',detail:error,retry:()=>guard(send)});
   const working = view?.tasks.some(t => ['running','waiting','queued'].includes(t.status));
-  return <><button ref={trigger} className="agent-entry" aria-expanded={open} onClick={() => setOpen(true)}>Agent · 学习对话</button>
-    {open && createPortal(<aside ref={panel} className={`agent-panel${sourceOpen && !narrow ? ' beside-source' : ''}`} role={narrow ? 'dialog' : 'complementary'} inert={narrow && sourceOpen} aria-modal={narrow || undefined} aria-label="Agent 学习对话" onKeyDown={event => {
+  return <PanelPortal id="agent"><aside ref={panel} className="agent-panel" role={narrow ? 'dialog' : 'complementary'} aria-modal={narrow || undefined} aria-label="Agent 学习对话" onKeyDown={event => {
       // Let native textarea Undo edit only the composer. No board/editor command receives it.
       if ((event.metaKey || event.ctrlKey) && ['z', 'y'].includes(event.key.toLowerCase()) && event.target === composer.current) event.stopPropagation();
       if (event.key === 'Escape') { event.preventDefault(); void close(); }
@@ -178,8 +178,8 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
         else if (!event.shiftKey && document.activeElement === items.at(-1)) { event.preventDefault(); items[0]?.focus(); }
       }
     }}>
-      <div className="agent-heading"><h2>学习对话</h2><button onClick={() => void close()}>收起对话</button></div>
-      <div className="agent-conversations"><label>对话 <select aria-label="学习对话列表" value={view?.id ?? ''} disabled={busy} onChange={event => void guard(() => loadConversation(event.target.value))}>
+      <div className="agent-heading"><h2>学习对话</h2><button className="panel-close" aria-label="收起对话" onClick={() => void close()}><X size={18}/></button></div>
+      <div className="agent-conversations"><label><span className="sr-only">对话</span><select aria-label="学习对话列表" value={view?.id ?? ''} disabled={busy} onChange={event => void guard(() => loadConversation(event.target.value))}>
         {!view && <option value="">选择对话</option>}{conversations.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}</select></label><button disabled={busy} onClick={() => void guard(create)}>新对话</button></div>
       <div className="agent-messages" aria-label="对话消息">
         {!view?.messages.length && <p className="agent-empty">{intent==='generate'?'从已解析原件建立完整小主题；候选、校验与正式回执会在这里保留。':'带上当前单元或原文选段提问。课程依据与补充解释会分别呈现，回答随课程保留。'}</p>}
@@ -205,14 +205,14 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
           })}>继续剩余工作</button>}</div>)}
       </div>
       <div className="agent-composer">
-        <p className="agent-target">{intent==='generate'?updateGenerated?'更新目标：':'画板锚点：': '提问目标：'}{intent==='generate'?targetName:selection?.selectedText ? `${selection.unitId} · 已选正文` : attachments.at(-1)?.target ? `${attachments.at(-1)!.target!.unitId} · 来源关联单元` : targetName}</p>
-        {selection?.selectedText && <div className="agent-attachment"><blockquote>{selection.selectedText}</blockquote><button onClick={() => { chosenTarget.current = undefined; setSelection(undefined); markDirty(); }}>移除正文选文</button></div>}
-        {attachments.map(c => <div className="agent-attachment" key={c.id}>{c.quote ? <blockquote>{c.quote}</blockquote> : <p>原页／选区 · 无精确选文</p>}<span>PDF 第 {c.pdfPageIndex + 1} 页 · 固定版本</span><button onClick={() => { chosenCitations.current = chosenCitations.current.filter(item => item.id !== c.id); setAttachments(chosenCitations.current); markDirty(); }}>移除出处</button></div>)}
-        <div className="agent-composer-options"><label>请求方式<select aria-label="Agent 请求方式" value={intent} disabled={busy} onChange={e=>{intentRef.current=e.target.value as AgentIntent;setIntent(intentRef.current);markDirty();}}><option value="question">只读提问</option><option value="modify">修改正文与整理</option><option value="add-to-board">加入画板</option><option value="generate">从来源生成小主题</option></select></label>
+        <p className="agent-target">{intent==='generate'?updateGenerated?'更新目标：':'画板锚点：': '提问目标：'}{intent==='generate'?targetName:selection?.selectedText ? `${fixedTargetName || selection.unitId} · 已选正文` : attachments.at(-1)?.target ? `${fixedTargetName || attachments.at(-1)!.target!.unitId} · 来源关联单元` : targetName}</p>
+        {selection?.selectedText && <div className="agent-attachment"><blockquote>{selection.selectedText}</blockquote><button className="attachment-remove" aria-label="移除正文选文" title="移除正文选文" onClick={() => { chosenTarget.current = undefined; setSelection(undefined); markDirty(); }}><X size={16}/></button></div>}
+        {attachments.map(c => <div className="agent-attachment" key={c.id}>{c.quote ? <blockquote>{c.quote}</blockquote> : <p>原页／选区 · 无精确选文</p>}<span>PDF 第 {c.pdfPageIndex + 1} 页 · 固定版本</span><button className="attachment-remove" aria-label="移除出处" title="移除出处" onClick={() => { chosenCitations.current = chosenCitations.current.filter(item => item.id !== c.id); setAttachments(chosenCitations.current); markDirty(); }}><X size={16}/></button></div>)}
+        <div className="agent-composer-options"><label><span className="sr-only">请求方式</span><select aria-label="Agent 请求方式" value={intent} disabled={busy} onChange={e=>{intentRef.current=e.target.value as AgentIntent;setIntent(intentRef.current);markDirty();}}><option value="question">只读提问</option><option value="modify">修改正文与整理</option><option value="add-to-board">加入画板</option><option value="generate">从来源生成小主题</option></select></label>
           {working && <label>工作中消息方式<select aria-label="工作中消息方式" value={messageMode} disabled={busy} onChange={e => setMessageMode(e.target.value as 'steer' | 'queue')}><option value="steer">引导当前工作</option><option value="queue">排队</option></select></label>}</div>
         {intent==='generate'&&<>{generatedTarget&&<label className="agent-generation-update"><input type="checkbox" checked={updateGenerated} disabled={busy} onChange={event=>{setUpdateGenerated(event.target.checked);setGenerationSource(null);}}/>更新当前已生成小主题，保留单元与批注身份</label>}
           <GenerationSource sessionId={sessionId} value={generationSource} sourceIdFilter={updateGenerated?generatedTarget?.sourceId:undefined} onChange={setGenerationSource}/></>}
-        <label htmlFor="agent-composer">{intent === 'question' ? '只读提问' : intent==='generate'?'小主题范围与学习目标':'明确修改请求'}</label><textarea id="agent-composer" ref={composer} aria-label="学习对话草稿" defaultValue={draft.current} disabled={busy} placeholder={intent==='generate'?'说明你要从这页建立的小主题、例题与练习范围。':'哪里还没理解？'} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; if (dirty.current) void flush(); }} onInput={event => {
+        <label className="sr-only" htmlFor="agent-composer">{intent === 'question' ? '只读提问' : intent==='generate'?'小主题范围与学习目标':'明确修改请求'}</label><textarea id="agent-composer" ref={composer} aria-label="学习对话草稿" defaultValue={draft.current} disabled={busy} placeholder={intent==='generate'?'说明你要从这页建立的小主题、例题与练习范围。':'哪里还没理解？'} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; if (dirty.current) void flush(); }} onInput={event => {
           draft.current = event.currentTarget.value; markDirty();
         }} />
         <div className="agent-send"><label>模型 <select aria-label="问答模型" value={model} onChange={e => setModel(e.target.value)} disabled={!executor?.available || busy}>{executor?.models.map(m => <option key={m.model} value={m.model}>{m.displayName || m.model}</option>)}</select></label>
@@ -221,6 +221,6 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
         {!executor ? <p role="status">正在检测本机执行器…</p> : !executor.available ? <p role="status">生成暂不可用：{executor.error} 已保存对话仍可阅读。</p> : <details className="executor-details"><summary>本机 Codex CLI · 已连接</summary><p>{executor.version}</p><p>{executor.path}</p></details>}
         {error && <div role="alert" className="agent-error"><p>{error}</p>{failed.current && <button onClick={() => { failed.current = false; void flush(); }}>重试保存对话草稿</button>}{retrySubmit.current && <button onClick={() => void guard(send)}>核对并重试原问题</button>}</div>}
       </div>
-    </aside>, document.body)}
-  </>;
+    </aside></PanelPortal>
+  ;
 });

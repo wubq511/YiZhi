@@ -1,0 +1,27 @@
+/* No preflight: course prose, MathLive and experiment documents retain their own styles. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@source "../components";
+@source "./";
+@theme inline {
+  --color-background: #fff;
+  --color-foreground: #30303b;
+  --color-primary: #6255c5;
+  --color-primary-foreground: #fff;
+  --color-secondary: #eeedf5;
+  --color-secondary-foreground: #41404c;
+  --color-muted: #f0eff5;
+  --color-muted-foreground: #686577;
+  --color-accent: #eeebfc;
+  --color-accent-foreground: #5e50b7;
+  --color-popover: #fff;
+  --color-popover-foreground: #30303b;
+  --color-destructive: #a13737;
+  --color-border: #e5e3ec;
+  --color-input: #dedce6;
+  --color-ring: #7568cd;
+  --radius-md: 8px;
+}

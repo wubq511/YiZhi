@@ -9,7 +9,7 @@ import type { Page } from '@playwright/test';
 const real=process.env.YIZHI_REAL_EXECUTOR==='1';
 const env=(root:string)=>{const e:Record<string,string>={...process.env,PATH:'/usr/bin:/bin',YIZHI_DATA_HOME:join(root,'profile')} as Record<string,string>;delete e.YIZHI_CODEX_PATH;return e;};
 async function conversation(page:Page){return page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open(),l=await b.agent.list({sessionId:c.sessionId});return b.agent.get({sessionId:c.sessionId,conversationId:l.selectedId});});}
-async function openAgent(page:Page){await page.getByRole('button',{name:'Agent · 学习对话',exact:true}).click();await expect(page.getByText('本机 Codex CLI · 已连接',{exact:true})).toBeVisible();await page.getByLabel('问答模型').selectOption('gpt-6-luna');}
+async function openAgent(page:Page){await page.getByRole('button',{name:'学习对话',exact:true}).click();await expect(page.getByText('本机 Codex CLI · 已连接',{exact:true})).toBeVisible();await page.getByLabel('问答模型').selectOption('gpt-6-luna');}
 async function terminal(page:Page){await expect.poll(async()=>(await conversation(page)).tasks.at(-1)?.status,{timeout:120000}).not.toBe('running');return (await conversation(page)).tasks.at(-1);}
 async function evidence(name:string,value:any){if(process.env.YIZHI_EVIDENCE_DIR)await writeFile(join(process.env.YIZHI_EVIDENCE_DIR,name+'.json'),JSON.stringify(value,null,2));}
 

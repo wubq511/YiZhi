@@ -1,3 +1,5 @@
+import { registerHistory, refreshHistory } from '../shell/edit-history';
+import { MessageCircle, Pencil, StickyNote, Highlighter, Sigma, ArrowUp, ArrowDown, Split } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { CandidateCheck } from '../../command-api';
 import { createRoot, type Root } from 'react-dom/client';
@@ -8,7 +10,8 @@ import './editor.css';
 import { observation } from '../../acceptance-observation';
 import { FormulaEditingContext, type FormulaEditing } from './nested-formula';
 
-export function ContinuousUnitEditor({ course, channel, disabled, saveError, composition, renderBlock, controller, annotate, highlight }: {
+export function ContinuousUnitEditor({ course, channel, disabled, saveError, composition, renderBlock, controller, annotate, highlight, question }: {
+  question(selection: import('../../annotation-api').AnnotationSelection, intent: 'question' | 'modify'): void;
   highlight(selection: import('../../annotation-api').AnnotationSelection): void;
   annotate(selection: import('../../annotation-api').AnnotationSelection): void;
   course: OpenedCourse; channel: ParagraphSaveChannel; disabled: boolean;
@@ -37,8 +40,10 @@ export function ContinuousUnitEditor({ course, channel, disabled, saveError, com
       },
     });
     instance.current = editor; latest.current.controller(editor);
+    const unregisterHistory = registerHistory(`body:${course.unit.id}`, { label: '正文', element: () => element.current?.closest('.continuous-editor') ?? null, canUndo: () => editor.editor.isEditable && editor.canUndo(), canRedo: () => editor.editor.isEditable && editor.canRedo(), undo: () => editor.undo(), redo: () => editor.redo() });
+    editor.editor.on('transaction', refreshHistory);
     const resource = observation.resource('editor.instances'); resource.set(1);
-    return () => { editor.destroy(); resource.close(); instance.current = null; latest.current.controller(null); };
+    return () => { unregisterHistory(); editor.editor.off('transaction', refreshHistory); editor.destroy(); resource.close(); instance.current = null; latest.current.controller(null); };
   }, [channel]);
   useEffect(() => { instance.current?.setEditable(!disabled && !resolving); }, [disabled, resolving]);
   useEffect(() => { let cancelled = false; if (saveError) void instance.current?.inputConflicts().then(items => { if (!cancelled) setConflicts(items); });
@@ -53,15 +58,14 @@ export function ContinuousUnitEditor({ course, channel, disabled, saveError, com
   const text = (value: Record<string, any>) => String(value.text ?? value.latex ?? value.payload?.text ?? value.payload?.latex ?? '结构或关联内容');
   return <section className="continuous-editor">
     <div className="editor-tools" role="toolbar" aria-label="正文编辑工具" onMouseDown={event => event.preventDefault()}>
-      <span>正文 · 连续编辑，自动保存</span>
-      <button disabled={disabled} onClick={() => { const capture = instance.current?.captureAnnotation(); if (capture) annotate(capture); }}>批注所选文字</button>
-      <button disabled={disabled} onClick={() => { const capture = instance.current?.captureAnnotation(); if (capture) highlight(capture); }}>荧光笔标记所选文字</button>
-      <button disabled={disabled} onClick={() => instance.current?.undo()}>撤销正文</button>
-      <button disabled={disabled} onClick={() => instance.current?.redo()}>重做正文</button>
-      <button disabled={disabled} onClick={() => instance.current?.insertFormula()}>插入公式</button>
-      <button disabled={disabled} onClick={() => instance.current?.moveSelected(-1)}>上移当前块</button>
-      <button disabled={disabled} onClick={() => instance.current?.moveSelected(1)}>下移当前块</button>
-      <button disabled={disabled} onClick={() => instance.current?.splitFirst()}>拆分首段为两段</button>
+      <button disabled={disabled} onClick={() => { const capture=instance.current?.captureAnnotation(); if (capture?.fragments.length) question(capture,'question'); }}><MessageCircle size={16}/>提问</button>
+      <button disabled={disabled} onClick={() => { const capture=instance.current?.captureAnnotation(); if (capture?.fragments.length) question(capture,'modify'); }}><Pencil size={16}/>请求修改</button>
+      <button disabled={disabled} onClick={() => { const capture = instance.current?.captureAnnotation(); if (capture) annotate(capture); }} aria-label="批注所选文字"><StickyNote size={16}/>批注</button>
+      <button disabled={disabled} onClick={() => { const capture = instance.current?.captureAnnotation(); if (capture) highlight(capture); }} aria-label="荧光笔标记所选文字"><Highlighter size={16}/>高亮</button>
+      <button aria-label="插入公式" disabled={disabled} onClick={() => instance.current?.insertFormula()}><Sigma size={16}/>公式</button>
+      <button disabled={disabled} onClick={() => instance.current?.moveSelected(-1)} aria-label="上移当前块" title="上移当前块"><ArrowUp size={16}/></button>
+      <button disabled={disabled} onClick={() => instance.current?.moveSelected(1)} aria-label="下移当前块" title="下移当前块"><ArrowDown size={16}/></button>
+      <button disabled={disabled} onClick={() => instance.current?.splitFirst()} aria-label="拆分首段为两段" title="拆分首段为两段"><Split size={16}/></button>
     </div>
     {checks.length > 0 && <div className="editor-integration" role="status" aria-label="同时修改处理">
       {checks.map(check => <div key={check.candidateId}><p>{check.status === 'committed' ? '已根据最新学生输入整合同时修改。' : check.status === 'needs-reread'

@@ -46,7 +46,7 @@ export async function resizeBoardWindow(app: ElectronApplication, page: Page, wi
 export async function revealBoardControl(page: Page, target: Locator) {
   await expect(page.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
   const board = (await page.locator('main.board').boundingBox())!;
-  await page.mouse.move(board.x + 8, board.y + board.height / 2);
+  await page.mouse.move(board.x + board.width - 8, board.y + board.height / 2);
   for (let step = 0; step < 60; step++) {
     const box = (await target.boundingBox())!;
     const delta = box.y + box.height / 2 - board.y - board.height / 2;

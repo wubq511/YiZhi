@@ -1,3 +1,4 @@
+import { sourceAction } from './shell-actions';
 import { test, expect, _electron as electron } from '@playwright/test';
 import type { ElectronApplication } from '@playwright/test';
 import { cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile, access } from 'node:fs/promises';
@@ -60,19 +61,19 @@ test('installed macOS app opens offline without checkout tools, decodes real res
     const editor = page.getByRole('textbox', { name: '编辑首段正文', exact: true });
     await editor.fill('安装副本离线输入：独立运行并自动保存 📝。');
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
-    await page.getByRole('button', { name: 'Agent · 学习对话', exact: true }).click();
+    await page.getByRole('button', { name: '学习对话', exact: true }).click();
     await expect(page.getByText(/生成暂不可用/)).toBeVisible();
     await expect(page.getByRole('button', { name: '发送问题', exact: true })).toBeDisabled();
     await page.getByRole('button', { name: '收起对话', exact: true }).click();
     await app.evaluate(({ dialog }, path) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] }); }, pdf);
     await page.getByRole('button', { name: '原文资料', exact: true }).click();
-    await page.getByRole('button', { name: '导入资料', exact: true }).click();
+    await sourceAction(page, '导入资料');
     await expect(page.getByRole('status', { name: '原文状态' })).toHaveText('原页已载入');
     await expect(page.locator('.source-pdf .textLayer')).toContainText('Installed app offline evidence');
     await expect(page.locator('.source-pdf canvas')).toBeVisible();
     // A PNG import exercises the packaged Worker's native canvas decoder, not just renderer canvas.
     await app.evaluate(({ dialog }, path) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] }); }, png);
-    await page.getByRole('button', { name: '导入资料', exact: true }).click();
+    await sourceAction(page, '导入资料');
     await expect(page.getByRole('status', { name: '原文状态' })).toHaveText('原页已载入');
     const source = await page.evaluate(async () => {
       const api = (window as any).yizhi, opened = await api.open(); return api.sources.list({ sessionId: opened.sessionId });

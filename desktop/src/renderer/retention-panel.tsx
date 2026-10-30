@@ -1,3 +1,4 @@
+import { forwardRef, useImperativeHandle } from 'react';
 import { useEffect,useRef,useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { RetentionStatus,RetentionSpace } from '../retention-api';
@@ -5,7 +6,7 @@ import './history-panel.css';
 import './retention-panel.css';
 const bytes=(n:number)=>n<1024?`${n} B`:n<1048576?`${(n/1024).toFixed(1)} KB`:`${(n/1048576).toFixed(1)} MB`;
 const date=(s:string)=>new Date(s).toLocaleString('zh-CN',{hour12:false});
-export function RetentionPanel({sessionId,prepare,onReturn}:{sessionId:string;prepare():Promise<void>;onReturn():void}) {
+export const RetentionPanel = forwardRef<{ open(): void }, {sessionId:string;prepare():Promise<void>;onReturn():void}>(function RetentionPanel({sessionId,prepare,onReturn}, ref) {
  const [open,setOpen]=useState(false),[status,setStatus]=useState<RetentionStatus>(),[space,setSpace]=useState<RetentionSpace>();
  const [days,setDays]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[result,setResult]=useState('');
  const trigger=useRef<HTMLButtonElement>(null),alive=useRef(true);
@@ -13,14 +14,15 @@ export function RetentionPanel({sessionId,prepare,onReturn}:{sessionId:string;pr
  const work=async(run:()=>Promise<void>)=>{setBusy(true);setError('');try{await run();}catch(e){if(alive.current)setError((e as Error).message);}finally{if(alive.current)setBusy(false);}};
  const refresh=async()=>{const [s,p]=await Promise.all([window.yizhi.retention.get({sessionId}),window.yizhi.retention.space({sessionId})]);if(alive.current){setStatus(s);setSpace(p);}return s;};
  const show=()=>{setOpen(true);setResult('');void work(async()=>{await prepare();const s=await refresh();setDays(String(s.days));});};
- const close=()=>{if(busy)return;setOpen(false);onReturn();requestAnimationFrame(()=>trigger.current?.focus());};
+ const close=()=>{if(busy)return;setOpen(false);onReturn();requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('[aria-label="课程菜单"]')?.focus());};
  useEffect(()=>{
   if(!open)return;
   let cancelled=false;
   const timer=setInterval(()=>{void window.yizhi.retention.get({sessionId}).then(s=>{if(!cancelled)setStatus(s);}).catch(e=>{if(!cancelled)setError(e.message);});},1000);
   return()=>{cancelled=true;clearInterval(timer);};
  },[open,sessionId]);
- return <><button ref={trigger} onClick={show} aria-haspopup="dialog">历史与空间</button>{open&&createPortal(<dialog className="history-panel retention-panel" aria-label="历史与空间" ref={node=>{if(node&&!node.open)node.showModal();}} onCancel={e=>{e.preventDefault();close();}} onKeyDown={e=>e.stopPropagation()}>
+ useImperativeHandle(ref, () => ({ open: show }));
+ return <>{open&&createPortal(<dialog className="history-panel retention-panel" aria-label="历史与空间" ref={node=>{if(node&&!node.open)node.showModal();}} onCancel={e=>{e.preventDefault();close();}} onKeyDown={e=>e.stopPropagation()}>
   <header className="history-heading"><h2>历史与空间</h2><button disabled={busy} onClick={close}>返回课程</button></header>
   {error&&<p role="alert" className="history-error">{error}</p>}
   <section aria-labelledby="retention-heading"><h3 id="retention-heading">正式历史期限</h3>
@@ -44,4 +46,4 @@ export function RetentionPanel({sessionId,prepare,onReturn}:{sessionId:string;pr
   </section>
   <p role="status" aria-label="空间操作结果">{busy?'正在核对并保存…':result}</p>
  </dialog>,document.body)}</>;
-}
+});

@@ -1,0 +1,23 @@
+[
+  {
+    "component": "button",
+    "url": "https://ui.shadcn.com/r/styles/base-nova/button.json",
+    "registrySha256": "9ba7e870178813f0552b818a913a2792fb500c779e36395740b4973e3025d427",
+    "retrieved": "2026-10-30",
+    "customizations": "Lucide icons; opaque menus; 40px shell hit targets"
+  },
+  {
+    "component": "dropdown-menu",
+    "url": "https://ui.shadcn.com/r/styles/base-nova/dropdown-menu.json",
+    "registrySha256": "335c59dba30145f434a9cc9ccb0438a3c5e2afe857fc11b029de1ecb415224d7",
+    "retrieved": "2026-10-30",
+    "customizations": "Lucide icons; opaque menus; 40px shell hit targets"
+  },
+  {
+    "component": "popover",
+    "url": "https://ui.shadcn.com/r/styles/base-nova/popover.json",
+    "registrySha256": "ba5fe84f353f6c0fd2133a2ab893f5e8861fc60dc4dea548a7ec875acaa37b2c",
+    "retrieved": "2026-10-30",
+    "customizations": "Opaque save details with reachable retry buttons"
+  }
+]

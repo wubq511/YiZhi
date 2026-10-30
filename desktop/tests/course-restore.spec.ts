@@ -1,3 +1,4 @@
+import { courseAction } from './shell-actions';
 import type { DatabaseSync } from 'node:sqlite';
 import { openFaultDatabase } from './fault-database';
 import { test,expect,_electron as electron } from '@playwright/test';
@@ -22,8 +23,8 @@ test('independent whole-course UI preserves personal state and a real incomplete
   const old=await page.evaluate(()=>(window as any).yizhi.open());
   const formula=page.locator('.editor-formula').first();await revealBoardControl(page,formula.getByRole('button',{name:'编辑公式',exact:true}));await formula.getByRole('button',{name:'编辑公式',exact:true}).click();
   await formula.locator('math-field').evaluate((el:any)=>{el.executeCommand('selectAll');el.executeCommand(['insert','\\frac{1}{#?}']);});
-  await expect(page.getByRole('button',{name:'整课历史恢复',exact:true})).toBeVisible();
-  await page.getByRole('button',{name:'整课历史恢复',exact:true}).click();
+  await expect(page.getByRole('button',{name:'课程菜单',exact:true})).toBeVisible();
+  await courseAction(page, '整课历史恢复');
   const dialog=page.getByRole('dialog',{name:'整课历史恢复',exact:true});
   await expect(dialog).toContainText('单元取回');await expect(dialog).toContainText('备份');
   await expect(dialog.getByLabel('恢复所选单元的布局')).not.toBeChecked();await expect(dialog.getByLabel('恢复所选单元的掌握状态')).not.toBeChecked();
@@ -43,7 +44,7 @@ test('independent whole-course UI preserves personal state and a real incomplete
   await fresh.getByRole('button',{name:'返回当前课程',exact:true}).click();
   const editor=page.getByRole('textbox',{name:'编辑首段正文',exact:true});await revealBoardControl(page,editor);await expect(editor).toHaveText('整课旧讲解');await editor.click();await page.keyboard.insertText(' 新代际输入');
   await expect.poll(()=>page.evaluate(async()=>(await(window as any).yizhi.open()).unit.reading.blocks[0].payload.text)).toContain('新代际输入');
-  await page.getByRole('button',{name:'整课历史恢复',exact:true}).click();
+  await courseAction(page, '整课历史恢复');
   await expect(page.getByRole('dialog',{name:'整课历史恢复',exact:true}).getByLabel('历史时间点')).toBeVisible();
   await page.getByRole('button',{name:'返回当前课程',exact:true}).click();
   await app.close();app=await launch();page=await app.firstWindow();await resizeBoardWindow(app,page);
@@ -85,7 +86,7 @@ test('epoch remount holds the real B read without resurrecting old editors or ac
    (globalThis as any).restoreEpochWorker=()=>{Worker.prototype.postMessage=post;Worker.prototype.emit=emit;};
   },old.sessionId);
   await expect.poll(()=>app.evaluate(()=>(globalThis as any).epochReadState.oldHeld)).toBe(true);
-  await page.getByRole('button',{name:'整课历史恢复',exact:true}).click();
+  await courseAction(page, '整课历史恢复');
   const dialog=page.getByRole('dialog',{name:'整课历史恢复',exact:true});
   await dialog.getByLabel('历史时间点').selectOption('epoch-anchor');await dialog.getByRole('button',{name:'预览整课所选范围',exact:true}).click();
   await dialog.getByRole('button',{name:'确认恢复并隔离旧任务',exact:true}).click();
@@ -104,7 +105,7 @@ test('epoch remount holds the real B read without resurrecting old editors or ac
   await page.getByRole('button',{name:'返回当前课程',exact:true}).click();
   await expect(editor).toContainText('B historical epoch content');await expect(editor).not.toContainText('B obsolete epoch content');
   const paragraph=editor.locator(`[data-block-id="${b.id}"]`);await revealBoardControl(page,paragraph);await paragraph.click();await page.keyboard.press('Home');await page.keyboard.insertText('New B keyboard input: ');
-  await expect(reader.getByRole('status',{name:'当前单元保存状态'})).toHaveText('已保存');
+  await expect(page.getByRole('status',{name:'保存状态',exact:true})).toHaveText('已保存');
   await expect.poll(()=>page.evaluate(async id=>{const c=await window.yizhi.open();return (await window.yizhi.read(c.sessionId,'KU-002')).unit.reading.blocks.find(p=>p.id===id)!.payload.text;},b.id)).toBe('New B keyboard input: B historical epoch content');
   await app.close();app=await launch();page=await app.firstWindow();await resizeBoardWindow(app,page);
   await expect(page.locator('[data-agent-unit="KU-002"]').getByRole('textbox',{name:'连续编辑正文',exact:true})).toContainText('New B keyboard input: B historical epoch content');
@@ -119,12 +120,12 @@ test('whole-course recovery interrupts an actual host protocol turn while its or
  try{
   const page=await app.firstWindow();await resizeBoardWindow(app,page);
   await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();
-  await page.getByRole('button',{name:'Agent · 学习对话',exact:true}).click();await expect(page.getByText('本机 Codex CLI · 已连接',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'学习对话',exact:true}).click();await expect(page.getByText('本机 Codex CLI · 已连接',{exact:true})).toBeVisible();
   await page.getByLabel('Agent 请求方式').selectOption('modify');await page.getByRole('textbox',{name:'学习对话草稿'}).fill('恢复整课前提交真实协议组并保持运行');await page.getByRole('button',{name:'发送修改请求',exact:true}).click();
   await expect(page.getByRole('textbox',{name:'编辑首段正文'})).toContainText('受控协议回归');
   const original=await page.evaluate(async()=>{const b=window.yizhi,c=await b.open(),list=await b.agent.list(c),view=await b.agent.get({...c,conversationId:list.selectedId!});return {sessionId:c.sessionId,task:view.tasks[0],receipt:await b.commands.query({...c,operationId:'controlled-group1'})};});
   expect(original.task.status).toBe('running');
-  await page.getByRole('button',{name:'整课历史恢复',exact:true}).click();const dialog=page.getByRole('dialog',{name:'整课历史恢复',exact:true});await dialog.getByLabel('历史时间点').selectOption('running-anchor');await dialog.getByRole('button',{name:'预览整课所选范围',exact:true}).click();await dialog.getByRole('button',{name:'确认恢复并隔离旧任务',exact:true}).click();
+  await courseAction(page, '整课历史恢复');const dialog=page.getByRole('dialog',{name:'整课历史恢复',exact:true});await dialog.getByLabel('历史时间点').selectOption('running-anchor');await dialog.getByRole('button',{name:'预览整课所选范围',exact:true}).click();await dialog.getByRole('button',{name:'确认恢复并隔离旧任务',exact:true}).click();
   await expect(page.getByRole('status',{name:'整课恢复结果'})).toContainText('已完成');
   await expect.poll(()=>page.evaluate(async original=>{const c=await window.yizhi.open(),v=await window.yizhi.agent.get({...c,conversationId:original.task.conversationId});return v.tasks[0].executorStatus;},original)).toBe('interrupted');
   const after=await page.evaluate(async original=>{const b=window.yizhi,c=await b.open();return {c,view:await b.agent.get({...c,conversationId:original.task.conversationId}),receipt:await b.commands.query({sessionId:original.sessionId,operationId:'controlled-group1'})};},original);
@@ -143,7 +144,7 @@ test('selected user states and the original recovery identity survive a real SQL
  let app=await launch(),fault:DatabaseSync|undefined;
  try{
   let page=await app.firstWindow();await resizeBoardWindow(app,page);
-  await page.getByRole('button',{name:'整课历史恢复',exact:true}).click();let dialog=page.getByRole('dialog',{name:'整课历史恢复',exact:true});
+  await courseAction(page, '整课历史恢复');let dialog=page.getByRole('dialog',{name:'整课历史恢复',exact:true});
   await dialog.getByLabel('历史时间点').selectOption('ui-state-anchor');await dialog.getByLabel('恢复所选单元的布局').check();await dialog.getByLabel('恢复所选单元的掌握状态').check();
   await dialog.getByRole('button',{name:'预览整课所选范围',exact:true}).click();await expect(dialog.getByRole('region',{name:'整课恢复影响'})).toContainText('掌握状态按所选时间恢复');
   fault=openFaultDatabase(join(directory,'course.sqlite'));fault.exec("CREATE TRIGGER ui_course_restore_fault BEFORE INSERT ON cg_history BEGIN SELECT RAISE(ABORT,'whole course UI disk fault'); END");

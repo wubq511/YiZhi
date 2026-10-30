@@ -1,3 +1,4 @@
+import { useSaveReport } from '../shell/save-status';
 import { useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import type { OpenedCourse } from '../../shared';
 import { ParagraphSaveChannel, type SaveState } from '../save-channel';
@@ -43,10 +44,11 @@ export function ActiveUnitEditor(props: Props) {
     });
     return () => { disposed = true; readiness.reject(new Error('当前单元编辑器已离开')); channel.current?.dispose(); latest.current.register(props.unitId, null); };
   }, [props.sessionId, props.unitId, readiness]);
+  useSaveReport(`body:${props.unitId}`, {label: '当前单元', status: state.status, detail: state.error, retry: () => channel.current?.flush()});
   if (!course || !channel.current) return <p role="status">{state.error ?? '正在读取当前正文与输入…'}</p>;
   return <>
     <ContinuousUnitEditor {...props} course={course} channel={channel.current} saveError={state.status === 'error'} controller={value => { editor.current = value; if (value) readiness.resolve(value); }} />
-    <p role="status" aria-label="当前单元保存状态">{({ saved: '已保存', draft: '草稿已保留', pending: '待保存', saving: '正在保存…', error: '未保存' })[state.status]}</p>
+
     {state.error && <div role="alert" className="save-error">{state.error}<button onClick={() => void channel.current?.flush()}>重试当前单元保存</button></div>}
   </>;
 }

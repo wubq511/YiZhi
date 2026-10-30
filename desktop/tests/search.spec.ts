@@ -4,7 +4,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import type { Page } from '@playwright/test';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { resizeBoardWindow, revealBoardControl } from './board-test-helpers';
+import { resizeBoardWindow, revealBoardControl, waitForReadingLayout } from './board-test-helpers';
 
 async function captureSearchFailure(page: Page, name: string, error: unknown) {
   try {
@@ -25,7 +25,7 @@ async function captureSearchFailure(page: Page, name: string, error: unknown) {
 
 test('offline real IPC search reveals a delivered deep answer and restores the original camera and disclosures', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-search-ui-'));
-  const launch = () => electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  const launch = () => electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_OBSERVE: '1', YIZHI_DATA_HOME: join(root, 'profile') } });
   let app = await launch();
   let current: Page | undefined;
   try {
@@ -34,6 +34,8 @@ test('offline real IPC search reveals a delivered deep answer and restores the o
     const first = page.getByRole('textbox', { name: '编辑首段正文' });
     await revealBoardControl(page, first); await first.click();
     await first.evaluate(el => { const range = document.createRange(); range.setStart(el.firstChild!, 0); range.setEnd(el.firstChild!, 3); const selection = getSelection()!; selection.removeAllRanges(); selection.addRange(range); document.dispatchEvent(new Event('selectionchange')); });
+    // Settle the real caret/native-scroll response before defining the search's starting scene.
+    await waitForReadingLayout(page);
     const selectedText = await page.evaluate(() => getSelection()!.toString());
     const before = await page.locator('.reading-layer[data-unit-id="KU-001"]').getAttribute('style');
     // Delay one real Worker read so locating must await the destination editor.
@@ -107,10 +109,10 @@ test('real saved note and durable message results open their own objects, preser
     await expect(page.getByRole('textbox', { name: '学习对话草稿' })).toHaveValue('保留未发送草稿');
     await page.getByRole('button', { name: '返回搜索前位置' }).click();
     await resizeBoardWindow(app, page, 700, 700);
-    await page.getByRole('button', { name: '关闭目录' }).click();
+    await page.getByRole('button', { name: '收起目录' }).click();
     await page.getByRole('button', { name: '搜索课程', exact: true }).click();
     await expect(page.getByRole('dialog', { name: '搜索课程', exact: true })).toBeVisible();
-    await expect(page.locator('.workspace')).toHaveAttribute('inert', '');
+    await expect(page.locator('main.board')).toHaveAttribute('inert', '');
     await page.getByRole('searchbox').fill('不存在的真实查找词');
     await expect(page.getByRole('region', { name: '搜索结果' })).toContainText('无命中');
     await page.screenshot({ path: evidencePath('t15-search-narrow.png') });
@@ -150,7 +152,7 @@ test('source result opens the fixed original page without creating an annotation
     const beforeClose = await returnScene();
     // Leave the original-page overlay before using the independent search return action.
     await page.getByRole('button', { name: '返回画板', exact: true }).click();
-    await expect(page.getByRole('complementary', { name: '原文资料', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('complementary', { name: '原文资料', exact: true })).toBeHidden();
     const afterClose = await returnScene();
     expect(afterClose.camera).toBe(beforeClose.camera); expect(afterClose.clear).toBe(true);
     const scenePath = test.info().outputPath('source-return-scenes.json');
@@ -188,8 +190,8 @@ test('a changed or unreadable result is rejected, and exact original repair rest
   try {
     page = await app.firstWindow(); await resizeBoardWindow(app, page);
     await page.getByRole('button', { name: '搜索课程', exact: true }).click();
-    await expect(page.getByRole('status', { name: '搜索索引状态' })).toContainText('当前可读内容已索引。');
-    await expect(page.getByRole('button', { name: '重建索引', exact: true })).toBeEnabled();
+    await expect.poll(() => page!.evaluate(async () => { const c=await window.yizhi.open();return (await window.yizhi.search.status({sessionId:c.sessionId})).pending; })).toBe(0);
+    await expect(page.getByRole('button', { name: '重建索引', exact: true })).toHaveCount(0);
     await page.getByRole('searchbox').fill('damaged original');
     await expect(page.getByRole('button', { name: '定位命中' })).toBeVisible();
     const ready = await page.evaluate(async () => {

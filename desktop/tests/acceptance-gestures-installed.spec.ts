@@ -54,7 +54,7 @@ test('T28 corrected installed gestures retain the existing 500 course and reopen
     const commandWheel = await readCameraTransform(viewport); expect(commandWheel.zoom).toBeCloseTo(.7967885985593094, 10);
     // End at normal reading zoom, not the old physical session's upper clamp.
     await navigateUnit(page, graph, ids[1]); await navigateUnit(page, graph, ids[0]);
-    await expect(page.getByRole('status', { name: '阅读状态', exact: true })).toHaveText('阅读位置已保存');
+    await expect(page.getByRole('status', { name: '保存状态', exact: true })).toHaveText('已保存');
     await expect.poll(() => page.evaluate(async sessionId => (await (window as any).yizhi.readingState(sessionId)).camera.zoom, opened.sessionId)).toBe(.85);
     const ready = await readCameraTransform(viewport); expect(ready.zoom).toBe(.85);
     await app.close(); app = await launch(); const reopened = await app.firstWindow(); await expect(reopened.locator('.workspace')).toHaveAttribute('aria-busy', 'false');

@@ -36,7 +36,7 @@ test('installed CLI integrates student typing, correction and new same-target ma
     expect(held.unit.reading.blocks.find(x=>x.id===a.id)!.payload.text).toContain('学生保留前缀：');
     expect(held.unit.reading.blocks.find(x=>x.id===a.id)!.payload.text).not.toContain('补充：位权等于');
     expect(held.unit.reading.blocks.find(x=>x.id===b.id)!.payload.text).toContain('独立补充：基数决定可用数码。');
-    await page.getByRole('button',{name:'Agent · 学习对话',exact:true}).click();
+    await page.getByRole('button',{name:'学习对话',exact:true}).click();
     await expect.poll(async()=>(await view(page)).tasks.every(t=>t.status==='completed'),{timeout:120000}).toBe(true);
     const done=await view(page);evidence.done=done;const final=await page.evaluate(()=>window.yizhi.open());evidence.final=final.unit;
     const finalText=final.unit.reading.blocks.find(x=>x.id===a.id)!.payload.text;

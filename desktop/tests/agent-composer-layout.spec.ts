@@ -15,7 +15,7 @@ test('persisted long conversation keeps the working composer usable at desktop a
   try {
     const page = await app.firstWindow();
     await resizeBoardWindow(app, page, 1024, 688);
-    await page.getByRole('button', { name: 'Agent · 学习对话', exact: true }).click();
+    await page.getByRole('button', { name: '学习对话', exact: true }).click();
     const longQuestion = Array.from({ length: 32 }, (_, i) => `第 ${i + 1} 段：请结合位权解释这个长问题，保留前后文。`).join('\n');
     const input = page.getByRole('textbox', { name: '学习对话草稿' });
     await input.fill(longQuestion);

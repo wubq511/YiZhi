@@ -9,9 +9,9 @@ test('closing the narrow Agent dialog with keyboard returns focus to its enabled
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile'), YIZHI_CODEX_PATH: join(root, 'missing-cli') } });
   try {
     const page = await app.firstWindow(); await resizeBoardWindow(app, page, 700, 700);
-    await page.getByRole('button', { name: '关闭目录', exact: true }).click();
+    await page.getByRole('button', { name: '收起目录', exact: true }).click();
     await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
-    const trigger = page.getByRole('button', { name: 'Agent · 学习对话', exact: true });
+    const trigger = page.getByRole('button', { name: '学习对话', exact: true });
     await trigger.focus(); await expect(trigger).toBeFocused(); await page.keyboard.press('Enter');
     await expect(page.getByRole('textbox', { name: '学习对话草稿', exact: true })).toBeFocused();
     const close = page.getByRole('button', { name: '收起对话', exact: true }); await close.focus(); await page.keyboard.press('Enter');
@@ -29,7 +29,7 @@ test('closing the narrow source dialog with Escape returns focus after the heade
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile'), YIZHI_CODEX_PATH: join(root, 'missing-cli') } });
   try {
     const page = await app.firstWindow(); await resizeBoardWindow(app, page, 700, 700);
-    await page.getByRole('button', { name: '关闭目录', exact: true }).click();
+    await page.getByRole('button', { name: '收起目录', exact: true }).click();
     await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
     const trigger = page.getByRole('button', { name: '原文资料', exact: true });
     await trigger.focus(); await expect(trigger).toBeFocused(); await page.keyboard.press('Enter');

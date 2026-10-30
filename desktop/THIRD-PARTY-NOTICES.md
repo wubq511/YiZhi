@@ -44,3 +44,20 @@ Portions of this software are copyright © 2026 The FreeType Project (www.freety
 This software is based in part on the work of the Independent JPEG Group.
 
 本材料保守保留 SBOM 全部组件及额外上游 notices；SBOM 含 build-dependencies、其他平台及工具记录，未证明的 runtime scope 在 manifest 中明确标出。这里不把这些记录都声称为 runtime，也不声称已完成对象级链接或可重现构建证明。最终安装包的复制与内容验证由打包流程完成。
+
+## 工作区组件（2026-10-30）
+
+外壳采用 shadcn/ui **Base UI / Nova** 的真实组件源码，本地组件为 Button、Dropdown Menu 与 Popover。原始 registry URL、下载摘要及本地定制范围见 [源码来源](licenses/shadcn/provenance.json)，[shadcn/ui MIT](licenses/shadcn/LICENSE.md) 随构建和打包保留。组件的图标占位符替换为 Lucide，菜单改为不透明背景，常用命中区调为约 40px。
+
+| 依赖 | 精确版本 | 许可 |
+| --- | --- | --- |
+| @base-ui/react | 1.9.0 | MIT |
+| lucide-react | 1.64.0 | ISC（包内保留衍生图标的 MIT 声明） |
+| motion | 14.8.0 | MIT |
+| cn | 0.5.0 | MIT |
+| class-variance-authority | 0.7.1 | Apache-2.0 |
+| tailwindcss / @tailwindcss/cli | 4.3.3 | MIT；仅构建工具 |
+| shadcn | 4.23.0 | MIT；组件配置及构建 CSS |
+| tw-animate-css | 1.4.0 | MIT；构建 CSS |
+
+以上直接依赖及使用的 Floating UI、Motion、Base UI 等传递包许可原文和摘要见 [workspace-shell 清单](licenses/workspace-shell/manifest.json)。`build` 将其复制到 `dist/licenses/`；macOS 打包保留整个 `licenses/`、`dist/licenses/` 与生产依赖包中的许可证。运行不下载组件、样式或图标。

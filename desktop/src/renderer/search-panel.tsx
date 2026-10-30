@@ -1,21 +1,22 @@
+import { PanelPortal, useDockPanel } from './shell/panels';
+import { X } from 'lucide-react';
 import { DescriptionSearch, useDescriptionSearch } from './description-search';
 import { SearchHitCard } from './search-hit';
 import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { searchScopes, type SearchHit, type SearchResults, type SearchScope, type SearchStatus } from '../search-api';
 import './search-panel.css';
 const labels: Record<SearchScope, string> = { knowledge: '知识', notes: '个人笔记', messages: '学习对话', sources: '来源原文' };
-export function SearchPanel({ sessionId, narrow, beforeOpen, onOpenChange, locate }: { sessionId: string; narrow: boolean; beforeOpen(): void; onOpenChange(open: boolean): void; locate(hit: SearchHit): Promise<void> }) {
+export function SearchPanel({ sessionId, narrow, locate }: { sessionId: string; narrow: boolean; locate(hit: SearchHit): Promise<void> }) {
   const described = useDescriptionSearch(sessionId);
-  const [open, setOpen] = useState(false), [query, setQuery] = useState(''), [scopes, setScopes] = useState(searchScopes);
+  const { open, setOpen } = useDockPanel('search');
+  const [query, setQuery] = useState(''), [scopes, setScopes] = useState(searchScopes);
   const [results, setResults] = useState<SearchResults>(), [status, setStatus] = useState<SearchStatus>();
   const [error, setError] = useState(''), [loading, setLoading] = useState(false), [indexing, setIndexing] = useState(false), [revision, setRevision] = useState(0);
-  const input = useRef<HTMLInputElement>(null), trigger = useRef<HTMLButtonElement>(null), panel = useRef<HTMLElement>(null);
-  const prepared = useRef(false);
+  const input = useRef<HTMLInputElement>(null), panel = useRef<HTMLElement>(null);
   const lastQuery = useRef('');
   const serial = useRef(0), alive = useRef(true), indexingRef = useRef(false);
   useEffect(() => () => { alive.current = false; }, []);
-  const show = (value: boolean) => { setOpen(value); onOpenChange(value); if (!value) requestAnimationFrame(() => trigger.current?.focus()); };
+  const show = (value: boolean) => { setOpen(value); };
   const rebuild = async (reset = false, retryErrors = false) => {
     if (indexingRef.current) return;
     indexingRef.current = true; setIndexing(true);
@@ -36,7 +37,7 @@ export function SearchPanel({ sessionId, narrow, beforeOpen, onOpenChange, locat
   useEffect(() => { if (open) { input.current?.focus(); void window.yizhi.search.status({ sessionId }).then(setStatus).catch(e => setError(e.message)); void rebuild(); } }, [open]);
   useEffect(() => {
     const token = ++serial.current;
-    if (!open || !query.trim()) { setResults(undefined); setLoading(false); return; }
+    if (!query.trim()) { setResults(undefined); setLoading(false); return; }
     const key = JSON.stringify([sessionId, query, scopes]), changed = key !== lastQuery.current; lastQuery.current = key;
     if (changed) { setLoading(true); setResults(undefined); }
     const timer = setTimeout(() => {
@@ -45,12 +46,14 @@ export function SearchPanel({ sessionId, narrow, beforeOpen, onOpenChange, locat
       }).catch(e => { if (token === serial.current && alive.current) { setError(e.message); setLoading(false); } });
     }, changed ? 150 : 0);
     return () => clearTimeout(timer);
-  }, [query, scopes, open, revision]);
+  }, [query, scopes, revision]);
   const openHit = (hit: SearchHit) => { void (async () => {
-    try { const current = await window.yizhi.search.locate({ sessionId, hit }); await locate(current); setOpen(false); onOpenChange(false); }
+    try { const current = await window.yizhi.search.locate({ sessionId, hit }); await locate(current); setOpen(false); }
     catch (e) { setError((e as Error).message); void window.yizhi.search.status({ sessionId }).then(setStatus).catch(() => {}); }
   })(); };
-  return <><button ref={trigger} aria-expanded={open} onPointerDown={() => { if (!open) { beforeOpen(); prepared.current = true; } }} onKeyDown={event => { if (!open && ['Enter', ' '].includes(event.key)) { beforeOpen(); prepared.current = true; } }} onClick={() => { if (!open && !prepared.current) beforeOpen(); prepared.current = false; show(true); }}>搜索课程</button>{open && createPortal(<aside ref={panel} className="search-panel" role={narrow ? 'dialog' : 'complementary'} aria-modal={narrow || undefined} aria-label="搜索课程" onKeyDown={event => {
+  // The retained native input owns its live value. Index/result renders must not replace
+  // a new browser edit with the previous query before its input event reaches React.
+  return <PanelPortal id="search"><aside ref={panel} className="search-panel" role={narrow ? 'dialog' : 'complementary'} aria-modal={narrow || undefined} aria-label="搜索课程" onKeyDown={event => {
     if (event.key === 'Escape') { event.preventDefault(); show(false); }
     if (event.key === 'Tab' && narrow) {
       const items = [...panel.current!.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), summary')].filter(el => el.getClientRects().length);
@@ -58,17 +61,15 @@ export function SearchPanel({ sessionId, narrow, beforeOpen, onOpenChange, locat
       else if (!event.shiftKey && document.activeElement === items.at(-1)) { event.preventDefault(); items[0]?.focus(); }
     }
   }}>
-    <div className="search-heading"><h2>搜索课程</h2><button onClick={() => show(false)}>收起搜索</button></div>
-    <label className="search-input">查找已有内容<input ref={input} type="search" aria-label="查找已有内容" value={query} onChange={e => setQuery(e.target.value)} placeholder="关键词、别名或公式符号" maxLength={512} /></label>
+    <div className="search-heading"><h2>搜索课程</h2><button className="panel-close" aria-label="收起搜索" onClick={() => show(false)}><X size={18}/></button></div>
+    <label className="search-input">查找已有内容<input ref={input} type="search" aria-label="查找已有内容" defaultValue={query} onInput={e => setQuery(e.currentTarget.value)} placeholder="关键词、别名或公式符号" maxLength={512} /></label>
     <fieldset className="search-scopes"><legend>搜索范围</legend>{searchScopes.map(scope => <label key={scope}><input type="checkbox" checked={scopes.includes(scope)} onChange={e => setScopes(current => e.target.checked ? [...current, scope] : current.filter(s => s !== scope))} />{labels[scope]}</label>)}</fieldset>
     <DescriptionSearch state={described} scopes={scopes} locate={openHit} />
     {error && <p role="alert" className="search-error">{error}</p>}
-    <div className="search-index" role="status" aria-label="搜索索引状态">{status && <span>{status.pending ? `${status.pending} 个对象尚未完成索引；当前变化正用有界直查补齐。` : '当前可读内容已索引。'}{indexing && ' 正在分批索引…'}</span>}
-      <button disabled={indexing} onClick={() => void rebuild(true, true)}>重建索引</button>
-    </div>
+    {indexing && <p className="search-index" role="status">正在更新搜索结果…</p>}
     {status && (status.indexErrors.length > 0 || status.unreadable.length > 0 || status.noText.length > 0 || status.unavailable > 0) && <details className="search-coverage"><summary>未覆盖与不可读内容</summary>
       {status.unavailable > 0 && <p>{status.unavailable} 个目录单元尚无已交付可读正文；不将其元数据当作全文。</p>}
-      {status.indexErrors.map(p => <p key={`index:${p.entityId}`}>{p.title} 尚未索引：{p.reason}。仍可直查，或重建索引。</p>)}
+      {status.indexErrors.map(p => <p key={`index:${p.entityId}`}>{p.title} 尚未索引：{p.reason}。已有内容仍可搜索。</p>)}
       {status.noText.map(p => <p key={p.entityId}>{p.title}：{p.reason}</p>)}
       {status.unreadable.map(p => <div key={`${p.scope}:${p.entityId}`}><p>{labels[p.scope]} · {p.title}：{p.reason}</p>{p.scope === 'sources' && <button onClick={() => { void (async () => {
         try { const { generation } = await window.yizhi.sources.list({ sessionId }); const repaired = await window.yizhi.sources.chooseRepair({ sessionId, generation, operationId: crypto.randomUUID(), versionId: p.entityId }); if (repaired) await rebuild(false, true); }
@@ -82,5 +83,5 @@ export function SearchPanel({ sessionId, narrow, beforeOpen, onOpenChange, locat
         {results.hits.map((hit, i) => <SearchHitCard key={`${hit.scope}:${hit.entityId}:${hit.field}:${i}`} hit={hit} locate={openHit} />)}
       </>}
     </section>
-  </aside>, document.body)}</>;
+  </aside></PanelPortal>;
 }

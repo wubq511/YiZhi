@@ -29,7 +29,7 @@ for(const nested of [false,true])test(`student reaches an existing ${nested?'nes
   const button=page.getByRole('button',{name:'编辑关联正文公式',exact:true});await revealBoardControl(page,button);await button.click();
   const field=page.locator('.editor-formula[data-block-id="mux-linked-formula"] math-field');await expect(field).toBeVisible();
   await field.evaluate((el:any)=>{el.setValue('Z=S_{10}');el.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertText'}));});
-  await expect(page.getByRole('status',{name:'当前单元保存状态'})).toHaveText('已保存');
+  await expect(page.getByRole('status',{name:'保存状态',exact:true})).toHaveText('已保存');
   await expect.poll(async()=>unitBlocks(await page.evaluate(async()=>{const c=await window.yizhi.open();return window.yizhi.readUnit(c.sessionId,'KU-057');})).find(b=>b.id==='mux-linked-formula')!.payload.latex).toContain('10');
   if(nested){
    expect(await page.locator('article[data-unit-id="KU-057"] details.material').first().getAttribute('open')).not.toBeNull();

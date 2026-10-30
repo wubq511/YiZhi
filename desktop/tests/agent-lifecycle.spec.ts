@@ -9,7 +9,7 @@ test('lifecycle controls expose stopping, explicit continue and reopen the curre
  const app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile'),YIZHI_CODEX_PATH:cli,YIZHI_FIXTURE_MODE:'linger'}});
  try {
   let page=await app.firstWindow();await resizeBoardWindow(app,page);
-  await page.getByRole('button',{name:'Agent · 学习对话',exact:true}).click();
+  await page.getByRole('button',{name:'学习对话',exact:true}).click();
   const composer=page.getByRole('textbox',{name:'学习对话草稿'});
   await expect(page.getByText('本机 Codex CLI · 已连接',{exact:true})).toBeVisible();
   await composer.fill('解释位权');await page.getByRole('button',{name:'发送问题',exact:true}).click();
@@ -26,7 +26,7 @@ test('lifecycle controls expose stopping, explicit continue and reopen the curre
   await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].close());await expect.poll(()=>app.windows().length).toBe(0);
   await app.evaluate(({app})=>app.emit('activate'));
   page=await app.waitForEvent('window');await resizeBoardWindow(app,page);
-  await page.getByRole('button',{name:'Agent · 学习对话',exact:true}).click();
+  await page.getByRole('button',{name:'学习对话',exact:true}).click();
   await expect(page.getByRole('textbox',{name:'学习对话草稿'})).toHaveValue('关窗保存的最新尾部');
   await expect(page.getByRole('status',{name:'回答状态'})).toHaveCount(2);
   await expect(page.getByRole('status',{name:'回答状态'}).nth(1)).toContainText('回答已完成');

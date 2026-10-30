@@ -1,3 +1,4 @@
+import { courseAction } from './shell-actions';
 import {test,expect,_electron as electron} from '@playwright/test';
 import {cp,mkdtemp,readFile,rm} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
@@ -14,6 +15,6 @@ test('the actual upgraded personal course opens as an independent offline UI cop
    return{courseId:c.courseId,format:c.courseFormat,units:graph.nodes.length,notes:await window.yizhi.annotations.list(c),sources:await window.yizhi.sources.list(c),tasks:conversations.flatMap(v=>v.tasks),messages:conversations.flatMap(v=>v.messages)};});
   expect(facts.format).toBe(2);expect(facts.units).toBe(84);expect(facts.notes).toHaveLength(1);expect(facts.notes[0].current.status).toBe('orphan');expect(facts.sources.versions).toHaveLength(16);expect(facts.tasks).toHaveLength(2);expect(facts.tasks.every(t=>t.status==='completed')).toBe(true);expect(facts.messages).toHaveLength(4);
   await page.getByRole('button',{name:'原文资料',exact:true}).click();await page.getByLabel('资料版本',{exact:true}).selectOption(facts.sources.versions[0].versionId);await expect(page.getByRole('status',{name:'原文状态'})).toHaveText('原页已载入');await expect(page.locator('.source-pdf canvas')).toBeVisible();await page.screenshot({path:test.info().outputPath('actual-format2-source.png')});await page.getByRole('button',{name:'返回画板',exact:true}).click();
-  await resizeBoardWindow(app,page,700,700);await page.getByRole('button',{name:'关闭目录',exact:true}).click();await page.getByRole('button',{name:'完整备份',exact:true}).click();const panel=page.getByRole('dialog',{name:'完整备份',exact:true});await expect(panel).toContainText('新建完整备份');expect(await panel.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);await page.screenshot({path:test.info().outputPath('actual-format2-narrow.png')});
+  await resizeBoardWindow(app,page,700,700);await page.getByRole('button',{name:'收起目录',exact:true}).click();await courseAction(page, '完整备份');const panel=page.getByRole('dialog',{name:'完整备份',exact:true});await expect(panel).toContainText('新建完整备份');expect(await panel.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);await page.screenshot({path:test.info().outputPath('actual-format2-narrow.png')});
  }finally{await app.close();await rm(root,{recursive:true,force:true});}
 });

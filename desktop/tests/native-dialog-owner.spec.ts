@@ -1,3 +1,4 @@
+import { sourceAction } from './shell-actions';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -23,7 +24,7 @@ test('source import and repair attach the native chooser to the requesting learn
       };
     },file);
     await page.getByRole('button',{name:'原文资料',exact:true}).click();
-    await page.getByRole('button',{name:'导入资料',exact:true}).click();
+    await sourceAction(page, '导入资料');
     await expect(page.getByRole('status',{name:'原文状态'})).toHaveText('原页已载入');
     const state=await page.evaluate(async()=>{
       const api=(window as any).yizhi,c=await api.open(),list=await api.sources.list({sessionId:c.sessionId});

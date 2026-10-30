@@ -1,3 +1,4 @@
+import { openRelations, sourceAction } from './shell-actions';
 import type { DatabaseSync } from 'node:sqlite';
 import { openFaultDatabase } from './fault-database';
 import { evidencePath } from './evidence-paths';
@@ -26,7 +27,7 @@ test('local PDF.js renders a real text layer, cites actual selection, preserves 
     // Only the native chooser is controlled; host copy, protocol, Worker, PDF.js and SQLite are real.
     await app.evaluate(({ dialog }, path) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] }); }, path);
     await page.getByRole('button', { name: '原文资料', exact: true }).click();
-    await page.getByRole('button', { name: '导入资料', exact: true }).click();
+    await sourceAction(page, '导入资料');
     await expect(page.getByRole('status', { name: '原文状态' })).toContainText('原页已载入');
     await expect(page.locator('.source-pdf canvas')).toBeVisible();
     expect(await page.locator('.source-pdf canvas').evaluate((canvas: HTMLCanvasElement) => {
@@ -35,6 +36,7 @@ test('local PDF.js renders a real text layer, cites actual selection, preserves 
       return ink;
     })).toBeGreaterThan(100);
     await expect(page.locator('.source-pdf .textLayer')).toContainText('Original course evidence');
+    await page.getByText('印刷页登记与定位',{exact:true}).click();
     await expect(page.getByText('印刷页：未核对', { exact: true })).toBeVisible();
     await page.getByLabel('已核对的印刷页').fill('iv');
     await page.getByRole('button', { name: '登记印刷页', exact: true }).click();
@@ -46,13 +48,14 @@ test('local PDF.js renders a real text layer, cites actual selection, preserves 
       getSelection()!.removeAllRanges(); getSelection()!.addRange(range); document.dispatchEvent(new Event('selectionchange'));
     });
     await page.getByRole('button', { name: '保留选文与出处', exact: true }).click();
+    await page.locator('.source-citations summary').click();
     await expect(page.locator('.source-citations blockquote')).toHaveText('Original');
     await sourceFixture(path, 'New revision evidence', 180000);
-    await page.getByRole('button', { name: '导入此来源新版', exact: true }).click();
+    await sourceAction(page, '导入此来源新版');
     await expect(page.locator('.source-pdf .textLayer')).toContainText('New revision evidence');
     await page.getByRole('button', { name: '暂不更新', exact: true }).click();
     await page.getByRole('button', { name: '根据新版更新', exact: true }).click();
-    await expect(page.getByText('已记录更新意图，尚未执行画板修改。', { exact: true })).toBeVisible();
+    await expect(page.getByText('已记录更新请求，画板尚未修改。', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: '打开引用原页', exact: true }).click();
     await expect(page.locator('.source-pdf .textLayer')).toContainText('Original course evidence');
     await page.getByRole('button', { name: '返回画板', exact: true }).click();
@@ -68,7 +71,7 @@ test('local PDF.js renders a real text layer, cites actual selection, preserves 
     await expect(page.getByRole('status', { name: '原文位置保存' })).toHaveText('原文位置已保存');
     await page.screenshot({ path: evidencePath('t14-source.png') });
     await page.getByRole('button', { name: '返回画板', exact: true }).click();
-    await page.getByRole('button', { name: '查看关系', exact: true }).click();
+    await openRelations(page);
     const relation = page.getByLabel('关系详情');
     await relation.getByRole('button', { name: '审核 REL-001', exact: true }).click();
     const imported = await page.evaluate(async () => {
@@ -94,7 +97,7 @@ test('graphic-only page carries a real region without fabricated quote; offline 
     const ranges: string[] = [];
     page.on('request', request => { if (request.url().startsWith('yizhi-resource:') && request.headers().range) ranges.push(request.headers().range); });
     await page.getByRole('button', { name: '原文资料', exact: true }).click();
-    await page.getByRole('button', { name: '导入资料', exact: true }).click();
+    await sourceAction(page, '导入资料');
     await expect(page.getByRole('status', { name: '原文状态' })).toHaveText('原页已载入');
     await page.getByRole('button', { name: '下一页', exact: true }).click();
     await expect(page.getByText(/本页没有可靠文本层/)).toBeVisible();
@@ -122,6 +125,7 @@ test('graphic-only page carries a real region without fabricated quote; offline 
     await page.waitForLoadState('load');
     await page.context().setOffline(true);
     await page.reload();
+    await page.getByRole('button',{name:'原文资料',exact:true}).click();
     await expect(page.getByRole('status', { name: '原文状态' })).toHaveText('原页已载入');
     await expect(page.getByLabel('PDF 页序')).toHaveValue('2');
     await expect(page.getByLabel('原页缩放')).toHaveValue('2.5');
@@ -130,10 +134,10 @@ test('graphic-only page carries a real region without fabricated quote; offline 
     await expect(page.locator('.source-pdf .textLayer')).toHaveText('');
     await page.setViewportSize({ width: 680, height: 650 });
     await expect(page.getByRole('dialog', { name: '原文资料' })).toBeVisible();
-    expect(await page.locator('.board-workspace').evaluate(element => (element as HTMLElement).inert)).toBe(true);
+    expect(await page.locator('main.board').evaluate(element => (element as HTMLElement).inert)).toBe(true);
     await page.screenshot({ path: evidencePath('t14-source-narrow.png') });
     await page.keyboard.press('Escape');
-    await expect(page.getByRole('dialog', { name: '原文资料' })).toHaveCount(0);
+    await expect(page.getByRole('dialog', { name: '原文资料' })).toBeHidden();
   } finally { await app?.close(); await rm(root, { recursive: true, force: true }); }
 });
 
@@ -150,7 +154,7 @@ test('host IPC denies paths and unregistered routes; real storage faults retain 
     fault = openFaultDatabase(join(root, 'course/course.sqlite'));
     fault.exec("CREATE TRIGGER source_failure BEFORE INSERT ON source_versions BEGIN SELECT RAISE(ABORT,'source registry unavailable'); END");
     await page.getByRole('button', { name: '原文资料', exact: true }).click();
-    await page.getByRole('button', { name: '导入资料', exact: true }).click();
+    await sourceAction(page, '导入资料');
     await expect(page.getByRole('alert')).toContainText('source registry unavailable');
     fault.exec('DROP TRIGGER source_failure');
     await page.getByRole('button', { name: '重试资料操作', exact: true }).click();

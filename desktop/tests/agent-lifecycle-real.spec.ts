@@ -5,7 +5,7 @@ import { join,resolve } from 'node:path';
 import { resizeBoardWindow } from './board-test-helpers';
 import type { Page } from '@playwright/test';
 async function view(page:Page){return page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open(),l=await b.agent.list({sessionId:c.sessionId});return b.agent.get({sessionId:c.sessionId,conversationId:l.selectedId});});}
-async function openAgent(page:Page){await page.getByRole('button',{name:'Agent · 学习对话',exact:true}).click();await expect(page.getByText('本机 Codex CLI · 已连接',{exact:true})).toBeVisible({timeout:30000});await page.getByLabel('问答模型').selectOption('gpt-6-luna');}
+async function openAgent(page:Page){await page.getByRole('button',{name:'学习对话',exact:true}).click();await expect(page.getByText('本机 Codex CLI · 已连接',{exact:true})).toBeVisible({timeout:30000});await page.getByLabel('问答模型').selectOption('gpt-6-luna');}
 test('installed CLI stops original turn, explicitly continues with fresh tool reads, survives learning-window close and reconciles durable results on reopen',async()=>{
  test.skip(process.env.YIZHI_REAL_EXECUTOR!=='1','Opt-in installed CLI acceptance, not protocol fixture');test.setTimeout(180000);
  const root=await mkdtemp(join(tmpdir(),'yizhi-t19-actual-')),result:any={};let app:any;

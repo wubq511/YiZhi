@@ -1,3 +1,4 @@
+import { sourceAction } from './shell-actions';
 import { openFaultDatabase } from './fault-database';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, chmod, writeFile } from 'node:fs/promises';
@@ -7,7 +8,7 @@ import type { ElectronApplication, Page } from '@playwright/test';
 import { sourceFixture } from './source-fixture';
 
 async function openAgent(page: Page) {
-  await page.getByRole('button', { name: 'Agent · 学习对话', exact: true }).click();
+  await page.getByRole('button', { name: '学习对话', exact: true }).click();
   await expect(page.getByRole('textbox', { name: '学习对话草稿' })).toBeVisible();
 }
 const fixture = resolve('dist/tests/agent-executor-fixture.cjs');
@@ -53,13 +54,13 @@ test('Agent sidebar keeps drafts, native composer Undo, fixed source selection a
     const pdf = join(root, 'evidence.pdf'); await sourceFixture(pdf, 'Source selection fixed evidence');
     await app.evaluate(({ dialog }, path) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] }); }, pdf);
     await page.getByRole('button', { name: '原文资料', exact: true }).click();
-    await page.getByRole('button', { name: '导入资料', exact: true }).click();
+    await sourceAction(page, '导入资料');
     await expect(page.locator('.source-pdf canvas')).toBeVisible();
     await expect(page.locator('.textLayer')).toContainText('Source selection fixed evidence');
     await page.locator('.textLayer span').first().evaluate(element => { const range = document.createRange(); range.selectNodeContents(element); const s = window.getSelection()!; s.removeAllRanges(); s.addRange(range); document.dispatchEvent(new Event('selectionchange')); });
     await page.getByRole('button', { name: '带此选段向 Agent 提问', exact: true }).click();
     await expect(page.locator('.agent-attachment')).toContainText('Source selection fixed evidence');
-    await page.getByRole('button', { name: '返回画板', exact: true }).click();
+    if (await page.locator('.source-panel').isVisible()) await page.getByRole('button', { name: '返回画板', exact: true }).click();
     await composer.fill('解释这段来源');
     const other = choices.find(o => o.id !== first.id)!;
     await page.getByLabel('学习对话列表').selectOption(other.id); await expect(composer).toHaveValue('第二段草稿');
@@ -116,7 +117,7 @@ test('actual installed executor answers a small cited question through the Elect
     const original = await page.evaluate(async () => (window as any).yizhi.open()); evidence.runtime = original.runtime;
     const pdf = join(root, 'evidence.pdf'); await sourceFixture(pdf, 'Place value depends on position.');
     await app.evaluate(({ dialog }, path) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] }); }, pdf);
-    await page.getByRole('button', { name: '原文资料', exact: true }).click(); await page.getByRole('button', { name: '导入资料', exact: true }).click();
+    await page.getByRole('button', { name: '原文资料', exact: true }).click(); await sourceAction(page, '导入资料');
     await expect(page.locator('.textLayer')).toContainText('Place value depends on position.');
     await page.locator('.textLayer span').first().evaluate(element => { const range = document.createRange(); range.selectNodeContents(element); const selection = window.getSelection()!; selection.removeAllRanges(); selection.addRange(range); document.dispatchEvent(new Event('selectionchange')); });
     await page.getByRole('button', { name: '带此选段向 Agent 提问' }).click();

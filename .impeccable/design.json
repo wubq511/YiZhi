@@ -1,13 +1,12 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-27T04:13:01.888577Z",
-  "title": "Design System: 绎知 YiZhi",
+  "generatedAt": "2026-10-29T19:10:48.399808+00:00",
+  "title": "Design System: 绎知桌面学习工作区",
   "extensions": {
     "colorMeta": {
       "paper": {
         "role": "neutral",
         "displayName": "画布白",
-        "canonical": "#fff",
         "tonalRamp": [
           "oklch(15.00% 0.0000 0.00)",
           "oklch(27.00% 0.0000 0.00)",
@@ -22,7 +21,6 @@
       "edit-paper": {
         "role": "neutral",
         "displayName": "暖白编辑纸",
-        "canonical": "#fffefa",
         "tonalRamp": [
           "oklch(15.00% 0.0030 95.10)",
           "oklch(27.00% 0.0043 95.10)",
@@ -37,7 +35,6 @@
       "ink": {
         "role": "neutral",
         "displayName": "石墨墨色",
-        "canonical": "#27343e",
         "tonalRamp": [
           "oklch(15.00% 0.0138 241.65)",
           "oklch(27.00% 0.0200 241.65)",
@@ -52,7 +49,6 @@
       "muted": {
         "role": "neutral",
         "displayName": "静谧灰蓝",
-        "canonical": "#68717a",
         "tonalRamp": [
           "oklch(15.00% 0.0098 248.15)",
           "oklch(27.00% 0.0142 248.15)",
@@ -67,7 +63,6 @@
       "border": {
         "role": "neutral",
         "displayName": "细线灰",
-        "canonical": "#e5e5eb",
         "tonalRamp": [
           "oklch(15.00% 0.0044 286.24)",
           "oklch(27.00% 0.0065 286.24)",
@@ -82,7 +77,6 @@
       "surface": {
         "role": "neutral",
         "displayName": "浅灰面板",
-        "canonical": "#f6f6f9",
         "tonalRamp": [
           "oklch(15.00% 0.0022 286.33)",
           "oklch(27.00% 0.0032 286.33)",
@@ -97,7 +91,6 @@
       "purple": {
         "role": "primary",
         "displayName": "交互紫",
-        "canonical": "#6965db",
         "tonalRamp": [
           "oklch(15.00% 0.0964 280.83)",
           "oklch(27.00% 0.1402 280.83)",
@@ -112,7 +105,6 @@
       "focus": {
         "role": "primary",
         "displayName": "聚焦淡紫",
-        "canonical": "#eeedff",
         "tonalRamp": [
           "oklch(15.00% 0.0132 288.49)",
           "oklch(27.00% 0.0193 288.49)",
@@ -127,7 +119,6 @@
       "blue": {
         "role": "secondary",
         "displayName": "条件蓝",
-        "canonical": "#345d88",
         "tonalRamp": [
           "oklch(15.00% 0.0463 251.08)",
           "oklch(27.00% 0.0673 251.08)",
@@ -142,7 +133,6 @@
       "blue-line": {
         "role": "secondary",
         "displayName": "手绘蓝线",
-        "canonical": "#7798bc",
         "tonalRamp": [
           "oklch(15.00% 0.0359 251.00)",
           "oklch(27.00% 0.0522 251.00)",
@@ -157,7 +147,6 @@
       "blue-fill": {
         "role": "secondary",
         "displayName": "条件浅蓝",
-        "canonical": "#f0f5fc",
         "tonalRamp": [
           "oklch(15.00% 0.0059 256.69)",
           "oklch(27.00% 0.0086 256.69)",
@@ -172,7 +161,6 @@
       "green": {
         "role": "secondary",
         "displayName": "结论青绿",
-        "canonical": "#286b58",
         "tonalRamp": [
           "oklch(15.00% 0.0411 171.37)",
           "oklch(27.00% 0.0597 171.37)",
@@ -187,7 +175,6 @@
       "green-line": {
         "role": "secondary",
         "displayName": "结论绿线",
-        "canonical": "#5f967e",
         "tonalRamp": [
           "oklch(15.00% 0.0380 164.96)",
           "oklch(27.00% 0.0553 164.96)",
@@ -202,7 +189,6 @@
       "green-fill": {
         "role": "secondary",
         "displayName": "验证浅绿",
-        "canonical": "#edf7f1",
         "tonalRamp": [
           "oklch(15.00% 0.0073 159.92)",
           "oklch(27.00% 0.0106 159.92)",
@@ -217,7 +203,6 @@
       "amber": {
         "role": "tertiary",
         "displayName": "笔记暖黄",
-        "canonical": "#79551f",
         "tonalRamp": [
           "oklch(15.00% 0.0463 73.95)",
           "oklch(27.00% 0.0673 73.95)",
@@ -232,7 +217,6 @@
       "amber-line": {
         "role": "tertiary",
         "displayName": "笔记赭线",
-        "canonical": "#bc9a5b",
         "tonalRamp": [
           "oklch(15.00% 0.0500 81.80)",
           "oklch(27.00% 0.0728 81.80)",
@@ -247,7 +231,6 @@
       "amber-fill": {
         "role": "tertiary",
         "displayName": "笔记浅黄",
-        "canonical": "#fff7e5",
         "tonalRamp": [
           "oklch(15.00% 0.0138 86.87)",
           "oklch(27.00% 0.0201 86.87)",
@@ -262,7 +245,6 @@
       "ui-muted": {
         "role": "neutral",
         "displayName": "界面辅助灰",
-        "canonical": "#626b79",
         "tonalRamp": [
           "oklch(15.00% 0.0136 259.19)",
           "oklch(27.00% 0.0197 259.19)",
@@ -277,7 +259,6 @@
       "ui-muted-tint": {
         "role": "neutral",
         "displayName": "浅底辅助灰",
-        "canonical": "#5f6479",
         "tonalRamp": [
           "oklch(15.00% 0.0186 274.61)",
           "oklch(27.00% 0.0271 274.61)",
@@ -292,7 +273,6 @@
       "ui-placeholder": {
         "role": "neutral",
         "displayName": "输入提示灰",
-        "canonical": "#687080",
         "tonalRamp": [
           "oklch(15.00% 0.0147 264.32)",
           "oklch(27.00% 0.0214 264.32)",
@@ -307,7 +287,6 @@
       "course-priority": {
         "role": "neutral",
         "displayName": "课程重要性灰蓝",
-        "canonical": "#5c6f80",
         "tonalRamp": [
           "oklch(15.00% 0.0193 245.53)",
           "oklch(27.00% 0.0281 245.53)",
@@ -322,7 +301,6 @@
       "learning-reminder": {
         "role": "tertiary",
         "displayName": "学习提醒赭色",
-        "canonical": "#8f4e2e",
         "tonalRamp": [
           "oklch(15.00% 0.0542 45.80)",
           "oklch(27.00% 0.0789 45.80)",
@@ -337,7 +315,6 @@
       "learning-reminder-line": {
         "role": "tertiary",
         "displayName": "学习提醒赭色边线",
-        "canonical": "#c58d74",
         "tonalRamp": [
           "oklch(15.00% 0.0425 45.01)",
           "oklch(27.00% 0.0619 45.01)",
@@ -352,7 +329,6 @@
       "learning-reminder-fill": {
         "role": "tertiary",
         "displayName": "学习提醒赭色浅底",
-        "canonical": "#fff4ec",
         "tonalRamp": [
           "oklch(15.00% 0.0088 58.64)",
           "oklch(27.00% 0.0128 58.64)",
@@ -367,7 +343,6 @@
       "learning-assist": {
         "role": "secondary",
         "displayName": "学习提示青",
-        "canonical": "#2f6f73",
         "tonalRamp": [
           "oklch(15.00% 0.0358 200.89)",
           "oklch(27.00% 0.0521 200.89)",
@@ -382,7 +357,6 @@
       "learning-assist-line": {
         "role": "secondary",
         "displayName": "学习提示青边线",
-        "canonical": "#8fb9b6",
         "tonalRamp": [
           "oklch(15.00% 0.0248 190.81)",
           "oklch(27.00% 0.0360 190.81)",
@@ -397,7 +371,6 @@
       "learning-assist-fill": {
         "role": "secondary",
         "displayName": "学习提示青浅底",
-        "canonical": "#edf7f6",
         "tonalRamp": [
           "oklch(15.00% 0.0059 189.83)",
           "oklch(27.00% 0.0085 189.83)",
@@ -412,7 +385,6 @@
       "review-weak": {
         "role": "tertiary",
         "displayName": "薄弱玫瑰",
-        "canonical": "#92516d",
         "tonalRamp": [
           "oklch(15.00% 0.0513 353.55)",
           "oklch(27.00% 0.0747 353.55)",
@@ -427,7 +399,6 @@
       "review-weak-fill": {
         "role": "tertiary",
         "displayName": "薄弱玫瑰浅底",
-        "canonical": "#fbf2f6",
         "tonalRamp": [
           "oklch(15.00% 0.0060 348.43)",
           "oklch(27.00% 0.0088 348.43)",
@@ -442,7 +413,6 @@
       "review-mastered": {
         "role": "tertiary",
         "displayName": "已掌握青绿",
-        "canonical": "#286b58",
         "tonalRamp": [
           "oklch(15.00% 0.0411 171.37)",
           "oklch(27.00% 0.0597 171.37)",
@@ -457,7 +427,6 @@
       "review-mastered-line": {
         "role": "tertiary",
         "displayName": "已掌握青绿边线",
-        "canonical": "#5f967e",
         "tonalRamp": [
           "oklch(15.00% 0.0380 164.96)",
           "oklch(27.00% 0.0553 164.96)",
@@ -472,7 +441,6 @@
       "review-mastered-fill": {
         "role": "tertiary",
         "displayName": "已掌握青绿浅底",
-        "canonical": "#edf7f1",
         "tonalRamp": [
           "oklch(15.00% 0.0073 159.92)",
           "oklch(27.00% 0.0106 159.92)",
@@ -487,7 +455,6 @@
       "personal-note": {
         "role": "tertiary",
         "displayName": "个人笔记暖黄",
-        "canonical": "#79551f",
         "tonalRamp": [
           "oklch(15.00% 0.0463 73.95)",
           "oklch(27.00% 0.0673 73.95)",
@@ -502,7 +469,6 @@
       "personal-note-line": {
         "role": "tertiary",
         "displayName": "个人笔记暖黄边线",
-        "canonical": "#bc9a5b",
         "tonalRamp": [
           "oklch(15.00% 0.0500 81.80)",
           "oklch(27.00% 0.0728 81.80)",
@@ -517,7 +483,6 @@
       "personal-note-fill": {
         "role": "tertiary",
         "displayName": "个人笔记暖黄浅底",
-        "canonical": "#fff7e5",
         "tonalRamp": [
           "oklch(15.00% 0.0138 86.87)",
           "oklch(27.00% 0.0201 86.87)",
@@ -532,7 +497,6 @@
       "content-draft": {
         "role": "neutral",
         "displayName": "内容草稿蓝灰",
-        "canonical": "#52677a",
         "tonalRamp": [
           "oklch(15.00% 0.0217 245.99)",
           "oklch(27.00% 0.0316 245.99)",
@@ -547,7 +511,6 @@
       "content-draft-line": {
         "role": "neutral",
         "displayName": "内容草稿蓝灰边线",
-        "canonical": "#b6c3cf",
         "tonalRamp": [
           "oklch(15.00% 0.0122 245.91)",
           "oklch(27.00% 0.0177 245.91)",
@@ -562,7 +525,6 @@
       "content-draft-fill": {
         "role": "neutral",
         "displayName": "内容草稿蓝灰浅底",
-        "canonical": "#f4f7fa",
         "tonalRamp": [
           "oklch(15.00% 0.0028 247.88)",
           "oklch(27.00% 0.0041 247.88)",
@@ -577,7 +539,6 @@
       "system-info": {
         "role": "secondary",
         "displayName": "系统信息蓝灰",
-        "canonical": "#41627e",
         "tonalRamp": [
           "oklch(15.00% 0.0327 245.07)",
           "oklch(27.00% 0.0476 245.07)",
@@ -592,7 +553,6 @@
       "system-info-line": {
         "role": "secondary",
         "displayName": "系统信息蓝灰边线",
-        "canonical": "#a9bdce",
         "tonalRamp": [
           "oklch(15.00% 0.0180 243.81)",
           "oklch(27.00% 0.0262 243.81)",
@@ -607,7 +567,6 @@
       "system-info-fill": {
         "role": "secondary",
         "displayName": "系统信息蓝灰浅底",
-        "canonical": "#f0f5fa",
         "tonalRamp": [
           "oklch(15.00% 0.0047 247.91)",
           "oklch(27.00% 0.0069 247.91)",
@@ -622,7 +581,6 @@
       "system-danger": {
         "role": "tertiary",
         "displayName": "系统异常红",
-        "canonical": "#a13737",
         "tonalRamp": [
           "oklch(15.00% 0.0774 23.90)",
           "oklch(27.00% 0.1127 23.90)",
@@ -637,7 +595,6 @@
       "system-danger-line": {
         "role": "tertiary",
         "displayName": "系统异常红边线",
-        "canonical": "#d9a3a3",
         "tonalRamp": [
           "oklch(15.00% 0.0353 18.66)",
           "oklch(27.00% 0.0514 18.66)",
@@ -652,7 +609,6 @@
       "system-danger-fill": {
         "role": "tertiary",
         "displayName": "系统异常红浅底",
-        "canonical": "#fdf0f0",
         "tonalRamp": [
           "oklch(15.00% 0.0077 17.40)",
           "oklch(27.00% 0.0112 17.40)",
@@ -663,202 +619,262 @@
           "oklch(86.00% 0.0045 17.40)",
           "oklch(95.00% 0.0014 17.40)"
         ]
+      },
+      "shell-surface": {
+        "role": "neutral",
+        "displayName": "shell-surface",
+        "tonalRamp": [
+          "oklch(0.15 0.0031 297.7)",
+          "oklch(0.27 0.0044 297.7)",
+          "oklch(0.39 0.0052 297.7)",
+          "oklch(0.51 0.0054 297.7)",
+          "oklch(0.63 0.0051 297.7)",
+          "oklch(0.75 0.0042 297.7)",
+          "oklch(0.87 0.0028 297.7)",
+          "oklch(0.95 0.0015 297.7)"
+        ]
+      },
+      "shell-panel": {
+        "role": "neutral",
+        "displayName": "shell-panel",
+        "tonalRamp": [
+          "oklch(0.15 0.0024 301.4)",
+          "oklch(0.27 0.0033 301.4)",
+          "oklch(0.39 0.0039 301.4)",
+          "oklch(0.51 0.0041 301.4)",
+          "oklch(0.63 0.0039 301.4)",
+          "oklch(0.75 0.0032 301.4)",
+          "oklch(0.87 0.0021 301.4)",
+          "oklch(0.95 0.0011 301.4)"
+        ]
+      },
+      "shell-ink": {
+        "role": "neutral",
+        "displayName": "shell-ink",
+        "tonalRamp": [
+          "oklch(0.15 0.0112 285.2)",
+          "oklch(0.27 0.0160 285.2)",
+          "oklch(0.39 0.0187 285.2)",
+          "oklch(0.51 0.0195 285.2)",
+          "oklch(0.63 0.0184 285.2)",
+          "oklch(0.75 0.0153 285.2)",
+          "oklch(0.87 0.0102 285.2)",
+          "oklch(0.95 0.0053 285.2)"
+        ]
+      },
+      "shell-muted": {
+        "role": "neutral",
+        "displayName": "shell-muted",
+        "tonalRamp": [
+          "oklch(0.15 0.0146 296.9)",
+          "oklch(0.27 0.0207 296.9)",
+          "oklch(0.39 0.0243 296.9)",
+          "oklch(0.51 0.0254 296.9)",
+          "oklch(0.63 0.0239 296.9)",
+          "oklch(0.75 0.0199 296.9)",
+          "oklch(0.87 0.0133 296.9)",
+          "oklch(0.95 0.0069 296.9)"
+        ]
+      },
+      "shell-line": {
+        "role": "neutral",
+        "displayName": "shell-line",
+        "tonalRamp": [
+          "oklch(0.15 0.0072 301.3)",
+          "oklch(0.27 0.0102 301.3)",
+          "oklch(0.39 0.0120 301.3)",
+          "oklch(0.51 0.0125 301.3)",
+          "oklch(0.63 0.0118 301.3)",
+          "oklch(0.75 0.0098 301.3)",
+          "oklch(0.87 0.0065 301.3)",
+          "oklch(0.95 0.0034 301.3)"
+        ]
+      },
+      "shell-accent": {
+        "role": "primary",
+        "displayName": "shell-accent",
+        "tonalRamp": [
+          "oklch(0.15 0.0912 286.5)",
+          "oklch(0.27 0.1296 286.5)",
+          "oklch(0.39 0.1519 286.5)",
+          "oklch(0.51 0.1585 286.5)",
+          "oklch(0.63 0.1493 286.5)",
+          "oklch(0.75 0.1244 286.5)",
+          "oklch(0.87 0.0831 286.5)",
+          "oklch(0.95 0.0433 286.5)"
+        ]
+      },
+      "shell-selected": {
+        "role": "primary",
+        "displayName": "shell-selected",
+        "tonalRamp": [
+          "oklch(0.15 0.0117 295.2)",
+          "oklch(0.27 0.0166 295.2)",
+          "oklch(0.39 0.0194 295.2)",
+          "oklch(0.51 0.0203 295.2)",
+          "oklch(0.63 0.0191 295.2)",
+          "oklch(0.75 0.0159 295.2)",
+          "oklch(0.87 0.0106 295.2)",
+          "oklch(0.95 0.0055 295.2)"
+        ]
+      },
+      "control-primary": {
+        "role": "primary",
+        "displayName": "control-primary",
+        "tonalRamp": [
+          "oklch(0.15 0.0968 284.2)",
+          "oklch(0.27 0.1376 284.2)",
+          "oklch(0.39 0.1612 284.2)",
+          "oklch(0.51 0.1682 284.2)",
+          "oklch(0.63 0.1584 284.2)",
+          "oklch(0.75 0.1320 284.2)",
+          "oklch(0.87 0.0881 284.2)",
+          "oklch(0.95 0.0459 284.2)"
+        ]
+      },
+      "control-ring": {
+        "role": "primary",
+        "displayName": "control-ring",
+        "tonalRamp": [
+          "oklch(0.15 0.0866 286.6)",
+          "oklch(0.27 0.1231 286.6)",
+          "oklch(0.39 0.1443 286.6)",
+          "oklch(0.51 0.1505 286.6)",
+          "oklch(0.63 0.1418 286.6)",
+          "oklch(0.75 0.1181 286.6)",
+          "oklch(0.87 0.0789 286.6)",
+          "oklch(0.95 0.0411 286.6)"
+        ]
       }
     },
     "typographyMeta": {
-      "canvas-theme": {
-        "displayName": "Canvas Theme",
-        "purpose": "画板世界中的主题标题与空间定位。"
-      },
       "canvas-title": {
-        "displayName": "Canvas Title",
-        "purpose": "知识单元标题。"
+        "displayName": "canvas-title",
+        "purpose": "世界坐标中的学习内容。"
       },
       "canvas-lead": {
-        "displayName": "Canvas Lead",
-        "purpose": "单元导语与关键学习说明。"
+        "displayName": "canvas-lead",
+        "purpose": "世界坐标中的学习内容。"
       },
       "canvas-body": {
-        "displayName": "Canvas Body",
-        "purpose": "画板世界中的连续学习正文。"
+        "displayName": "canvas-body",
+        "purpose": "世界坐标中的学习内容。"
       },
       "title": {
-        "displayName": "Title",
-        "purpose": "侧栏、对话框与主要面板标题。"
+        "displayName": "title",
+        "purpose": "规则屏幕界面与内容专用字形。"
       },
       "body": {
-        "displayName": "Body",
-        "purpose": "屏幕界面的操作与普通说明。"
-      },
-      "label": {
-        "displayName": "label",
-        "purpose": "短标签与界面辅助信息。"
-      },
-      "math": {
-        "displayName": "Math",
-        "purpose": "由本地 MathLive / KaTeX 渲染的公式。"
-      },
-      "mono": {
-        "displayName": "Mono",
-        "purpose": "原文、诊断和待处理数据。"
+        "displayName": "body",
+        "purpose": "规则屏幕界面与内容专用字形。"
       },
       "control": {
         "displayName": "control",
-        "purpose": "搜索、导航与画板操作控件。"
+        "purpose": "规则屏幕界面与内容专用字形。"
       },
-      "prose": {
-        "displayName": "prose",
-        "purpose": "助手回答和草稿等长文。"
+      "label": {
+        "displayName": "label",
+        "purpose": "规则屏幕界面与内容专用字形。"
+      },
+      "rail-label": {
+        "displayName": "rail-label",
+        "purpose": "规则屏幕界面与内容专用字形。"
+      },
+      "math": {
+        "displayName": "math",
+        "purpose": "规则屏幕界面与内容专用字形。"
+      },
+      "mono": {
+        "displayName": "mono",
+        "purpose": "规则屏幕界面与内容专用字形。"
       },
       "table-body": {
         "displayName": "table-body",
-        "purpose": "世界坐标中的表格正文，使用 UI 字体和等宽数字。"
+        "purpose": "规则屏幕界面与内容专用字形。"
       },
       "table-head": {
         "displayName": "table-head",
-        "purpose": "世界坐标中的表头。"
+        "purpose": "规则屏幕界面与内容专用字形。"
       }
     },
     "shadows": [
       {
-        "name": "floating-low",
-        "value": "0 1px 2px #27343e04, 0 4px 14px #27343e07",
-        "purpose": "画板缩放工具、小地图和轻量浮动入口。"
+        "name": "shell-floating",
+        "value": "0 4px 18px #2f234014, 0 1px 3px #2f23400a",
+        "purpose": "浮动画板工具、小地图与导航。"
       },
       {
-        "name": "floating-medium",
-        "value": "0 8px 30px #27343e0d, 0 2px 8px #27343e06",
-        "purpose": "Toast、保存异常和高层提示。"
-      },
-      {
-        "name": "dialog",
-        "value": "0 24px 80px #27343e26",
-        "purpose": "历史版本等模态对话框。"
-      },
-      {
-        "name": "editing",
-        "value": "0 5px 20px #27384a12, 0 1px 3px #27384e08",
-        "purpose": "编辑工具与编辑面板。"
+        "name": "shell-menu",
+        "value": "0 8px 30px #2f23401a, 0 2px 6px #2f23400a",
+        "purpose": "课程、图形与关系二级菜单。"
       }
     ],
     "motion": [
       {
-        "name": "ease-standard",
-        "value": "cubic-bezier(.2, .75, .25, 1)",
-        "purpose": "面板、消息、展开和提示的统一入场曲线。"
-      },
-      {
-        "name": "duration-fast",
-        "value": "140ms",
-        "purpose": "颜色、边界、焦点和透明度等即时反馈。"
-      },
-      {
-        "name": "duration-medium",
-        "value": "220ms",
-        "purpose": "侧栏、列表与轻量面板过渡。"
-      },
-      {
-        "name": "duration-reveal",
-        "value": "180ms",
-        "purpose": "已备材料、提示与答案的展开反馈。"
-      },
-      {
-        "name": "camera",
-        "value": "180ms / 1-(1-t)^3",
-        "purpose": "鼠标定位的相机移动；键盘定位与减少动态效果偏好下即时完成。"
+        "name": "panel-reveal",
+        "value": "180ms cubic-bezier(.22, 1, .36, 1)",
+        "purpose": "辅助区开合，减少动态效果时取消。"
       }
     ],
     "breakpoints": [
       {
-        "name": "compact-nav",
-        "value": "viewport width <=1180px"
+        "name": "overlay-panels",
+        "value": "760px"
       },
       {
-        "name": "compact-header",
-        "value": "viewport width <=950px"
-      },
-      {
-        "name": "overlay-workspace",
-        "value": "viewport width <=760px"
-      },
-      {
-        "name": "scrollable-editing-tools",
-        "value": "viewport width <=650px"
-      },
-      {
-        "name": "compact-labels",
-        "value": "viewport width <=480px"
-      },
-      {
-        "name": "overview-two-columns",
-        "value": "canvas width <620px"
-      },
-      {
-        "name": "overview-three-columns",
-        "value": "620px <= canvas width <1000px"
-      },
-      {
-        "name": "overview-six-columns",
-        "value": "canvas width >=1000px"
-      },
-      {
-        "name": "canvas-tools-clearance",
-        "value": "container width <=1000px"
-      },
-      {
-        "name": "short-overview",
-        "value": "viewport height <=820px"
-      },
-      {
-        "name": "short-assistant",
-        "value": "viewport height <=680px"
-      },
-      {
-        "name": "short-panels",
-        "value": "viewport height <=640px"
+        "name": "compact-tool-menu",
+        "value": "460px"
       }
     ]
   },
   "components": [
     {
-      "name": "Secondary Button",
-      "kind": "button",
-      "refersTo": "button-secondary",
-      "description": "顶栏与普通面板中的次要操作。",
-      "html": "<button class=\"ds-btn-secondary\" type=\"button\">知识关系</button>",
-      "css": ".ds-btn-secondary{display:inline-flex;align-items:center;justify-content:center;min-height:35px;padding:7px 12px;border:1px solid #dfe1e8;border-radius:8px;background:#fff;color:#3f454d;font:.75rem/1.2 var(--ui, \"PingFang SC\", \"Microsoft YaHei\", system-ui, sans-serif);cursor:pointer;transition:background-color 140ms ease,border-color 140ms ease,color 140ms ease}.ds-btn-secondary:hover{border-color:#d4d1f1;background:#f6f5ff;color:#514db5}.ds-btn-secondary:focus-visible{outline:2px solid var(--purple, #6965db);outline-offset:3px}.ds-btn-secondary:active{transform:translateY(1px)}"
-    },
-    {
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Agent 发送等明确的当前主动作。",
-      "html": "<button class=\"ds-btn-primary\" type=\"button\">发送</button>",
-      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:6px 13px;border:1px solid #dcd7fa;border-radius:7px;background:var(--focus, #eeedff);color:var(--purple, #6965db);font:600 .75rem/1.5 var(--ui, \"PingFang SC\", \"Microsoft YaHei\", system-ui, sans-serif);cursor:pointer;transition:background-color 140ms ease,border-color 140ms ease,color 140ms ease}.ds-btn-primary:hover{border-color:#c9c2f3;background:#e7e4ff}.ds-btn-primary:focus-visible{outline:2px solid var(--purple, #6965db);outline-offset:3px}.ds-btn-primary:active{transform:translateY(1px)}"
+      "description": "外壳 primary 按钮。",
+      "html": "<button class=\"ds-button-primary\">继续</button>",
+      "css": ".ds-button-primary{font:500 14px \"PingFang SC\",system-ui,sans-serif;height:40px;padding:0 10px;border-radius:8px;cursor:pointer;transition:background-color .15s;background:#6255c5;color:#fff;border:1px solid transparent}.ds-button-primary:hover{background:#7e73d1}.ds-button-primary:focus-visible{outline:2px solid var(--color-ring,#7568cd);outline-offset:2px}.ds-button-primary:active{transform:translateY(1px)}.ds-button-primary:disabled{opacity:.5;cursor:default}"
     },
     {
-      "name": "Search Field",
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "外壳 outline 按钮。",
+      "html": "<button class=\"ds-button-outline\">重试保存</button>",
+      "css": ".ds-button-outline{font:500 14px \"PingFang SC\",system-ui,sans-serif;height:40px;padding:0 10px;border-radius:8px;cursor:pointer;transition:background-color .15s;background:#fff;color:#30303b;border:1px solid #e5e3ec}.ds-button-outline:hover{background:#f0eff5}.ds-button-outline:focus-visible{outline:2px solid var(--color-ring,#7568cd);outline-offset:2px}.ds-button-outline:active{transform:translateY(1px)}.ds-button-outline:disabled{opacity:.5;cursor:default}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "外壳 ghost 按钮。",
+      "html": "<button class=\"ds-button-ghost\">课程菜单</button>",
+      "css": ".ds-button-ghost{font:500 14px \"PingFang SC\",system-ui,sans-serif;height:40px;padding:0 10px;border-radius:8px;cursor:pointer;transition:background-color .15s;background:transparent;color:#696575;border:1px solid transparent}.ds-button-ghost:hover{background:#f0eff5}.ds-button-ghost:focus-visible{outline:2px solid var(--color-ring,#7568cd);outline-offset:2px}.ds-button-ghost:active{transform:translateY(1px)}.ds-button-ghost:disabled{opacity:.5;cursor:default}"
+    },
+    {
+      "name": "Search Input",
       "kind": "input",
       "refersTo": "input-search",
-      "description": "课程知识、笔记、对话与原文的统一搜索。",
-      "html": "<label class=\"ds-search\"><svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" aria-hidden=\"true\"><circle cx=\"10\" cy=\"10\" r=\"6\"/><path d=\"m14.5 14.5 5 5\"/></svg><input type=\"search\" placeholder=\"找知识、笔记、对话或原文\" aria-label=\"搜索课程\"></label>",
-      "css": ".ds-search{display:flex;align-items:center;gap:8px;min-height:40px;padding:8px 10px;border:1px solid #e4e5eb;border-radius:9px;background:#f8f8fa;color:#838591}.ds-search>span{font-size:17px;transform:translateY(-1px)}.ds-search input{width:100%;min-width:0;border:0;background:transparent;color:var(--ink, #27343e);font:.8125rem/1.5 var(--ui, \"PingFang SC\", \"Microsoft YaHei\", system-ui, sans-serif);outline:none}.ds-search input::placeholder{color:var(--ui-placeholder, #687080)}.ds-search:focus-within{border-color:#bcb7ee;background:#fff;box-shadow:0 0 0 3px #6965db10}.ds-search input:focus-visible{outline:none}"
+      "description": "已有课程内容搜索。",
+      "html": "<input class=\"ds-search\" aria-label=\"查找已有内容\" placeholder=\"关键词、别名或公式符号\">",
+      "css": ".ds-search{font:13px \"PingFang SC\",system-ui,sans-serif;color:#27343e;background:#f8f8fa;border:1px solid #e5e5eb;border-radius:9px;padding:10px;min-width:230px}.ds-search::placeholder{color:#687080}.ds-search:hover{border-color:#b7afc7}.ds-search:focus-visible{outline:2px solid #7568cd;outline-offset:2px}"
     },
     {
-      "name": "Active Navigation Item",
+      "name": "Navigation Rail",
       "kind": "nav",
       "refersTo": "nav-item-active",
-      "description": "课程目录中的当前知识单元。",
-      "html": "<button class=\"ds-nav-item\" type=\"button\" aria-current=\"true\">1. 位置记数法与权展开</button>",
-      "css": ".ds-nav-item{position:relative;display:block;width:100%;padding:7px 8px 7px 17px;border:0;border-radius:6px;background:var(--focus, #eeedff);color:var(--purple, #6965db);font:550 .8125rem/1.6 var(--ui, \"PingFang SC\", \"Microsoft YaHei\", system-ui, sans-serif);text-align:left;cursor:pointer;transition:background-color 140ms ease,color 140ms ease}.ds-nav-item:before{content:\"\";position:absolute;left:6px;top:50%;width:3px;height:14px;border-radius:3px;background:var(--purple, #6965db);transform:translateY(-50%)}.ds-nav-item:hover{background:#f5f4fb;color:#514db5}.ds-nav-item:focus-visible{outline:2px solid var(--purple, #6965db);outline-offset:3px}"
+      "description": "当前面板的稳定入口。",
+      "html": "<nav class=\"ds-rail\" aria-label=\"工作区导航\"><button aria-expanded=\"true\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 7v14m-1-14C8.8 5.5 6 5 2 5v15c4 0 6.8.5 9 2h2c2.2-1.5 5-2 9-2V5c-4 0-6.8.5-9 2z\"/></svg><span>目录</span></button></nav>",
+      "css": ".ds-rail{background:var(--shell-surface,#f5f4f8);width:64px;padding:12px 0;display:flex;justify-content:center}.ds-rail button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:50px;height:56px;border:0;border-radius:10px;background:var(--shell-selected,#eeebfa);color:var(--shell-accent,#6555be);font:500 11px \"PingFang SC\",system-ui,sans-serif;cursor:pointer}.ds-rail button:hover{background:#e7e1f5}.ds-rail button:focus-visible{outline:2px solid #7568cd;outline-offset:2px}"
     },
     {
-      "name": "Scope Chip",
-      "kind": "chip",
-      "refersTo": "chip-scope",
-      "description": "课程规模等短元信息。",
-      "html": "<span class=\"ds-scope-chip\">20 个主题 · 84 个单元</span>",
-      "css": ".ds-scope-chip{display:inline-flex;align-items:center;padding:5px 10px;border:1px solid #e6e6ec;border-radius:16px;background:#fbfbfc;color:var(--ui-muted, #626b79);font:.75rem/1.4 var(--ui, \"PingFang SC\", \"Microsoft YaHei\", system-ui, sans-serif);letter-spacing:.02em;white-space:nowrap}"
+      "name": "Canvas Toolbar",
+      "kind": "custom",
+      "refersTo": "canvas-toolbar",
+      "description": "屏幕坐标中的阅读与画板工具。",
+      "html": "<div class=\"ds-tools\" role=\"toolbar\" aria-label=\"画板工具\"><button aria-label=\"阅读工具\" aria-pressed=\"true\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 7v14m-1-14C8.8 5.5 6 5 2 5v15c4 0 6.8.5 9 2h2c2.2-1.5 5-2 9-2V5c-4 0-6.8.5-9 2z\"/></svg></button><span></span><button aria-label=\"选择工具\"><svg width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" aria-hidden=\"true\"><path d=\"m4 3 7.1 17 2.3-6.6L20 11z\"/></svg></button></div>",
+      "css": ".ds-tools{display:inline-flex;align-items:center;gap:4px;padding:5px;height:40px;background:#fff;border-radius:12px;box-shadow:var(--shell-shadow,0 4px 18px #2f234014)}.ds-tools button{display:grid;place-items:center;width:36px;height:38px;border:0;border-radius:8px;background:transparent;color:#676071;cursor:pointer}.ds-tools button[aria-pressed=true]{background:#eeebfa;color:#6555be}.ds-tools button:hover{background:#f1eef7}.ds-tools button:focus-visible{outline:2px solid #7568cd;outline-offset:2px}.ds-tools>span{height:22px;width:1px;background:#e6e3ec}"
     },
     {
       "name": "Reading Card",
@@ -867,14 +883,6 @@
       "description": "世界坐标正文示例；静态 SVG 表示手绘轮廓，不代替运行时 Rough.js 与相机布局。",
       "html": "<article class=\"ds-reading-card\"><svg class=\"ds-reading-sketch\" viewBox=\"0 0 100 100\" preserveAspectRatio=\"none\" aria-hidden=\"true\"><path d=\"M2 2.4 L98 2 L98.3 97.8 L2.2 98 Z\"/><path d=\"M2.4 2 L97.8 2.5 L98 98 L2 97.6 Z\"/></svg><div class=\"ds-reading-inner\"><h3>三种基本逻辑运算与真值表</h3><p>与、或、非是三种最基本的逻辑运算：任何复杂的逻辑函数都可以由它们组合表达。</p></div></article>",
       "css": ".ds-reading-card{position:relative;max-width:520px;padding:35px 38px 28px;background:#fff;color:var(--ink, #27343e);font:24px/1.85 var(--hand, ReviewExcalifont, PrototypeXiaolai, \"Kaiti SC\", \"PingFang SC\", sans-serif)}.ds-reading-sketch{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}.ds-reading-sketch path{fill:none;stroke:#aebecb;stroke-width:.45;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round}.ds-reading-sketch path+path{opacity:.45}.ds-reading-inner{position:relative}.ds-reading-card h3{margin:4px 0 18px;font:400 34px/1.5 var(--hand, ReviewExcalifont, PrototypeXiaolai, \"Kaiti SC\", \"PingFang SC\", sans-serif)}.ds-reading-card p{margin:0;font:24px/1.85 var(--hand, ReviewExcalifont, PrototypeXiaolai, \"Kaiti SC\", \"PingFang SC\", sans-serif)}"
-    },
-    {
-      "name": "Condition Card",
-      "kind": "card",
-      "refersTo": "card-condition",
-      "description": "当前正文的规则蓝色提示框；与手绘单元外框区分。",
-      "html": "<aside class=\"ds-condition-card\"><span class=\"ds-condition-label\">关键条件</span><p>2 选 1 MUX 用 S 选择输入：S=0 时输出 I₀，S=1 时输出 I₁。</p></aside>",
-      "css": ".ds-condition-card{max-width:460px;padding:13px 16px;border:1px solid #bfd1e3;border-radius:9px;background:#f1f6fb;color:var(--ink,#27343e);font:24px/1.85 var(--hand,ReviewExcalifont,PrototypeXiaolai,\"Kaiti SC\",\"PingFang SC\",sans-serif)}.ds-condition-label{display:block;margin-bottom:6px;color:var(--blue,#345d88);font:16px/1.4 var(--ui,\"PingFang SC\",\"Microsoft YaHei\",system-ui,sans-serif)}.ds-condition-card p{margin:0}"
     },
     {
       "name": "Personal Note",
@@ -891,61 +899,58 @@
       "description": "在所属单元原位展开已经备齐的学习材料。",
       "html": "<details class=\"ds-material\"><summary>完整例题<span>例题</span></summary><div class=\"ds-material-content\">例题展开后直接显示完整讲解，图形、公式和步骤保持相邻。</div></details>",
       "css": ".ds-material{max-width:480px;border-top:1px solid #d5dde3;padding-top:5px;color:var(--blue, #345d88);font:23px/1.65 var(--hand, ReviewExcalifont, PrototypeXiaolai, \"Kaiti SC\", \"PingFang SC\", sans-serif)}.ds-material summary{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:13px 4px;border-radius:6px;cursor:pointer;list-style:none}.ds-material summary::-webkit-details-marker{display:none}.ds-material summary:before{content:\"＋\";width:24px;font:22px var(--ui, \"PingFang SC\", \"Microsoft YaHei\", system-ui, sans-serif)}.ds-material[open] summary:before{content:\"−\"}.ds-material summary:hover{background:#f5f8fa}.ds-material summary:focus-visible{outline:2px solid var(--purple, #6965db);outline-offset:3px}.ds-material summary span{margin-left:auto;padding:3px 6px;border:1px solid #cdd9e2;border-radius:5px;color:var(--muted, #68717a);font:14px var(--ui, \"PingFang SC\", \"Microsoft YaHei\", system-ui, sans-serif)}.ds-material-content{color:var(--ink,#27343e);font-size:24px;line-height:1.9;padding:5px 8px 14px;animation:ds-material-in 180ms cubic-bezier(.2,.75,.25,1)}@keyframes ds-material-in{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.ds-material-content{animation:none}}"
-    },
-    {
-      "name": "Editing Toolbar",
-      "kind": "custom",
-      "refersTo": "editing-toolbar",
-      "description": "文字、公式与个人图形标注的浮动工具组。",
-      "html": "<div class=\"ds-editing-toolbar\" role=\"toolbar\" aria-label=\"编辑与标注工具\"><button type=\"button\" aria-pressed=\"true\">编辑与标注</button><button type=\"button\">选取文字</button><button type=\"button\">直线</button><button type=\"button\">波浪线</button><button type=\"button\">荧光笔</button></div>",
-      "css": ".ds-editing-toolbar{display:flex;flex-wrap:wrap;gap:6px;max-width:940px;padding:7px;border:1px solid #b8c9d8;border-radius:11px;background:#fffefa;box-shadow:0 5px 20px #27384a12,0 1px 3px #27384e08}.ds-editing-toolbar button{min-height:30px;padding:5px 9px;border:1px solid #bdccda;border-radius:7px;background:#fff;color:#345d88;font:13px/1.6 system-ui,sans-serif;cursor:pointer;transition:background-color 140ms ease,border-color 140ms ease,color 140ms ease}.ds-editing-toolbar button:hover{border-color:#9fb7ce;background:#edf4fc}.ds-editing-toolbar button[aria-pressed=true]{border-color:#aaa3df;background:#eeedff;color:#514db5}.ds-editing-toolbar button:focus-visible{outline:2px solid #6965db;outline-offset:3px}.ds-editing-toolbar button:active{transform:translateY(1px)}"
     }
   ],
   "narrative": {
-    "northStar": "手帐推演",
-    "overview": "在一张安静的白纸上组织清楚的推演。顶栏、目录、表单和侧栏是低干扰的操作外壳；知识正文、图示、关系和个人标注承载手绘个性。简约意味着操作克制、信息层级明确，同时备齐必要的讲解、条件与题解。\n\n屏幕坐标中的界面使用 PingFang、细边界、小圆角和淡紫交互状态；画板世界中的学习内容由 Excalifont 承担拉丁字符、Xiaolai 承担中文，配合稳定的 Rough.js 线条和浅底语义色。MathLive 使用本地 KaTeX 数学字形。共享的石墨文字与留白把操作区和阅读区连接起来。\n\n远景、单元全览和正文阅读改变信息密度，保持知识身份与阅读顺序。主题总览可按画板可用宽度重新分列；单元正文仍使用稳定的局部坐标。动效解释相机、面板、消息与展开反馈；边框种子保持稳定。",
+    "northStar": "有序工作台，手绘推演",
+    "overview": "学生在白色画板上持续阅读、练习和修改。操作外壳以浅灰紫底、规则字形和精确间距提供稳定位置；学习内容保留端正手绘笔触、完整讲解与语义配色。现代感来自层级、密度、焦点和状态的一致性。\n\n屏幕界面不随画板缩放；目录、搜索、笔记、资料与学习对话按需让出空间。控件靠近所作用的内容，课程级操作归于课程菜单；选中内容后直接提问、修改或批注。用户的阅读位置、输入和真实保存结果决定反馈。",
     "keyCharacteristics": [
-      "白色画布、浅色系统控件、端正排版。",
-      "拉丁手写、中文手写和专业数学字形各司其职。",
-      "操作状态、课程语义、个人内容与系统异常有明确的色彩分工。",
-      "屏幕界面与画板世界使用独立字号尺度。",
-      "浮动层轻量，焦点可见，动效尊重减少动态效果设置。"
+      "浅灰紫操作区、白色画板、石墨文字和紫色当前状态。",
+      "规则系统控件与端正手绘学习内容使用两套字级。",
+      "Lucide 线性图标、紧凑菜单、柔和浮影与清楚焦点。",
+      "面板切换保留现场，常用操作稳定可见，低频操作逐层展开。",
+      "保存异常持续可见，颜色之外还有图形与文字表达状态。"
     ],
     "rules": [
       {
         "name": "The Two Palettes Rule",
-        "body": "操作外壳使用灰白与淡紫，正文按具体学习含义使用蓝、绿、暖黄及扩展语义色；不要让课程语义色接管所有按钮。",
+        "body": "操作状态与课程语义分开命名；不能把条件、答案、个人笔记和异常合成同一种强调色。",
         "section": "colors"
       },
       {
         "name": "The Meaning Before Hue Rule",
-        "body": "重要性、复习状态、个人笔记、学习提醒、内容草稿和系统异常分别命名；保留标签、边界或图形线索，不用颜色独自传达含义。",
+        "body": "当前入口同时有选中底色和状态属性；复习状态有不同图形及可访问名称；保存状态有图标、文字和恢复操作。",
         "section": "colors"
       },
       {
         "name": "The Two Registers Rule",
-        "body": "屏幕控件与画板世界分别使用各自字级；世界坐标中的字号经过相机缩放，不能直接搬给普通屏幕标题或按钮。",
+        "body": "屏幕控件与世界内容分别使用各自字级；不能把缩放前的正文尺寸直接搬到普通界面标题。",
         "section": "typography"
       },
       {
+        "name": "The Scope Before Placement Rule",
+        "body": "课程级操作进入课程菜单；内容操作靠近选区；画板工具保持在画板；开发验证与自动维护不产生学生界面入口。",
+        "section": "layout"
+      },
+      {
         "name": "The Floating Only Rule",
-        "body": "阴影说明层级与状态，不说明知识重要性；知识框优先使用手绘边界与语义浅底。",
+        "body": "阴影说明浮动层级；知识重要性由内容、关系与评级表达。",
         "section": "elevation"
       }
     ],
     "dos": [
-      "Do 让操作外壳保持简约，把手绘个性用于知识正文、图示和个人标注。",
-      "Do 同时保留手绘笔触、端正排版和有信息含义的内容配色。",
-      "Do 按具体语义选择颜色 token，并用文字、位置或边界补足含义。",
-      "Do 保留两套字号尺度、稳定身份与边框种子，让相机和焦点协调。",
-      "Do 为公式保留 MathLive 的专业数学字形，并尊重 `prefers-reduced-motion`。"
+      "Do 按操作作用范围组织入口，以布局和间距解释关系。",
+      "Do 保留规则操作外壳与端正手绘内容的分工。",
+      "Do 让焦点、当前状态和保存结果有明确且可访问的反馈。",
+      "Do 保留面板现场、稳定内容身份、语义色与专业数学字形。",
+      "Do 从实际渲染与相称的行为检查更新本规范。"
     ],
     "donts": [
-      "Don't 为简约删除必要讲解、隐藏适用条件或移除全部内容颜色。",
-      "Don't 给所有系统控件套手写字体，或用手写近似形替换数学符号。",
-      "Don't 旋转知识卡片、扭曲文字、添加装饰点阵、渐变、玻璃拟态或厚重阴影。",
-      "Don't 合并课程重要性、复习状态、个人笔记与系统异常，也不要把个人箭头表达成已审核关系。",
-      "Don't 把画板世界字号和宽度直接当作屏幕 UI 尺寸，或把自动化视口测试写成真机验证。"
+      "Don't 让功能模块各自添加常驻顶栏按钮或重复说明。",
+      "Don't 用颜色单独表达状态，或隐藏真实失败与待处理输入。",
+      "Don't 把个人箭头当作正式知识关系，把更新意图当作已完成修改。",
+      "Don't 将学习正文缩成普通小号界面文字，或给系统控件套手写字体。",
+      "Don't 把旧版、开发构建、安装包或未运行的平台验证互相替代。"
     ]
   }
 }

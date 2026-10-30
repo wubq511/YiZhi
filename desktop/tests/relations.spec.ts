@@ -1,3 +1,4 @@
+import { openRelations, relationScope } from './shell-actions';
 import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -11,7 +12,7 @@ test('formal relation editor rejects incomplete evidence, saves a reviewed corre
   let app = await launch();
   try {
     let window = await app.firstWindow();
-    await window.getByRole('button', { name: '查看关系', exact: true }).click();
+    await openRelations(window);
     const panel = window.getByLabel('关系详情');
     await expect(panel.getByText('个人箭头只作个人标注；正式关系在此独立审核。')).toBeVisible();
     await panel.getByRole('button', { name: '审核 REL-001', exact: true }).click();
@@ -24,14 +25,14 @@ test('formal relation editor rejects incomplete evidence, saves a reviewed corre
     await panel.getByLabel('正式关系显示').selectOption('auxiliary');
     await panel.getByRole('button', { name: '保存正式关系', exact: true }).click();
     await expect(panel.getByRole('status', { name: '正式关系结果' })).toContainText('已保存');
-    await window.getByLabel('关系范围', { exact: true }).selectOption('auxiliary');
+    await relationScope(window, 'auxiliary');
     await expect(panel.getByText('副本审核：模与补数解释补码的表示依据，保留原有方向与来源。', { exact: true })).toBeVisible();
-    await window.getByLabel('关系范围', { exact: true }).selectOption('all');
+    await relationScope(window, 'all');
     await expect(panel.getByText(/G1 · 任选一条/)).toBeVisible();
     await window.screenshot({ path: evidencePath('t11-electron.png'), fullPage: true });
     await app.close(); app = await launch(); window = await app.firstWindow();
-    await window.getByRole('button', { name: '查看关系', exact: true }).click();
-    await window.getByLabel('关系范围', { exact: true }).selectOption('auxiliary');
+    await openRelations(window);
+    await relationScope(window, 'auxiliary');
     await expect(window.getByLabel('关系详情').getByText('副本审核：模与补数解释补码的表示依据，保留原有方向与来源。', { exact: true })).toBeVisible();
     await window.getByLabel('关系详情').getByRole('button', { name: '审核 REL-001', exact: true }).click();
     await expect(window.getByRole('textbox', { name: '具体信息价值', exact: true })).toHaveValue('副本审核：模与补数解释补码的表示依据，保留原有方向与来源。');
@@ -44,7 +45,7 @@ test('formal add/remove and stale-basis reconciliation use the same real IPC rou
     env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const window = await app.firstWindow();
-    await window.getByRole('button', { name: '查看关系', exact: true }).click();
+    await openRelations(window);
     const panel = window.getByLabel('关系详情');
     await panel.getByRole('button', { name: '新增正式关系', exact: true }).click();
     await panel.getByRole('combobox', { name: '起点单元', exact: true }).fill('KU-001');
@@ -78,6 +79,6 @@ test('formal add/remove and stale-basis reconciliation use the same real IPC rou
     await panel.getByRole('button', { name: '添加来源', exact: true }).click();
     await window.screenshot({ path: evidencePath('t11-narrow-electron.png'), fullPage: true });
     await window.keyboard.press('Escape');
-    await expect(window.getByRole('button', { name: '查看关系', exact: true })).toBeFocused();
+    await expect(window.getByRole('button', { name: '关系', exact: true })).toBeFocused();
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });

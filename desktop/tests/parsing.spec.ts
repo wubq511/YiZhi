@@ -1,3 +1,4 @@
+import { sourceAction } from './shell-actions';
 import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -20,7 +21,7 @@ test('actual host parsing UI shows immutable artifacts, correction, original-pag
     const camera=await page.locator('.reading-layer').first().getAttribute('style');
     await app.evaluate(({dialog},path)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[path]});},path);
     await page.getByRole('button',{name:'原文资料',exact:true}).click();
-    await page.getByRole('button',{name:'导入资料',exact:true}).click();
+    await sourceAction(page, '导入资料');
     await expect(page.getByRole('status',{name:'原文状态'})).toHaveText('原页已载入');
     await page.getByText('解析此资料',{exact:true}).click();
     await page.getByRole('button',{name:'开始解析此版本',exact:true}).click();
@@ -67,7 +68,7 @@ test('stop and continue use the actual parser; closing the learning window leave
   try {
     let page=await app.firstWindow();
     await app.evaluate(({dialog},path)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[path]});},path);
-    await page.getByRole('button',{name:'原文资料',exact:true}).click();await page.getByRole('button',{name:'导入资料',exact:true}).click();
+    await page.getByRole('button',{name:'原文资料',exact:true}).click();await sourceAction(page, '导入资料');
     await expect(page.getByRole('status',{name:'原文状态'})).toHaveText('原页已载入');
     await page.getByText('解析此资料',{exact:true}).click();await page.getByRole('button',{name:'开始解析此版本',exact:true}).click();
     await page.getByRole('button',{name:'停止解析',exact:true}).click();

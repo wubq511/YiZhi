@@ -1,0 +1,189 @@
+[
+  {
+    "name": "@base-ui/react",
+    "version": "1.9.0",
+    "license": "MIT",
+    "files": [
+      {
+        "file": "@base-ui__react/LICENSE",
+        "sha256": "07fc1b39d69d14bc7d40482a628f47226258eb01265db68ae684944b916beb2a"
+      }
+    ]
+  },
+  {
+    "name": "@base-ui/utils",
+    "version": "0.5.0",
+    "license": "MIT",
+    "files": [
+      {
+        "file": "@base-ui__utils/LICENSE",
+        "sha256": "07fc1b39d69d14bc7d40482a628f47226258eb01265db68ae684944b916beb2a"
+      }
+    ]
+  },
+  {
+    "name": "@floating-ui/react-dom",
+    "version": "2.1.9",
+    "license": "MIT",
+    "files": [
+      {
+        "file": "@floating-ui__react-dom/LICENSE",
+        "sha256": "0e4c9a9b6c71019cbbea3bdc20b01223110a9035700f9c960c8fcbf78c2325ce"
+      }
+    ]
+  },
+  {
+    "name": "@floating-ui/dom",
+    "version": "1.8.0",
+    "license": "MIT",
+    "files": [
+      {
+        "file": "@floating-ui__dom/LICENSE",
+        "sha256": "0e4c9a9b6c71019cbbea3bdc20b01223110a9035700f9c960c8fcbf78c2325ce"
+      }
+    ]
+  },
+  {
+    "name": "@floating-ui/core",
+    "version": "1.8.0",
+    "license": "MIT",
+    "files": [
+      {
+        "file": "@floating-ui__core/LICENSE",
+        "sha256": "0e4c9a9b6c71019cbbea3bdc20b01223110a9035700f9c960c8fcbf78c2325ce"
+      }
+    ]
+  },
+  {
+    "name": "@floating-ui/utils",
+    "version": "0.2.12",
+    "license": "MIT",
+    "files": [
+      {
+        "file": "@floating-ui__utils/LICENSE",
+        "sha256": "0e4c9a9b6c71019cbbea3bdc20b01223110a9035700f9c960c8fcbf78c2325ce"
+      }
+    ]
+  },
+  {
+    "name": "lucide-react",
+    "version": "1.64.0",
+    "license": "ISC",
+    "files": [
+      {
+        "file": "lucide-react/LICENSE",
+        "sha256": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57"
+      }
+    ]
+  },
+  {
+    "name": "motion",
+    "version": "14.8.0",
+    "license": "MIT",
+    "files": [
+      {
+        "file": "motion/LICENSE.md",
+        "sha256": "1bf0dc3f7727723e5a032ed12164a47cf92c05204cb1a3485f123c24e2833ed1"
+      }
+    ]
+  },
+  {
+    "name": "motion-dom",
+    "version": "14.8.0",
+    "license": "MIT",
+    "files": [
+      {
+        "file": "motion-dom/LICENSE.md",
+        "sha256": "1bf0dc3f7727723e5a032ed12164a47cf92c05204cb1a3485f123c24e2833ed1"
+      }
+    ]
+  },
+  {
+    "name": "motion-utils",
+    "version": "14.7.0",
+    "license": "MIT",
+    "files": [
+      {
+        "file": "motion-utils/LICENSE.md",
+        "sha256": "1bf0dc3f7727723e5a032ed12164a47cf92c05204cb1a3485f123c24e2833ed1"
+      }
+    ]
+  },
+  {
+    "name": "framer-motion",
+    "version": "14.8.0",
+    "license": "MIT",
+    "files": [
+      {
+        "file": "framer-motion/LICENSE.md",
+        "sha256": "5ff46083b88563822b0560dd6221ab89d2f74bc97a52d4c97a75020fd62c6f32"
+      }
+    ]
+  },
+  {
+    "name": "cn",
+    "version": "0.5.0",
+    "license": "MIT",
+    "files": [
+      {
+        "file": "cn/LICENSE",
+        "sha256": "00ff8408e93e2ecc4d90c0edeabdf434100c3aff50acc5d330e17eccd4a3faa5"
+      }
+    ]
+  },
+  {
+    "name": "class-variance-authority",
+    "version": "0.7.1",
+    "license": "Apache-2.0",
+    "files": [
+      {
+        "file": "class-variance-authority/LICENSE",
+        "sha256": "0ccbf956cffc8dcf515809433cb5242ee67c94513d46e48c261d68d0880de406"
+      }
+    ]
+  },
+  {
+    "name": "clsx",
+    "version": "2.1.1",
+    "license": "MIT",
+    "files": [
+      {
+        "file": "clsx/license",
+        "sha256": "9a9edad7baae52622bddf3c15b2ef8a33d2c89f2d25408ad13e8a7481c6b0c97"
+      }
+    ]
+  },
+  {
+    "name": "tailwindcss",
+    "version": "4.3.3",
+    "license": "MIT",
+    "files": [
+      {
+        "file": "tailwindcss/LICENSE",
+        "sha256": "60e0b68c0f35c078eef3a5d29419d0b03ff84ec1df9c3f9d6e39a519a5ae7985"
+      }
+    ]
+  },
+  {
+    "name": "shadcn",
+    "version": "4.23.0",
+    "license": "MIT",
+    "files": [
+      {
+        "file": "shadcn/LICENSE.md",
+        "sha256": "1564074e13439397221ffd522e2e504d56561994a23d371aa5e3ad43e4f5423f"
+      }
+    ]
+  },
+  {
+    "name": "tw-animate-css",
+    "version": "1.4.0",
+    "license": "MIT",
+    "files": [
+      {
+        "file": "tw-animate-css/LICENSE",
+        "sha256": "039184dfa0a822397b3f45a435b5b1e538721587fbade96b9fa80f86cb354109"
+      }
+    ]
+  }
+]

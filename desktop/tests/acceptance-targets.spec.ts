@@ -23,7 +23,7 @@ test('T28 opt-in result display releases previous heavy reading surfaces across 
     const page = await app.firstWindow(); await resizeBoardWindow(app, page); await metrics.attach(page, 'A');
     const graph = await page.evaluate(async () => { const api = (window as any).yizhi, c = await api.open(); return api.graph(c.sessionId); });
     await navigateUnit(page, graph, 'KU-001');
-    await page.getByRole('button', { name: 'Agent · 学习对话', exact: true }).click();
+    await page.getByRole('button', { name: '学习对话', exact: true }).click();
     const buttons = page.getByRole('button', { name: '查看实际修改', exact: true }); await expect(buttons).toHaveCount(fixture.results.length);
     for (let index = 0; index < fixture.results.length; index++) {
       await buttons.nth(index).click();

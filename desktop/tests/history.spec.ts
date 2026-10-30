@@ -1,3 +1,4 @@
+import { courseAction } from './shell-actions';
 import type { DatabaseSync } from 'node:sqlite';
 import { openFaultDatabase } from './fault-database';
 import { test,expect,_electron as electron } from '@playwright/test';
@@ -22,7 +23,7 @@ test('real history UI expands real differences, previews read-only and restores 
   await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();
   await expect(page.getByRole('heading',{name:'位置记数法与权展开',exact:true})).toBeVisible();
   const camera=await page.locator('.react-flow__viewport').getAttribute('style');
-  await page.getByRole('button',{name:'课程历史',exact:true}).click();
+  await courseAction(page, '课程历史');
   const dialog=page.getByRole('dialog',{name:'修改历史',exact:true});await expect(dialog).toBeVisible();
   await dialog.getByLabel('历史范围').selectOption('KU-057');
   await expect(dialog).toContainText('此范围还没有正式修改');
@@ -42,7 +43,7 @@ test('real history UI expands real differences, previews read-only and restores 
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole('textbox',{name:'编辑首段正文'})).toHaveText('历史旧版讲解');
   await expect(page.locator('.react-flow__viewport')).toHaveAttribute('style',camera!);
-  await page.getByRole('button',{name:'课程历史',exact:true}).click();
+  await courseAction(page, '课程历史');
   await dialog.locator('.history-activity').filter({hasText:'恢复单元旧内容'}).locator('summary').first().click();
   await dialog.getByRole('button',{name:'撤回这次修改',exact:true}).first().click();
   await dialog.getByRole('button',{name:'确认撤回',exact:true}).click();
@@ -65,7 +66,7 @@ test('real incomplete formula remains a draft through failed history restore, ex
   await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();
   const formula=page.locator('.editor-formula').first();await revealBoardControl(page,formula.getByRole('button',{name:'编辑公式',exact:true}));await formula.getByRole('button',{name:'编辑公式',exact:true}).click();
   await formula.locator('math-field').evaluate((el:any)=>{el.executeCommand('selectAll');el.executeCommand(['insert','\\frac{1}{#?}']);});
-  await page.getByRole('button',{name:'课程历史',exact:true}).click();
+  await courseAction(page, '课程历史');
   const dialog=page.getByRole('dialog',{name:'修改历史',exact:true});
   await dialog.locator('.history-activity').first().locator('summary').first().click();
   await dialog.getByRole('button',{name:'查看修改前版本',exact:true}).first().click();
@@ -99,13 +100,13 @@ test('history stops an executing protocol task before withdrawing its complete b
   const page=await app.firstWindow();await resizeBoardWindow(app,page);
   const original=await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return {unit:c.unit,graph:await b.graph(c.sessionId)};});
   await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();
-  await page.getByRole('button',{name:'Agent · 学习对话',exact:true}).click();
+  await page.getByRole('button',{name:'学习对话',exact:true}).click();
   await expect(page.getByText('本机 Codex CLI · 已连接',{exact:true})).toBeVisible();
   await page.getByLabel('Agent 请求方式').selectOption('modify');
   await page.getByRole('textbox',{name:'学习对话草稿'}).fill('受控协议历史撤回回归：提交后保持运行');
   await page.getByRole('button',{name:'发送修改请求',exact:true}).click();
   await expect(page.getByRole('textbox',{name:'编辑首段正文'})).toContainText('受控协议回归');
-  await page.getByRole('button',{name:'课程历史',exact:true}).click();
+  await courseAction(page, '课程历史');
   const dialog=page.getByRole('dialog',{name:'修改历史',exact:true});
   await dialog.locator('.history-activity').filter({hasText:'Agent 修改'}).locator('summary').first().click();
   await dialog.getByRole('button',{name:'撤回整个任务',exact:true}).click();
@@ -137,13 +138,13 @@ test('active B history preserves a failed input tail before preview and restores
   fault=openFaultDatabase(join(directory,'course.sqlite'));
   fault.exec("CREATE TRIGGER history_b_draft_fault BEFORE INSERT ON drafts BEGIN SELECT RAISE(ABORT,'active B input disk fault'); END");
   await page.keyboard.insertText('历史保留当前单元尾部：');
-  await expect(reader.getByRole('status',{name:'当前单元保存状态'})).toHaveText('未保存');
-  await page.getByRole('button',{name:'课程历史',exact:true}).click();
+  await expect(page.getByRole('status',{name:'保存状态',exact:true})).toHaveText('有改动未保存');
+  await courseAction(page, '课程历史');
   const dialog=page.getByRole('dialog',{name:'修改历史',exact:true});
   await expect(dialog.getByRole('alert')).toContainText('当前单元输入尚未保留');
   fault.exec('DROP TRIGGER history_b_draft_fault');fault.close();fault=undefined;
   await dialog.getByRole('button',{name:'返回原阅读位置',exact:true}).click();
-  await page.getByRole('button',{name:'课程历史',exact:true}).click();
+  await courseAction(page, '课程历史');
   await dialog.getByLabel('历史范围').selectOption('KU-057');
   await dialog.locator('.history-activity').first().locator('summary').first().click();
   await expect(dialog).toContainText('历史保留当前单元尾部：');

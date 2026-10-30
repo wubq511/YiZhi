@@ -1,3 +1,4 @@
+import { reportSave } from './shell/save-status';
 import { useEffect, useRef, useState } from 'react';
 import { MathfieldElement } from 'mathlive';
 import type { DesktopBridge, ReadingBlock } from '../shared';
@@ -17,12 +18,12 @@ class ExperimentClient {
   private work?: Promise<boolean>;
   private listeners = new Set<() => void>();
   private ready: Promise<void>;
-  constructor(private bridge: DesktopBridge, readonly sessionId: string, unitId: string, blockId: string) {
+  constructor(private bridge: DesktopBridge, readonly sessionId: string, readonly unitId: string, readonly blockId: string) {
     this.ready = bridge.experiments.open({ sessionId, unitId, blockId }).then(v => { this.view = v; this.emit(); }).catch(error => { this.error = String(error); this.emit(); });
   }
   get pending() { return this.jobs.length > 0; }
   subscribe(fn: () => void) { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; }
-  private emit() { for (const fn of this.listeners) fn(); }
+  private emit() { reportSave(`experiment:${this.sessionId}:${this.blockId}`, {label: `实验 · ${this.unitId}`, status: this.error || this.view?.phase === 'pause-incomplete' ? 'error' : !this.view || this.pending ? 'pending' : 'saved', detail: this.error, retry: () => this.retry()}); for (const fn of this.listeners) fn(); }
   send(action: ExperimentAction | Job['action']) {
     this.notice=undefined;
     this.jobs.push({ operationId: crypto.randomUUID(), action: typeof action === 'function' ? action : () => action }); this.emit();

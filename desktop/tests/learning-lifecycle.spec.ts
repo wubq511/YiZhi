@@ -1,3 +1,4 @@
+import { chooseShape, manageDrawings } from './shell-actions';
 import type { DatabaseSync } from 'node:sqlite';
 import { openFaultDatabase } from './fault-database';
 import { test,expect,_electron as electron } from '@playwright/test';
@@ -10,7 +11,7 @@ import { resizeBoardWindow,revealBoardControl } from './board-test-helpers';
 async function resize(app:ElectronApplication,page:Page){await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');const handle=await app.browserWindow(page);const size=await handle.evaluate(w=>{w.setSize(1024,688);return w.getContentSize();});await expect.poll(()=>page.evaluate(()=>[innerWidth,innerHeight])).toEqual(size);}
 async function choose(app:ElectronApplication,directory:string){await app.evaluate(({dialog,Menu},directory)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[directory]});const menu=Menu.getApplicationMenu()!.items.find(i=>i.label==='课程')!.submenu!.items[0];menu.click(undefined,undefined,undefined);},directory);}
 async function body(page:Page,text:string){await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();const editor=page.getByRole('textbox',{name:'连续编辑正文',exact:true});await editor.evaluate((el:any)=>{el.editor.commands.setTextSelection({from:1,to:el.editor.state.doc.firstChild.nodeSize-1});el.editor.view.focus();});await page.keyboard.insertText(text);}
-async function composer(page:Page,text:string){await page.getByRole('button',{name:'Agent · 学习对话',exact:true}).click();await page.getByRole('textbox',{name:'学习对话草稿'}).fill(text);}
+async function composer(page:Page,text:string){await page.getByRole('button',{name:'学习对话',exact:true}).click();await page.getByRole('textbox',{name:'学习对话草稿'}).fill(text);}
 
 test('explicit quit collects actual latest input in both course windows, rejects a failed barrier, preserves both scenes, then saves and reopens both authorities',async()=>{
  const root=await mkdtemp(join(tmpdir(),'yizhi-multi-quit-')),cli=resolve('dist/tests/agent-executor-fixture.cjs');await chmod(cli,0o755);
@@ -48,9 +49,9 @@ test('normal learning-window close confirms body, incomplete MathLive formula, p
  const root=await mkdtemp(join(tmpdir(),'yizhi-all-inputs-')),app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile'),YIZHI_CODEX_PATH:resolve('dist/tests/agent-executor-fixture.cjs')}});
  try {
   let page=await app.firstWindow();await resizeBoardWindow(app,page);
-  await page.getByRole('button',{name:'绘图标注',exact:true}).click();await page.getByRole('button',{name:'矩形',exact:true}).click();
+  await manageDrawings(page);await chooseShape(page, '矩形');
   const board=(await page.locator('main.board').boundingBox())!;await page.mouse.move(board.x+300,board.y+140);await page.mouse.down();await page.mouse.move(board.x+380,board.y+200,{steps:4});await page.mouse.up();
-  await page.getByRole('button',{name:'绘图标注',exact:true}).click();
+  await manageDrawings(page);
   await body(page,'关窗时必须保留的正文');
   const editor=page.getByRole('textbox',{name:'连续编辑正文',exact:true});
   await editor.evaluate((el:any)=>{el.editor.commands.setTextSelection({from:1,to:5});el.editor.view.focus();});
@@ -82,7 +83,7 @@ test('an actual crashed renderer reopens confirmed composer content and disclose
   fault.exec('DROP TRIGGER crash_draft_fault');fault.close();fault=undefined;crashStage='crash';console.log(crashStage);
   await app.evaluate(({BrowserWindow})=>new Promise<void>(resolve=>{const w=BrowserWindow.getAllWindows()[0];w.webContents.once('render-process-gone',()=>resolve());setTimeout(()=>w.webContents.forcefullyCrashRenderer(),0);}));crashStage='recover menu';console.log(crashStage);
   const next=app.waitForEvent('window',{timeout:10000});await app.evaluate(({dialog,Menu,BrowserWindow})=>{BrowserWindow.getAllWindows()[0].focus();dialog.showErrorBox=(title,content)=>{console.log('recovery-error',title,content);};dialog.showMessageBox=async()=>({response:0,checkboxChecked:false});const item=Menu.getApplicationMenu()!.items.find(i=>i.label==='窗口')!.submenu!.items.find(i=>i.label==='恢复无响应窗口')!;item.click(undefined,undefined,undefined);});
-  page=await next;crashStage='new window';console.log(crashStage);await resizeBoardWindow(app,page);await page.getByRole('button',{name:'Agent · 学习对话',exact:true}).click();
+  page=await next;crashStage='new window';console.log(crashStage);await resizeBoardWindow(app,page);await page.getByRole('button',{name:'学习对话',exact:true}).click();
   await expect(page.getByRole('textbox',{name:'学习对话草稿'})).toHaveValue('异常前已确认草稿');
   await expect(page.getByText('上次窗口异常结束。',{exact:false})).toBeVisible();crashStage='passed';
  }finally{console.log('crash cleanup',crashStage);if(fault){fault.exec('DROP TRIGGER IF EXISTS crash_draft_fault');fault.close();}if(crashStage==='passed')await app.close();else app.process().kill('SIGKILL');await rm(root,{recursive:true,force:true});}

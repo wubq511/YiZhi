@@ -1,14 +1,18 @@
+import { registerHistory, refreshHistory } from './shell/edit-history';
+import { PanelPortal, useDockPanel } from './shell/panels';
+import { useSaveReport } from './shell/save-status';
+import { X } from 'lucide-react';
 import type { SearchHit } from '../search-api';
 import { paintFrame, waitForSearchElement } from './search-location';
-import { createPortal } from 'react-dom';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type { AnnotationSelection, PersonalNote } from '../annotation-api';
 import './annotation-panel.css';
 export interface AnnotationScene { open: boolean; active?: string; scrollTop: number }
-export interface AnnotationPanelHandle { capture(): AnnotationScene; restore(scene: AnnotationScene): Promise<void>; openSearch(hit: SearchHit): Promise<void>; create(selection: AnnotationSelection): Promise<void>; flush(): Promise<boolean> }
-export const AnnotationPanel = forwardRef<AnnotationPanelHandle, { sessionId: string; narrow: boolean; prepare(): Promise<boolean>; onOpenChange(open: boolean): void; locate(note: PersonalNote): Promise<void> }>(function AnnotationPanel({ sessionId, narrow, prepare, onOpenChange, locate }, ref) {
+export interface AnnotationPanelHandle { capture(): AnnotationScene; restore(scene: AnnotationScene, restoreVisibility?: boolean): Promise<void>; openSearch(hit: SearchHit): Promise<void>; create(selection: AnnotationSelection): Promise<void>; flush(): Promise<boolean> }
+export const AnnotationPanel = forwardRef<AnnotationPanelHandle, { sessionId: string; narrow: boolean; prepare(): Promise<boolean>; locate(note: PersonalNote): Promise<void> }>(function AnnotationPanel({ sessionId, narrow, prepare, locate }, ref) {
   const [searchHit, setSearchHit] = useState<SearchHit>();
-  const [open, setOpen] = useState(false), [notes, setNotes] = useState<PersonalNote[]>([]);
+  const { open, setOpen } = useDockPanel('notes');
+  const [notes, setNotes] = useState<PersonalNote[]>([]);
   const [locating, setLocating] = useState(false), [creating, setCreating] = useState(false);
   const [active, setActive] = useState<string>(), [status, setStatus] = useState('已保存'), [error, setError] = useState<string>();
   const reassociation = useRef<AnnotationSelection | undefined>(undefined);
@@ -18,9 +22,9 @@ export const AnnotationPanel = forwardRef<AnnotationPanelHandle, { sessionId: st
   const pending = useRef<Parameters<typeof window.yizhi.annotations.update>[0] | undefined>(undefined);
   const work = useRef<Promise<boolean> | undefined>(undefined), timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const maxTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined), composing = useRef(false);
-  const opener = useRef<HTMLButtonElement>(null), panel = useRef<HTMLElement>(null), input = useRef<HTMLTextAreaElement>(null);
+  const panel = useRef<HTMLElement>(null), input = useRef<HTMLTextAreaElement>(null);
   const publish = () => setNotes([...cache.current.values()]);
-  const show = (value: boolean) => { setOpen(value); onOpenChange(value); if (!value) requestAnimationFrame(() => opener.current?.focus()); };
+  const show = (value: boolean) => { setOpen(value); };
   const refresh = async () => {
     const current = await window.yizhi.annotations.list({ sessionId });
     for (const note of current) {
@@ -61,7 +65,7 @@ export const AnnotationPanel = forwardRef<AnnotationPanelHandle, { sessionId: st
   };
   useImperativeHandle(ref, () => ({ flush,
     capture: () => ({ open, active, scrollTop: panel.current?.scrollTop ?? 0 }),
-    async restore(scene) { setSearchHit(undefined); if (!await flush()) throw new Error('笔记输入尚未保存'); show(scene.open); setActive(scene.active); await paintFrame(); if (panel.current) panel.current.scrollTop = scene.scrollTop; },
+    async restore(scene, restoreVisibility = true) { setSearchHit(undefined); if (!await flush()) throw new Error('笔记输入尚未保存'); if (restoreVisibility) show(scene.open); setActive(scene.active); await paintFrame(); if (panel.current) panel.current.scrollTop = scene.scrollTop; },
     async openSearch(hit) {
       if (!await flush()) throw new Error('笔记输入尚未保存');
       await refresh(); const note = cache.current.get(hit.noteId!);
@@ -85,7 +89,7 @@ export const AnnotationPanel = forwardRef<AnnotationPanelHandle, { sessionId: st
     let stopped = false;
     const poll = () => { if (!stopped) void refresh().catch(e => { if (!stopped) setError((e as Error).message); }); };
     poll(); const interval = setInterval(poll, 400);
-    return () => { stopped = true; clearInterval(interval); clearTimeout(timer.current); clearTimeout(maxTimer.current); };
+    return () => { stopped = true; clearInterval(interval); };
   }, [sessionId, open]);
   useEffect(() => { if (open && narrow) panel.current?.querySelector<HTMLButtonElement>('button')?.focus(); }, [open, narrow]);
   const edit = (text: string, record = true) => {
@@ -102,7 +106,11 @@ export const AnnotationPanel = forwardRef<AnnotationPanelHandle, { sessionId: st
     const text = source.pop(); if (text === undefined) return;
     destination.push(values.current.get(active) ?? ''); edit(text, false);
   };
+  const historyActions = useRef({undo}); historyActions.current = {undo};
+  useEffect(() => registerHistory('notes', { label: '笔记', element: () => input.current, canUndo: () => !!active && !!histories.current.get(active)?.undo.length, canRedo: () => !!active && !!histories.current.get(active)?.redo.length, undo: () => historyActions.current.undo(), redo: () => historyActions.current.undo(true) }), [active]);
+  useEffect(() => { refreshHistory(); }, [notes]);
   const close = async () => { if (await flush()) show(false); };
+  useSaveReport('notes', { label: '笔记', status: status === '未保存' ? 'error' : status === '已保存' ? 'saved' : 'pending', detail: error, retry: flush });
   const current = notes.find(n => n.id === active);
   const reassociate = async () => {
     setError(undefined);
@@ -117,9 +125,7 @@ export const AnnotationPanel = forwardRef<AnnotationPanelHandle, { sessionId: st
       cache.current.set(note.id, note); publish();
     } catch (e) { setError((e as Error).message); }
   };
-  return <>
-    <button ref={opener} onClick={() => { if (open) void close(); else show(true); }} aria-expanded={open}>个人批注</button>
-    {open && createPortal(<section ref={panel} className="annotation-panel" role={narrow ? 'dialog' : 'region'} aria-modal={narrow || undefined} aria-label="个人批注" onKeyDown={event => {
+  return <PanelPortal id="notes"><section ref={panel} className="annotation-panel" role={narrow ? 'dialog' : 'region'} aria-modal={narrow || undefined} aria-label="个人批注" onKeyDown={event => {
       if (event.key === 'Escape') { event.preventDefault(); void close(); }
       if (narrow && event.key === 'Tab') {
         const items = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled),textarea,summary')];
@@ -127,7 +133,7 @@ export const AnnotationPanel = forwardRef<AnnotationPanelHandle, { sessionId: st
         else if (!event.shiftKey && document.activeElement === items.at(-1)) { event.preventDefault(); items[0]?.focus(); }
       }
     }}>
-      <div className="annotation-heading"><h2>个人批注</h2><button onClick={() => void close()}>关闭批注</button></div>
+      <div className="annotation-heading"><h2>个人批注</h2><button className="panel-close" aria-label="关闭批注" onClick={() => void close()}><X size={18}/></button></div>
       {!notes.length && <p>选择正文文字或公式片段后添加批注。原引用会随笔记保留。</p>}
       {notes.length > 1 && <nav aria-label="批注列表">{notes.map((n, i) => <button key={n.id} aria-current={n.id === active ? 'true' : undefined} onClick={() => setActive(n.id)}>{n.text.slice(0, 20) || `批注 ${i + 1}`} · {n.current.status === 'orphan' ? '待重新关联' : '已关联'}</button>)}</nav>}
       {creating && <p role="status">{error ? '批注尚未建立，请重试后继续填写。' : '正在建立批注…'}</p>}
@@ -147,6 +153,6 @@ export const AnnotationPanel = forwardRef<AnnotationPanelHandle, { sessionId: st
       </>}
       <p role="status" aria-label="批注同步状态">{status}</p>
       {error && <div role="alert"><p>{error}</p><button onClick={() => void flush()}>重试保存批注</button></div>}
-    </section>, document.body)}
-  </>;
+    </section></PanelPortal>
+  ;
 });

@@ -31,7 +31,7 @@ test('explicit description search uses real hits and query/rank evidence while o
   try {
     const page = await app.firstWindow(); await resizeBoardWindow(app, page);
     await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
-    await page.getByRole('button', { name: 'Agent · 学习对话', exact: true }).click();
+    await page.getByRole('button', { name: '学习对话', exact: true }).click();
     await page.getByRole('textbox', { name: '学习对话草稿' }).fill('尚未发送，不要替我提问');
     await expect(page.getByRole('status', { name: '对话草稿保存' })).toHaveText('草稿已保存');
     await page.getByRole('button', { name: '收起对话', exact: true }).click();

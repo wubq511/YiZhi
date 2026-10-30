@@ -1,3 +1,4 @@
+import { openRelations, relationScope } from './shell-actions';
 import { controlledElectron } from './controlled-launch';
 import {expectBoundedReading} from './board-test-helpers';
 import type { DatabaseSync } from 'node:sqlite';
@@ -251,11 +252,11 @@ test('relationship browser preserves required and alternative prerequisite route
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const window = await app.firstWindow();
-    await window.getByRole('button', { name: '查看关系' }).click();
+    await openRelations(window);
     await expect(window.getByText('KU-029：真值表与标准式互转')).toBeVisible();
     await expect(window.getByText(/任选一条.*KU-033.*KU-035/)).toBeVisible();
     await expect(window.getByText(/REL-010.*requires/)).toBeVisible();
-    await window.getByLabel('关系范围').selectOption('auxiliary');
+    await relationScope(window, 'auxiliary');
     await expect(window.getByText(/REL-028.*requires/)).toBeVisible();
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
@@ -270,12 +271,12 @@ test('narrow directory traps keyboard focus and restores it when closed', async 
     await expect(nav).toBeVisible();
     await window.screenshot({ path: evidencePath('t04-narrow.png') });
     await expect(window.locator('main.board')).toHaveAttribute('inert', '');
-    await nav.getByRole('button', { name: '关闭目录' }).focus();
+    await nav.getByRole('button', { name: '收起目录' }).focus();
     await window.keyboard.press('Shift+Tab');
     await expect(nav.locator('button').last()).toBeFocused();
     await window.keyboard.press('Escape');
     await expect(nav).toBeHidden();
-    await expect(window.getByRole('button', { name: '展开目录' })).toBeFocused();
+    await expect(window.getByRole('button', { name: '课程目录' })).toBeFocused();
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
@@ -327,8 +328,8 @@ test('narrow relationship overlay isolates the workspace and returns focus', asy
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const window = await app.firstWindow(); await window.setViewportSize({ width: 700, height: 600 });
-    await window.getByRole('button', { name: '关闭目录' }).click();
-    await window.getByRole('button', { name: '查看关系' }).click();
+    await window.getByRole('button', { name: '收起目录' }).click();
+    await openRelations(window);
     const dialog = window.getByRole('dialog', { name: '关系详情' });
     await expect(dialog).toBeVisible();
     await expect(window.locator('.board-background')).toHaveAttribute('inert', '');
@@ -434,10 +435,10 @@ test('a rejected reading position stays visible and can be retried', async () =>
     fault = openFaultDatabase(join(root, 'course/course.sqlite'));
     fault.exec("CREATE TRIGGER reject_reading BEFORE INSERT ON reading_state BEGIN SELECT RAISE(ABORT, 'reading storage unavailable'); END");
     await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
-    await expect(window.getByRole('status', { name: '阅读状态' })).toContainText('未保存');
+    await expect(window.getByRole('status', { name: '保存状态', exact: true })).toContainText('未保存');
     fault.exec('DROP TRIGGER reject_reading');
     await window.getByRole('button', { name: '重试保存阅读位置' }).click();
-    await expect(window.getByRole('status', { name: '阅读状态' })).toContainText('已保存');
+    await expect(window.getByRole('status', { name: '保存状态', exact: true })).toContainText('已保存');
   } finally { fault?.close(); await app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
@@ -446,7 +447,7 @@ test('wheel inside the relationships panel scrolls it without panning the canvas
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const window = await app.firstWindow();
-    await window.getByRole('button', { name: '查看关系' }).click();
+    await openRelations(window);
     const panel = window.getByLabel('关系详情');
     const transform = () => window.locator('.react-flow__viewport').evaluate(el => getComputedStyle(el).transform);
     const before = await transform(); await panel.hover(); await window.mouse.wheel(0, 300);
@@ -480,7 +481,7 @@ test('narrow controlled producer overlay returns focus and isolates the board', 
   const app = await controlledElectron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const window = await app.firstWindow(); await window.setViewportSize({ width: 700, height: 600 });
-    await window.getByRole('button', { name: '关闭目录' }).click();
+    await window.getByRole('button', { name: '收起目录' }).click();
     const entry = window.getByText('可控生产者 · 验证入口', { exact: true }); await entry.click();
     await expect(window.locator('main.board')).toHaveAttribute('inert', '');
     await window.keyboard.press('Escape'); await expect(entry).toBeFocused();

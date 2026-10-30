@@ -58,7 +58,7 @@ export const HistoryPanel=forwardRef<HistoryPanelHandle,Props>(function HistoryP
     await changed(receipt);await load(scope);
   });
   const names=(ids:string[])=>ids.map(id=>units.find(u=>u.id===id)?.name??id).join('、');
-  return <><button ref={trigger} onClick={()=>show()} aria-haspopup="dialog">课程历史</button>{open&&createPortal(<dialog className="history-panel" aria-label="修改历史" ref={node=>{dialog.current=node;if(node&&!node.open)node.showModal();}} onCancel={e=>{e.preventDefault();close();}} onKeyDown={e=>{
+  return <>{open&&createPortal(<dialog className="history-panel" aria-label="修改历史" ref={node=>{dialog.current=node;if(node&&!node.open)node.showModal();}} onCancel={e=>{e.preventDefault();close();}} onKeyDown={e=>{
     e.stopPropagation();if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z')e.preventDefault();
   }}>
     <header className="history-heading"><h2>修改历史</h2><button disabled={busy} onClick={close}>返回原阅读位置</button></header>

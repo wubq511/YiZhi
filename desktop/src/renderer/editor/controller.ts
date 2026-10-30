@@ -352,6 +352,8 @@ export class ContinuousEditor {
     this.editor.view.dom.querySelectorAll('math-field').forEach(field => { (field as HTMLElement & { readOnly: boolean }).readOnly = !editable || (field as HTMLElement).dataset.annotationSelection === 'true'; });
     this.editor.view.dom.querySelectorAll<HTMLButtonElement>('.editor-formula button').forEach(button => { button.disabled = !editable; });
   }
+  canUndo() { return undo(this.editor.state); }
+  canRedo() { return redo(this.editor.state); }
   undo() { undo(this.editor.state, this.editor.view.dispatch); }
   redo() { redo(this.editor.state, this.editor.view.dispatch); }
   splitFirst() {

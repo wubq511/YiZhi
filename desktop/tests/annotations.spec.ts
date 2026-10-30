@@ -25,7 +25,7 @@ test('actual displayed Unicode selection creates one note; note Undo/autosave/re
     const note = page.getByRole('textbox', { name: '批注内容', exact: true });
     await note.fill('第一版理解');
     await page.getByRole('button', { name: '关闭批注', exact: true }).click();
-    await expect(page.getByRole('region', { name: '个人批注', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('region', { name: '个人批注', exact: true })).toBeHidden();
     await expect.poll(() => page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return (await b.annotations.list({ sessionId: c.sessionId }))[0]?.text; })).toBe('第一版理解');
     await page.getByRole('button', { name: '个人批注', exact: true }).click();
     await expect(page.getByRole('status', { name: '批注同步状态' })).toHaveText('已保存');
@@ -224,7 +224,7 @@ test('held displayed selection creates an old-version orphan and explicit reasso
     await expect.poll(async () => (await getNotes())[0].text).toBe('重新关联后还可继续记录');
     await page.setViewportSize({ width: 700, height: 700 });
     await expect(page.getByRole('dialog', { name: '个人批注', exact: true })).toBeVisible();
-    expect(await page.locator('.workspace').evaluate((el: HTMLElement) => el.inert)).toBe(true);
+    expect(await page.locator('main.board').evaluate((el: HTMLElement) => el.inert)).toBe(true);
     await page.screenshot({ path: evidencePath('t07-notes-narrow.png') });
     await page.getByRole('button', { name: '关闭批注', exact: true }).click();
   } finally { await app.close(); await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }); }

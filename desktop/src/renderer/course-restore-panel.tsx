@@ -1,3 +1,4 @@
+import { forwardRef, useImperativeHandle } from 'react';
 import { useEffect,useRef,useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { CourseRestorePermit,CourseRestorePreview,CourseRestoreResult,PreservedDraft } from '../course-restore-api';
@@ -13,7 +14,7 @@ function PreservedInput({draft}:{draft:PreservedDraft}) {
   <details><summary>原始输入与版本依据</summary><pre>{JSON.stringify(input,null,2)}</pre></details>
  </>;
 }
-export function CourseRestorePanel({sessionId,courseId,units,prepare}:{sessionId:string;courseId:string;units:Array<{id:string;name:string}>;prepare():Promise<void>}) {
+export const CourseRestorePanel = forwardRef<{ open(): void }, {sessionId:string;courseId:string;units:Array<{id:string;name:string}>;prepare():Promise<void>}>(function CourseRestorePanel({sessionId,courseId,units,prepare}, ref) {
  const key=`yizhi-course-restore:${courseId}`;
  const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[activities,setActivities]=useState<HistoryActivity[]>([]),[next,setNext]=useState<string>();
  const [point,setPoint]=useState(''),[side,setSide]=useState<'before'|'after'>('after'),[selected,setSelected]=useState(units.map(u=>u.id)),[layout,setLayout]=useState(false),[review,setReview]=useState(false);
@@ -28,7 +29,7 @@ export function CourseRestorePanel({sessionId,courseId,units,prepare}:{sessionId
   void work(async()=>{const receipt=await window.yizhi.courseRestore.query({sessionId:request.sessionId,operationId:request.operationId});if(receipt){setResult(receipt);setPending(undefined);localStorage.removeItem(key);}else setError('上次整课恢复尚无完整结果。请核对并重试原操作；不会自动执行。');setDrafts(await window.yizhi.courseRestore.drafts({sessionId}));});
  },[key,sessionId]);
  const show=()=>{setOpen(true);if(!pending){setResult(undefined);setPreview(undefined);setShowDrafts(false);}void work(async()=>{await prepare();await load();setDrafts(await window.yizhi.courseRestore.drafts({sessionId}));});};
- const close=()=>{if(busy)return;setOpen(false);requestAnimationFrame(()=>trigger.current?.focus());};
+ const close=()=>{if(busy)return;setOpen(false);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('[aria-label="课程菜单"]')?.focus());};
  const invalidate=()=>{setPreview(undefined);setResult(undefined);};
  const inspect=()=>void work(async()=>{await prepare();setResult(undefined);setPreview(await window.yizhi.courseRestore.preview({sessionId,atOperationId:point,side,unitIds:selected,userState:{layout,review}}));});
  const apply=()=>void work(async()=>{
@@ -39,7 +40,8 @@ export function CourseRestorePanel({sessionId,courseId,units,prepare}:{sessionId
   const receipt=await window.yizhi.courseRestore.apply({...request,sessionId});setResult(receipt);
  });
  const locked=busy||!!pending||!!result;
- return <><button ref={trigger} aria-haspopup="dialog" onClick={show}>整课历史恢复</button>{open&&createPortal(<dialog className="history-panel course-restore-panel" aria-label="整课历史恢复" ref={node=>{if(node&&!node.open)node.showModal();}} onCancel={e=>{e.preventDefault();close();}} onKeyDown={e=>{e.stopPropagation();if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z')e.preventDefault();}}>
+ useImperativeHandle(ref, () => ({ open: show }));
+ return <>{open&&createPortal(<dialog className="history-panel course-restore-panel" aria-label="整课历史恢复" ref={node=>{if(node&&!node.open)node.showModal();}} onCancel={e=>{e.preventDefault();close();}} onKeyDown={e=>{e.stopPropagation();if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z')e.preventDefault();}}>
   <header className="history-heading"><h2>整课历史恢复</h2><button disabled={busy} onClick={close}>返回当前课程</button></header>
   <p>从课程历史恢复所选学习范围，并隔离恢复前任务。单元取回和编辑器即时 Undo 使用各自入口；独立课程备份不在这里覆盖。</p>
   {error&&<div className="history-error" role="alert">{error}</div>}{busy&&<p role="status">正在核对整课范围与持久结果…</p>}
@@ -60,4 +62,4 @@ export function CourseRestorePanel({sessionId,courseId,units,prepare}:{sessionId
   </section>}
   {drafts.length>0&&<><button disabled={busy} onClick={()=>setShowDrafts(v=>!v)}>查看恢复前草稿</button>{showDrafts&&<section aria-label="恢复前草稿（只读）"><h3>恢复前草稿（只读）</h3><p>原输入与依据保留在原代际；请对照当前课程后重新编辑，不会自动提交旧输入。</p>{drafts.map((d,i)=><details key={`${d.restoreOperationId}:${i}`} open><summary>{units.find(u=>u.id===(d.input.unitId??'KU-001'))?.name??d.input.unitId??'KU-001'} · 输入 {d.input.inputSeq}</summary><PreservedInput draft={d}/></details>)}</section>}</>}
  </dialog>,document.body)}</>;
-}
+});

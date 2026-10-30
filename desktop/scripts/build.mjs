@@ -1,4 +1,5 @@
 import { build } from 'esbuild';
+import { execFileSync } from 'node:child_process';
 import { mkdir, copyFile, readdir, cp, rm, writeFile } from 'node:fs/promises';
 const production=process.argv.includes('--production');
 if(process.argv.slice(2).some(arg=>arg!=='--production'))throw new Error('Unknown build argument');
@@ -27,6 +28,7 @@ try {
     platform: 'browser', format: 'esm', target: 'chrome140', define: { 'process.env.NODE_ENV': '"production"' },
     loader: { '.woff': 'file', '.woff2': 'file', '.ttf': 'file' },metafile:true });
   runtimeInputs['renderer/app.js']=Object.keys(result.metafile.inputs).sort();
+  execFileSync(process.execPath, ['node_modules/@tailwindcss/cli/dist/index.mjs', '-i', 'src/renderer/shell/tailwind.css', '-o', 'dist/renderer/shell-utilities.css', '--minify'], { stdio: 'inherit' });
   await copyFile('src/renderer/index.html', 'dist/renderer/index.html');
   await copyFile('src/renderer/assets/ti74153-1.png', 'dist/renderer/ti74153-1.png');
   await cp('node_modules/mathlive/fonts', 'dist/renderer/mathlive-fonts', { recursive: true });

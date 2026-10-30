@@ -1,3 +1,4 @@
+import { reportSave, clearSave } from './shell/save-status';
 import {PARITY_ORACLES,type ExtensionView,type ExtensionManifest,type ExtensionState,type ExtensionAction,type ExtensionIdentity} from '../extensions-api';
 import type {DesktopBridge} from '../shared';
 const origin='yizhi-extension://package';
@@ -50,7 +51,7 @@ export class ExtensionRuntime {
     this.timer=setInterval(()=>void this.tick(),220);void this.tick();
   }
   subscribe(fn:()=>void){this.listeners.add(fn);return()=>{this.listeners.delete(fn);};}
-  private emit(){for(const fn of this.listeners)fn();}
+  private emit(){const v=this.view;reportSave(`extension:${this.sessionId}`,{label:'扩展现场',status:this.error||v?.phase==='pause-incomplete'?'error':!this.ready||this.pending||v?.phase==='pausing'||v&&JSON.stringify(v.inputs)!==JSON.stringify(v.state.inputs)?'pending':'saved',detail:this.error,retry:()=>this.recover()});for(const fn of this.listeners)fn();}
   private adopt(v:ExtensionView){if(!this.view||v.revision>=this.view.revision)this.view=v;this.emit();}
   async send(action:ExtensionAction){
     if(!this.view)return;

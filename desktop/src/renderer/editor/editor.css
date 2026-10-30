@@ -1,6 +1,7 @@
-.editor-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px; margin: 22px 0; background: #fffdf8; border: 1px solid #b9c9d9; border-radius: 11px; font: 13px/1.5 system-ui, sans-serif; color: #345d88; }
+.editor-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 6px; margin: 22px 0; background: #f6f4fa; border: 0; border-radius: 10px; font: 13px/1.5 system-ui, sans-serif; color: #655d72; }
 .editor-tools span { flex-basis: 100%; }
-.editor-tools button { color: #345d88; font: inherit; }
+.editor-tools button { display: inline-flex; align-items: center; gap: 5px; color: #655d72; background: transparent; font: inherit; padding: 7px 9px; }
+.editor-tools button:hover { background: #ebe6f5; color: #6452b6; }
 .editor-integration { margin-block: 18px; padding: 12px; border: 1px solid #b9c9d9; border-radius: 8px; background: #fffdf8; color: #345d88; font: 14px/1.7 system-ui, sans-serif; overflow-wrap: anywhere; }
 .editor-integration p { margin-block: 0 10px; }
 .editor-integration dt { font-weight: 600; }

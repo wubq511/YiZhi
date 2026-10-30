@@ -110,7 +110,7 @@ test('manual width and drag remain after collapse and reopen without replacing t
     const afterGrowth = (await page.locator('.reading-layer').first().boundingBox())!;
     expect(afterGrowth.x).toBeCloseTo(duringDrag.x, 1); expect(afterGrowth.y).toBeCloseTo(duringDrag.y, 1);
     await page.mouse.up();
-    await expect(page.getByRole('status', { name: '布局状态' })).toHaveText('布局已保存');
+    await expect(page.getByRole('status', { name: '保存状态', exact: true })).toHaveText('已保存');
     // The old saved label can still belong to the preceding width edit; wait for this move's durable result.
     await expect.poll(() => page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return (await b.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-001').x; })).toBeGreaterThan(180);
     const saved = await page.evaluate(async () => { const bridge = (window as any).yizhi; const c = await bridge.open(); return (await bridge.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-001'); });
@@ -124,7 +124,7 @@ test('manual width and drag remain after collapse and reopen without replacing t
     await reveal(page, material.locator('summary').first());
     await material.locator('summary').first().click();
     await expect(material).not.toHaveAttribute('open');
-    await expect(page.getByRole('status', { name: '阅读状态' })).toHaveText('阅读位置已保存');
+    await expect(page.getByRole('status', { name: '保存状态', exact: true })).toHaveText('已保存');
     expect(await page.evaluate(async () => { const b = (window as any).yizhi; const c = await b.open(); return (await b.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-001'); })).toEqual(saved);
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     await app.close(); app = await launch(); page = await app.firstWindow();
@@ -238,7 +238,7 @@ test('growth displaces the local chain while the current reading anchor and stud
     await expect(heading).toBeVisible();
     const width = page.getByRole('slider', { name: '调整非十进制与十进制互转宽度' });
     await width.focus(); await page.keyboard.press('ArrowRight');
-    await expect(page.getByRole('status', { name: '布局状态' })).toHaveText('布局已保存');
+    await expect(page.getByRole('status', { name: '保存状态', exact: true })).toHaveText('已保存');
     const baseline = await page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return (await b.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-002'); });
     expect(baseline.y).toBe(168); expect(baseline.width).toBe(674);
     const before = (await heading.boundingBox())!;
@@ -287,7 +287,7 @@ test('layout persistence failure retains the visible placement and retry confirm
     fault.exec("CREATE TRIGGER reject_ui_layout BEFORE INSERT ON layout_baseline BEGIN SELECT RAISE(ABORT, 'layout storage unavailable'); END");
     const width = page.getByRole('slider', { name: '调整位置记数法与权展开宽度' });
     await width.focus(); await page.keyboard.press('ArrowRight');
-    await expect(page.getByRole('status', { name: '布局状态' })).toHaveText('布局未保存');
+    await expect(page.getByRole('status', { name: '保存状态', exact: true })).toHaveText('布局未保存');
     await expect(width).toHaveAttribute('aria-valuenow', '674');
     await app.evaluate(({ app, ipcMain, dialog }) => {
       (globalThis as any).layoutCloseResult=null;
@@ -301,10 +301,10 @@ test('layout persistence failure retains the visible placement and retry confirm
     await expect.poll(()=>app.evaluate(()=> (globalThis as any).layoutQuitError?.title)).toBe('退出未完成');
     expect(await app.evaluate(()=> (globalThis as any).layoutQuitError.content)).toContain('仍有窗口的最新输入未确认保存');
     await expect.poll(()=>page.evaluate(()=>document.body.inert)).toBe(false);
-    await expect(page.getByRole('status', { name: '布局状态' })).toHaveText('布局未保存');
+    await expect(page.getByRole('status', { name: '保存状态', exact: true })).toHaveText('布局未保存');
     fault.exec('DROP TRIGGER reject_ui_layout');
     await page.getByRole('button', { name: '重试保存布局' }).click();
-    await expect(page.getByRole('status', { name: '布局状态' })).toHaveText('布局已保存');
+    await expect(page.getByRole('status', { name: '保存状态', exact: true })).toHaveText('已保存');
     const saved = await page.evaluate(async () => { const b = (window as any).yizhi; const c = await b.open(); return (await b.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-001'); });
     expect(saved.width).toBe(674);completed=true;
   } finally { await setupWriter?.terminate();fault?.exec('DROP TRIGGER IF EXISTS reject_ui_layout');fault?.close(); if(completed)await app.close();else app.process().kill('SIGKILL'); await rm(root, { recursive: true, force: true }); }

@@ -47,7 +47,6 @@ test('independent producer range update survives student Undo and complete SQLit
     });
     expect(updated.result.status).toBe('committed');
     await expect(page.getByRole('textbox', { name: '编辑第二段正文', exact: true })).toHaveText('外部独立更新必须保留');
-    await revealBoardControl(page, page.getByRole('button', { name: '撤销正文', exact: true }));
     await page.getByRole('button', { name: '撤销正文', exact: true }).click();
     await expect(first).toHaveText(original.unit.reading.blocks[0].payload.text);
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
@@ -114,7 +113,6 @@ test('copy assigns fresh identities recursively, an explicit internal move keeps
     expect(saved.unit.reading.blocks[0]).toEqual(adjacent);
     expect(saved.unit.reading.blocks[1].payload.text).toBe('复制与移动');
     const movedId = saved.unit.reading.blocks[1].id;
-    await revealBoardControl(page, page.getByRole('button', { name: '撤销正文', exact: true }));
     await page.getByRole('button', { name: '撤销正文', exact: true }).click();
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     expect((await page.evaluate(() => (window as any).yizhi.open())).unit.reading.blocks[0].id).toBe(movedId);
@@ -124,10 +122,8 @@ test('copy assigns fresh identities recursively, an explicit internal move keeps
     await revealBoardControl(page, page.getByRole('button', { name: '插入公式', exact: true }));
     await page.getByRole('button', { name: '插入公式', exact: true }).click();
     await expect.poll(async () => (await page.evaluate(() => (window as any).yizhi.open())).unit.reading.blocks.filter((b: any) => b.kind === 'formula').length).toBe(count + 1);
-    await revealBoardControl(page, page.getByRole('button', { name: '撤销正文', exact: true }));
     await page.getByRole('button', { name: '撤销正文', exact: true }).click();
     await expect.poll(async () => (await page.evaluate(() => (window as any).yizhi.open())).unit.reading.blocks.filter((b: any) => b.kind === 'formula').length).toBe(count);
-    await revealBoardControl(page, page.getByRole('button', { name: '重做正文', exact: true }));
     await page.getByRole('button', { name: '重做正文', exact: true }).click();
     await expect.poll(async () => (await page.evaluate(() => (window as any).yizhi.open())).unit.reading.blocks.filter((b: any) => b.kind === 'formula').length).toBe(count + 1);
   } finally {

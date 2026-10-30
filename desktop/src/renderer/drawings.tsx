@@ -1,3 +1,6 @@
+import { useSaveReport } from './shell/save-status';
+import { registerHistory, refreshHistory, activateHistory } from './shell/edit-history';
+import { X } from 'lucide-react';
 import rough from 'roughjs';
 import type { LayoutPlacement } from '../layout';
 import type { PlacementEdit } from '../drawing-api';
@@ -8,7 +11,8 @@ import { equal } from '../editor-api';
 import type { Viewport } from '@xyflow/react';
 import './drawings.css';
 
-export interface DrawingHandle { recordPlacement(edit: PlacementEdit): void; flush(): Promise<boolean>; highlight(selection: AnnotationSelection): Promise<void> }
+export interface DrawingToolState { kind?: DrawingKind; space: 'board'|'object'|'image'; pending: boolean }
+export interface DrawingHandle { choose(kind?: DrawingKind): void; select(active: boolean): void; setSpace(space: 'board'|'object'|'image'): void; manage(): void;  recordPlacement(edit: PlacementEdit): void; flush(): Promise<boolean>; highlight(selection: AnnotationSelection): Promise<void> }
 const names: Record<DrawingKind, string> = { rectangle: '矩形', ellipse: '椭圆', arrow: '个人箭头', line: '直线', wave: '波浪线', highlighter: '荧光笔' };
 const generator=rough.generator();
 function Drawing({ value, id='preview' }: { value: DrawingValue; id?:string }) {
@@ -31,7 +35,8 @@ function Drawing({ value, id='preview' }: { value: DrawingValue; id?:string }) {
   }
   return <g className="drawing-ink">{generator.toPaths(shape).map((p,i)=><path key={i} d={p.d} vectorEffect="non-scaling-stroke"/>)}</g>;
 }
-export const Drawings = forwardRef<DrawingHandle, { sessionId: string; viewport: Viewport; takeover(): void; pan(dx:number,dy:number):void; prepare(): Promise<boolean>; paint(notes: PersonalNote[]): void; contentKey: string; waitLayout(): Promise<boolean>; restorePlacement(before: LayoutPlacement,after: LayoutPlacement,done:()=>void):void }>(function Drawings({ sessionId, viewport, takeover, pan, prepare, paint, contentKey, waitLayout, restorePlacement }, ref) {
+export const Drawings = forwardRef<DrawingHandle, { onToolChange(state: DrawingToolState): void; sessionId: string; viewport: Viewport; takeover(): void; pan(dx:number,dy:number):void; prepare(): Promise<boolean>; paint(notes: PersonalNote[]): void; contentKey: string; waitLayout(): Promise<boolean>; restorePlacement(before: LayoutPlacement,after: LayoutPlacement,done:()=>void):void }>(function Drawings({ onToolChange, sessionId, viewport, takeover, pan, prepare, paint, contentKey, waitLayout, restorePlacement }, ref) {
+  const [manager, setManager] = useState(false);
   const [open, setOpen] = useState(false), [kind, setKind] = useState<DrawingKind>();
   const [space,setSpace]=useState<'board'|'object'|'image'>('board');
   const [,redraw]=useState(0);
@@ -72,7 +77,7 @@ export const Drawings = forwardRef<DrawingHandle, { sessionId: string; viewport:
         setRecords(previous => previous.some(r=>r.id===saved.id)?previous.map(r=>r.id===saved.id?saved:r):[...previous,saved]);
         onSaved.current?.(saved); onSaved.current=undefined;
         pending.current = undefined; setPreview(undefined); setStatus('已保存'); return true;
-      } catch (e) { setStatus('未保存'); setError((e as Error).message); return false; }
+      } catch (e) { setManager(true); setStatus('未保存'); setError((e as Error).message); return false; }
       finally { saving.current = undefined; }
     })(); saving.current = work; return work;
   };
@@ -97,7 +102,7 @@ export const Drawings = forwardRef<DrawingHandle, { sessionId: string; viewport:
     if(step.kind==='placement'){restorePlacement(redo?step.edit.before:step.edit.after,redo?step.edit.after:step.edit.before,done);return;}
     apply(step.id,redo?step.after:step.before,()=>{done();setSelected(step.id);});
   };
-  useImperativeHandle(ref, () => ({ recordPlacement(edit){past.current.push({kind:'placement',edit});future.current=[];redraw(n=>n+1);}, flush: save, async highlight(selection) {
+  useImperativeHandle(ref, () => ({ choose(next) { cancel(); setOpen(true); setKind(next); activateHistory('board'); }, select(active) { cancel(); setKind(undefined); setOpen(active); }, setSpace, manage() { activateHistory('board'); setManager(value => !value); setOpen(true); setKind(undefined); }, recordPlacement(edit){past.current.push({kind:'placement',edit});future.current=[];redraw(n=>n+1);}, flush: save, async highlight(selection) {
     setOpen(true);setKind(undefined);
     if(pending.current) return;
     if(!selection.fragments.length||selection.fragments.some(f=>f.field!=='text')){setError('请先选择正文中的文字范围。');return;}
@@ -184,13 +189,17 @@ export const Drawings = forwardRef<DrawingHandle, { sessionId: string; viewport:
       {selected===r.id&&open&&<rect className="drawing-resize" role="slider" tabIndex={0} aria-label="调整个人图形尺寸" aria-valuenow={Math.round(g.width)} x={g.x+g.width-6/viewport.zoom} y={g.y+g.height-6/viewport.zoom} width={12/viewport.zoom} height={12/viewport.zoom} onPointerDown={e=>adjust(e,r,'resize')}/>}
     </g>;
   };
+  const historyActions = useRef({undo}); historyActions.current = {undo};
+  const blocked = useRef(false); blocked.current = !!pending.current || historyBusy;
+  useEffect(() => registerHistory('board', { label: '画板', element: () => layer.current?.closest('main') ?? null, canUndo: () => !blocked.current && !!past.current.length, canRedo: () => !blocked.current && !!future.current.length, undo: () => { void historyActions.current.undo(); }, redo: () => { void historyActions.current.undo(true); } }), []);
+  useEffect(() => { refreshHistory(); });
+  const toolCallback = useRef(onToolChange); toolCallback.current = onToolChange;
+  useEffect(() => { toolCallback.current({kind, space, pending: !!pending.current}); }, [kind, space, status]);
+  useSaveReport('drawings', { label: '图形', status: status === '未保存' ? 'error' : status === '已保存' ? 'saved' : 'saving', detail: error, retry: () => { setManager(true); return save(); } });
   const chosen=records.find(r=>r.id===selected);
   return <>
-    <div className="drawing-entry"><button aria-expanded={open} onClick={()=>{setOpen(!open);setKind(undefined);cancel();}}>绘图标注</button><span role="status" aria-label="绘图同步状态" className={status==='未保存'?'drawing-save-error':''}>{status}</span></div>
-    {open && <section className="drawing-tools" aria-label="个人绘图工具">
-      <label>标注坐标 <select aria-label="标注坐标" value={space} onChange={e=>{cancel();setSpace(e.target.value as typeof space);}}><option value="board">画板坐标</option><option value="object">对象坐标</option><option value="image">图像相对几何</option></select></label>
-      <div role="toolbar" aria-label="绘图工具">{Object.entries(names).map(([id,name])=><button key={id} disabled={!!pending.current} aria-pressed={kind===id} onClick={()=>{cancel();setKind(id as DrawingKind);}}>{name}</button>)}<button onClick={()=>{setKind(undefined);cancel();}}>结束绘图</button></div>
-      <div role="toolbar" aria-label="画板撤销"><button disabled={!!pending.current||historyBusy||!past.current.length} onClick={()=>undo()}>撤销画板</button><button disabled={!!pending.current||historyBusy||!future.current.length} onClick={()=>undo(true)}>重做画板</button></div>
+    {manager && <section className="drawing-tools" aria-label="个人绘图工具">
+      <div className="panel-heading"><h2>个人图形</h2><button className="panel-close" aria-label="收起个人图形" onClick={() => setManager(false)}><X size={18}/></button></div>
       <div className="drawing-list">{records.map((r,i)=><button key={r.id} aria-pressed={selected===r.id} onClick={()=>{setSelected(r.id);setKind(undefined);}}>{`选择${names[(r.value??r.original).kind]} ${i+1}`}{r.status==='orphan'?' · 待重新关联':r.status==='deleted'?' · 已删除':''}</button>)}</div>
       {chosen&&<div className="drawing-details"><details><summary>原语境与几何</summary><p>{names[chosen.original.kind]} · {chosen.original.anchor.space==='board'?'画板':chosen.original.anchor.space==='text'?'文字范围':chosen.original.anchor.unitId}</p><pre>{JSON.stringify(chosen.original.geometry)}</pre>{chosen.original.anchor.space==='text'&&notes.find(n=>n.id===(chosen.original.anchor as {noteId:string}).noteId)?.original.fragments.map((f,i)=><blockquote key={i}>{f.quote}</blockquote>)}{(chosen.original.anchor.space==='image'||chosen.original.anchor.space==='object')&&chosen.original.anchor.block&&<p>{String(chosen.original.anchor.block.payload.alt??chosen.original.anchor.block.payload.text??chosen.original.anchor.block.kind)}</p>}</details>
         {chosen.status==='deleted'&&<button disabled={!!pending.current} onClick={async()=>{const history=await window.yizhi.drawings.history({sessionId,id:chosen.id});commit(chosen.id,history.at(-1)?.before??chosen.original);}}>找回已删除图形</button>}
