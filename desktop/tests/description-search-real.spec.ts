@@ -60,14 +60,14 @@ test('actual installed CLI rewrites one memory description into existing hits, p
     }
     await region.getByText('查询与排序依据', { exact: true }).first().click();
     await page.screenshot({ path: evidencePath('t20-actual-description-results.png') });
-    await region.getByRole('button', { name: '定位命中', exact: true }).first().click();
+    await region.getByRole('button', { name: '前往', exact: true }).first().click();
     await expect(page.locator('[data-search-current="true"]')).toBeVisible();
     await page.screenshot({ path: evidencePath('t20-actual-description-location.png') });
     await page.getByRole('button', { name: '返回搜索前位置', exact: true }).click();
     await expect(page.locator('.reading-layer[data-unit-id="KU-001"]')).toHaveAttribute('style', camera!);
     expect(await snapshot()).toEqual(before);
-    evidence.assertions = { actualQueryAndHitBasis: true, canonicalLocateVerified: true, boardReviewAndAllUnsentConversationsUnchanged: true, cameraReturned: true };
-    await page.getByRole('button', { name: '搜索课程', exact: true }).click();
+    evidence.assertions = { actualQueryAndHitBasis: true, canonicalLocateVerified: true, boardReviewAndAllUnsentConversationsUnchanged: true, cameraReturned: true, leftPanelKept: true };
+    await expect(page.getByRole('complementary', { name: '搜索课程', exact: true })).toBeVisible();
     await page.context().setOffline(true);
     const mode = page.getByRole('button', { name: 'AI 检索', exact: true });
     if (await mode.getAttribute('aria-pressed') === 'true') await mode.click();

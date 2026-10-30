@@ -6,6 +6,7 @@ import { InputGroup, InputGroupButton, InputGroupTextarea } from './components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { DescriptionControls, DescriptionFeedback, DescriptionResults, useDescriptionSearch } from './description-search';
 import { SearchHitCard } from './search-hit';
+import { Tooltip as TooltipPrimitive } from 'radix-ui';
 import { useEffect, useRef, useState } from 'react';
 import { searchScopes, type SearchHit, type SearchResults, type SearchScope, type SearchStatus } from '../search-api';
 import './search-panel.css';
@@ -15,15 +16,17 @@ export function SearchPanel({ sessionId, narrow, locate }: { sessionId: string; 
   const described = useDescriptionSearch(sessionId);
   const { open, setOpen } = useDockPanel('search');
   const [query, setQuery] = useState(''), [scopes, setScopes] = useState(searchScopes);
-  const [aiMode, setAiMode] = useState(false), [aiMotion, setAiMotion] = useState(false);
+  const [aiMode, setAiMode] = useState(false), [aiMotion, setAiMotion] = useState(false), [showAiControls, setShowAiControls] = useState(false);
   const [resultView, setResultView] = useState<'local' | 'ai'>('local');
   const [results, setResults] = useState<SearchResults>(), [status, setStatus] = useState<SearchStatus>();
   const [error, setError] = useState(''), [loading, setLoading] = useState(false), [indexing, setIndexing] = useState(false), [revision, setRevision] = useState(0);
   const input = useRef<HTMLTextAreaElement>(null), panel = useRef<HTMLElement>(null);
+  const controlsTimer = useRef<number | undefined>(undefined);
   const lastQuery = useRef('');
   const serial = useRef(0), alive = useRef(true), indexingRef = useRef(false);
   const wasOnline = useRef(described.online);
   useEffect(() => () => { alive.current = false; }, []);
+  useEffect(() => () => window.clearTimeout(controlsTimer.current), []);
   useEffect(() => {
     if (!wasOnline.current && described.online && aiMode && !described.checking) void described.check();
     wasOnline.current = described.online;
@@ -59,10 +62,9 @@ export function SearchPanel({ sessionId, narrow, locate }: { sessionId: string; 
     }, changed ? 150 : 0);
     return () => clearTimeout(timer);
   }, [query, scopes, revision]);
-  const openHit = (hit: SearchHit) => { void (async () => {
-    try { const current = await window.yizhi.search.locate({ sessionId, hit }); await locate(current); setOpen(false); }
-    catch (e) { setError((e as Error).message); void window.yizhi.search.status({ sessionId }).then(setStatus).catch(() => {}); }
-  })(); };
+  const openHit = (hit: SearchHit) => { void locate(hit).catch(e => {
+    setError((e as Error).message); void window.yizhi.search.status({ sessionId }).then(setStatus).catch(() => {});
+  }); };
   const canStartAi = described.online && !described.checking && !!described.executor?.available && !described.starting && described.run?.state !== 'running'
     && !!query.trim() && Array.from(query).length <= 2000 && !!scopes.length && !!described.model;
   const startAi = () => { if (canStartAi) { setResultView('ai'); void described.start(query, scopes); } };
@@ -89,6 +91,8 @@ export function SearchPanel({ sessionId, narrow, locate }: { sessionId: string; 
   }}>
     <div className="search-heading"><h2>搜索课程</h2><Button variant="ghost" size="icon-sm" className="panel-close" aria-label="收起搜索" onClick={() => show(false)}><X size={18}/></Button></div>
     <InputGroup className="search-field" data-ai={aiMode || undefined} data-motion={aiMotion ? 'pointer' : undefined}>
+      <span className="search-field-wash" aria-hidden="true" />
+      <span className="search-field-light" aria-hidden="true" />
       <div className="search-field-main">
         <InputGroupTextarea ref={input} role="searchbox" rows={1} aria-label="查找已有内容" defaultValue={query} placeholder="搜索关键词、公式或描述" maxLength={4000} onInput={event => {
           const field = event.currentTarget; field.style.height = 'auto'; field.style.height = `${Math.min(field.scrollHeight, 100)}px`;
@@ -96,14 +100,32 @@ export function SearchPanel({ sessionId, narrow, locate }: { sessionId: string; 
         }} onKeyDown={event => {
           if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (aiMode && !event.repeat) startAi(); }
         }} />
-        <InputGroupButton size="icon-sm" className="search-ai-toggle" aria-label="AI 检索" title="AI 检索" aria-pressed={aiMode} onClick={event => {
-          const next = !aiMode; setAiMotion(event.detail > 0); setAiMode(next);
-          if (next && !described.executor && !described.checking && described.online) void described.check();
-          if (!next) setResultView('local');
-          if (event.detail > 0) input.current?.focus();
-        }}><Sparkles size={17} aria-hidden="true" /></InputGroupButton>
+        <TooltipPrimitive.Provider delayDuration={120} skipDelayDuration={300}>
+          <TooltipPrimitive.Root>
+            <TooltipPrimitive.Trigger asChild>
+              <InputGroupButton size="icon-sm" className="search-ai-toggle" aria-label="AI 检索" aria-pressed={aiMode} onClick={event => {
+                const next = !aiMode, pointer = event.detail > 0;
+                window.clearTimeout(controlsTimer.current);
+                setAiMotion(pointer); setAiMode(next);
+                if (next) setShowAiControls(true);
+                else if (pointer && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) controlsTimer.current = window.setTimeout(() => setShowAiControls(false), 240);
+                else setShowAiControls(false);
+                if (next && !described.executor && !described.checking && described.online) void described.check();
+                if (!next) setResultView('local');
+                if (pointer) input.current?.focus();
+              }}><Sparkles size={17} aria-hidden="true" /></InputGroupButton>
+            </TooltipPrimitive.Trigger>
+            <TooltipPrimitive.Portal>
+              <TooltipPrimitive.Content className="search-ai-tip" side="bottom" sideOffset={6} collisionPadding={10}>AI 检索</TooltipPrimitive.Content>
+            </TooltipPrimitive.Portal>
+          </TooltipPrimitive.Root>
+        </TooltipPrimitive.Provider>
       </div>
-      {aiMode && <DescriptionControls state={described} canStart={canStartAi} onStart={startAi} />}
+      <div className="search-controls-reveal" aria-hidden={!aiMode || undefined} inert={!aiMode}>
+        <div className="search-controls-clip" onClick={event => { if (!(event.target as HTMLElement).closest('button')) input.current?.focus(); }}>
+          {showAiControls && <DescriptionControls state={described} canStart={canStartAi} onStart={startAi} />}
+        </div>
+      </div>
     </InputGroup>
     {aiMode && <DescriptionFeedback state={described} showError={resultView !== 'ai'} />}
     {aiMode && Array.from(query).length > 2000 && <p className="search-error" role="status">AI 查找最多支持 2000 字。</p>}

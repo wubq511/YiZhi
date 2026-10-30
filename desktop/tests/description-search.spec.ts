@@ -42,7 +42,17 @@ test('explicit description search uses real hits and query/rank evidence while o
     await page.getByRole('button', { name: '搜索课程', exact: true }).click();
     await page.getByRole('searchbox', { name: '查找已有内容' }).fill('基数');
     await expect(page.getByRole('region', { name: '搜索结果', exact: true })).toContainText('已有内容');
-    await page.getByRole('button', { name: 'AI 检索', exact: true }).click();
+    const aiToggle = page.getByRole('button', { name: 'AI 检索', exact: true });
+    await aiToggle.hover();
+    await expect(page.getByRole('tooltip')).toHaveText('AI 检索');
+    const tipPlacement = await page.evaluate(() => {
+      const tip = document.querySelector('[role="tooltip"]')!.getBoundingClientRect(), button = document.querySelector('.search-ai-toggle')!.getBoundingClientRect();
+      return { centerDelta: Math.abs(tip.left + tip.width / 2 - (button.left + button.width / 2)), below: tip.top >= button.bottom };
+    });
+    expect(tipPlacement.centerDelta).toBeLessThan(1.5);
+    expect(tipPlacement.below).toBe(true);
+    await aiToggle.click();
+    await expect(page.getByRole('tooltip')).toBeHidden();
     await page.getByRole('searchbox', { name: '查找已有内容' }).fill('同一数码的位置变化会影响什么');
     await page.getByRole('button', { name: 'AI 查找', exact: true }).click();
     const enhanced = page.getByRole('region', { name: 'AI 检索结果', exact: true });
@@ -51,13 +61,13 @@ test('explicit description search uses real hits and query/rank evidence while o
     await expect(enhanced).not.toContainText('模型新解释');
     await enhanced.getByText('查询与排序依据', { exact: true }).first().click();
     await expect(enhanced).toContainText('query-1');
-    await enhanced.getByRole('button', { name: '定位命中', exact: true }).first().click();
+    await enhanced.getByRole('button', { name: '前往', exact: true }).first().click();
     await expect(page.locator('p[data-search-current="true"]')).toBeVisible();
     await page.getByRole('button', { name: '返回搜索前位置', exact: true }).click();
     await expect(page.locator('.reading-layer[data-unit-id="KU-001"]')).toHaveAttribute('style', camera!);
     const after = await page.evaluate(async () => { const c = await window.yizhi.open(), a = await window.yizhi.agent.list({ sessionId: c.sessionId }); return { drawings: await window.yizhi.drawings.list({ sessionId: c.sessionId }), drawingHistory: await window.yizhi.drawings.history({ sessionId: c.sessionId }), placements: await window.yizhi.drawings.placements({ sessionId: c.sessionId }), unit: c.unit, review: await window.yizhi.reviewStates(c.sessionId), conversation: await window.yizhi.agent.get({ sessionId: c.sessionId, conversationId: a.selectedId! }) }; });
     expect(after).toEqual(before);
-    await page.getByRole('button', { name: '搜索课程', exact: true }).click();
+    await expect(page.getByRole('complementary', { name: '搜索课程', exact: true })).toBeVisible();
     await page.getByRole('searchbox', { name: '查找已有内容' }).fill('基数');
     const aiTab = page.getByRole('tab', { name: 'AI 结果', exact: true });
     if (await aiTab.isVisible()) await aiTab.click();
@@ -234,5 +244,31 @@ test('a long model menu stays compact and supports scrolling and keyboard select
     await model.click();
     await page.keyboard.press('Escape');
     await expect(model).toBeFocused();
+  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('rapid AI mode reversal preserves the query and keeps only the active controls accessible', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-description-motion-ui-')); await chmod(fixture, 0o755);
+  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile'), YIZHI_CODEX_PATH: fixture, YIZHI_DESCRIPTION_FIXTURE: 'paragraph' } });
+  try {
+    const page = await app.firstWindow(); await resizeBoardWindow(app, page);
+    await page.getByRole('button', { name: '搜索课程', exact: true }).click();
+    const mode = page.getByRole('button', { name: 'AI 检索', exact: true });
+    const input = page.getByRole('searchbox', { name: '查找已有内容' });
+    await input.fill('位置记数 1011'); await mode.click();
+    const model = page.getByRole('button', { name: '检索模型' });
+    await expect(model).toBeEnabled();
+    const bounds = (await mode.boundingBox())!, x = bounds.x + bounds.width / 2, y = bounds.y + bounds.height / 2;
+    await page.mouse.click(x, y);
+    await expect(page.locator('.search-controls-reveal')).toHaveAttribute('inert', '');
+    await page.mouse.click(x, y);
+    await page.waitForTimeout(350); // A pending exit must not remove the reopened controls.
+    await expect(mode).toHaveAttribute('aria-pressed', 'true');
+    await expect(model).toBeEnabled();
+    await expect(input).toHaveValue('位置记数 1011');
+    await expect(input).toBeFocused();
+    await mode.focus(); await page.keyboard.press('Space');
+    await expect(mode).toBeFocused();
+    await expect(page.locator('.description-model-trigger')).toHaveCount(0);
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });

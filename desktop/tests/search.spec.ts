@@ -33,29 +33,29 @@ test('scope filters work with the keyboard and retain the search when the panel 
     const input = page.getByRole('searchbox', { name: '查找已有内容' });
     const results = page.getByRole('region', { name: '搜索结果' });
     await input.fill('基数');
-    await expect(results.getByRole('button', { name: '定位命中' }).first()).toBeVisible();
+    await expect(results.getByRole('button', { name: '前往', exact: true }).first()).toBeVisible();
     await expect(results.locator('.search-excerpt mark').first()).toHaveText('基数');
     const knowledge = page.getByRole('checkbox', { name: '知识', exact: true });
     await knowledge.click();
-    await expect(results.getByRole('button', { name: '定位命中' })).toHaveCount(0);
+    await expect(results.getByRole('button', { name: '前往', exact: true })).toHaveCount(0);
     await knowledge.focus(); await page.keyboard.press('Space');
-    await expect(results.getByRole('button', { name: '定位命中' }).first()).toBeVisible();
+    await expect(results.getByRole('button', { name: '前往', exact: true }).first()).toBeVisible();
     await input.fill('不会匹配的独特搜索词');
     await expect(results).toContainText('部分知识内容暂不可搜索');
     await knowledge.click();
     await expect(results).not.toContainText('部分知识内容暂不可搜索');
     await knowledge.click();
     await input.fill('基数');
-    await expect(results.getByRole('button', { name: '定位命中' }).first()).toBeVisible();
+    await expect(results.getByRole('button', { name: '前往', exact: true }).first()).toBeVisible();
     for (const name of ['知识', '个人笔记', '学习对话', '来源原文']) {
       const scope = page.getByRole('checkbox', { name, exact: true });
       await scope.focus(); await page.keyboard.press('Space');
       await expect(scope).not.toBeChecked();
     }
     await expect(results).toContainText('请选择至少一个搜索范围');
-    await expect(results.getByRole('button', { name: '定位命中' })).toHaveCount(0);
+    await expect(results.getByRole('button', { name: '前往', exact: true })).toHaveCount(0);
     await knowledge.focus(); await page.keyboard.press('Space');
-    await expect(results.getByRole('button', { name: '定位命中' }).first()).toBeVisible();
+    await expect(results.getByRole('button', { name: '前往', exact: true }).first()).toBeVisible();
     await page.getByRole('button', { name: '收起搜索' }).click();
     await page.getByRole('button', { name: '搜索课程', exact: true }).click();
     await expect(input).toHaveValue('基数'); await expect(knowledge).toBeChecked();
@@ -63,7 +63,7 @@ test('scope filters work with the keyboard and retain the search when the panel 
     await resizeBoardWindow(app, page, 700, 700);
     const close = page.getByRole('button', { name: '收起搜索' });
     await close.focus(); await page.keyboard.press('Shift+Tab');
-    await expect(results.getByRole('button', { name: '定位命中' }).last()).toBeFocused();
+    await expect(results.getByRole('button', { name: '前往', exact: true }).last()).toBeFocused();
     await page.keyboard.press('Tab'); await expect(close).toBeFocused();
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
@@ -101,17 +101,19 @@ test('offline real IPC search reveals a delivered deep answer and restores the o
     await page.getByRole('button', { name: '搜索课程', exact: true }).click();
     await page.getByRole('searchbox', { name: '查找已有内容' }).fill('0.40625×16');
     const results = page.getByRole('region', { name: '搜索结果' });
-    await expect(results.getByRole('button', { name: '定位命中' }).first()).toBeVisible();
-    await results.getByRole('button', { name: '定位命中' }).first().click();
+    await expect(results.getByRole('button', { name: '前往', exact: true }).first()).toBeVisible();
+    await results.getByRole('button', { name: '前往', exact: true }).first().click();
     await expect(page.locator('[data-search-current="true"]')).toContainText('0.40625×16');
+    await expect(page.getByRole('complementary', { name: '搜索课程', exact: true })).toBeVisible();
+    await expect(page.getByRole('searchbox', { name: '查找已有内容' })).toHaveValue('0.40625×16');
     expect(await app.evaluate(() => (globalThis as any).searchReadDelay)).toEqual(['held', 'sent']);
     await expect(page.locator('[data-unit-id="KU-002"] details.answer')).toHaveAttribute('open', '');
     await page.getByRole('button', { name: '返回搜索前位置', exact: true }).click();
     await expect(page.locator('.reading-layer[data-unit-id="KU-001"]')).toHaveAttribute('style', before!);
     await expect.poll(() => page.evaluate(() => getSelection()!.toString())).toBe(selectedText);
-    await page.getByRole('button', { name: '搜索课程', exact: true }).click();
+    await expect(page.getByRole('complementary', { name: '搜索课程', exact: true })).toBeVisible();
     await page.getByRole('searchbox', { name: '查找已有内容' }).fill('Nibble');
-    await results.getByRole('button', { name: '定位命中' }).first().click();
+    await results.getByRole('button', { name: '前往', exact: true }).first().click();
     await expect(page.locator('[data-search-current="true"]')).toContainText('Nibble');
     await page.screenshot({ path: evidencePath('t15-knowledge-hit.png') });
     await app.close(); app = await launch();
@@ -119,7 +121,7 @@ test('offline real IPC search reveals a delivered deep answer and restores the o
     await reopened.context().setOffline(true);
     await reopened.getByRole('button', { name: '搜索课程', exact: true }).click();
     await reopened.getByRole('searchbox').fill('Nibble');
-    await reopened.getByRole('button', { name: '定位命中' }).first().click();
+    await reopened.getByRole('button', { name: '前往', exact: true }).first().click();
     await expect(reopened.locator('[data-search-current="true"]')).toContainText('Nibble');
   } catch (error) { if (current) await captureSearchFailure(current, 'deep-search-location', error); throw error; }
   finally { await app.close(); await rm(root, { recursive: true, force: true }); }
@@ -143,19 +145,19 @@ test('real saved note and durable message results open their own objects, preser
     const page = await app.firstWindow(); await resizeBoardWindow(app, page);
     await page.getByRole('button', { name: '搜索课程', exact: true }).click();
     await page.getByRole('searchbox').fill('笔记定位独特词');
-    await page.getByRole('button', { name: '定位命中' }).click();
+    await page.getByRole('button', { name: '前往', exact: true }).click();
     await expect(page.getByRole('textbox', { name: '批注内容' })).toHaveValue(note.text);
     await expect(page.getByRole('textbox', { name: '批注内容' })).toHaveAttribute('data-search-current', 'true');
     await page.getByRole('button', { name: '返回搜索前位置' }).click();
+    await expect(page.getByRole('textbox', { name: '批注内容' })).toBeVisible();
     await page.getByRole('button', { name: '搜索课程', exact: true }).click();
     await page.getByRole('searchbox').fill('深层已保存回答');
-    await page.getByRole('button', { name: '定位命中' }).click();
+    await page.getByRole('button', { name: '前往', exact: true }).click();
     await expect(page.locator('[data-search-current="true"]')).toHaveAttribute('data-message-id', `${task.id}:answer`);
     await expect(page.getByRole('textbox', { name: '学习对话草稿' })).toHaveValue('保留未发送草稿');
     await page.getByRole('button', { name: '返回搜索前位置' }).click();
-    await expect(page.getByRole('navigation', { name: '课程目录', exact: true })).toBeHidden();
+    await expect(page.getByRole('complementary', { name: '搜索课程', exact: true })).toBeVisible();
     await resizeBoardWindow(app, page, 700, 700);
-    await page.getByRole('button', { name: '搜索课程', exact: true }).click();
     await expect(page.getByRole('dialog', { name: '搜索课程', exact: true })).toBeVisible();
     await expect(page.locator('main.board')).toHaveAttribute('inert', '');
     await page.getByRole('searchbox').fill('不存在的真实查找词');
@@ -182,7 +184,7 @@ test('source result opens the fixed original page without creating an annotation
     await page.context().setOffline(true);
     await page.getByRole('button', { name: '搜索课程', exact: true }).click();
     await page.getByRole('searchbox').fill('original evidence');
-    await page.getByRole('button', { name: '定位命中' }).click();
+    await page.getByRole('button', { name: '前往', exact: true }).click();
     await expect(page.locator('.source-panel canvas')).toBeVisible();
     await expect(page.locator('.source-panel [data-search-current="true"]')).toContainText('original evidence');
     const facts = await page.evaluate(async () => { const c = await window.yizhi.open(); return { citations: await window.yizhi.sources.citations({ sessionId: c.sessionId }), context: await window.yizhi.sources.context({ sessionId: c.sessionId }) }; });
@@ -238,7 +240,7 @@ test('a changed or unreadable result is rejected, and exact original repair rest
     await expect.poll(() => page!.evaluate(async () => { const c=await window.yizhi.open();return (await window.yizhi.search.status({sessionId:c.sessionId})).pending; })).toBe(0);
     await expect(page.getByRole('button', { name: '重建索引', exact: true })).toHaveCount(0);
     await page.getByRole('searchbox').fill('damaged original');
-    await expect(page.getByRole('button', { name: '定位命中' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '前往', exact: true })).toBeVisible();
     const ready = await page.evaluate(async () => {
       const b = (window as any).yizhi, c = await b.open();
       return { status: await b.search.status({ sessionId: c.sessionId }), index: document.querySelector('[aria-label="搜索索引状态"]')?.textContent,
@@ -247,14 +249,14 @@ test('a changed or unreadable result is rejected, and exact original repair rest
     expect(ready.status.pending).toBe(0);
     observations.push({ phase: 'before-fault', ...ready });
     await writeFile(join(root, 'course/resources', version.sha256), 'damaged bytes');
-    await page.getByRole('button', { name: '定位命中' }).click();
+    await page.getByRole('button', { name: '前往', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText('损坏');
     await page.getByText('未覆盖与不可读内容', { exact: true }).click();
     await expect(page.getByRole('button', { name: '从原件修复此版本' })).toBeVisible();
     await app.evaluate(({ dialog }, path) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] }); }, path);
     await page.getByRole('button', { name: '从原件修复此版本' }).click();
     await expect(page.getByRole('alert')).toHaveCount(0);
-    await page.getByRole('button', { name: '定位命中' }).click();
+    await page.getByRole('button', { name: '前往', exact: true }).click();
     await expect(page.locator('.source-panel [data-search-current="true"]')).toContainText('damaged original');
   } catch (error) {
     if (page) {
