@@ -1,6 +1,7 @@
-.search-field .description-controls { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; padding:0 4px 4px; }
-.search-panel .description-model-trigger { flex:0 1 auto; display:flex; align-items:center; gap:6px; min-width:0; max-width:190px; min-height:32px; padding:0 6px; color:#514b5b; background:#fff; border:1px solid #e4e1eb; border-radius:6px; font:inherit; font-size:12px; cursor:pointer; }
-.search-panel .description-model-trigger:disabled { color:#777080; cursor:default; }
+.search-field .description-controls { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; padding:0 7px 7px; }
+.search-panel .description-model-trigger { flex:0 1 auto; display:flex; align-items:center; gap:6px; min-width:0; max-width:190px; min-height:30px; padding:0 4px; color:#514b5b; background:#fff; border:1px solid #e4e1eb; border-radius:6px; font:inherit; font-size:12px; cursor:pointer; }
+.search-panel .description-model-trigger:not(:disabled):hover, .search-panel .description-model-trigger[data-state="open"] { background:#f6f4fa; border-color:#cec8de; }
+.search-panel .description-model-trigger:disabled { color:var(--shell-muted); background:#f7f6fa; border-color:var(--shell-line); opacity:1; cursor:default; }
 .description-model-value { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .description-model-trigger > svg { flex:none; }
 [data-slot="dropdown-menu-content"].description-model-menu { min-width:190px; max-width:min(300px, calc(100vw - 24px)); max-height:min(256px, var(--radix-dropdown-menu-content-available-height, 100vh)); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#cfc8d9 transparent; }
