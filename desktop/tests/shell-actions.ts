@@ -18,6 +18,7 @@ export async function manageDrawings(page: Page) {
   if (await page.getByRole('region',{name:'个人绘图工具',exact:true}).isVisible()) return;
   await page.getByRole('button',{name:'图形',exact:true}).click();
   await page.getByRole('menuitem',{name:'管理与找回图形',exact:true}).click();
+  await expect(page.getByRole('region',{name:'个人绘图工具',exact:true})).toBeVisible();
 }
 export async function expectSaved(page: Page) { await expect(page.getByRole('status',{name:'保存状态',exact:true})).toHaveText('已保存'); }
 export async function sourceAction(page: Page, name: string) {

@@ -1,3 +1,4 @@
+import { Button } from './components/ui/button';
 import { useEffect,useState } from 'react';
 import type { AgentTask } from '../agent-api';
 import type { GenerationCandidateView } from '../generation-api';
@@ -25,7 +26,7 @@ export function GenerationTask({sessionId,task}:{sessionId:string;task:AgentTask
     <details onToggle={event=>setExpanded(event.currentTarget.open)}>
       <summary>查看未完成候选与校验</summary>
       {busy&&<p role="status">正在读取候选…</p>}
-      {error&&<p role="alert">候选读取失败：{error} <button type="button" onClick={()=>setReload(value=>value+1)}>重试</button></p>}
+      {error&&<p role="alert">候选读取失败：{error} <Button variant="outline" size="sm" type="button" onClick={()=>setReload(value=>value+1)}>重试</Button></p>}
       {candidates?.length===0&&<p>暂无未完成候选。</p>}
       {candidates?.map(candidate=><article key={candidate.operationId} className="agent-generation-candidate">
         <strong>{stageName[candidate.stage]} · 草稿未发布</strong><p>{candidate.reason}</p>

@@ -1,3 +1,4 @@
+import { Button } from './components/ui/button';
 import { useSaveReport } from './shell/save-status';
 import { registerHistory, refreshHistory, activateHistory } from './shell/edit-history';
 import { X } from 'lucide-react';
@@ -199,20 +200,20 @@ export const Drawings = forwardRef<DrawingHandle, { onToolChange(state: DrawingT
   const chosen=records.find(r=>r.id===selected);
   return <>
     {manager && <section className="drawing-tools" aria-label="个人绘图工具" data-motion={managerMotion?'pointer':undefined}>
-      <div className="panel-heading"><h2>个人图形</h2><button className="panel-close" aria-label="收起个人图形" onClick={() => setManager(false)}><X size={18}/></button></div>
-      <div className="drawing-list">{records.map((r,i)=><button key={r.id} aria-pressed={selected===r.id} onClick={()=>{setSelected(r.id);setKind(undefined);}}>{`选择${names[(r.value??r.original).kind]} ${i+1}`}{r.status==='orphan'?' · 待重新关联':r.status==='deleted'?' · 已删除':''}</button>)}</div>
+      <div className="panel-heading"><h2>个人图形</h2><Button variant="ghost" size="icon-sm" className="panel-close" aria-label="收起个人图形" onClick={() => setManager(false)}><X size={18}/></Button></div>
+      <div className="drawing-list">{records.map((r,i)=><Button variant="outline" size="sm" key={r.id} aria-pressed={selected===r.id} onClick={()=>{setSelected(r.id);setKind(undefined);}}>{`选择${names[(r.value??r.original).kind]} ${i+1}`}{r.status==='orphan'?' · 待重新关联':r.status==='deleted'?' · 已删除':''}</Button>)}</div>
       {chosen&&<div className="drawing-details"><details><summary>原语境与几何</summary><p>{names[chosen.original.kind]} · {chosen.original.anchor.space==='board'?'画板':chosen.original.anchor.space==='text'?'文字范围':chosen.original.anchor.unitId}</p><pre>{JSON.stringify(chosen.original.geometry)}</pre>{chosen.original.anchor.space==='text'&&notes.find(n=>n.id===(chosen.original.anchor as {noteId:string}).noteId)?.original.fragments.map((f,i)=><blockquote key={i}>{f.quote}</blockquote>)}{(chosen.original.anchor.space==='image'||chosen.original.anchor.space==='object')&&chosen.original.anchor.block&&<p>{String(chosen.original.anchor.block.payload.alt??chosen.original.anchor.block.payload.text??chosen.original.anchor.block.kind)}</p>}</details>
-        {chosen.status==='deleted'&&<button disabled={!!pending.current} onClick={async()=>{const history=await window.yizhi.drawings.history({sessionId,id:chosen.id});commit(chosen.id,history.at(-1)?.before??chosen.original);}}>找回已删除图形</button>}
-        {chosen.status==='orphan'&&chosen.value?.anchor.space!=='text'&&<button disabled={!!pending.current} onClick={()=>{const rect=layer.current!.getBoundingClientRect();commit(chosen.id,{kind:chosen.original.kind,anchor:{space:'board'},geometry:{x:(rect.width/2-viewport.x)/viewport.zoom,y:(rect.height/2-viewport.y)/viewport.zoom,width:150/viewport.zoom,height:70/viewport.zoom}});}}>找回到画板</button>}
+        {chosen.status==='deleted'&&<Button variant="outline" size="sm" disabled={!!pending.current} onClick={async()=>{const history=await window.yizhi.drawings.history({sessionId,id:chosen.id});commit(chosen.id,history.at(-1)?.before??chosen.original);}}>找回已删除图形</Button>}
+        {chosen.status==='orphan'&&chosen.value?.anchor.space!=='text'&&<Button variant="outline" size="sm" disabled={!!pending.current} onClick={()=>{const rect=layer.current!.getBoundingClientRect();commit(chosen.id,{kind:chosen.original.kind,anchor:{space:'board'},geometry:{x:(rect.width/2-viewport.x)/viewport.zoom,y:(rect.height/2-viewport.y)/viewport.zoom,width:150/viewport.zoom,height:70/viewport.zoom}});}}>找回到画板</Button>}
         {chosen.value?.anchor.space==='text'&&<p>文字范围与原语境可在“个人批注”中重新关联。</p>}
-        <button disabled={!!pending.current||!chosen.value} onClick={()=>commit(chosen.id,null)}>删除个人图形</button>
+        <Button variant="destructive" size="sm" disabled={!!pending.current||!chosen.value} onClick={()=>commit(chosen.id,null)}>删除个人图形</Button>
       </div>}
       <p>选择工具后拖动绘制；Esc 取消。箭头仅为个人标注。</p>
-      {error && <><p role="alert">{error} 图形仍保留，请重试。</p><button onClick={()=>void save()}>重试保存绘图</button>{pending.current&&<button disabled={!!saving.current} onClick={async()=>{
+      {error && <><p role="alert">{error} 图形仍保留，请重试。</p><Button variant="outline" size="sm" onClick={()=>void save()}>重试保存绘图</Button>{pending.current&&<Button variant="outline" size="sm" disabled={!!saving.current} onClick={async()=>{
         const request=pending.current;pending.current=undefined;onSaved.current=undefined;gesture.current=undefined;setPreview(undefined);historyWork.current=false;setHistoryBusy(false);
         if(request&&error.includes('图形已变化')){versions.current.delete(request.id);past.current=past.current.filter(step=>step.kind!=='drawing'||step.id!==request.id);future.current=future.current.filter(step=>step.kind!=='drawing'||step.id!==request.id);}
         await refresh();setError(undefined);setStatus('已保存');
-      }}>放弃未保存绘图</button>}</>}
+      }}>放弃未保存绘图</Button>}</>}
     </section>}
     <svg ref={layer} className={`drawing-layer${kind?' drawing-active':''}`} tabIndex={-1} aria-label="个人图形标注" onPointerDown={start} onPointerMove={e=>move(e)} onPointerUp={e=>move(e,true)} onPointerCancel={cancel} onLostPointerCapture={cancel}>
       <g transform={`translate(${viewport.x},${viewport.y}) scale(${viewport.zoom})`}>

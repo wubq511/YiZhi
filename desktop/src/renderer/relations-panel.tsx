@@ -1,3 +1,8 @@
+import { NativeSelect, NativeSelectOption } from './components/ui/native-select';
+import { Input } from './components/ui/input';
+import { Textarea } from './components/ui/textarea';
+import { Button } from './components/ui/button';
+import { Checkbox } from './components/ui/checkbox';
 import { useEffect, useRef, useState, type Ref, type KeyboardEvent, type MouseEvent } from 'react';
 import type { CourseGraph } from '../shared';
 import type { FormalRelation, RelationBasis, RelationCommand, RequirementGroup } from '../relation-api';
@@ -112,47 +117,47 @@ export function RelationsPanel({ graph, sessionId, view, narrow, panelRef, open,
   const shown = graph.edges.filter(edge => view === 'all' || edge.view === view);
   const refs = draft?.sourceRefs ?? [];
   return <aside ref={panelRef} className="relations-panel" role={narrow ? 'dialog' : undefined} aria-modal={narrow && open || undefined} aria-label="关系详情" aria-hidden={!open || undefined} inert={!open} data-motion={motion?'pointer':undefined} data-exiting={!open?'':undefined} onKeyDown={onKeyDown}>
-    <h2>关系详情</h2><button onClick={onClose}>关闭关系详情</button>
+    <h2>关系详情</h2><Button variant="outline" size="sm" onClick={onClose}>关闭关系详情</Button>
     <p>个人箭头只作个人标注；正式关系在此独立审核。</p>
-    <button disabled={busy || !!pending.current} onClick={() => void begin()}>新增正式关系</button>
+    <Button variant="outline" size="sm" disabled={busy || !!pending.current} onClick={() => void begin()}>新增正式关系</Button>
     {error && <p role="alert">{error} 候选仍保留，可修改后重试。</p>}
     <p role="status" aria-label="正式关系结果">{busy ? '正在核对正式关系…' : result}</p>
-    {uncertain && <button disabled={busy} onClick={() => void submit()}>核对原操作结果</button>}
+    {uncertain && <Button variant="outline" size="sm" disabled={busy} onClick={() => void submit()}>核对原操作结果</Button>}
     {draft && basis && <form ref={form} className="relation-editor" onSubmit={event => { event.preventDefault(); void submit(); }}>
       <h3>正式关系审核</h3><p>{draft.id}</p><fieldset disabled={busy || uncertain}>
-        <label>起点单元<input list="relation-units" value={draft.fromUnitId} onChange={e => changed({ ...draft, fromUnitId: e.target.value })} /></label>
-        <label>终点单元<input list="relation-units" value={draft.toUnitId} onChange={e => { changed({ ...draft, toUnitId: e.target.value }); setRoute('none'); }} /></label>
+        <label>起点单元<Input list="relation-units" value={draft.fromUnitId} onChange={e => changed({ ...draft, fromUnitId: e.target.value })} /></label>
+        <label>终点单元<Input list="relation-units" value={draft.toUnitId} onChange={e => { changed({ ...draft, toUnitId: e.target.value }); setRoute('none'); }} /></label>
         <datalist id="relation-units">{graph.nodes.map(node => <option key={node.id} value={node.id}>{node.name}</option>)}</datalist>
-        <label>关系含义<select value={draft.type} onChange={e => { changed({ ...draft, type: e.target.value, directed: e.target.value !== 'inverse' }); if (e.target.value !== 'requires') setRoute('none'); }}>{Object.entries(types).map(([id, label]) => <option key={id} value={id}>{label} · {id}</option>)}</select></label>
-        <label className="relation-direction"><input type="checkbox" checked={draft.directed} onChange={e => changed({ ...draft, directed: e.target.checked })} />有向：起点 → 终点（互逆为无向）</label>
-        <label>正式关系显示<select value={draft.view} onChange={e => changed({ ...draft, view: e.target.value })}><option value="main">主关系</option><option value="auxiliary">辅助关系</option></select></label>
-        <label>具体信息价值<textarea rows={4} value={draft.value} onChange={e => changed({ ...draft, value: e.target.value })} /></label>
+        <label>关系含义<NativeSelect value={draft.type} onChange={e => { changed({ ...draft, type: e.target.value, directed: e.target.value !== 'inverse' }); if (e.target.value !== 'requires') setRoute('none'); }}>{Object.entries(types).map(([id, label]) => <NativeSelectOption key={id} value={id}>{label} · {id}</NativeSelectOption>)}</NativeSelect></label>
+        <label className="relation-direction"><Checkbox checked={draft.directed} disabled={busy || uncertain} onCheckedChange={checked => changed({ ...draft, directed: checked === true })} />有向：起点 → 终点（互逆为无向）</label>
+        <label>正式关系显示<NativeSelect value={draft.view} onChange={e => changed({ ...draft, view: e.target.value })}><NativeSelectOption value="main">主关系</NativeSelectOption><NativeSelectOption value="auxiliary">辅助关系</NativeSelectOption></NativeSelect></label>
+        <label>具体信息价值<Textarea rows={4} value={draft.value} onChange={e => changed({ ...draft, value: e.target.value })} /></label>
         <h4>来源与固定版本</h4>
         {refs.map((reference, index) => {
           const update = (next: typeof reference) => changed({ ...draft, sourceRefs: refs.map((r, i) => i === index ? next : r) });
           const source = basis.sources.find(s => s.id === reference.sourceId);
           return <div className="relation-source" key={index}>
-            <label>来源 {index + 1}<select value={reference.sourceId} onChange={e => update({ sourceId: e.target.value, versionId: basis.sources.find(s => s.id === e.target.value)?.versions[0]?.id, pdfPages: [] })}>
-              <option value="">选择来源</option>{basis.sources.map(s => <option key={s.id} value={s.id}>{s.id} · {s.title}</option>)}
-            </select></label>
-            <label>固定版本 {index + 1}<select value={reference.versionId ?? ''} onChange={e => update({ ...reference, versionId: e.target.value })}><option value="">选择版本</option>{source?.versions.map(v => <option key={v.id} value={v.id}>{v.id}</option>)}</select></label>
-            <label>PDF 页码 {index + 1}<input value={reference.pdfPages?.join(',') ?? ''} placeholder="如 25,26,27" onChange={e => update({ ...reference, pdfPages: e.target.value ? e.target.value.split(/[,，、\s]+/).map(Number) : [] })} /></label>
-            <label>章节定位 {index + 1}<input value={reference.section ?? ''} onChange={e => update({ ...reference, section: e.target.value })} /></label>
-            <button type="button" onClick={() => changed({ ...draft, sourceRefs: refs.filter((_, i) => i !== index) })}>移除来源 {index + 1}</button>
+            <label>来源 {index + 1}<NativeSelect value={reference.sourceId} onChange={e => update({ sourceId: e.target.value, versionId: basis.sources.find(s => s.id === e.target.value)?.versions[0]?.id, pdfPages: [] })}>
+              <NativeSelectOption value="">选择来源</NativeSelectOption>{basis.sources.map(s => <NativeSelectOption key={s.id} value={s.id}>{s.id} · {s.title}</NativeSelectOption>)}
+            </NativeSelect></label>
+            <label>固定版本 {index + 1}<NativeSelect value={reference.versionId ?? ''} onChange={e => update({ ...reference, versionId: e.target.value })}><NativeSelectOption value="">选择版本</NativeSelectOption>{source?.versions.map(v => <NativeSelectOption key={v.id} value={v.id}>{v.id}</NativeSelectOption>)}</NativeSelect></label>
+            <label>PDF 页码 {index + 1}<Input value={reference.pdfPages?.join(',') ?? ''} placeholder="如 25,26,27" onChange={e => update({ ...reference, pdfPages: e.target.value ? e.target.value.split(/[,，、\s]+/).map(Number) : [] })} /></label>
+            <label>章节定位 {index + 1}<Input value={reference.section ?? ''} onChange={e => update({ ...reference, section: e.target.value })} /></label>
+            <Button variant="outline" size="sm" type="button" onClick={() => changed({ ...draft, sourceRefs: refs.filter((_, i) => i !== index) })}>移除来源 {index + 1}</Button>
           </div>;
         })}
-        <button type="button" onClick={() => changed({ ...draft, sourceRefs: [...refs, { sourceId: '', pdfPages: [] }] })}>添加来源</button>
+        <Button variant="outline" size="sm" type="button" onClick={() => changed({ ...draft, sourceRefs: [...refs, { sourceId: '', pdfPages: [] }] })}>添加来源</Button>
         {draft.type === 'requires' && <>
-          <label>前置路线组<select value={route} onChange={e => { setRoute(e.target.value); pending.current = undefined; const group = groupsFor(basis, e.target.value); if (group) { setRouteMode(group.mode); setRouteValue(group.value); } }}><option value="none">不分组：必须条件</option>{basis.graph.requirementGroups.filter(g => g.targetUnitId === draft.toUnitId).map(g => <option key={g.id} value={g.id}>{g.id}</option>)}<option value="new">新建路线组</option></select></label>
-          {route !== 'none' && <><label>路线规则<select value={routeMode} onChange={e => { setRouteMode(e.target.value as 'all' | 'any'); pending.current = undefined; }}><option value="all">全部需要 · AND</option><option value="any">任选一条 · OR</option></select></label><label>路线信息价值<textarea value={routeValue} onChange={e => { setRouteValue(e.target.value); pending.current = undefined; }} /></label></>}
+          <label>前置路线组<NativeSelect value={route} onChange={e => { setRoute(e.target.value); pending.current = undefined; const group = groupsFor(basis, e.target.value); if (group) { setRouteMode(group.mode); setRouteValue(group.value); } }}><NativeSelectOption value="none">不分组：必须条件</NativeSelectOption>{basis.graph.requirementGroups.filter(g => g.targetUnitId === draft.toUnitId).map(g => <NativeSelectOption key={g.id} value={g.id}>{g.id}</NativeSelectOption>)}<NativeSelectOption value="new">新建路线组</NativeSelectOption></NativeSelect></label>
+          {route !== 'none' && <><label>路线规则<NativeSelect value={routeMode} onChange={e => { setRouteMode(e.target.value as 'all' | 'any'); pending.current = undefined; }}><NativeSelectOption value="all">全部需要 · AND</NativeSelectOption><NativeSelectOption value="any">任选一条 · OR</NativeSelectOption></NativeSelect></label><label>路线信息价值<Textarea value={routeValue} onChange={e => { setRouteValue(e.target.value); pending.current = undefined; }} /></label></>}
         </>}
-        <div className="relation-actions"><button type="submit">保存正式关系</button><button type="button" onClick={() => void reread()}>重新读取依据</button><button type="button" onClick={() => { setDraft(undefined); setError(''); }}>取消审核</button></div>
-        {basis.graph.edges.some(edge => edge.id === draft.id) && <button type="button" onClick={() => void submit(true)}>移除此正式关系</button>}
+        <div className="relation-actions"><Button size="sm" type="submit">保存正式关系</Button><Button variant="outline" size="sm" type="button" onClick={() => void reread()}>重新读取依据</Button><Button variant="outline" size="sm" type="button" onClick={() => { setDraft(undefined); setError(''); }}>取消审核</Button></div>
+        {basis.graph.edges.some(edge => edge.id === draft.id) && <Button variant="destructive" size="sm" type="button" onClick={() => void submit(true)}>移除此正式关系</Button>}
       </fieldset>
     </form>}
     <section className="relation-prerequisites"><h3>前置条件</h3><p>未分组的项目全部必要；路线组保留 AND／OR。构造、优化、互逆不进入前置追溯。</p>
-      <label>追溯单元<select value={traceTarget} onChange={e => { setTraceTarget(e.target.value); setTrace(undefined); }}>{graph.nodes.map(node => <option key={node.id} value={node.id}>{name(node.id)}</option>)}</select></label>
-      <button onClick={async () => { try { const value = await window.yizhi.relations.prerequisites({ sessionId, unitId: traceTarget }); setTrace(value.conditions); } catch (failure) { setError((failure as Error).message); } }}>追溯全部前置</button>
+      <label>追溯单元<NativeSelect value={traceTarget} onChange={e => { setTraceTarget(e.target.value); setTrace(undefined); }}>{graph.nodes.map(node => <NativeSelectOption key={node.id} value={node.id}>{name(node.id)}</NativeSelectOption>)}</NativeSelect></label>
+      <Button variant="outline" size="sm" onClick={async () => { try { const value = await window.yizhi.relations.prerequisites({ sessionId, unitId: traceTarget }); setTrace(value.conditions); } catch (failure) { setError((failure as Error).message); } }}>追溯全部前置</Button>
       {Object.entries(trace ?? graph.conditions).filter(([id]) => trace || id === traceTarget).map(([target, conditions]) => <section key={target}><h4>{name(target)}</h4>
         {conditions.required.map(id => <p key={id}>必须：{id}：{graph.nodes.find(node => node.id === id)?.name}</p>)}
         {conditions.groups.map(id => { const group = graph.requirementGroups.find(g => g.id === id)!; return <div key={id}><p>{group.id} · {group.mode === 'any' ? '任选一条' : '全部需要'}：{group.unitIds.map(name).join(group.mode === 'any' ? ' 或 ' : ' 且 ')}</p><p>{group.value}</p></div>; })}
@@ -162,7 +167,7 @@ export function RelationsPanel({ graph, sessionId, view, narrow, panelRef, open,
     {!shown.length && <p>此范围没有正式关系。可切换范围查看其他已审核关系。</p>}
     {shown.map(edge => <section className="relation-fact" key={edge.id}><h3>{edge.id} · {types[edge.type]} · {edge.type}</h3><p>{name(edge.fromUnitId)} {edge.directed ? '→' : '↔'} {name(edge.toUnitId)}</p><p>{edge.value}</p>
       <p>来源：{edge.sourceRefs.map(ref => `${ref.sourceId} · ${ref.versionId ?? '未记录版本'} · ${ref.pdfPages?.join('、') ?? ref.section ?? ''} ${ref.note ?? ''}`).join('；')}</p>
-      <button disabled={busy} onClick={() => void begin(edge.id)}>审核 {edge.id}</button></section>)}
+      <Button variant="outline" size="sm" disabled={busy} onClick={() => void begin(edge.id)}>审核 {edge.id}</Button></section>)}
   </aside>;
 }
 function groupsFor(basis: RelationBasis, id: string) { return basis.graph.requirementGroups.find(group => group.id === id); }

@@ -1,23 +1,82 @@
 [
   {
     "component": "button",
-    "url": "https://ui.shadcn.com/r/styles/base-nova/button.json",
-    "registrySha256": "9ba7e870178813f0552b818a913a2792fb500c779e36395740b4973e3025d427",
+    "url": "https://ui.shadcn.com/r/styles/radix-nova/button.json",
+    "registrySha256": "c07a8feb7b7ed07ad5279023e45ce23ed7b5b94c7dba3de5c08f30a2aa037de3",
     "retrieved": "2026-10-30",
-    "customizations": "Lucide icons; opaque menus; 40px shell hit targets"
+    "customizations": "Project theme and existing shell sizing"
   },
   {
     "component": "dropdown-menu",
-    "url": "https://ui.shadcn.com/r/styles/base-nova/dropdown-menu.json",
-    "registrySha256": "335c59dba30145f434a9cc9ccb0438a3c5e2afe857fc11b029de1ecb415224d7",
+    "url": "https://ui.shadcn.com/r/styles/radix-nova/dropdown-menu.json",
+    "registrySha256": "cf35c272d386e57dc55d91c7982694ae95bca64ef2b0f8dc46771809bb13fddd",
     "retrieved": "2026-10-30",
-    "customizations": "Lucide icons; opaque menus; 40px shell hit targets"
+    "customizations": "Project theme and opaque menu styling"
   },
   {
     "component": "popover",
-    "url": "https://ui.shadcn.com/r/styles/base-nova/popover.json",
-    "registrySha256": "ba5fe84f353f6c0fd2133a2ab893f5e8861fc60dc4dea548a7ec875acaa37b2c",
+    "url": "https://ui.shadcn.com/r/styles/radix-nova/popover.json",
+    "registrySha256": "2d61356c065868ee9ef6b98ab280665ec5bca65eb6b9d9d92217df92d7578784",
     "retrieved": "2026-10-30",
     "customizations": "Opaque save details with reachable retry buttons"
+  },
+  {
+    "component": "input-group",
+    "url": "https://ui.shadcn.com/r/styles/radix-nova/input-group.json",
+    "registrySha256": "09df858d8391c409378a88c40a5cf1d3f42ff83bcde8e24c920c37943ce27bda",
+    "retrieved": "2026-10-30",
+    "customizations": "Project UI aliases; focus textarea as well as input when clicking an addon; preserve button type for form semantics",
+    "originalSourceUrl": "https://ui.shadcn.com/r/styles/base-nova/input-group.json",
+    "originalRegistrySha256": "acf9c5497a6c844dee87fbd4afefb6cd8be9ce50d050d14d58a340d955e517a1",
+    "sourceNote": "Originally adapted from base-nova; equivalent radix-nova source verified before local customizations."
+  },
+  {
+    "component": "input",
+    "url": "https://ui.shadcn.com/r/styles/radix-nova/input.json",
+    "registrySha256": "2a94c176dcab621485ad6f902ec9a8b928b1a380a13c196d467ae46923e49044",
+    "retrieved": "2026-10-30",
+    "customizations": "Project theme"
+  },
+  {
+    "component": "textarea",
+    "url": "https://ui.shadcn.com/r/styles/radix-nova/textarea.json",
+    "registrySha256": "940fc16b5a019922c5f3ccf64d765776bf96eb735eeb8685df7b8e1c29ab75ad",
+    "retrieved": "2026-10-30",
+    "customizations": "Project theme"
+  },
+  {
+    "component": "tabs",
+    "url": "https://ui.shadcn.com/r/styles/radix-nova/tabs.json",
+    "registrySha256": "b91ac50256d7de55eaee4d443ea35dc19f5977f8d3a221b3fc087fa7278d1edc",
+    "retrieved": "2026-10-30",
+    "customizations": "Project theme"
+  },
+  {
+    "component": "checkbox",
+    "url": "https://ui.shadcn.com/r/styles/radix-nova/checkbox.json",
+    "registrySha256": "fe791df77078b10eac5363484b77a7e203be9fa9ff9741a5fced9b2546ae0426",
+    "retrieved": "2026-10-30",
+    "customizations": "Project theme"
+  },
+  {
+    "component": "collapsible",
+    "url": "https://ui.shadcn.com/r/styles/radix-nova/collapsible.json",
+    "registrySha256": "e7f440016561f83cbb8658b954b6763c7a42b4156294aa5cbc2f4df6efe79ce5",
+    "retrieved": "2026-10-30",
+    "customizations": "Project theme"
+  },
+  {
+    "component": "select",
+    "url": "https://ui.shadcn.com/r/styles/radix-nova/select.json",
+    "registrySha256": "fabccf9d428ccea4769ac7933315ed4d5a5f34b931f83006d0b65d3ab0ff6d29",
+    "retrieved": "2026-10-30",
+    "customizations": "Project theme"
+  },
+  {
+    "component": "native-select",
+    "url": "https://ui.shadcn.com/r/styles/radix-nova/native-select.json",
+    "registrySha256": "b7768152ec197d3f9c7b4ae12e0f6bdc7de69dc1522e9ddcebb3062346a81d58",
+    "retrieved": "2026-10-30",
+    "customizations": "Project theme and native select semantics in dialogs"
   }
 ]

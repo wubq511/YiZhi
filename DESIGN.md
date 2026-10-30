@@ -197,7 +197,7 @@ components:
 - 面板切换保留现场，常用操作稳定可见，低频操作逐层展开。
 - 保存异常持续可见，颜色之外还有图形与文字表达状态。
 
-本规范以当前 Electron renderer 的 `shell/`、`components/ui/`、正文与编辑器样式为依据；当前操作外壳采用 shadcn/ui Base UI Nova、Tailwind 与 Motion。Tailwind 不启用全局 preflight，正文与 MathLive 保持各自排版。历史 Python/Web 基线的截图和测量仍属于其原版验收，不代表当前桌面实现。
+本规范以当前 Electron renderer 的 `shell/`、`components/ui/`、正文与编辑器样式为依据；当前操作外壳采用 shadcn/ui Radix Nova、Tailwind 与 Motion。Tailwind 不启用全局 preflight，正文与 MathLive 保持各自排版。历史 Python/Web 基线的截图和测量仍属于其原版验收，不代表当前桌面实现。
 
 ## Colors
 
@@ -230,7 +230,7 @@ components:
 
 ## Typography
 
-**UI Font:** PingFang SC、Microsoft YaHei、system-ui、sans-serif。Base UI 组件继承屏幕字级；操作区为规则字体。
+**UI Font:** PingFang SC、Microsoft YaHei、system-ui、sans-serif。shadcn/ui 组件继承屏幕字级；操作区为规则字体。
 
 **Canvas Font:** ReviewExcalifont、PrototypeXiaolai、Kaiti SC、PingFang SC、sans-serif。拉丁与中文由本地字体分别承担。**Math Font:** MathLive 本地 KaTeX 数学字形；公式内部字形独立于手写正文。
 
@@ -273,17 +273,17 @@ components:
 
 ### Buttons
 
-外壳按钮与菜单使用 Base UI 交互语义，区分 primary、outline、ghost；常驻工具以 ghost 为主，选中态由淡紫底和紫色图标表达。图标按钮有完整可访问名称，禁用保留原生语义。正文既有按钮保持作用域，不被外壳全局重置覆盖。键盘焦点用紫色轮廓或 ring。
+操作区按钮与菜单使用 shadcn/ui 组件和 Radix 交互语义，区分 primary、outline、ghost；常驻工具以 ghost 为主，选中态由淡紫底和紫色图标表达。图标按钮有完整可访问名称，禁用保留原生语义。正文既有按钮保持作用域，不被外壳全局重置覆盖。键盘焦点用紫色轮廓或 ring。
 
 ### Inputs / Fields
 
 搜索、资料页序、选择器和对话草稿使用规则字体。输入边界轻而清楚，placeholder 保持可读，长文本可以滚动。公式保留 MathLive 专业排版与独立输入历史。
 
-搜索面板以输入、四个可多选范围和结果为主，记忆线索与覆盖状态按需展开。结果显示内容类型、摘录和定位入口，可确定的匹配词在摘录中标出。
+搜索面板共用一个可随内容展开的输入框；右侧图标切换 AI 检索模式，输入框轮廓表达当前模式。AI 模式沿用 shadcn/ui Prompt Input 与 Model Selector 的组合，把模型选择和发起操作放在输入框内；模型选择记住上次使用。输入默认触发本地查找，AI 查找由学生主动发起；两类结果通过 Tabs 在同一区域切换，搜索条件变化时标明旧 AI 结果。四个范围可多选，覆盖异常按需展开。结果显示内容类型、摘录和定位入口，可确定的匹配词在摘录中标出。
 
 ### Navigation
 
-入口栏始终使用图标和短标签；搜索保留图标入口与 ⌘K。目录主题可展开，当前单元使用淡紫底和 `aria-current`。目录复习状态有独立形状与可访问文字，不逐行重复统计。隐藏面板保留查询、草稿与原页现场，同时退出键盘和辅助技术访问。
+入口栏始终使用图标和短标签；搜索保留图标入口与 ⌘K。目录标题行容纳复习状态筛选，列表独立滚动；主题箭头只控制展开，主题名称定位首个可见单元，当前单元使用淡紫底和 `aria-current`。主题汇总表达已掌握与单元总数，单元状态有独立形状与可访问文字；筛选只显示匹配项。隐藏面板保留查询、草稿与原页现场，同时退出键盘和辅助技术访问。
 
 ### Canvas Toolbar
 

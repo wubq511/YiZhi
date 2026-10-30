@@ -2,6 +2,8 @@ import { PanelPortal, useDockPanel } from './shell/panels';
 import { useSaveReport } from './shell/save-status';
 import { X, MoreHorizontal, FilePlus, FileUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from './components/ui/button';
+import { Input } from './components/ui/input';
+import { NativeSelect, NativeSelectOption } from './components/ui/native-select';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from './components/ui/dropdown-menu';
 import type { SearchHit } from '../search-api';
 import { paintFrame } from './search-location';
@@ -136,6 +138,8 @@ export const SourcePanel = forwardRef<SourcePanelHandle, { sessionId: string; na
   useSaveReport('source-action', { label: '资料', status: busy ? 'saving' : retryAction.current && error ? 'error' : 'saved', detail: error, retry: () => retryAction.current && run(retryAction.current) });
   const intent = [...list.intents].reverse().find(item => item.versionId === versionId);
   return <PanelPortal id="sources"><aside ref={panel} className="source-panel" role={narrow ? 'dialog' : 'complementary'} aria-modal={narrow || undefined} aria-label="原文资料" onKeyDown={event => {
+    // Portalled menu keys are handled by Radix before returning focus to this panel.
+    if (!event.currentTarget.contains(event.target as Node)) return;
     if (event.key === 'Escape') { event.preventDefault(); void close(); }
     if (event.key === 'Tab' && narrow) {
       const targets = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), summary, [tabindex="0"]')].filter(element => element.getClientRects().length > 0);
@@ -143,59 +147,59 @@ export const SourcePanel = forwardRef<SourcePanelHandle, { sessionId: string; na
       else if (!event.shiftKey && document.activeElement === targets.at(-1)) { event.preventDefault(); targets[0]?.focus(); }
     }
   }}>
-    <div className="source-heading"><h2>原文资料</h2><div className="source-heading-actions"><DropdownMenu><DropdownMenuTrigger render={<Button variant="ghost" size="icon" aria-label="资料操作"/>}><MoreHorizontal size={18}/></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem disabled={busy} onClick={() => importSource()}><FilePlus/>导入资料</DropdownMenuItem>{version && <DropdownMenuItem disabled={busy} onClick={() => importSource(version.sourceId)}><FileUp/>导入此来源新版</DropdownMenuItem>}</DropdownMenuContent></DropdownMenu><button className="panel-close" aria-label="返回画板" onClick={() => void close()}><X size={18}/></button></div></div>
+    <div className="source-heading"><h2>原文资料</h2><div className="source-heading-actions"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label="资料操作"><MoreHorizontal size={18}/></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem disabled={busy} onClick={() => importSource()}><FilePlus/>导入资料</DropdownMenuItem>{version && <DropdownMenuItem disabled={busy} onClick={() => importSource(version.sourceId)}><FileUp/>导入此来源新版</DropdownMenuItem>}</DropdownMenuContent></DropdownMenu><Button variant="ghost" size="icon-sm" className="panel-close" aria-label="返回画板" onClick={() => void close()}><X size={18}/></Button></div></div>
     <div className="source-controls">
-      {list.versions.length ? <label><span className="sr-only">资料版本</span><select aria-label="资料版本" disabled={busy} value={versionId} onChange={event => choose(event.target.value)}>{list.versions.map((item, i) => <option key={item.versionId} value={item.versionId}>{item.title} · 版本 {i + 1}</option>)}</select></label> : <p>导入 PDF 或图片，保留原件后再核对出处。</p>}
+      {list.versions.length ? <NativeSelect className="source-version" aria-label="资料版本" disabled={busy} value={versionId} onChange={event => choose(event.target.value)}>{list.versions.map((item, i) => <NativeSelectOption key={item.versionId} value={item.versionId}>{item.title} · 版本 {i + 1}</NativeSelectOption>)}</NativeSelect> : <p>导入 PDF 或图片，保留原件后再核对出处。</p>}
     </div>
     {version && <><div className="source-update"><p>{intent?.decision === 'defer' ? '已保留当前画板与旧引用。' : intent?.decision === 'update' ? '已记录更新请求，画板尚未修改。' : message || '使用此资料更新画板？'}</p>
-      <button disabled={busy} onClick={() => { const request = { sessionId, generation: list.generation, operationId: crypto.randomUUID(), versionId, decision: 'update' as const }; void run(async () => { await api.setUpdateIntent(request); await refresh(); }); }}>根据新版更新</button>
-      <button disabled={busy} onClick={() => { const request = { sessionId, generation: list.generation, operationId: crypto.randomUUID(), versionId, decision: 'defer' as const }; void run(async () => { await api.setUpdateIntent(request); await refresh(); }); }}>暂不更新</button></div>
-      <div className="source-pagination"><button disabled={busy || pageIndex === 0} aria-label="上一页" title="上一页" onClick={() => choose(versionId, pageIndex - 1)}><ChevronLeft size={18}/></button>
-        <label><span className="sr-only">{version.mediaType === 'application/pdf' ? 'PDF 页序' : '图片'}</span><input aria-label="PDF 页序" type="number" min="1" max={version.pdfPages || 1} value={pageIndex + 1} onChange={event => { const next = Number(event.target.value) - 1; if (Number.isSafeInteger(next) && next >= 0 && next < (version.pdfPages || 1)) choose(versionId, next); }} /> / {version.pdfPages || 1}</label>
-        <button disabled={busy || pageIndex + 1 >= (version.pdfPages || 1)} aria-label="下一页" title="下一页" onClick={() => choose(versionId, pageIndex + 1)}><ChevronRight size={18}/></button>
-        <label className="source-zoom"><span className="sr-only">缩放</span><select aria-label="原页缩放" value={scale} onChange={event => choose(versionId, pageIndex, Number(event.target.value))}><option value={0.75}>75%</option><option value={1.2}>120%</option><option value={1.75}>175%</option><option value={2.5}>250%</option></select></label></div>
+      <Button variant="outline" size="sm" disabled={busy} onClick={() => { const request = { sessionId, generation: list.generation, operationId: crypto.randomUUID(), versionId, decision: 'update' as const }; void run(async () => { await api.setUpdateIntent(request); await refresh(); }); }}>根据新版更新</Button>
+      <Button variant="outline" size="sm" disabled={busy} onClick={() => { const request = { sessionId, generation: list.generation, operationId: crypto.randomUUID(), versionId, decision: 'defer' as const }; void run(async () => { await api.setUpdateIntent(request); await refresh(); }); }}>暂不更新</Button></div>
+      <div className="source-pagination"><Button variant="outline" size="icon-sm" disabled={busy || pageIndex === 0} aria-label="上一页" title="上一页" onClick={() => choose(versionId, pageIndex - 1)}><ChevronLeft size={18}/></Button>
+        <label><span className="sr-only">{version.mediaType === 'application/pdf' ? 'PDF 页序' : '图片'}</span><Input aria-label="PDF 页序" type="number" min="1" max={version.pdfPages || 1} value={pageIndex + 1} onChange={event => { const next = Number(event.target.value) - 1; if (Number.isSafeInteger(next) && next >= 0 && next < (version.pdfPages || 1)) choose(versionId, next); }} /> / {version.pdfPages || 1}</label>
+        <Button variant="outline" size="icon-sm" disabled={busy || pageIndex + 1 >= (version.pdfPages || 1)} aria-label="下一页" title="下一页" onClick={() => choose(versionId, pageIndex + 1)}><ChevronRight size={18}/></Button>
+        <NativeSelect className="source-zoom" aria-label="原页缩放" value={scale} onChange={event => choose(versionId, pageIndex, Number(event.target.value))}><NativeSelectOption value={0.75}>75%</NativeSelectOption><NativeSelectOption value={1.2}>120%</NativeSelectOption><NativeSelectOption value={1.75}>175%</NativeSelectOption><NativeSelectOption value={2.5}>250%</NativeSelectOption></NativeSelect></div>
       <details className="source-print-tools"><summary>印刷页登记与定位</summary><div className="source-page-map"><span>印刷页：{page?.printedPage?.label ?? '未核对'}</span>
-        <input aria-label="已核对的印刷页" placeholder="看原页核对后填写" value={printed} maxLength={200} onChange={event => setPrinted(event.target.value)} />
-        <button disabled={busy || !ready || !printed.trim()} onClick={() => { const request = { sessionId, generation: list.generation, operationId: crypto.randomUUID(), versionId, pdfPageIndex: pageIndex, printedPage: printed }; void run(async () => { const mapping = await api.mapPrintedPage(request); setPage(previous => previous && ({ ...previous, printedPage: mapping })); }); }}>登记印刷页</button></div>
-      <div className="source-print-navigation"><span className="sr-only">按已核对的印刷页定位</span><input aria-label="前往印刷页" value={printedTarget} onChange={event => setPrintedTarget(event.target.value)} placeholder="输入已核对的页码" /><button disabled={busy || !printedTarget.trim()} onClick={() => void run(async () => {
+        <Input aria-label="已核对的印刷页" placeholder="看原页核对后填写" value={printed} maxLength={200} onChange={event => setPrinted(event.target.value)} />
+        <Button variant="outline" size="sm" disabled={busy || !ready || !printed.trim()} onClick={() => { const request = { sessionId, generation: list.generation, operationId: crypto.randomUUID(), versionId, pdfPageIndex: pageIndex, printedPage: printed }; void run(async () => { const mapping = await api.mapPrintedPage(request); setPage(previous => previous && ({ ...previous, printedPage: mapping })); }); }}>登记印刷页</Button></div>
+      <div className="source-print-navigation"><span className="sr-only">按已核对的印刷页定位</span><Input aria-label="前往印刷页" value={printedTarget} onChange={event => setPrintedTarget(event.target.value)} placeholder="输入已核对的页码" /><Button variant="outline" size="sm" disabled={busy || !printedTarget.trim()} onClick={() => void run(async () => {
         const matches = await api.locatePrintedPage({ sessionId, versionId, printedPage: printedTarget }); setPrintedMatches(matches);
         if (matches.length === 1) choose(versionId, matches[0].pdfPageIndex);
         else if (!matches.length) throw new Error('尚未登记此印刷页，请按 PDF 页序定位并核对；不会推算页码偏移。');
-      })}>前往印刷页</button>{printedMatches.length > 1 && <p>同名印刷页有多处，请选择：{printedMatches.map(match => <button key={match.id} onClick={() => choose(versionId, match.pdfPageIndex)}>PDF 第 {match.pdfPageIndex + 1} 页</button>)}</p>}</div></details>
+      })}>前往印刷页</Button>{printedMatches.length > 1 && <p>同名印刷页有多处，请选择：{printedMatches.map(match => <Button variant="outline" size="sm" key={match.id} onClick={() => choose(versionId, match.pdfPageIndex)}>PDF 第 {match.pdfPageIndex + 1} 页</Button>)}</p>}</div></details>
       {activeCitation?.printedPage && <p>原引用印刷页：{activeCitation.printedPage.label}（保留引用时的核对记录）</p>}
     </>}
     {visited && version && <ParsingSection key={versionId} sessionId={sessionId} generation={list.generation} source={version} onSource={index => { choose(versionId,index); setReload(n=>n+1); requestAnimationFrame(()=>scroller.current?.scrollIntoView({block:'center'})); }} />}
     <div role="status" aria-label="原文状态" aria-live="polite" className="source-status">{busy ? '正在保存资料…' : renderError ? '原页暂不可读' : ready ? '原页已载入' : version ? '正在读取本地原页…' : '尚未导入资料'}</div>
-    {error && <div role="alert" className="source-error"><p>{error}</p>{retryAction.current && <button disabled={busy} onClick={() => retryAction.current && void run(retryAction.current)}>重试资料操作</button>}</div>}
-    {renderError && <div role="alert" className="source-error"><p>该来源暂不可读：{renderError}。画板正文仍可阅读。</p><button onClick={() => setReload(value => value + 1)}>重试原页</button><button disabled={busy} onClick={() => {
+    {error && <div role="alert" className="source-error"><p>{error}</p>{retryAction.current && <Button variant="outline" size="sm" disabled={busy} onClick={() => retryAction.current && void run(retryAction.current)}>重试资料操作</Button>}</div>}
+    {renderError && <div role="alert" className="source-error"><p>该来源暂不可读：{renderError}。画板正文仍可阅读。</p><Button variant="outline" size="sm" onClick={() => setReload(value => value + 1)}>重试原页</Button><Button variant="outline" size="sm" disabled={busy} onClick={() => {
       const request = { sessionId, generation: list.generation, operationId: crypto.randomUUID(), versionId };
       void run(async () => { if (await api.chooseRepair(request)) setReload(value => value + 1); });
-    }}>从原件修复此版本</button></div>}
+    }}>从原件修复此版本</Button></div>}
     <div ref={scroller} className="source-scroll" tabIndex={0} aria-label="原页阅读区" onScroll={event => {
       if (!restored.current || !context.current || !ready) return;
       persist({ ...context.current, scrollTop: event.currentTarget.scrollTop, scrollLeft: event.currentTarget.scrollLeft });
     }}>{page && version && <SourcePdf sessionId={sessionId} version={version} page={page} scale={scale} regionMode={regionMode} citation={activeCitation} searchHit={searchHit} onSelection={setSelection} onReady={pageReady} onError={error => setRenderError(error.message)} />}</div>
     {page && version && <div className="source-selection"><p>{page.projection.text.length ? '选取实际文本层中的文字，或拖动框选原页区域。' : '本页没有可靠文本层。可保留实际原页或框选区域，不会生成精确选文。'}</p>
-      <button disabled={!ready || busy} aria-pressed={regionMode} onClick={() => { setRegionMode(!regionMode); setSelection(null); }}>选取页面区域</button>
-      <button disabled={!ready || busy} onMouseDown={event => event.preventDefault()} onClick={() => {
+      <Button variant="outline" size="sm" disabled={!ready || busy} aria-pressed={regionMode} onClick={() => { setRegionMode(!regionMode); setSelection(null); }}>选取页面区域</Button>
+      <Button variant="outline" size="sm" disabled={!ready || busy} onMouseDown={event => event.preventDefault()} onClick={() => {
         const request = { sessionId, generation: list.generation, operationId: crypto.randomUUID(), versionId, pdfPageIndex: pageIndex, target: context.current?.target ?? target, ...selection };
         void run(async () => { await api.cite(request); const next = await api.citations({ sessionId }); setCitations(next); onCitationsChange(next); setMessage('原文与出处已保留，可从下方打开固定版本。'); });
-      }}>{selection?.start !== undefined ? '保留选文与出处' : selection?.region ? '保留选区出处' : '保留本页出处'}</button>
-      {onQuestion && <button disabled={busy || !ready} onClick={() => {
+      }}>{selection?.start !== undefined ? '保留选文与出处' : selection?.region ? '保留选区出处' : '保留本页出处'}</Button>
+      {onQuestion && <Button variant="outline" size="sm" disabled={busy || !ready} onClick={() => {
         const request = { sessionId, generation: list.generation, operationId: crypto.randomUUID(), versionId, pdfPageIndex: pageIndex, target: context.current?.target ?? target, ...selection };
         void run(async () => {
           const citation = await api.cite(request); const next = await api.citations({ sessionId }); setCitations(next); onCitationsChange(next);
           if (narrow) { if (context.current) persist({ ...context.current, open: false }); setOpen(false); }
           onQuestion(citation);
         });
-      }}>带此选段向 Agent 提问</button>}
+      }}>带此选段向 Agent 提问</Button>}
     </div>}
     {searchHit && <blockquote className="source-search-quote">搜索原文：{searchHit.quote}</blockquote>}
-    <div className="source-context-status" role="status" aria-label="原文位置保存">{contextStatus === 'saved' ? '原文位置已保存' : contextStatus === 'pending' ? '正在保存原文位置' : '原文位置未保存'}{contextStatus === 'error' && <button onClick={() => { failed.current = false; setContextStatus('pending'); void saveLatest(); }}>重试保存原文位置</button>}</div>
+    <div className="source-context-status" role="status" aria-label="原文位置保存">{contextStatus === 'saved' ? '原文位置已保存' : contextStatus === 'pending' ? '正在保存原文位置' : '原文位置未保存'}{contextStatus === 'error' && <Button variant="outline" size="sm" onClick={() => { failed.current = false; setContextStatus('pending'); void saveLatest(); }}>重试保存原文位置</Button>}</div>
     <details className="source-citations"><summary>保留的原文与出处 · {citations.length}</summary>{citations.map(citation => <section key={citation.id}>
       {citation.quote ? <blockquote>{citation.quote}</blockquote> : <p>{citation.textStatus === 'no-text-layer' ? '无可靠文本层 · ' : ''}{citation.region ? '原页选区' : '整页出处'}</p>}
       <p>{list.versions.find(item => item.versionId === citation.versionId)?.title} · PDF 第 {citation.pdfPageIndex + 1} 页 · 印刷页 {citation.printedPage?.label ?? '未核对'}</p>
-      <button onClick={() => openCitation(citation)}>打开引用原页</button>{onQuestion && <button onClick={() => { if (narrow) setOpen(false); onQuestion(citation); }}>带此出处提问</button>}
+      <Button variant="outline" size="sm" onClick={() => openCitation(citation)}>打开引用原页</Button>{onQuestion && <Button variant="outline" size="sm" onClick={() => { if (narrow) setOpen(false); onQuestion(citation); }}>带此出处提问</Button>}
     </section>)}</details>
     {version && <details className="source-identity"><summary>版本身份与原件摘要</summary><p>{version.originalName} · {version.importedAt}</p><p>版本 {version.versionId}</p><p>SHA-256 {version.sha256}</p><p>{version.byteLength} bytes · {version.mediaType}</p></details>}
   </aside></PanelPortal>;
@@ -205,6 +209,6 @@ export function SourceReferences({ citations, onOpen }: { citations: SourceCitat
   if (!citations.length) return null;
   return <section className="source-references" aria-label="正文来源引用"><h3>原文出处</h3>{citations.map(citation => <p key={citation.id}>
     {citation.quote ? `“${citation.quote}”` : citation.region ? '原页选区' : '原页'} · PDF 第 {citation.pdfPageIndex + 1} 页 · 印刷页 {citation.printedPage?.label ?? '未核对'}{' '}
-    <button onClick={() => onOpen(citation)}>核对来源原页</button>
+    <Button variant="outline" size="sm" onClick={() => onOpen(citation)}>核对来源原页</Button>
   </p>)}</section>;
 }

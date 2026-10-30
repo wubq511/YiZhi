@@ -20,7 +20,6 @@
     "test:smoke": "npm run build && playwright test"
   },
   "dependencies": {
-    "@base-ui/react": "1.9.0",
     "@napi-rs/canvas": "1.0.13",
     "@tiptap/core": "3.32.0",
     "@tiptap/extension-document": "3.32.0",
@@ -35,6 +34,7 @@
     "mathlive": "0.111.1",
     "motion": "14.8.0",
     "pdfjs-dist": "6.4.299",
+    "radix-ui": "1.8.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "roughjs": "4.6.6"

@@ -1,3 +1,4 @@
+import { Button } from '../components/ui/button';
 import { useSaveReport } from '../shell/save-status';
 import { useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import type { OpenedCourse } from '../../shared';
@@ -49,6 +50,6 @@ export function ActiveUnitEditor(props: Props) {
   return <>
     <ContinuousUnitEditor {...props} course={course} channel={channel.current} saveError={state.status === 'error'} controller={value => { editor.current = value; if (value) readiness.resolve(value); }} />
 
-    {state.error && <div role="alert" className="save-error">{state.error}<button onClick={() => void channel.current?.flush()}>重试当前单元保存</button></div>}
+    {state.error && <div role="alert" className="save-error">{state.error}<Button variant="outline" size="sm" onClick={() => void channel.current?.flush()}>重试当前单元保存</Button></div>}
   </>;
 }

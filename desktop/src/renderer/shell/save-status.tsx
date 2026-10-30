@@ -29,8 +29,8 @@ export function SaveIndicator({ ready }: { ready: boolean }) {
   const priorities: Record<SavePhase, number> = { error:0, saving:1, pending:2, draft:3, saved:4 };
   const attention=values.filter(v=>v.status!=='saved').sort((a,b)=>priorities[a.status]-priorities[b.status]);
   const saved=values.filter(v=>v.status==='saved');
-  return <Popover><PopoverTrigger render={<Button variant="ghost" className={`shell-save shell-save-${phase}`} />}><Icon size={16}/><span role="status" aria-label="保存状态">{label}</span></PopoverTrigger>
-    <PopoverContent className="shell-save-details" align="end"><PopoverTitle>自动保存</PopoverTitle>
+  return <Popover><PopoverTrigger asChild><Button variant="ghost" className={`shell-save shell-save-${phase}`}><Icon size={16}/><span role="status" aria-label="保存状态">{label}</span></Button></PopoverTrigger>
+    <PopoverContent className="shell-save-details" align="end" aria-label="自动保存"><PopoverTitle>自动保存</PopoverTitle>
       {attention.map(v=><div key={v.id} className={`save-channel save-channel-${v.status}`}><strong>{v.label}</strong><span>{({saved:'已保存',draft:'草稿已保留',pending:'待保存',saving:'正在保存',error:'未保存'})[v.status]}</span>{v.status==='error'&&<><p>{v.detail ? v.detail.replace(/^Error invoking remote method '[^']+': (?:Error: )?/,'').split(/\n\s*at\s/)[0] : `${v.label}尚未确认保存，当前现场仍保留。`}</p>{v.retry&&<Button variant="outline" onClick={()=>void v.retry?.()}>重试保存{v.label}</Button>}</>}</div>)}
       {!!saved.length&&<details className="save-confirmed"><summary>已保存 · {saved.length} 项</summary>{saved.map(v=><div key={v.id}><Check size={13}/><span>{v.label}</span></div>)}</details>}
     </PopoverContent>

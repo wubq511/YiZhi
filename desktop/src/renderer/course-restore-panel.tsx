@@ -1,3 +1,6 @@
+import { Button } from './components/ui/button';
+import { Checkbox } from './components/ui/checkbox';
+import { NativeSelect, NativeSelectOption } from './components/ui/native-select';
 import { forwardRef, useImperativeHandle } from 'react';
 import { useEffect,useRef,useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -42,24 +45,24 @@ export const CourseRestorePanel = forwardRef<{ open(pointer?:boolean): void }, {
  const locked=busy||!!pending||!!result;
  useImperativeHandle(ref, () => ({ open: show }));
  return <>{open&&createPortal(<dialog className="history-panel course-restore-panel" aria-label="整课历史恢复" data-motion={motion?'pointer':undefined} ref={node=>{if(node&&!node.open)node.showModal();}} onCancel={e=>{e.preventDefault();close();}} onKeyDown={e=>{e.stopPropagation();if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z')e.preventDefault();}}>
-  <header className="history-heading"><h2>整课历史恢复</h2><button disabled={busy} onClick={close}>返回当前课程</button></header>
+  <header className="history-heading"><h2>整课历史恢复</h2><Button variant="outline" size="sm" disabled={busy} onClick={close}>返回当前课程</Button></header>
   <p>从课程历史恢复所选学习范围，并隔离恢复前任务。单元取回和编辑器即时 Undo 使用各自入口；独立课程备份不在这里覆盖。</p>
   {error&&<div className="history-error" role="alert">{error}</div>}{busy&&<p role="status">正在核对整课范围与持久结果…</p>}
   {result&&<section className="history-result" role="status" aria-label="整课恢复结果">已完成整课所选范围恢复。恢复前内容仍在正式历史，旧任务需重新核对后明确继续。</section>}
-  {pending&&<section><p>原操作 {pending.operationId} 已保留，先核对其结果再继续。</p><button disabled={busy} onClick={apply}>核对并重试原操作</button></section>}
+  {pending&&<section><p>原操作 {pending.operationId} 已保留，先核对其结果再继续。</p><Button variant="outline" size="sm" disabled={busy} onClick={apply}>核对并重试原操作</Button></section>}
   {!result&&!pending&&<>
-   <div className="course-restore-selection"><label>历史时间点<select aria-label="历史时间点" value={point} disabled={locked} onChange={e=>{setPoint(e.target.value);invalidate();}}><option value="">选择实际提交</option>{activities.flatMap(a=>[...a.operationIds].reverse().map(id=><option key={id} value={id}>{new Date(a.committedAt).toLocaleString('zh-CN',{hour12:false})} · {a.explanation} · {id}</option>))}</select></label><label>版本位置<select value={side} disabled={locked} onChange={e=>{setSide(e.target.value as 'before'|'after');invalidate();}}><option value="after">此次提交后</option><option value="before">此次提交前</option></select></label></div>
-   {next&&<button disabled={busy} onClick={()=>void work(()=>load(next))}>加载更早时间点</button>}
+   <div className="course-restore-selection"><label>历史时间点<NativeSelect aria-label="历史时间点" value={point} disabled={locked} onChange={e=>{setPoint(e.target.value);invalidate();}}><NativeSelectOption value="">选择实际提交</NativeSelectOption>{activities.flatMap(a=>[...a.operationIds].reverse().map(id=><NativeSelectOption key={id} value={id}>{new Date(a.committedAt).toLocaleString('zh-CN',{hour12:false})} · {a.explanation} · {id}</NativeSelectOption>))}</NativeSelect></label><label>版本位置<NativeSelect value={side} disabled={locked} onChange={e=>{setSide(e.target.value as 'before'|'after');invalidate();}}><NativeSelectOption value="after">此次提交后</NativeSelectOption><NativeSelectOption value="before">此次提交前</NativeSelectOption></NativeSelect></label></div>
+   {next&&<Button variant="outline" size="sm" disabled={busy} onClick={()=>void work(()=>load(next))}>加载更早时间点</Button>}
    {!activities.length&&!busy&&<p>还没有可恢复的正式提交。当前输入草稿不是历史版本。</p>}
-   <fieldset disabled={locked}><legend>课程内容范围 · 已选 {selected.length} 个知识单元</legend><label><input type="checkbox" checked={selected.length===units.length} onChange={e=>{setSelected(e.target.checked?units.map(u=>u.id):[]);invalidate();}}/>选择全部知识单元</label><details><summary>调整知识单元范围</summary><div className="course-restore-unit-options">{units.map(u=><label key={u.id}><input type="checkbox" checked={selected.includes(u.id)} onChange={e=>{setSelected(old=>e.target.checked?[...old,u.id]:old.filter(id=>id!==u.id));invalidate();}}/>{u.name}</label>)}</div></details></fieldset>
-   <fieldset disabled={locked}><legend>另选用户状态 · 默认保留当前值</legend><label><input type="checkbox" checked={layout} onChange={e=>{setLayout(e.target.checked);invalidate();}}/>恢复所选单元的布局</label><label><input type="checkbox" checked={review} onChange={e=>{setReview(e.target.checked);invalidate();}}/>恢复所选单元的掌握状态</label><p>个人笔记、图形、对话与新导入资料保持当前记录。</p></fieldset>
-   <button disabled={busy||!point||!selected.length} onClick={inspect}>预览整课所选范围</button>
+   <fieldset disabled={locked}><legend>课程内容范围 · 已选 {selected.length} 个知识单元</legend><label><Checkbox checked={selected.length===units.length} disabled={locked} onCheckedChange={checked=>{setSelected(checked===true?units.map(u=>u.id):[]);invalidate();}}/>选择全部知识单元</label><details><summary>调整知识单元范围</summary><div className="course-restore-unit-options">{units.map(u=><label key={u.id}><Checkbox checked={selected.includes(u.id)} disabled={locked} onCheckedChange={checked=>{setSelected(old=>checked===true?[...old,u.id]:old.filter(id=>id!==u.id));invalidate();}}/>{u.name}</label>)}</div></details></fieldset>
+   <fieldset disabled={locked}><legend>另选用户状态 · 默认保留当前值</legend><label><Checkbox checked={layout} disabled={locked} onCheckedChange={checked=>{setLayout(checked===true);invalidate();}}/>恢复所选单元的布局</label><label><Checkbox checked={review} disabled={locked} onCheckedChange={checked=>{setReview(checked===true);invalidate();}}/>恢复所选单元的掌握状态</label><p>个人笔记、图形、对话与新导入资料保持当前记录。</p></fieldset>
+   <Button variant="outline" size="sm" disabled={busy||!point||!selected.length} onClick={inspect}>预览整课所选范围</Button>
   </>}
   {preview&&!result&&<section className="history-preview" aria-label="整课恢复影响"><h3>恢复影响</h3>{preview.explanations.map(t=><p key={t}>{t}</p>)}<p>{preview.affectedUnitIds.length} 个知识单元在本次范围内；{preview.changes.length} 个对象发生变化。{preview.preservedDrafts} 份有效草稿将单独保留。</p>
    <details><summary>核对必要一致范围与内容差异</summary>{preview.units.map(u=><p key={u.id}>{u.name} · {u.id} · {u.blockCount} 个正文块</p>)}{preview.changes.map(c=><section className="history-difference" key={c.objectId}><h4>{c.objectId}</h4><div><section><h5>恢复前</h5><pre>{JSON.stringify(c.before,null,2)}</pre></section><section><h5>将恢复为</h5><pre>{JSON.stringify(c.after,null,2)}</pre></section></div></section>)}</details>
    {preview.sourceVersions.length>0&&<details><summary>旧内容使用的固定来源版本</summary>{preview.sourceVersions.map(v=><p key={v}>{v}</p>)}</details>}
-   {!pending&&<button className="history-confirm" disabled={busy} onClick={apply}>确认恢复并隔离旧任务</button>}
+   {!pending&&<Button size="sm" className="history-confirm" disabled={busy} onClick={apply}>确认恢复并隔离旧任务</Button>}
   </section>}
-  {drafts.length>0&&<><button disabled={busy} onClick={()=>setShowDrafts(v=>!v)}>查看恢复前草稿</button>{showDrafts&&<section aria-label="恢复前草稿（只读）"><h3>恢复前草稿（只读）</h3><p>原输入与依据保留在原代际；请对照当前课程后重新编辑，不会自动提交旧输入。</p>{drafts.map((d,i)=><details key={`${d.restoreOperationId}:${i}`} open><summary>{units.find(u=>u.id===(d.input.unitId??'KU-001'))?.name??d.input.unitId??'KU-001'} · 输入 {d.input.inputSeq}</summary><PreservedInput draft={d}/></details>)}</section>}</>}
+  {drafts.length>0&&<><Button variant="outline" size="sm" disabled={busy} onClick={()=>setShowDrafts(v=>!v)}>查看恢复前草稿</Button>{showDrafts&&<section aria-label="恢复前草稿（只读）"><h3>恢复前草稿（只读）</h3><p>原输入与依据保留在原代际；请对照当前课程后重新编辑，不会自动提交旧输入。</p>{drafts.map((d,i)=><details key={`${d.restoreOperationId}:${i}`} open><summary>{units.find(u=>u.id===(d.input.unitId??'KU-001'))?.name??d.input.unitId??'KU-001'} · 输入 {d.input.inputSeq}</summary><PreservedInput draft={d}/></details>)}</section>}</>}
  </dialog>,document.body)}</>;
 });

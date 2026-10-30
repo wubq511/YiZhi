@@ -23,6 +23,16 @@ test('actual displayed Unicode selection creates one note; note Undo/autosave/re
     await editor.evaluate((el: any) => { let end = 0, n = 0; el.editor.state.doc.forEach((node: any, pos: number) => { if (node.type.name === 'paragraph' && ++n === 2) end = pos + 5; }); el.editor.commands.setTextSelection({ from: 2, to: end }); el.editor.view.focus(); });
     await page.getByRole('button', { name: '批注所选文字', exact: true }).click();
     const note = page.getByRole('textbox', { name: '批注内容', exact: true });
+    // A native insertion can be followed by a resize/render before its input event reaches React.
+    await note.evaluate((element: HTMLTextAreaElement) => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(element, '正在输入');
+    });
+    const [width, height] = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getContentSize());
+    await app.evaluate(({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0].setContentSize(size[0], size[1]), [width - 4, height]);
+    await expect.poll(() => page.evaluate(() => innerWidth)).toBe(width - 4);
+    await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
+    await expect(note).toHaveValue('正在输入');
+    await note.evaluate(element => element.dispatchEvent(new Event('input', { bubbles: true })));
     await note.fill('第一版理解');
     await page.getByRole('button', { name: '关闭批注', exact: true }).click();
     await expect(page.getByRole('region', { name: '个人批注', exact: true })).toBeHidden();

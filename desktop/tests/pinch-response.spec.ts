@@ -174,7 +174,7 @@ test('pinch pauses automatic follow immediately while panel controls retain whee
     const taken = await readCameraTransform(viewport);
     await stepFrame(page); await stepFrame(page);
     expect(await readCameraTransform(viewport)).toEqual(taken);
-    for (const target of [page.locator('.board-tools select'), page.getByRole('textbox', { name: '可控候选内容' })]) {
+    for (const target of [page.getByRole('toolbar', { name: '画板工具' }).getByRole('button', { name: '图形', exact: true }), page.getByRole('textbox', { name: '可控候选内容' })]) {
       await target.dispatchEvent('wheel', { deltaY: -100, ctrlKey: true, deltaMode: 0, bubbles: true, cancelable: true });
     }
     await stepFrame(page); expect(await readCameraTransform(viewport)).toEqual(taken);

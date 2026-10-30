@@ -47,11 +47,11 @@ This software is based in part on the work of the Independent JPEG Group.
 
 ## 工作区组件（2026-10-30）
 
-外壳采用 shadcn/ui **Base UI / Nova** 的真实组件源码，本地组件为 Button、Dropdown Menu 与 Popover。原始 registry URL、下载摘要及本地定制范围见 [源码来源](licenses/shadcn/provenance.json)，[shadcn/ui MIT](licenses/shadcn/LICENSE.md) 随构建和打包保留。组件的图标占位符替换为 Lucide，菜单改为不透明背景，常用命中区调为约 40px。
+外壳采用 shadcn/ui **Radix / Nova** 的真实组件源码，本地组件包括 Button、Dropdown Menu、Popover、Collapsible、Checkbox、Select、Native Select、Input Group、Input、Textarea 与 Tabs。原始 registry URL、下载摘要及本地定制范围见 [源码来源](licenses/shadcn/provenance.json)，[shadcn/ui MIT](licenses/shadcn/LICENSE.md) 随构建和打包保留。组件的图标占位符替换为 Lucide，菜单改为不透明背景，常用命中区调为约 40px。
 
 | 依赖 | 精确版本 | 许可 |
 | --- | --- | --- |
-| @base-ui/react | 1.9.0 | MIT |
+| radix-ui | 1.8.1 | MIT |
 | lucide-react | 1.64.0 | ISC（包内保留衍生图标的 MIT 声明） |
 | motion | 14.8.0 | MIT |
 | cn | 0.5.0 | MIT |
@@ -60,4 +60,4 @@ This software is based in part on the work of the Independent JPEG Group.
 | shadcn | 4.23.0 | MIT；组件配置及构建 CSS |
 | tw-animate-css | 1.4.0 | MIT；构建 CSS |
 
-以上直接依赖及使用的 Floating UI、Motion、Base UI 等传递包许可原文和摘要见 [workspace-shell 清单](licenses/workspace-shell/manifest.json)。`build` 将其复制到 `dist/licenses/`；macOS 打包保留整个 `licenses/`、`dist/licenses/` 与生产依赖包中的许可证。运行不下载组件、样式或图标。
+以上直接依赖及使用的 Radix、Floating UI、Motion 等传递包许可原文和摘要见 [workspace-shell 清单](licenses/workspace-shell/manifest.json)。`build` 将其复制到 `dist/licenses/`；macOS 打包保留整个 `licenses/`、`dist/licenses/` 与生产依赖包中的许可证。运行不下载组件、样式或图标。

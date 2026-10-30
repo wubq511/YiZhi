@@ -3,4 +3,5 @@
 .readonly-course pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;max-width:72ch}.readonly-course label{display:inline-flex;align-items:center;gap:8px;margin:0 16px 12px 0}
 .readonly-course [role="alert"]{color:#a13737}
 .readonly-course select,.readonly-course button{font:inherit;padding:6px 10px;border:1px solid #e5e5eb;border-radius:4px;background:#fff;color:inherit;max-width:100%}.readonly-course button{cursor:pointer}.readonly-course button:hover:not(:disabled){background:#f6f6f9}.readonly-course button:disabled{opacity:.55;cursor:default}.readonly-course :focus-visible{outline:2px solid #6965db;outline-offset:3px}.readonly-course ::selection{background:#eeedff;color:#27343e}
+.readonly-course [data-slot="native-select"]{padding-right:32px}
 @media(max-width:760px){.readonly-course{inset:96px 8px 8px;padding:16px;max-width:calc(100vw - 16px)}}

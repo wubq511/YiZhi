@@ -34,6 +34,12 @@ test('closing the narrow source dialog with Escape returns focus after the heade
     const trigger = page.getByRole('button', { name: '原文资料', exact: true });
     await trigger.focus(); await expect(trigger).toBeFocused(); await page.keyboard.press('Enter');
     await expect(page.getByRole('dialog', { name: '原文资料', exact: true })).toBeVisible();
+    const menu = page.getByRole('button', { name: '资料操作', exact: true });
+    await menu.focus(); await page.keyboard.press('Space');
+    await expect(page.getByRole('menuitem', { name: '导入资料', exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: '原文资料', exact: true })).toBeVisible();
+    await expect(menu).toBeFocused();
     await page.getByRole('button', { name: '返回画板', exact: true }).focus();
     await page.keyboard.press('Escape'); await expect(trigger).toBeFocused();
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }

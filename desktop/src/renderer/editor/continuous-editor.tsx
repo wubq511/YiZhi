@@ -1,3 +1,4 @@
+import { Button } from '../components/ui/button';
 import { registerHistory, refreshHistory } from '../shell/edit-history';
 import { MessageCircle, Pencil, StickyNote, Highlighter, Sigma, ArrowUp, ArrowDown, Split } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
@@ -58,28 +59,28 @@ export function ContinuousUnitEditor({ course, channel, disabled, saveError, com
   const text = (value: Record<string, any>) => String(value.text ?? value.latex ?? value.payload?.text ?? value.payload?.latex ?? '结构或关联内容');
   return <section className="continuous-editor">
     <div className="editor-tools" role="toolbar" aria-label="正文编辑工具" onMouseDown={event => event.preventDefault()}>
-      <button disabled={disabled} onClick={() => { const capture=instance.current?.captureAnnotation(); if (capture?.fragments.length) question(capture,'question'); }}><MessageCircle size={16}/>提问</button>
-      <button disabled={disabled} onClick={() => { const capture=instance.current?.captureAnnotation(); if (capture?.fragments.length) question(capture,'modify'); }}><Pencil size={16}/>请求修改</button>
-      <button disabled={disabled} onClick={() => { const capture = instance.current?.captureAnnotation(); if (capture) annotate(capture); }} aria-label="批注所选文字"><StickyNote size={16}/>批注</button>
-      <button disabled={disabled} onClick={() => { const capture = instance.current?.captureAnnotation(); if (capture) highlight(capture); }} aria-label="荧光笔标记所选文字"><Highlighter size={16}/>高亮</button>
-      <button aria-label="插入公式" disabled={disabled} onClick={() => instance.current?.insertFormula()}><Sigma size={16}/>公式</button>
-      <button disabled={disabled} onClick={() => instance.current?.moveSelected(-1)} aria-label="上移当前块" title="上移当前块"><ArrowUp size={16}/></button>
-      <button disabled={disabled} onClick={() => instance.current?.moveSelected(1)} aria-label="下移当前块" title="下移当前块"><ArrowDown size={16}/></button>
-      <button disabled={disabled} onClick={() => instance.current?.splitFirst()} aria-label="拆分首段为两段" title="拆分首段为两段"><Split size={16}/></button>
+      <Button variant="ghost" size="sm" disabled={disabled} onClick={() => { const capture=instance.current?.captureAnnotation(); if (capture?.fragments.length) question(capture,'question'); }}><MessageCircle size={16}/>提问</Button>
+      <Button variant="ghost" size="sm" disabled={disabled} onClick={() => { const capture=instance.current?.captureAnnotation(); if (capture?.fragments.length) question(capture,'modify'); }}><Pencil size={16}/>请求修改</Button>
+      <Button variant="ghost" size="sm" disabled={disabled} onClick={() => { const capture = instance.current?.captureAnnotation(); if (capture) annotate(capture); }} aria-label="批注所选文字"><StickyNote size={16}/>批注</Button>
+      <Button variant="ghost" size="sm" disabled={disabled} onClick={() => { const capture = instance.current?.captureAnnotation(); if (capture) highlight(capture); }} aria-label="荧光笔标记所选文字"><Highlighter size={16}/>高亮</Button>
+      <Button variant="ghost" size="sm" aria-label="插入公式" disabled={disabled} onClick={() => instance.current?.insertFormula()}><Sigma size={16}/>公式</Button>
+      <Button variant="ghost" size="sm" disabled={disabled} onClick={() => instance.current?.moveSelected(-1)} aria-label="上移当前块" title="上移当前块"><ArrowUp size={16}/></Button>
+      <Button variant="ghost" size="sm" disabled={disabled} onClick={() => instance.current?.moveSelected(1)} aria-label="下移当前块" title="下移当前块"><ArrowDown size={16}/></Button>
+      <Button variant="ghost" size="sm" disabled={disabled} onClick={() => instance.current?.splitFirst()} aria-label="拆分首段为两段" title="拆分首段为两段"><Split size={16}/></Button>
     </div>
     {checks.length > 0 && <div className="editor-integration" role="status" aria-label="同时修改处理">
       {checks.map(check => <div key={check.candidateId}><p>{check.status === 'committed' ? '已根据最新学生输入整合同时修改。' : check.status === 'needs-reread'
         ? '这项修改依赖的内容已改变，需要内容生产者重新读取并推导。当前内容继续保留。' : check.status === 'conflict'
         ? check.reason?.includes('读取依据') ? '这项修改依赖的内容已改变，需要重新推导。当前内容继续保留。' : '此处内容与学生输入不兼容。双方内容均已保留，请选择冲突部分的内容。' : check.reason}</p>
         {check.status === 'conflict' && <><dl>{check.parts?.map(part => <div key={part.objectId}><dt>当前内容</dt><dd>{text(part.current)}</dd><dt>同时修改的候选</dt><dd>{text(part.incoming)}</dd></div>)}</dl>
-          <button disabled={resolving} onClick={() => void resolve(() => instance.current!.resolveCandidate(check.candidateId, 'current'))}>保留当前内容</button>
-          {!check.reason?.includes('读取依据') && <button disabled={resolving} onClick={() => void resolve(() => instance.current!.resolveCandidate(check.candidateId, 'incoming'))}>此处使用外部修改</button>}</>}
+          <Button variant="outline" size="sm" disabled={resolving} onClick={() => void resolve(() => instance.current!.resolveCandidate(check.candidateId, 'current'))}>保留当前内容</Button>
+          {!check.reason?.includes('读取依据') && <Button variant="outline" size="sm" disabled={resolving} onClick={() => void resolve(() => instance.current!.resolveCandidate(check.candidateId, 'incoming'))}>此处使用外部修改</Button>}</>}
       </div>)}
     </div>}
     {conflicts.length > 0 && <section className="editor-integration" aria-label="学生草稿冲突"><p>只有以下部分发生同处冲突，其他兼容修改会自动保留。</p>
       <dl>{conflicts.map(part => <div key={part.blockId}><dt>已保存的外部内容</dt><dd>{text(part.current)}</dd><dt>学生草稿</dt><dd>{text(part.student)}</dd></div>)}</dl>
-      <button disabled={resolving} onClick={() => void resolve(() => instance.current!.resolveInput('student'))}>冲突处保留学生草稿</button>
-      <button disabled={resolving} onClick={() => void resolve(() => instance.current!.resolveInput('external'))}>冲突处保留外部内容</button>
+      <Button variant="outline" size="sm" disabled={resolving} onClick={() => void resolve(() => instance.current!.resolveInput('student'))}>冲突处保留学生草稿</Button>
+      <Button variant="outline" size="sm" disabled={resolving} onClick={() => void resolve(() => instance.current!.resolveInput('external'))}>冲突处保留外部内容</Button>
     </section>}
     {failure && <p role="alert">{failure}</p>}
     <div ref={element} />

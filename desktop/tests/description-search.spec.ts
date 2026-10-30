@@ -3,19 +3,19 @@ import { test, expect, _electron as electron, type Page } from '@playwright/test
 import { mkdtemp, rm, chmod, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
-import { resizeBoardWindow, revealBoardControl } from './board-test-helpers';
+import { resizeBoardWindow } from './board-test-helpers';
 const fixture = resolve('dist/tests/description-executor-fixture.cjs');
 
 async function captureDescriptionFailure(page: Page) {
   const scene = await page.evaluate(async () => {
     const section = document.querySelector('[data-description-id]'), id = section?.getAttribute('data-description-id');
-    const button = [...document.querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent === '用描述查找已有内容');
+    const button = document.querySelector<HTMLButtonElement>('[aria-label="AI 查找"]');
     let run: unknown;
     if (id) { const course = await window.yizhi.open(); run = await window.yizhi.description.get({ sessionId: course.sessionId, id }); }
-    return { viewport: [innerWidth, innerHeight], availability: document.querySelector('[aria-label="描述检索可用性"]')?.textContent,
+    return { viewport: [innerWidth, innerHeight], availability: document.querySelector('[role="status"]')?.textContent,
       start: button ? { disabled: button.disabled, bounds: button.getBoundingClientRect().toJSON() } : null,
-      clue: document.querySelector<HTMLTextAreaElement>('[aria-label="记忆线索"]')?.value,
-      status: section?.querySelector('[aria-label="描述检索状态"]')?.textContent,
+      clue: document.querySelector<HTMLInputElement>('[aria-label="查找已有内容"]')?.value,
+      status: section?.querySelector('[role="status"]')?.textContent,
       interactions: (window as any).__descriptionInteractions ?? [], run };
   });
   const json = test.info().outputPath('description-failure.json'), dom = test.info().outputPath('description-failure.html'), screenshot = test.info().outputPath('description-failure.png');
@@ -39,12 +39,12 @@ test('explicit description search uses real hits and query/rank evidence while o
     const before = await page.evaluate(async () => { const c = await window.yizhi.open(), a = await window.yizhi.agent.list({ sessionId: c.sessionId }); return { drawings: await window.yizhi.drawings.list({ sessionId: c.sessionId }), drawingHistory: await window.yizhi.drawings.history({ sessionId: c.sessionId }), placements: await window.yizhi.drawings.placements({ sessionId: c.sessionId }), unit: c.unit, review: await window.yizhi.reviewStates(c.sessionId), conversation: await window.yizhi.agent.get({ sessionId: c.sessionId, conversationId: a.selectedId! }) }; });
     const camera = await page.locator('.reading-layer[data-unit-id="KU-001"]').getAttribute('style');
     await page.getByRole('button', { name: '搜索课程', exact: true }).click();
-    await page.getByRole('searchbox').fill('基数');
+    await page.getByRole('searchbox', { name: '查找已有内容' }).fill('基数');
     await expect(page.getByRole('region', { name: '搜索结果', exact: true })).toContainText('已有内容');
-    await page.getByText('按记忆线索查找（Agent）', { exact: true }).click();
-    await page.getByRole('textbox', { name: '记忆线索' }).fill('同一数码的位置变化会影响什么');
-    await page.getByRole('button', { name: '用描述查找已有内容', exact: true }).click();
-    const enhanced = page.getByRole('region', { name: '描述检索结果', exact: true });
+    await page.getByRole('button', { name: 'AI 检索', exact: true }).click();
+    await page.getByRole('searchbox', { name: '查找已有内容' }).fill('同一数码的位置变化会影响什么');
+    await page.getByRole('button', { name: 'AI 查找', exact: true }).click();
+    const enhanced = page.getByRole('region', { name: 'AI 检索结果', exact: true });
     await expect(enhanced).toContainText('检索完成');
     await expect(enhanced).toContainText('位置记数法');
     await expect(enhanced).not.toContainText('模型新解释');
@@ -56,6 +56,15 @@ test('explicit description search uses real hits and query/rank evidence while o
     await expect(page.locator('.reading-layer[data-unit-id="KU-001"]')).toHaveAttribute('style', camera!);
     const after = await page.evaluate(async () => { const c = await window.yizhi.open(), a = await window.yizhi.agent.list({ sessionId: c.sessionId }); return { drawings: await window.yizhi.drawings.list({ sessionId: c.sessionId }), drawingHistory: await window.yizhi.drawings.history({ sessionId: c.sessionId }), placements: await window.yizhi.drawings.placements({ sessionId: c.sessionId }), unit: c.unit, review: await window.yizhi.reviewStates(c.sessionId), conversation: await window.yizhi.agent.get({ sessionId: c.sessionId, conversationId: a.selectedId! }) }; });
     expect(after).toEqual(before);
+    await page.getByRole('button', { name: '搜索课程', exact: true }).click();
+    await page.getByRole('searchbox', { name: '查找已有内容' }).fill('基数');
+    const aiTab = page.getByRole('tab', { name: 'AI 结果', exact: true });
+    if (await aiTab.isVisible()) await aiTab.click();
+    await expect(page.getByRole('region', { name: 'AI 检索结果', exact: true })).toContainText('搜索条件已改变');
+    await expect(page.getByRole('region', { name: 'AI 检索结果', exact: true })).toContainText('位置记数法');
+    const localTab = page.getByRole('tab', { name: '本地结果', exact: true });
+    if (await localTab.isVisible()) await localTab.click();
+    await expect(page.getByRole('region', { name: '搜索结果', exact: true })).toContainText('已有内容');
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
@@ -65,22 +74,24 @@ test('offline and a genuinely missing CLI preserve basic short-word/symbol searc
   try {
     const page = await app.firstWindow(); await resizeBoardWindow(app, page);
     await page.getByRole('button', { name: '搜索课程', exact: true }).click();
-    await page.getByText('按记忆线索查找（Agent）', { exact: true }).click();
-    await expect(page.getByRole('status', { name: '描述检索可用性' })).toContainText('暂不可用');
-    await page.getByRole('textbox', { name: '记忆线索' }).fill('这里记得位置影响数值');
-    await expect(page.getByRole('button', { name: '用描述查找已有内容', exact: true })).toBeDisabled();
-    await page.getByRole('searchbox').fill('模');
+    await page.getByRole('button', { name: 'AI 检索', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: '暂不可用' })).toBeVisible();
+    await page.getByRole('searchbox', { name: '查找已有内容' }).fill('这里记得位置影响数值');
+    await expect(page.getByRole('button', { name: 'AI 查找', exact: true })).toBeDisabled();
+    await page.getByRole('button', { name: 'AI 检索', exact: true }).click();
+    await page.getByRole('searchbox', { name: '查找已有内容' }).fill('模');
     await expect(page.getByRole('region', { name: '搜索结果', exact: true })).toContainText('已有内容');
     await page.context().setOffline(true);
-    await expect(page.getByText('当前离线。上方关键词、别名和符号查找继续可用。', { exact: true })).toBeVisible();
-    await page.getByRole('searchbox').fill('基数');
+    await page.getByRole('button', { name: 'AI 检索', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: '离线' })).toBeVisible();
+    await page.getByRole('button', { name: 'AI 检索', exact: true }).click();
+    await page.getByRole('searchbox', { name: '查找已有内容' }).fill('基数');
     await expect(page.getByRole('region', { name: '搜索结果', exact: true })).toContainText('已有内容');
     await resizeBoardWindow(app, page, 700, 700);
     await expect(page.getByRole('dialog', { name: '搜索课程', exact: true })).toBeVisible();
     await expect(page.locator('main.board')).toHaveAttribute('inert', '');
-    await page.getByRole('textbox', { name: '记忆线索' }).focus();
-    await page.keyboard.press('Shift+Tab');
-    await expect(page.getByRole('dialog', { name: '搜索课程', exact: true })).toContainText('当前离线');
+    await page.getByRole('searchbox', { name: '查找已有内容' }).focus();
+    await expect(page.getByRole('searchbox', { name: '查找已有内容' })).toHaveValue('基数');
     await page.screenshot({ path: evidencePath('t20-description-narrow.png') });
     await page.keyboard.press('Escape');
     await expect(page.getByRole('button', { name: '搜索课程', exact: true })).toBeFocused();
@@ -96,30 +107,95 @@ test('literal input stays responsive while description is waiting, and stopping 
     await page.evaluate(() => {
       const interactions: unknown[] = []; (window as any).__descriptionInteractions = interactions;
       for (const type of ['pointerdown', 'pointerup', 'click']) document.addEventListener(type, event => {
-        const target = event.target instanceof Element ? event.target.closest<HTMLElement>('button, summary, textarea, select') : null;
-        if (!target?.closest('.description-search') || interactions.length >= 30) return;
+        const target = event.target instanceof Element ? event.target.closest<HTMLElement>('button, input, [role="combobox"], [role="tab"]') : null;
+        if (!target?.closest('[aria-label="搜索课程"]') || interactions.length >= 30) return;
         interactions.push({ type, trusted: event.isTrusted, time: performance.now(), target: target.getAttribute('aria-label') ?? target.textContent,
           disabled: target instanceof HTMLButtonElement ? target.disabled : undefined, bounds: target.getBoundingClientRect().toJSON() });
       }, true);
     });
     await page.getByRole('button', { name: '搜索课程', exact: true }).click();
-    await page.getByText('按记忆线索查找（Agent）', { exact: true }).click();
-    await page.getByRole('textbox', { name: '记忆线索' }).fill('记得位置会影响值');
-    await expect(page.getByRole('status', { name: '描述检索可用性' })).toContainText('本机 CLI 与模型目录已检查。');
-    await expect(page.getByRole('combobox', { name: '描述检索模型' })).toHaveValue('fixture');
-    await page.getByRole('button', { name: '用描述查找已有内容', exact: true }).click();
-    const enhanced = page.getByRole('region', { name: '描述检索结果', exact: true });
+    await page.getByRole('button', { name: 'AI 检索', exact: true }).click();
+    await page.getByRole('searchbox', { name: '查找已有内容' }).fill('记得位置会影响值');
+    await expect(page.getByRole('button', { name: '检索模型' })).toContainText('Description fixture');
+    await page.getByRole('button', { name: 'AI 查找', exact: true }).click();
+    const enhanced = page.getByRole('region', { name: 'AI 检索结果', exact: true });
     await expect(enhanced.getByText('实际执行的查询 · 1', { exact: true })).toBeVisible();
-    await page.getByRole('searchbox').fill('模');
+    const localTab = page.getByRole('tab', { name: '本地结果', exact: true });
+    await page.getByRole('searchbox', { name: '查找已有内容' }).fill('基数');
     await expect(page.getByRole('region', { name: '搜索结果', exact: true })).toContainText('已有内容');
+    await page.getByRole('tab', { name: 'AI 结果', exact: true }).click();
+    await expect(enhanced).toContainText('搜索条件已改变');
     await expect(enhanced).toHaveAttribute('aria-busy', 'true');
-    await page.getByRole('button', { name: '停止描述检索', exact: true }).click();
-    await expect(enhanced.getByRole('status', { name: '描述检索状态' })).toContainText('已停止');
+    await page.getByRole('button', { name: '停止 AI 查找', exact: true }).click();
+    await expect(enhanced.getByRole('status').filter({ hasText: '已停止' })).toBeVisible();
     await expect(enhanced.locator('.search-result')).toHaveCount(0);
-    await page.getByRole('searchbox').fill('基数');
+    await page.waitForTimeout(4500);
+    await expect(enhanced.getByRole('status').filter({ hasText: '已停止' })).toBeVisible();
+    await expect(enhanced.locator('.search-result')).toHaveCount(0);
+    await page.getByRole('searchbox', { name: '查找已有内容' }).fill('基数');
+    await expect(enhanced.locator('.search-result')).toHaveCount(0);
+    if (await localTab.isVisible()) await localTab.click();
     await expect(page.getByRole('region', { name: '搜索结果', exact: true })).toContainText('已有内容');
   } catch (error) {
     if (page) await captureDescriptionFailure(page).catch(() => {});
     throw error;
+  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('AI model selection survives mode toggles and an Electron restart in the same profile', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-description-model-ui-')); await chmod(fixture, 0o755);
+  const args = [resolve('.'), `--course=${join(root, 'course')}`];
+  const env = { ...process.env, YIZHI_DATA_HOME: join(root, 'profile'), YIZHI_CODEX_PATH: fixture, YIZHI_DESCRIPTION_FIXTURE: 'paragraph' };
+  let app = await electron.launch({ args, env });
+  try {
+    const page = await app.firstWindow(); await resizeBoardWindow(app, page);
+    await page.getByRole('button', { name: '搜索课程', exact: true }).click();
+    const mode = page.getByRole('button', { name: 'AI 检索', exact: true });
+    const model = page.getByRole('button', { name: '检索模型' });
+    await expect(mode).toHaveAttribute('aria-pressed', 'false');
+    await expect(model).toHaveCount(0);
+    await mode.click();
+    await expect(mode).toHaveAttribute('aria-pressed', 'true');
+    await expect(model).toContainText('Description fixture');
+    await model.click();
+    await page.getByRole('menuitemradio', { name: 'Description fixture second', exact: true }).click();
+    await expect(model).toContainText('Description fixture second');
+    await mode.click();
+    await expect(mode).toHaveAttribute('aria-pressed', 'false');
+    await expect(model).toHaveCount(0);
+    await mode.click();
+    await expect(mode).toHaveAttribute('aria-pressed', 'true');
+    await expect(model).toContainText('Description fixture second');
+    const input = page.getByRole('searchbox', { name: '查找已有内容' });
+    const initialHeight = (await input.boundingBox())!.height;
+    await input.fill('线'.repeat(257));
+    await expect(page.getByRole('region', { name: '搜索结果', exact: true })).toContainText('本地搜索最多支持 256 字');
+    await expect(page.getByRole('button', { name: 'AI 查找', exact: true })).toBeEnabled();
+    expect((await input.boundingBox())!.height).toBeGreaterThan(initialHeight);
+    await resizeBoardWindow(app, page, 700, 700);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await model.focus(); await page.keyboard.press('Space');
+    await expect(page.getByRole('menuitemradio', { name: 'Description fixture second', exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: '搜索课程' })).toBeVisible();
+    await expect(model).toBeFocused();
+    await mode.focus(); await page.keyboard.press('Space'); await page.keyboard.press('Space');
+    await expect(mode).toHaveAttribute('aria-pressed', 'true');
+    expect(await page.locator('.search-field').evaluate(el => parseFloat(getComputedStyle(el, '::after').transitionDuration))).toBeLessThan(0.001);
+    await app.close();
+    app = await electron.launch({ args, env });
+    const reopened = await app.firstWindow(); await resizeBoardWindow(app, reopened);
+    await reopened.getByRole('button', { name: '搜索课程', exact: true }).click();
+    const reopenedMode = reopened.getByRole('button', { name: 'AI 检索', exact: true });
+    if (await reopenedMode.getAttribute('aria-pressed') !== 'true') await reopenedMode.click();
+    await expect(reopened.getByRole('button', { name: '检索模型' })).toContainText('Description fixture second');
+    await reopened.getByRole('searchbox', { name: '查找已有内容' }).fill('同一数码的位置变化会影响什么');
+    await expect(reopened.getByRole('button', { name: 'AI 查找', exact: true })).toBeEnabled();
+    await reopened.getByRole('searchbox', { name: '查找已有内容' }).press('Enter');
+    const result = reopened.getByRole('region', { name: 'AI 检索结果', exact: true });
+    await expect(result).toContainText('检索完成');
+    const id = (await result.getAttribute('data-description-id'))!;
+    const run = await reopened.evaluate(async id => { const course = await window.yizhi.open(); return window.yizhi.description.get({ sessionId: course.sessionId, id }); }, id);
+    expect(run.executor?.model).toBe('fixture-second');
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });

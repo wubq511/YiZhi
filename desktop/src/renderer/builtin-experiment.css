@@ -16,7 +16,7 @@
 .builtin-experiment .builtin-result { color: #286b58; background: #edf7f1; padding: 10px 14px; margin-block: 12px 20px; }
 .builtin-runtime { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 20px; }
 .builtin-runtime label { font: 18px/1.6 system-ui, sans-serif; }
-.builtin-experiment button { min-height: 34px; }
+.builtin-experiment [data-slot="button"] { height: auto; min-height: 44px; padding: 6px 12px; font: 18px/1.4 system-ui, sans-serif; white-space: normal; }
 .builtin-experiment button:focus-visible, .builtin-experiment input:focus-visible { outline: 2px solid #6965db; outline-offset: 3px; }
 .builtin-experiment button:disabled { opacity: .55; cursor: default; }
 .builtin-experiment .builtin-error { color: #a13737; background: #fdf0f0; padding: 12px; }

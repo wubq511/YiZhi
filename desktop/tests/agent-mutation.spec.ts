@@ -35,7 +35,7 @@ test('small actual Electron window follows real tool groups, keeps student takeo
   const actual=await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return {state:await b.readingState(c.sessionId),unit:c.unit,graph:await b.graph(c.sessionId)};});expect(actual.state.camera).toEqual(camera);const finalCamera=await matrix();expect(finalCamera.x).toBeCloseTo(liveCamera.x,3);expect(finalCamera.y).toBeCloseTo(liveCamera.y,3);expect(finalCamera.zoom).toBeCloseTo(liveCamera.zoom,6);
   expect(actual.unit.reading.blocks[0].kind).toBe('example');const baseline=actual.graph.layout.nodes.find((n:any)=>n.unitId==='KU-001');
   await page.getByRole('button',{name:'收起对话',exact:true}).click();
-  const summary=page.locator('[data-agent-unit="KU-001"] details summary').first();await revealBoardControl(page,summary);await summary.click();await summary.click();
+  const summary=page.locator('[data-agent-unit="KU-001"] details summary').first();await revealBoardControl(page,summary);await summary.click();await revealBoardControl(page,summary);await summary.click();
   expect((await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return b.graph(c.sessionId);})).layout.nodes.find((n:any)=>n.unitId==='KU-001')).toEqual(baseline);
   await page.getByRole('button',{name:'学习对话',exact:true}).click();
   await page.getByRole('button',{name:'停止任务',exact:true}).click();

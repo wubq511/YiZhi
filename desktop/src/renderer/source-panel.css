@@ -1,24 +1,25 @@
 .source-panel { position: fixed; z-index: 60; top: 0; right: 0; bottom: 0; width: min(590px, 100vw); box-sizing: border-box; padding: 20px 22px; background: #fff; color: #27343e; box-shadow: -8px 0 30px #27343e1a; display: flex; flex-direction: column; gap: 12px; overflow: auto; font: 14px/1.5 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; }
-.source-panel :is(button, input, select) { font: inherit; color: inherit; border: 1px solid #e5e5eb; border-radius: 6px; background: #fff; padding: 6px 9px; max-width: 100%; box-sizing: border-box; }
-.source-panel button { cursor: pointer; white-space: nowrap; }
-.source-panel button:hover { background: #eeedff; border-color: #6965db; }
-.source-panel button:disabled { color: #626b79; background: #f6f6f9; cursor: default; }
+.source-panel :is(button, input, select) { max-width: 100%; box-sizing: border-box; }
 .source-panel button[aria-pressed="true"] { background: #eeedff; color: #514bbe; border-color: #6965db; }
-.source-panel :focus-visible { outline: 2px solid #6965db; outline-offset: 3px; }
+.source-panel :is(summary, .source-scroll):focus-visible { outline: 2px solid #7568cd; outline-offset: 2px; }
 .source-panel ::selection { background: #eeedff; color: #27343e; }
 .source-panel input::placeholder { color: #687080; }
 .source-panel input { caret-color: #6965db; }
-.source-panel h2 { font-size: 22px; margin: 0; }
+.source-panel h2 { font-size: 15px; font-weight: 600; margin: 0; }
 .source-panel p { margin: 0 0 8px; overflow-wrap: anywhere; }
 .source-heading, .source-controls, .source-pagination, .source-page-map { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .source-heading { justify-content: space-between; }
 .source-controls label { display: flex; align-items: center; gap: 8px; width: 100%; }
-.source-controls select { flex: 1; min-width: 0; }
+.source-controls .source-version { flex: 1; min-width: 0; width: 100%; }
+.source-panel [data-slot="input"], .source-panel [data-slot="native-select"] { background-color: #fff; }
 .source-update { padding-block: 8px; }
 .source-update button + button { margin-left: 8px; }
 .source-pagination input { width: 60px; font-variant-numeric: tabular-nums; }
 .source-pagination label { display: flex; align-items: center; gap: 5px; }
 .source-page-map input { width: 164px; }
+.source-print-navigation { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.source-print-navigation input { width: 164px; }
+.source-print-navigation p { flex-basis: 100%; }
 .source-scroll { flex: 1 0 220px; min-height: 220px; max-height: 65vh; overflow: auto; background: #f6f6f9; padding: 12px; overscroll-behavior: contain; scrollbar-color: #b6b4d1 #f6f6f9; scrollbar-width: thin; }
 .source-page-frame { position: relative; width: fit-content; min-width: 1px; }
 .source-pdf { position: relative; background: white; line-height: 1; }

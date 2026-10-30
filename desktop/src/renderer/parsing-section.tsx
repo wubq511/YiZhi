@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { Button } from './components/ui/button';
+import { Input } from './components/ui/input';
+import { Textarea } from './components/ui/textarea';
+import { NativeSelect, NativeSelectOption } from './components/ui/native-select';
 import type { SourceVersion } from '../sources-api';
 import type { ArtifactRef, ParseTask, ParsedPage, ParseStructure } from '../parsing-api';
 import './parsing-section.css';
@@ -41,22 +45,22 @@ export function ParsingSection({sessionId,generation,source,onSource}:{sessionId
   }
   return <details className="parsing-section"><summary>解析此资料</summary>
     <p>保留文字位置、原生表格／公式标签及页面图像。扫描页需要另行 OCR；解析不会改写画板。</p>
-    <div className="parse-actions"><button disabled={busy||source.mediaType!=='application/pdf'||task?.status==='running'} onClick={()=>{
+    <div className="parse-actions"><Button variant="outline" size="sm" disabled={busy||source.mediaType!=='application/pdf'||task?.status==='running'} onClick={()=>{
       const request={sessionId,generation,operationId:crypto.randomUUID(),versionId:source.versionId};
       void run(async()=>{const result=await api.start(request);setSelected(result.taskId);});
-    }}>{tasks.length?'重新解析为新版本':'开始解析此版本'}</button>
-    {task?.status==='running'&&<button disabled={busy} onClick={()=>{const request={sessionId,generation,operationId:crypto.randomUUID(),taskId:task.taskId,attemptId:task.attemptId};void run(async()=>{await api.stop(request);});}}>停止解析</button>}
-    {task&&['failed','stopped','interrupted'].includes(task.status)&&<button disabled={busy} onClick={()=>{const request={sessionId,generation,operationId:crypto.randomUUID(),taskId:task.taskId};void run(async()=>{await api.continue(request);});}}>从已确认页面继续</button>}</div>
+    }}>{tasks.length?'重新解析为新版本':'开始解析此版本'}</Button>
+    {task?.status==='running'&&<Button variant="outline" size="sm" disabled={busy} onClick={()=>{const request={sessionId,generation,operationId:crypto.randomUUID(),taskId:task.taskId,attemptId:task.attemptId};void run(async()=>{await api.stop(request);});}}>停止解析</Button>}
+    {task&&['failed','stopped','interrupted'].includes(task.status)&&<Button variant="outline" size="sm" disabled={busy} onClick={()=>{const request={sessionId,generation,operationId:crypto.randomUUID(),taskId:task.taskId};void run(async()=>{await api.continue(request);});}}>从已确认页面继续</Button>}</div>
     {source.mediaType!=='application/pdf'&&<p>当前入口只解析 PDF；图片未执行 OCR。</p>}
-    {tasks.length>1&&<label>解析记录<select aria-label="解析记录" value={task?.taskId} onChange={e=>setSelected(e.target.value)}>{tasks.map((t,i)=><option key={t.taskId} value={t.taskId}>解析 {tasks.length-i} · {statuses[t.status]}</option>)}</select></label>}
+    {tasks.length>1&&<label>解析记录<NativeSelect className="w-full" aria-label="解析记录" value={task?.taskId} onChange={e=>setSelected(e.target.value)}>{tasks.map((t,i)=><NativeSelectOption key={t.taskId} value={t.taskId}>解析 {tasks.length-i} · {statuses[t.status]}</NativeSelectOption>)}</NativeSelect></label>}
     <p role="status" aria-label="解析进度">{task?`${statuses[task.status]} · 已确认 ${task.confirmed.length} / ${source.pdfPages} 页`:'尚未解析'}</p>
     {task?.failure&&<p className="parse-failure">{task.failure}</p>}
-    {error&&<div role="alert" className="parse-failure"><p>{error}</p><button disabled={busy} onClick={()=>retry.current?void run(retry.current):void refresh().catch(e=>setError(e.message))}>重试解析操作</button></div>}
-    {task&&<><div className="parse-artifacts">{task.confirmed.map(ref=><button key={ref.artifactId} disabled={busy} onClick={()=>void run(()=>view(ref))}>查看第 {ref.pdfPageIndex+1} 页产物</button>)}{refs.filter(ref=>ref.parentArtifactId).map(ref=><button key={ref.artifactId} disabled={busy} onClick={()=>void run(()=>view(ref))}>查看修正版</button>)}</div>
+    {error&&<div role="alert" className="parse-failure"><p>{error}</p><Button variant="outline" size="sm" disabled={busy} onClick={()=>retry.current?void run(retry.current):void refresh().catch(e=>setError(e.message))}>重试解析操作</Button></div>}
+    {task&&<><div className="parse-artifacts">{task.confirmed.map(ref=><Button variant="outline" size="sm" key={ref.artifactId} disabled={busy} onClick={()=>void run(()=>view(ref))}>查看第 {ref.pdfPageIndex+1} 页产物</Button>)}{refs.filter(ref=>ref.parentArtifactId).map(ref=><Button variant="outline" size="sm" key={ref.artifactId} disabled={busy} onClick={()=>void run(()=>view(ref))}>查看修正版</Button>)}</div>
       <details><summary>输入、工具与尝试</summary><p>{task.tool.name} {task.tool.version} · {task.tool.adapter} · 配置 {task.config.version} · 不使用 OCR</p><p>固定输入版本 {task.source.versionId}</p><p>SHA-256 {task.source.sha256}</p>{task.attempts.map((attempt,i)=><p key={attempt.attemptId}>尝试 {i+1} · {attempt.startedAt} · 执行页 {attempt.pagesStarted.map(n=>n+1).join('、')}{attempt.failure&&` · ${attempt.failure}`}</p>)}</details></>}
     {artifact&&<section aria-label="结构化页面产物" className="parse-page"><h3>PDF 第 {artifact.pdfPageIndex+1} 页产物</h3>
       <p>{artifact.textStatus==='ocr-needed'?'没有可靠文本层，需要 OCR；未生成文字。':`${artifact.text.length} 个文字片段 · ${artifact.images.length} 个图片区域`}</p>
-      <button onClick={()=>onSource(artifact.pdfPageIndex)}>核对产物原页</button>
+      <Button variant="outline" size="sm" onClick={()=>onSource(artifact.pdfPageIndex)}>核对产物原页</Button>
       <details><summary>产物版本与依据</summary><p>产物 {artifactId}</p><p>SHA-256 {selectedRef?.digest}</p><p>固定来源版本 {artifact.source.versionId}</p>{artifact.correction&&<p>人工修正：{artifact.correction.note} · {artifact.correction.correctedAt} · 原产物 {artifact.correction.parentArtifactId}</p>}</details>
       <p className="parse-coordinate">原页坐标 [{artifact.view.join(', ')}] · PDF user space</p>
       {artifact.resources.filter(r=>r.mediaType==='image/png').map(r=><img key={r.sha256} className="parse-raster" alt={`PDF 第 ${artifact.pdfPageIndex+1} 页保留图像`} src={`yizhi-resource://course/${sessionId}/${artifactId}/${r.sha256}`}/>)}
@@ -64,10 +68,10 @@ export function ParsingSection({sessionId,generation,source,onSource}:{sessionId
       {!!artifact.text.length&&<details open><summary>文字与原页位置</summary><ol className="parse-text">{artifact.text.map(item=><li key={item.id}><p>{item.text}</p><small>[{item.bounds.map(n=>n.toFixed(1)).join(', ')}]{item.corrected?' · 人工修正':''}</small></li>)}</ol></details>}
       {!!artifact.images.length&&<details><summary>图片定位</summary>{artifact.images.map(image=><p key={image.id}>原页图像区域 [{image.bounds.map(n=>n.toFixed(1)).join(', ')}]</p>)}</details>}
       {!!artifact.text.length&&<form onSubmit={e=>{e.preventDefault();const request={sessionId,generation,operationId:crypto.randomUUID(),artifactId,textId,text,note};void run(async()=>{const next=await api.correct(request);await view(next);setMessage('已保留新版本，原产物仍可查。');});}}>
-        <h4>核对后修正文字</h4><label>文字片段<select aria-label="修正文字片段" value={textId} onChange={e=>{setTextId(e.target.value);setText(artifact.text.find(t=>t.id===e.target.value)?.text??'');}}>{artifact.text.map(item=><option key={item.id} value={item.id}>{item.text.slice(0,40)}</option>)}</select></label>
-        <label>修正文字<textarea aria-label="修正文字" value={text} maxLength={100000} onChange={e=>setText(e.target.value)}/></label>
-        <label>修正依据<input aria-label="修正依据" value={note} maxLength={2000} onChange={e=>setNote(e.target.value)} placeholder="说明与原页核对的结果"/></label>
-        <button disabled={busy||!note.trim()}>保留为新产物版本</button><p role="status" aria-label="产物修正结果">{message}</p>
+        <h4>核对后修正文字</h4><label>文字片段<NativeSelect className="w-full" aria-label="修正文字片段" value={textId} onChange={e=>{setTextId(e.target.value);setText(artifact.text.find(t=>t.id===e.target.value)?.text??'');}}>{artifact.text.map(item=><NativeSelectOption key={item.id} value={item.id}>{item.text.slice(0,40)}</NativeSelectOption>)}</NativeSelect></label>
+        <label>修正文字<Textarea aria-label="修正文字" value={text} maxLength={100000} onChange={e=>setText(e.target.value)}/></label>
+        <label>修正依据<Input aria-label="修正依据" value={note} maxLength={2000} onChange={e=>setNote(e.target.value)} placeholder="说明与原页核对的结果"/></label>
+        <Button type="submit" disabled={busy||!note.trim()}>保留为新产物版本</Button><p role="status" aria-label="产物修正结果">{message}</p>
       </form>}
       <details><summary>解析能力与局限</summary><ul>{artifact.limitations.map(line=><li key={line}>{line}</li>)}</ul></details>
     </section>}

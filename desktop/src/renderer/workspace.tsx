@@ -5,7 +5,7 @@ import { CourseMenu } from './shell/course-menu';
 import { SaveIndicator, useSaveReport, resetSaves, reportSave } from './shell/save-status';
 import { CanvasToolbar, CanvasNavigation } from './shell/canvas-toolbar';
 import { Button } from './components/ui/button';
-import { MessageCircle, ChevronRight, X, ArrowLeft, Circle, CircleCheck, CircleAlert } from 'lucide-react';
+import { MessageCircle, ArrowLeft } from 'lucide-react';
 import type { DrawingToolState } from './drawings';
 import type { AnnotationSelection } from '../annotation-api';
 import { observation } from '../acceptance-observation';
@@ -16,6 +16,7 @@ import { RetentionPanel } from './retention-panel';
 import { HistoryPanel,type HistoryPanelHandle } from './history-panel';
 import { Drawings, type DrawingHandle } from './drawings';
 import { SearchPanel } from './search-panel';
+import { DirectoryPanel } from './directory-panel';
 import type { SearchHit } from '../search-api';
 import { highlightSearch, paintFrame, waitForSearchElement } from './search-location';
 import { AnnotationPanel, type AnnotationPanelHandle } from './annotation-panel';
@@ -113,10 +114,10 @@ function BlockContent({ block, onReference, reading, updateReading, onSource, ex
   if (block.kind === 'figure' && payload.asset) {
     const registered = experiment.contentScope === 'content-candidate' || experiment.resourceAssets?.includes(payload.asset);
     const fixedPage = /^\/source-pages\/([^/]+)\/([^/]+)\/(\d+)\.png$/.exec(payload.asset);
-    return <figure><img data-search-field="alt" src={registered ? `yizhi-resource://course/${experiment.sessionId}/content/${encodeURIComponent(payload.asset)}` : './ti74153-1.png'} alt={payload.alt} /><figcaption data-search-field="caption">{payload.caption}</figcaption><button onClick={event => onSource(event.currentTarget)} data-source-registered={registered || undefined} data-source-version={fixedPage?.[2] ?? (block.sourceRefs as Array<any> | undefined)?.[0]?.versionId} data-source-page={fixedPage?.[3] ?? (block.sourceRefs as Array<any> | undefined)?.[0]?.pdfPages?.[0]}>查看{registered ? '固定原页' : ' TI 74153 原页'}</button></figure>;
+    return <figure><img data-search-field="alt" src={registered ? `yizhi-resource://course/${experiment.sessionId}/content/${encodeURIComponent(payload.asset)}` : './ti74153-1.png'} alt={payload.alt} /><figcaption data-search-field="caption">{payload.caption}</figcaption><Button variant="outline" size="sm" onClick={event => onSource(event.currentTarget)} data-source-registered={registered || undefined} data-source-version={fixedPage?.[2] ?? (block.sourceRefs as Array<any> | undefined)?.[0]?.versionId} data-source-page={fixedPage?.[3] ?? (block.sourceRefs as Array<any> | undefined)?.[0]?.pdfPages?.[0]}>查看{registered ? '固定原页' : ' TI 74153 原页'}</Button></figure>;
   }
   if (block.kind === 'figure' && payload.config?.nodes) return <figure><figcaption data-search-field="alt">{payload.alt}</figcaption><svg viewBox="0 0 640 250" role="img" aria-label={payload.alt}>{payload.config.edges.map((edge: any, index: number) => { const a = payload.config.nodes.find((node: any) => node.id === edge.from), b = payload.config.nodes.find((node: any) => node.id === edge.to); return <line key={index} x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#7798bc" />; })}{payload.config.nodes.map((node: any) => <g key={node.id} data-search-field={`config.nodes.${payload.config.nodes.indexOf(node)}.label`}><rect x={node.x - 45} y={node.y - 20} width="90" height="40" fill="white" stroke="#7798bc" /><text x={node.x} y={node.y} textAnchor="middle" dominantBaseline="middle" fontSize="13">{node.label}</text></g>)}</svg><figcaption data-search-field="config.caption">{payload.config.caption}</figcaption></figure>;
-  if (block.kind === 'knowledge-reference') return <p className="reference"><span data-search-field="intent">{payload.intent}</span><br/><button onClick={() => onReference(payload.targetUnitId, block.id)}>前往 {payload.targetUnitId}</button></p>;
+  if (block.kind === 'knowledge-reference') return <p className="reference"><span data-search-field="intent">{payload.intent}</span><br/><Button variant="outline" size="sm" onClick={() => onReference(payload.targetUnitId, block.id)}>前往 {payload.targetUnitId}</Button></p>;
   return <details open={reading?.expanded[`${block.id}:retained`] ?? false} onToggle={event => updateReading(`${block.id}:retained`, event.currentTarget.open)}><summary>保留的内容 · {block.kind}</summary><pre>{JSON.stringify(payload, null, 2)}</pre>{children}</details>;
 }
 
@@ -160,7 +161,6 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
   const backupPanel = useRef<{open(pointer?:boolean):void}>(null), retentionPanel = useRef<{open(pointer?:boolean):void}>(null), restorePanel = useRef<{open(pointer?:boolean):void}>(null);
   const [drawingTool, setDrawingTool] = useState<DrawingToolState>({space:'board',pending:false});
   const capturedSelection = useRef<AnnotationSelection | undefined>(undefined);
-  const [directoryTheme, setDirectoryTheme] = useState<string>();
   const [narrow, setNarrow] = useState(() => matchMedia('(max-width: 760px)').matches);
   const navRef = useRef<HTMLElement>(null);
   useEffect(() => { const media = matchMedia('(max-width: 760px)'); const update = () => setNarrow(media.matches); media.addEventListener('change', update); return () => media.removeEventListener('change', update); }, []);
@@ -246,7 +246,6 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
   };
   const [reading, setReading] = useState<ReadingState | null>(null);
   const [review, setReview] = useState<ReviewSnapshot>();
-  const [reviewFilter, setReviewFilter] = useState<'all' | ReviewStatus>('all');
   const readingRef = useRef<ReadingState | null>(null);
   const navigation = useRef<Promise<void>>(Promise.resolve());
   const writes = useRef<Promise<void>>(Promise.resolve());
@@ -457,7 +456,7 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
     if (!position) return;
     setReadError(undefined);
     if (!await flushUnitInputs(true)) { setReadError('当前单元输入尚未保存，请先处理后再切换。'); return; }
-    try { const unit = await window.yizhi.readUnit(course.sessionId, id); persist(nextState ?? { ...(readingRef.current ?? { expanded: {}, returnStack: [], scrollTop: 0 }), unitId: id, scrollTop: 0, pinnedUnitId: mounted.some(item => item.id === 'KU-001') || id === 'KU-001' ? 'KU-001' : undefined }); selectedRef.current=id;setSelected(unit); setDirectoryTheme(unit.theme.id); cacheUnit(unit,id); }
+    try { const unit = await window.yizhi.readUnit(course.sessionId, id); persist(nextState ?? { ...(readingRef.current ?? { expanded: {}, returnStack: [], scrollTop: 0 }), unitId: id, scrollTop: 0, pinnedUnitId: mounted.some(item => item.id === 'KU-001') || id === 'KU-001' ? 'KU-001' : undefined }); selectedRef.current=id;setSelected(unit); cacheUnit(unit,id); }
 
     catch (error) { setSelected(undefined); setReadError((error as Error).message); }
     pinchFrame.cancel();
@@ -682,7 +681,7 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
   useSaveReport('body', { label: '正文', status: state.status, detail: state.error, retry: () => channel.current?.flush() });
   useSaveReport('layout', { label: '布局', status: layoutSave, retry: saveLayout });
   useSaveReport('reading', { label: '阅读位置', status: readingSave, retry: () => { if (readingRef.current) { readingFailed.current = false; persist(readingRef.current); } } });
-  if(!course&&readonlyReport)return <><header className="app-header"><strong className="brand">绎知</strong><span>兼容范围只读 · 拒绝写入</span><button onClick={()=>void load()}>重新核对版本</button></header><ReadonlyCourse report={readonlyReport}/></>;
+  if(!course&&readonlyReport)return <><header className="app-header"><strong className="brand">绎知</strong><span>兼容范围只读 · 拒绝写入</span><Button variant="outline" size="sm" onClick={()=>void load()}>重新核对版本</Button></header><ReadonlyCourse report={readonlyReport}/></>;
   return <>
     <header className="app-header">
       <CourseMenu backup={pointer => backupPanel.current?.open(pointer)} history={pointer => historyPanel.current?.open(undefined, pointer)} restore={pointer => restorePanel.current?.open(pointer)} settings={pointer => retentionPanel.current?.open(pointer)}/>
@@ -753,7 +752,7 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
           if(!await flushUnitInputs(true))throw new Error('请先保存当前单元输入。');
           const unit=await window.yizhi.readUnit(course.sessionId,displayedUnitId);
           selectedRef.current=unit.id;cacheUnit(unit,unit.id);
-          setSelected(unit);setDirectoryTheme(unit.theme.id);if(readingRef.current)persist({...readingRef.current,unitId:unit.id});requestAnimationFrame(()=>camera.resume());
+          setSelected(unit);if(readingRef.current)persist({...readingRef.current,unitId:unit.id});requestAnimationFrame(()=>camera.resume());
         }
         else if(phase==='finish'){mutationUnitRef.current=undefined;setMutationUnit(undefined);camera.finish();if(readingRef.current)persist({...readingRef.current,modification:{targetId:workTarget.current,ended:true}});}
         else requestAnimationFrame(()=>camera.updated());
@@ -783,10 +782,8 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
     <div className="workspace board-workspace" aria-busy={!cameraReady && !loadError}>
       <NavigationRail beforeOpen={id => { captureSelection(); if (id === 'search' && shell.visibleLeft !== 'search') searchOrigin.current = captureSearchScene(); }}/>
       <PanelDock side="left">
-      <nav ref={navRef} className="directory-panel" hidden={!directory} inert={!directory || sourceOpen} aria-label="课程目录" onKeyDown={event => { if (event.key === 'Escape') closeDirectory(); }}>
-        <div className="panel-heading"><h2>课程目录</h2><button className="panel-close" aria-label="收起目录" onClick={closeDirectory}><X size={18}/></button></div>
-        <label className="review-filter"><span className="sr-only">复习状态筛选</span><select aria-label="复习状态筛选" value={reviewFilter} onChange={event => setReviewFilter(event.target.value as typeof reviewFilter)}><option value="all">全部单元</option><option value="pending">待复习</option><option value="weak">薄弱</option><option value="mastered">已掌握</option></select></label>
-        {graph?.groups.map(group => { const counts = review?.themes[group.id]; const matches = graph.nodes.filter(node => node.themeId === group.id && (reviewFilter === 'all' ? (directoryTheme ?? selected?.theme.id) === group.id : review?.units[node.id]?.status === reviewFilter)); return <div key={group.id}><button aria-label={group.name} className="directory-theme" aria-expanded={(directoryTheme ?? selected?.theme.id) === group.id} onClick={() => { setDirectoryTheme(group.id); const first = matches[0] ?? graph.nodes.find(node => node.themeId === group.id); if (first) { void go(first.id); if (narrow) closeDirectory(); } }}><ChevronRight size={15}/><span className="directory-title">{group.name}</span>{counts ? <span className="directory-count" aria-label={`${counts.mastered} 个已掌握`}>{counts.mastered}/{counts.pending+counts.weak+counts.mastered}</span> : ''}</button>{matches.map(node => <button aria-label={node.name} aria-describedby={`review-state-${node.id}`} className="directory-unit" aria-current={selected?.id === node.id ? "page" : undefined} key={node.id} onClick={() => { void go(node.id); if (narrow) closeDirectory(); }}><span className="directory-title">{node.name}</span>{review ? <span id={`review-state-${node.id}`} className={`directory-status status-${review.units[node.id]?.status ?? "pending"}`} title={{pending:'待复习',weak:'薄弱',mastered:'已掌握'}[review.units[node.id]?.status ?? 'pending']}><span className="sr-only">{{pending:'待复习',weak:'薄弱',mastered:'已掌握'}[review.units[node.id]?.status ?? 'pending']}</span>{review.units[node.id]?.status === 'mastered' ? <CircleCheck size={13} aria-hidden="true"/> : review.units[node.id]?.status === 'weak' ? <CircleAlert size={13} aria-hidden="true"/> : <Circle size={5} aria-hidden="true"/>}</span> : ''}</button>)}</div>; })}</nav></PanelDock>
+      <DirectoryPanel navRef={navRef} open={directory} inert={sourceOpen} graph={graph} review={review} selectedId={selected?.id}
+        selectedThemeId={selected?.theme.id} narrow={narrow} onClose={closeDirectory} onNavigate={id => { void go(id); }}/></PanelDock>
       <main onWheelCapture={event => { if (!((event.target as HTMLElement).closest('.board-tools, .relations-panel, .source-dialog, input, select, textarea, .mux, .builtin-formula-editor, math-field'))) camera.takeover(); }} onPointerDownCapture={event => { pinchFrame.cancel(); const target = event.target as HTMLElement; if (target.closest('.react-flow__pane, .react-flow__minimap, .board-tools')) camera.takeover(); }} ref={boardRef} className="board" data-relations-open={relationsOpen?'':undefined} aria-label="知识画板" role="region" inert={(narrow && (!!shell.visibleLeft || shell.visibleAgent || accessoryOpen)) || !cameraReady && !loadError}>
         <div className="board-background" inert={sourceOpen || (narrow && relationsOpen)}><ReactFlow onlyRenderVisibleElements nodes={nodes} edges={edges} onInit={() => setNodesReady(true)} onEdgeClick={(event, edge) => { setRelationFocus(edge.id); openRelations(event.detail > 0); }} minZoom={0.04} maxZoom={2} nodesDraggable={false} panOnScroll zoomOnScroll={false} zoomOnPinch panOnDrag={tool === "select" ? [1] : [0, 1]} selectionOnDrag={tool === "select"} panActivationKeyCode="Space" onMoveStart={event => { if (event) { pinchFrame.cancel(); camera.takeover(); } }} onMove={(event, next) => { updateReadingProtection(); if (event) camera.takeover(); setViewport(next); }} onMoveEnd={(_event, next) => { const current = readingRef.current; if (current) persist({ ...current, camera: next }); }} onNodeClick={(_event, node) => { const first = graph?.nodes.find(item => item.id === node.id || item.themeId === node.id); if (first) void go(first.id); }}>
 
@@ -797,13 +794,13 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
         <CanvasToolbar tool={tool} chooseTool={chooseTool} drawing={drawingTool} capture={captureSelection} chooseDrawing={kind => drawingPanel.current?.choose(kind)} changeSpace={space => drawingPanel.current?.setSpace(space)} manageDrawings={pointer => drawingPanel.current?.manage(pointer)} highlight={() => { const selection = capturedSelection.current; if (selection?.fragments.length) { void drawingPanel.current?.highlight(selection); capturedSelection.current = undefined; } else drawingPanel.current?.choose('highlighter'); }} relations={openRelations} relationView={relationView} changeRelations={setRelationView}/>
         <CanvasNavigation minimap={minimap} toggle={() => setMinimap(!minimap)} zoom={viewport.zoom} zoomIn={() => { camera.takeover(); void flow.zoomIn({duration:0}); }} zoomOut={() => { camera.takeover(); void flow.zoomOut({duration:0}); }} fit={() => { camera.takeover(); pinchFrame.cancel(); void flow.fitBounds(flow.getNodesBounds(flow.getNodes()),{duration:0}); }}/>
         {(searchReturn || !!reading?.returnStack.length) && <div className="reading-return"><Button variant="outline" onClick={() => { if (searchReturn) void searchReturn().catch(e => setReadError(e.message)); else if (reading?.returnStack.length) { const previous = reading.returnStack.at(-1)!; void go(previous.unitId, {...reading,unitId:previous.unitId,scrollTop:previous.scrollTop,camera:previous.camera,returnStack:reading.returnStack.slice(0,-1)}); } }}><ArrowLeft size={16}/>{searchReturn ? '返回搜索前位置' : '返回引用位置'}</Button></div>}
-        {loadError && <div className="load-error" role="alert"><h1>课程未打开</h1><p>{loadError}</p><button onClick={() => void load()}>重新打开课程</button></div>}
+        {loadError && <div className="load-error" role="alert"><h1>课程未打开</h1><p>{loadError}</p><Button variant="outline" size="sm" onClick={() => void load()}>重新打开课程</Button></div>}
         {readError && <div className="read-error" role="status">{visibleError(readError)}</div>}
         {course && mounted.filter(unit=>unit.id===selected?.id||unit.id==='KU-001'||readingRange.includes(unit.id)||heldReading.includes(unit.id)||unit.id===mutationUnit).map(unit => { const position = local.placements.find(node => node.unitId === unit.id); if (!position) return null; return <div key={unit.id} className="reading-layer" data-unit-id={unit.id} style={{ width: position.width >= 360 ? position.width : 650, transform: `translate(${viewport.x + position.x * viewport.zoom}px, ${viewport.y + position.y * viewport.zoom}px) scale(${viewport.zoom})`, visibility: viewport.zoom >= 0.55 ? 'visible' : 'hidden' }}>
           <ReadingSurface id={unit.id} name={unit.name} position={position} baseline={graph!.layout.nodes.find(node => node.unitId === unit.id)!} active={selected?.id === unit.id} articleRef={articleRef} measure={local.measure} gesture={local.gesture} commit={place} takeover={() => camera.takeover()}>
             <RoughFrame id={unit.id} />
 
-            <h1 data-search-field="name">{unit.name}</h1><button onClick={event=>historyPanel.current?.open(unit.id,event.detail>0)}>单元历史</button><div className="unit-aliases">{Array.isArray(unit.aliases) && unit.aliases.map((alias: string, i: number) => <span key={i} data-search-field={`aliases.${i}`}>{alias}</span>)}</div><p className="unit-meta">课程重要性 {unit.rating.stars} / 5 · {unit.id}</p>{review && <ReviewControls unitId={unit.id} snapshot={review} change={status => void changeReview(unit.id, status)} confirm={(id, adjust) => void confirmReview(id, adjust)} />}<p className="outcome" data-search-field="outcome">{unit.outcome}</p>
+            <h1 data-search-field="name">{unit.name}</h1><Button variant="outline" size="sm" onClick={event=>historyPanel.current?.open(unit.id,event.detail>0)}>单元历史</Button><div className="unit-aliases">{Array.isArray(unit.aliases) && unit.aliases.map((alias: string, i: number) => <span key={i} data-search-field={`aliases.${i}`}>{alias}</span>)}</div><p className="unit-meta">课程重要性 {unit.rating.stars} / 5 · {unit.id}</p>{review && <ReviewControls unitId={unit.id} snapshot={review} change={status => void changeReview(unit.id, status)} confirm={(id, adjust) => void confirmReview(id, adjust)} />}<p className="outcome" data-search-field="outcome">{unit.outcome}</p>
             {unit.id==='KU-001'&&!course.contentScope&&<ExtensionExperiment sessionId={course.sessionId} active={viewport.zoom>=0.55&&selected?.id===unit.id} disabled={closing}/>}
             <SourceReferences citations={sourceCitations.filter(citation => citation.target?.unitId === unit.id)} onOpen={citation => sourcesPanel.current?.openCitation(citation)} />
             {unit.id === 'KU-001' && channel.current ? <ContinuousUnitEditor course={course} channel={channel.current} disabled={closing || accessoryBusy || !cameraReady} saveError={state.status === 'error'}
@@ -839,10 +836,10 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
           </ReadingSurface>
         </div>; })}</div>
         {course && <div inert={sourceOpen||(narrow&&relationsOpen)}><Drawings onToolChange={setDrawingTool} ref={drawingPanel} sessionId={course.sessionId} viewport={viewport} takeover={()=>camera.takeover()} pan={(dx,dy)=>camera.pan(dx,dy)} prepare={async()=>!!await channel.current?.flush() && await flushUnitInputs()} paint={notes=>{void continuous.current?.paintDrawings(notes);for(const input of unitInputs.current.values())void input.editor()?.paintDrawings(notes);}} contentKey={`${course.revision}:${mounted.map(u=>u.id).join(',')}`} waitLayout={async()=>{await layoutWrites.current;return !layoutPending.current.length;}} restorePlacement={enqueuePlacement}  /></div>}
-        {followState !== 'idle' && <div className="follow-control"><span role="status" aria-label="修改跟随">{followState === 'following' ? '正在跟随修改' : followState === 'paused' ? '已由你控制视野' : '修改已结束'}</span>{followState !== 'following' && <button onClick={() => { camera.resume(); }}>{followState === 'finished' ? '查看修改结果' : '返回并继续跟随'}</button>}</div>}
+        {followState !== 'idle' && <div className="follow-control"><span role="status" aria-label="修改跟随">{followState === 'following' ? '正在跟随修改' : followState === 'paused' ? '已由你控制视野' : '修改已结束'}</span>{followState !== 'following' && <Button variant="outline" size="sm" onClick={() => { camera.resume(); }}>{followState === 'finished' ? '查看修改结果' : '返回并继续跟随'}</Button>}</div>}
 
         {(relationsOpen || relationsExiting) && graph && course && <RelationsPanel graph={graph} sessionId={course.sessionId} view={relationView} narrow={narrow} panelRef={relationPanel} open={relationsOpen} motion={relationMotion} onClose={event => closeRelations(event.detail > 0)} onKeyDown={event => trap(event, () => closeRelations())} onGraph={setGraph} focusId={relationFocus} />}
-        {sourceOpen && <section ref={sourceDialog} className="source-dialog" role="dialog" aria-modal="true" aria-label="TI 74153 原页" onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); closeSource(); } else if (event.key === 'Tab') { event.preventDefault(); sourceDialog.current?.querySelector<HTMLButtonElement>('button')?.focus(); } }}><button onClick={closeSource}>返回正文</button><h2>TI 74153 原页 · 第 1 页</h2><img src="./ti74153-1.png" alt="TI 74153 手册第 1 页" /></section>}
+        {sourceOpen && <section ref={sourceDialog} className="source-dialog" role="dialog" aria-modal="true" aria-label="TI 74153 原页" onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); closeSource(); } else if (event.key === 'Tab') { event.preventDefault(); sourceDialog.current?.querySelector<HTMLButtonElement>('button')?.focus(); } }}><Button variant="outline" size="sm" onClick={closeSource}>返回正文</Button><h2>TI 74153 原页 · 第 1 页</h2><img src="./ti74153-1.png" alt="TI 74153 手册第 1 页" /></section>}
       </main>
       <PanelDock side="agent"/>
     </div>

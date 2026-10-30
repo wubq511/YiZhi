@@ -1,3 +1,4 @@
+import { Button } from './components/ui/button';
 import { reportSave } from './shell/save-status';
 import { useEffect, useRef, useState } from 'react';
 import { MathfieldElement } from 'mathlive';
@@ -108,7 +109,7 @@ function FormulaEditor({ initial, changed, done, composition }: { initial: strin
     host.current!.append(field); field.focus();
     return () => { field.removeEventListener('input', input); field.removeEventListener('compositionstart', composing); field.removeEventListener('compositionend', composed); composition?.(false); field.remove(); resource.close(); };
   }, []);
-  return <div className="builtin-formula-editor"><div ref={host} /><button onClick={done}>完成公式编辑</button></div>;
+  return <div className="builtin-formula-editor"><div ref={host} /><Button variant="outline" size="sm" onClick={done}>完成公式编辑</Button></div>;
 }
 function Diagram({ v }: { v: ExperimentView }) {
   const d = v.definition, r = v.result;
@@ -169,20 +170,20 @@ export function BuiltinExperiment({ block, unitId, sessionId, active, disabled, 
     <h3 data-search-field="title">{title}</h3>
 
     {!v ? <p role="status">{client.error ?? '正在恢复实验现场…'}</p> : <>
-      {v.pendingDefinition && <div role="status" aria-label="实验定义迁移"><p>正式定义 {v.pendingDefinition.revision} 已保存；当前现场仍采用定义 {v.definition.revision}。{v.gesture ? '本次操作结束后迁移。' : v.migrationError ?? '正在接续兼容现场。'}</p>{v.migrationError && <button onClick={()=>client.send({kind:'restart',baseVersion:v.version})}>按新定义重新开始</button>}</div>}
+      {v.pendingDefinition && <div role="status" aria-label="实验定义迁移"><p>正式定义 {v.pendingDefinition.revision} 已保存；当前现场仍采用定义 {v.definition.revision}。{v.gesture ? '本次操作结束后迁移。' : v.migrationError ?? '正在接续兼容现场。'}</p>{v.migrationError && <Button variant="outline" size="sm" onClick={()=>client.send({kind:'restart',baseVersion:v.version})}>按新定义重新开始</Button>}</div>}
       <p className="builtin-scope">{v.definition.kind === 'mux' ? '仅演示通道选择；不模拟器件使能端。' : v.definition.kind === 'decoder' ? '74LS138 式：使能满足时，仅选中输出为低电平。' : '固定 A / BC 示例，列按格雷顺序排列；不改变函数或自动化简。'}</p>
       <fieldset disabled={v.phase === 'pause-incomplete'}><legend>实验输入</legend>{Object.entries(localInputs ?? v.state.inputs).map(([n, value]) => <label key={n}><input type="checkbox" aria-label={n === 'showCorners' ? '显示跨边四格' : n} checked={!!value} onChange={event => {
         const next = { ...(localInputs ?? v.state.inputs), [n]: Number(event.target.checked) }; setLocalInputs(next); client.send({ kind: 'inputs', inputs: next });
       }} />{n === 'showCorners' ? '显示跨边四格' : `${n} = ${value}`}</label>)}</fieldset>
-      <div className="builtin-formula"><span>本实验公式</span>{editing ? <FormulaEditor composition={composition} initial={formula ?? v.definition.formula} changed={latex => { setFormula(latex); client.send(current => ({ kind: 'formula', formula: latex, baseRevision: current.definition.revision })); }} done={() => setEditing(false)} /> : <><p role="math" aria-label="本实验公式">{v.definition.formula}</p><button onClick={() => { if(v.formulaScope==='consistency-group')editLinkedFormula?.(block.id);else {setFormula(v.definition.formula);setEditing(true);} }}>{v.formulaScope==='consistency-group'?'编辑关联正文公式':'编辑实验公式'}</button></>}</div>
+      <div className="builtin-formula"><span>本实验公式</span>{editing ? <FormulaEditor composition={composition} initial={formula ?? v.definition.formula} changed={latex => { setFormula(latex); client.send(current => ({ kind: 'formula', formula: latex, baseRevision: current.definition.revision })); }} done={() => setEditing(false)} /> : <><p role="math" aria-label="本实验公式">{v.definition.formula}</p><Button variant="outline" size="sm" onClick={() => { if(v.formulaScope==='consistency-group')editLinkedFormula?.(block.id);else {setFormula(v.definition.formula);setEditing(true);} }}>{v.formulaScope==='consistency-group'?'编辑关联正文公式':'编辑实验公式'}</Button></>}</div>
       <p className="builtin-grammar">{v.definition.kind === 'mux' ? '可转换：0、1、声明变量及非／与／或；每一路须能化为常量或单个输入（含取反）。' : v.definition.kind === 'decoder' ? '可转换：Y0–Y7 的八个布尔等式（分号分隔），须与当前 74LS138 定义等价。' : '可转换：与 ¬C 等价的三变量布尔式。'}</p>
       {v.definition.check === 'needs-check' ? <p className="builtin-error" role="status">公式需要核对；当前不显示计算结果。</p> : <><Diagram v={v} />{v.definition.kind === 'mux' && <p className="builtin-result" role="status" aria-label="MUX 输出">输出 {v.definition.outputName} = {v.result?.output}</p>}{v.definition.kind === 'decoder' && <p className="builtin-result" role="status" aria-label="译码器输出">{v.result?.enabled ? `选中 Y${v.result.selected}` : '未使能'} · Y0–Y7 = {v.result?.outputs?.join('')}</p>}</>}
-      <div className="builtin-runtime"><button disabled={v.definition.check !== 'verified' || v.phase === 'pause-incomplete'} onClick={() => client.send({ kind: 'run', running: !v.running })}>{v.running ? '暂停遍历' : '开始遍历输入'}</button><label><input type="checkbox" checked={v.background} onChange={e => client.send({ kind: 'background', enabled: e.target.checked })} />离屏继续运行</label></div>
+      <div className="builtin-runtime"><Button variant="outline" size="sm" disabled={v.definition.check !== 'verified' || v.phase === 'pause-incomplete'} onClick={() => client.send({ kind: 'run', running: !v.running })}>{v.running ? '暂停遍历' : '开始遍历输入'}</Button><label><input type="checkbox" checked={v.background} onChange={e => client.send({ kind: 'background', enabled: e.target.checked })} />离屏继续运行</label></div>
       <p className="builtin-runtime-state" role="status" aria-label="实验运行状态">{v.phase === 'running' ? '正在遍历' : v.phase === 'pause-incomplete' ? '暂停未完成' : v.phase === 'needs-check' ? '等待公式核对' : '已暂停'} · 模拟时间 {v.state.simulationTime} ms · 已确认 {v.state.step} 步 · 定义 {v.definition.revision}</p>
       <p role="status" aria-label="实验保存状态">{client.error || v.phase === 'pause-incomplete' ? '现场未保存' : client.pending ? '正在保存现场' : '现场已保存'}</p>
       {client.notice && <p role="status">{client.notice}</p>}
-      {client.error && <p className="builtin-error" role="alert">{client.error} 输入仍保留。<button onClick={() => void client.retry()}>重试保存现场</button></p>}
-      {v.phase === 'pause-incomplete' && <p className="builtin-error" role="alert">暂停未完成，显示的是最近确认现场。<button onClick={() => void client.recover()}>恢复最近确认现场</button></p>}
+      {client.error && <p className="builtin-error" role="alert">{client.error} 输入仍保留。<Button variant="outline" size="sm" onClick={() => void client.retry()}>重试保存现场</Button></p>}
+      {v.phase === 'pause-incomplete' && <p className="builtin-error" role="alert">暂停未完成，显示的是最近确认现场。<Button variant="outline" size="sm" onClick={() => void client.recover()}>恢复最近确认现场</Button></p>}
     </>}
   </section>;
 }

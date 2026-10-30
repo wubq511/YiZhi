@@ -9,7 +9,7 @@ import { resizeBoardWindow, revealBoardControl, waitForReadingLayout } from './b
 async function captureSearchFailure(page: Page, name: string, error: unknown) {
   try {
     const scene = await page.evaluate(async () => {
-      const b = window.yizhi, c = await b.open(), query = document.querySelector<HTMLInputElement>('input[type="search"]')?.value;
+      const b = window.yizhi, c = await b.open(), query = document.querySelector<HTMLTextAreaElement>('[role="searchbox"]')?.value;
       return { viewport: [innerWidth, innerHeight], camera: (document.querySelector('.react-flow__viewport') as HTMLElement)?.style.transform,
         query, focus: document.activeElement?.outerHTML.slice(0, 400), reading: await b.readingState(c.sessionId),
         alerts: [...document.querySelectorAll('[role="alert"]')].map(el => el.textContent), results: document.querySelector('.search-results')?.outerHTML,
@@ -38,6 +38,13 @@ test('scope filters work with the keyboard and retain the search when the panel 
     await knowledge.click();
     await expect(results.getByRole('button', { name: '定位命中' })).toHaveCount(0);
     await knowledge.focus(); await page.keyboard.press('Space');
+    await expect(results.getByRole('button', { name: '定位命中' }).first()).toBeVisible();
+    await input.fill('不会匹配的独特搜索词');
+    await expect(results).toContainText('部分知识内容暂不可搜索');
+    await knowledge.click();
+    await expect(results).not.toContainText('部分知识内容暂不可搜索');
+    await knowledge.click();
+    await input.fill('基数');
     await expect(results.getByRole('button', { name: '定位命中' }).first()).toBeVisible();
     for (const name of ['知识', '个人笔记', '学习对话', '来源原文']) {
       const scope = page.getByRole('checkbox', { name, exact: true });

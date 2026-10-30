@@ -3,7 +3,7 @@
 .retention-panel h3{font-size:17px;margin:0 0 10px;}
 .retention-panel p{margin:8px 0;overflow-wrap:anywhere;}
 .retention-field,.retention-space-heading{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-.retention-field input{box-sizing:border-box;width:120px;padding:7px 10px;border:1px solid #b6b9c8;border-radius:4px;color:#27343e;background:#fff;font:inherit;caret-color:#6965db;font-variant-numeric:tabular-nums;}
+.retention-field input{width:120px;caret-color:#6965db;font-variant-numeric:tabular-nums;}
 .retention-field .history-confirm{margin:10px 0;}
 .retention-range{margin:16px 0;padding:12px 0;border-block:1px solid #e5e5eb;}
 .retention-range strong{font-weight:600;}
