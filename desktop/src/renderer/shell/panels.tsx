@@ -22,7 +22,7 @@ function usePanelState() {
     if (id === 'agent') { setAgent(open); if (open) setPriority('agent'); }
     else { setLeft(previous => open ? id : previous === id ? null : previous); if (open) setPriority('left'); }
   };
-  return { activity: () => activity.current, capture: () => ({left,agent,priority}), restore: (scene:{left:LeftPanel|null;agent:boolean;priority:'left'|'agent'}) => {setLeft(scene.left);setAgent(scene.agent);setPriority(scene.priority);return ++activity.current;}, left, agent, visibleLeft, visibleAgent, set, leftHost, agentHost, setLeftHost, setAgentHost,
+  return { activity: () => activity.current, capture: () => ({left,agent,priority}), restore: (scene:{left:LeftPanel|null;agent:boolean;priority:'left'|'agent'}, options:{keepLeft?:boolean} = {}) => { if (!options.keepLeft) { setLeft(scene.left); setPriority(scene.priority); } setAgent(scene.agent); return ++activity.current; }, left, agent, visibleLeft, visibleAgent, set, leftHost, agentHost, setLeftHost, setAgentHost,
     leftWidth: visibleLeft ? Math.min(width - 64, widths[visibleLeft]) : 0, narrow: width <= 760 };
 }
 const PanelContext = createContext<ReturnType<typeof usePanelState> | null>(null);

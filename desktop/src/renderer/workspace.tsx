@@ -588,7 +588,8 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
     const details = [...document.querySelectorAll<HTMLDetailsElement>('details')].map(el => ({ el, open: el.open }));
     const sourceScene = sourcesPanel.current?.capture(), noteScene = notesPanel.current?.capture(), agentScene = agentPanel.current?.capture();
     const restore = async () => {
-      const activation = shell.restore(shellScene);
+      // Keep whichever left panel the student has open; only the reading scene returns.
+      const activation = shell.restore(shellScene, { keepLeft: true });
       continuous.current?.clearSearch();
       for (const input of unitInputs.current.values()) input.editor()?.clearSearch();
       if (sourceScene) await sourcesPanel.current?.restore(sourceScene, false);

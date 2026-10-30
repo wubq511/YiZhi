@@ -152,8 +152,8 @@ test('real saved note and durable message results open their own objects, preser
     await expect(page.locator('[data-search-current="true"]')).toHaveAttribute('data-message-id', `${task.id}:answer`);
     await expect(page.getByRole('textbox', { name: '学习对话草稿' })).toHaveValue('保留未发送草稿');
     await page.getByRole('button', { name: '返回搜索前位置' }).click();
+    await expect(page.getByRole('navigation', { name: '课程目录', exact: true })).toBeHidden();
     await resizeBoardWindow(app, page, 700, 700);
-    await page.getByRole('button', { name: '收起目录' }).click();
     await page.getByRole('button', { name: '搜索课程', exact: true }).click();
     await expect(page.getByRole('dialog', { name: '搜索课程', exact: true })).toBeVisible();
     await expect(page.locator('main.board')).toHaveAttribute('inert', '');
