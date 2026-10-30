@@ -24,7 +24,7 @@ npm start
 
 画板顶部工具条独立于世界坐标：阅读、选择、平移；荧光笔与图形；正式关系；当前上下文撤销／重做。图形菜单包含矩形、椭圆、个人箭头、直线、波浪线和绘制坐标选择；“管理与找回图形”保留删除、恢复和原语境入口。文字荧光笔与批注仍针对实际选段。撤销直接调用正文、公式、笔记或画板历史；对没有可查询历史的原生输入框，工具条不假冒全局撤销，原生快捷键继续有效。小地图与缩放／全图集中在右下角。
 
-外壳使用 shadcn/ui Radix 的 Nova 组件、Tailwind CSS、Motion 与 Lucide。保持现有 esbuild 构建，Tailwind CLI 单独输出本地 `shell-utilities.css`；只导入 theme/utilities，不导入 preflight，正文、MathLive 和实验样式保持各自边界。官方源码来源及许可见 [第三方资源](THIRD-PARTY-NOTICES.md)。
+外壳使用 shadcn/ui Radix 的 Nova 组件、Tailwind CSS、Motion 与 Lucide。悬浮通知使用 Sonner，工作区已挂载统一的 `Toaster`，后续可从 `sonner` 导入 `toast` 触发。保持现有 esbuild 构建，Tailwind CLI 单独输出本地 `shell-utilities.css`；只导入 theme/utilities，不导入 preflight，正文、MathLive 和实验样式保持各自边界。官方源码来源及许可见 [第三方资源](THIRD-PARTY-NOTICES.md)。
 
 ## 验证
 

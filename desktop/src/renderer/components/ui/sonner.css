@@ -1,0 +1,30 @@
+[data-sonner-toaster].workspace-toaster {
+  font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+[data-sonner-toaster].workspace-toaster [data-sonner-toast][data-styled="true"] {
+  gap: 10px;
+  min-height: 52px;
+  padding: 14px 48px 14px 16px;
+  border: 0;
+  border-radius: 10px;
+  background: #fff;
+  color: #383541;
+  box-shadow: 0 8px 28px #2f23401c, 0 2px 7px #2f23400a;
+  font-size: 13px;
+}
+[data-sonner-toaster].workspace-toaster [data-icon] { color: #6555be; }
+[data-sonner-toaster].workspace-toaster [data-title] { font-weight: 500; line-height: 1.55; }
+[data-sonner-toaster].workspace-toaster [data-sonner-toast][data-styled="true"] [data-close-button] {
+  top: 12px;
+  right: 12px;
+  left: auto;
+  width: 28px;
+  height: 28px;
+  transform: none;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #696575;
+}
+[data-sonner-toaster].workspace-toaster [data-sonner-toast][data-styled="true"] [data-close-button]:hover { background: #f1eef7; color: #51436f; }
+[data-sonner-toaster].workspace-toaster [data-close-button]:focus-visible { outline: 2px solid #7568cd; outline-offset: 2px; }

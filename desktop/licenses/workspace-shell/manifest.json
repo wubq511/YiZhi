@@ -924,5 +924,16 @@
         "sha256": "30f0cfddf483d1128e3610205020f2041a6c5e837aa999e0aa82e5576187d4a9"
       }
     ]
+  },
+  {
+    "name": "sonner",
+    "version": "2.0.8",
+    "license": "MIT",
+    "files": [
+      {
+        "file": "sonner/LICENSE.md",
+        "sha256": "da9201378c36ffd81f51ad0b305f3f0981e90bc558789210ad65d1161eec3b7d"
+      }
+    ]
   }
 ]

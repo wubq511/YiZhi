@@ -1,3 +1,5 @@
+export const UNIT_NOT_FOUND_MESSAGE = '该单元不存在或正文尚未加入课程副本';
+
 export interface ReadingBlock {
   id: string;
   kind: string;

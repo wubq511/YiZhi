@@ -78,5 +78,12 @@
     "registrySha256": "b7768152ec197d3f9c7b4ae12e0f6bdc7de69dc1522e9ddcebb3062346a81d58",
     "retrieved": "2026-10-30",
     "customizations": "Project theme and native select semantics in dialogs"
+  },
+  {
+    "component": "sonner",
+    "url": "https://ui.shadcn.com/r/styles/radix-nova/sonner.json",
+    "registrySha256": "1a2e2eeca1b8dc4bb1ce60d5f13e6ba10cac12b3aa633bca68c4e71ad06137d9",
+    "retrieved": "2026-10-30",
+    "customizations": "Light theme, Lucide icons, localized accessible labels and workspace notification styling; no theme provider required."
   }
 ]

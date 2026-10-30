@@ -5,6 +5,7 @@ import { CourseMenu } from './shell/course-menu';
 import { SaveIndicator, useSaveReport, resetSaves, reportSave } from './shell/save-status';
 import { CanvasToolbar, CanvasNavigation } from './shell/canvas-toolbar';
 import { Button } from './components/ui/button';
+import { Toaster } from './components/ui/sonner';
 import { MessageCircle, ArrowLeft } from 'lucide-react';
 import type { DrawingToolState } from './drawings';
 import type { AnnotationSelection } from '../annotation-api';
@@ -35,7 +36,7 @@ import '@xyflow/react/dist/style.css';
 import rough from 'roughjs';
 import 'katex/dist/katex.min.css';
 import './style.css';
-import type { CourseGraph, CourseUnit, DesktopBridge, OpenedCourse, ReadingBlock, ReadingState } from '../shared';
+import { UNIT_NOT_FOUND_MESSAGE, type CourseGraph, type CourseUnit, type DesktopBridge, type OpenedCourse, type ReadingBlock, type ReadingState } from '../shared';
 import { ParagraphSaveChannel, type SaveState } from './save-channel';
 import { RelationsPanel, useRelationEvents } from './relations-panel';
 import { ContinuousUnitEditor } from './editor/continuous-editor';
@@ -56,6 +57,10 @@ declare global { interface Window { yizhi: DesktopBridge } }
 
 function visibleError(message: string) {
   return message.replace(/^Error invoking remote method '[^']+': (?:Error: )?/, '').split(/\n\s*at\s/)[0];
+}
+
+function isMissingUnit(error: unknown) {
+  return error instanceof Error && visibleError(error.message) === UNIT_NOT_FOUND_MESSAGE;
 }
 
 function RoughFrame({ id }: { id: string }) {
@@ -323,7 +328,7 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
           const unit=await window.yizhi.readUnit(sessionId,id);
           if(sessionRef.current!==sessionId||!rangeDemand.current.includes(id))continue;
           cacheUnit(unit);
-        }catch(error){failed.add(id);if(sessionRef.current===sessionId&&rangeDemand.current.includes(id))setReadError((error as Error).message);}
+        }catch(error){failed.add(id);if(!isMissingUnit(error)&&sessionRef.current===sessionId&&rangeDemand.current.includes(id))setReadError((error as Error).message);}
         finally{pendingRangeReads.set(0);}
       }
     };
@@ -458,7 +463,7 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
     if (!await flushUnitInputs(true)) { setReadError('当前单元输入尚未保存，请先处理后再切换。'); return; }
     try { const unit = await window.yizhi.readUnit(course.sessionId, id); persist(nextState ?? { ...(readingRef.current ?? { expanded: {}, returnStack: [], scrollTop: 0 }), unitId: id, scrollTop: 0, pinnedUnitId: mounted.some(item => item.id === 'KU-001') || id === 'KU-001' ? 'KU-001' : undefined }); selectedRef.current=id;setSelected(unit); cacheUnit(unit,id); }
 
-    catch (error) { setSelected(undefined); setReadError((error as Error).message); }
+    catch (error) { if (isMissingUnit(error)) return; setSelected(undefined); setReadError((error as Error).message); }
     pinchFrame.cancel();
     navigationAnchorRef.current=nextState?.camera?undefined:id;
     if (nextState?.camera) await flow.setViewport(nextState.camera, { duration: 0 });
@@ -845,7 +850,7 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
     </div>
   </>;
 }
-export function Workspace({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAccessoryProps>}){const [epoch,setEpoch]=useState(0);useEffect(()=>window.yizhi.onGenerationChanged(()=>setEpoch(n=>n+1)),[]);return <ShellPanels key={epoch}><ReactFlowProvider><App Accessory={Accessory} /></ReactFlowProvider></ShellPanels>;}
+export function Workspace({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAccessoryProps>}){const [epoch,setEpoch]=useState(0);useEffect(()=>window.yizhi.onGenerationChanged(()=>setEpoch(n=>n+1)),[]);return <><ShellPanels key={epoch}><ReactFlowProvider><App Accessory={Accessory} /></ReactFlowProvider></ShellPanels><Toaster/></>;}
 
 import './acceptance';
 
