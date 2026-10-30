@@ -55,6 +55,8 @@ export interface SaveReceipt {
   basedOnRevision?: number;
 }
 export interface DesktopBridge extends SaveBridge {
+  /** True when the host hides its native title bar and leaves the window controls over the page chrome. */
+  titleBarInset: boolean;
   backup: import('./backup-api').BackupBridge;
   courseFormat: import('./format-api').ReadonlyCourseBridge;
   courseRestore: import('./course-restore-api').CourseRestoreAPI;

@@ -62,9 +62,11 @@ export class LearningHost {
     this.lastDirectory=directory;
     const existing=this.views.get(directory);
     if(existing){if(existing.window.isMinimized())existing.window.restore();existing.window.show();existing.window.focus();return;}
+    const insetTitleBar=process.platform==='darwin';
     const window=new BrowserWindow({width:1280,height:900,...bounds,minWidth:660,minHeight:500,title:'绎知',backgroundColor:'#ffffff',
+      ...insetTitleBar?{titleBarStyle:'hiddenInset' as const,trafficLightPosition:{x:18,y:17}}:{},
       webPreferences:{preload:this.options.preloadPath??join(this.preloadDirectory,'preload.cjs'),contextIsolation:true,nodeIntegration:false,nodeIntegrationInSubFrames:false,sandbox:true,
-        additionalArguments:process.env.YIZHI_OBSERVE==='1'?['--yizhi-observe']:[]}});
+        additionalArguments:[...(process.env.YIZHI_OBSERVE==='1'?['--yizhi-observe']:[]),...(insetTitleBar?['--yizhi-titlebar']:[])]}});
     const view:View={directory,window,id:randomUUID(),saved:false,recovering:false};this.views.set(directory,view);
     window.on('focus',()=>{this.lastDirectory=view.directory;});
     window.webContents.on('unresponsive',()=>void this.recover(view));

@@ -9,10 +9,11 @@
   --shell-shadow: 0 4px 18px #2f234014, 0 1px 3px #2f23400a;
   --shell-motion-ease: cubic-bezier(.22, 1, .36, 1);
 }
-.app-header { flex: 0 0 52px; height: 52px; min-height: 52px; display: flex; align-items: center; gap: 8px; padding: 0 18px 0 14px; border-bottom: 1px solid var(--shell-line); background: var(--shell-surface); color: var(--shell-ink); font-size: 14px; }
+.app-header { flex: 0 0 48px; height: 48px; min-height: 48px; display: flex; align-items: center; gap: 8px; padding: 0 18px 0 14px; border-bottom: 1px solid var(--shell-line); background: var(--shell-surface); color: var(--shell-ink); font-size: 14px; }
+[data-titlebar=inset] .app-header { padding-left: 84px; -webkit-app-region: drag; }
+[data-titlebar=inset] .app-header :is(button, a, input, [role=button]) { -webkit-app-region: no-drag; }
 .app-header .course-menu-trigger { min-width: 0; max-width: min(52vw, 460px); justify-content: flex-start; color: var(--shell-ink); padding: 0 8px; }
-.course-menu-trigger > span:nth-child(2) { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.course-mark { display: grid; place-items: center; background: #e7e2f4; color: #5b4b9d; width: 28px; height: 28px; border-radius: 8px; font-weight: 650; margin-right: 6px; }
+.course-menu-trigger > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .app-header .shell-save { margin-left: auto; font-size: 12px; color: var(--shell-muted); gap: 6px; }
 .app-header .shell-save-error { color: #a13737; background: #fceeee; }
 .app-header .agent-entry { color: #595066; background: transparent; padding: 0 12px; gap: 8px; border-left: 1px solid var(--shell-line); border-radius: 0; }
@@ -188,8 +189,9 @@ button.panel-close:hover { background: #efecf5; color: #4e426e; }
 .shell-dock .agent-conversations { align-items: center; }
 @media (max-width: 760px) {
   .app-header { padding: 0 8px; gap: 3px; }
+  [data-titlebar=inset] .app-header { padding-left: 84px; }
   .app-header .course-menu-trigger { max-width: calc(100vw - 150px); font-size: 12px; }
-  .course-mark { display: none; }
+  [data-titlebar=inset] .app-header .course-menu-trigger { max-width: calc(100vw - 234px); }
   .app-header .agent-entry { width: 40px; padding: 0; flex-shrink: 0; }
   .agent-entry > span { display: none; }
   .shell-save { padding: 0 6px; }
