@@ -1,5 +1,8 @@
 .history-panel{box-sizing:border-box;width:min(1120px,calc(100vw - 40px));height:calc(100vh - 56px);max-height:900px;padding:20px 24px;border:1px solid #e5e5eb;border-radius:8px;background:#fff;color:#27343e;overflow:auto;font:14px/1.6 "PingFang SC",system-ui,sans-serif;scrollbar-color:#b6b9c8 #f6f6f9;}
 .history-panel::backdrop{background:rgb(39 52 62 / 26%)}
+.history-panel[data-motion="pointer"],.history-panel[data-motion="pointer"]::backdrop{opacity:1;transition:opacity 180ms var(--shell-motion-ease)}
+@starting-style{.history-panel[data-motion="pointer"],.history-panel[data-motion="pointer"]::backdrop{opacity:0}}
+@media(prefers-reduced-motion:reduce){.history-panel[data-motion="pointer"],.history-panel[data-motion="pointer"]::backdrop{transition:opacity 100ms var(--shell-motion-ease)!important}}
 .history-panel::selection,.history-panel ::selection{background:#eeedff;color:#27343e}
 .history-heading,.history-preview>header{display:flex;align-items:center;justify-content:space-between;gap:16px;}
 .history-heading h2{font-size:21px;margin:0 0 12px}.history-heading button{flex-shrink:0}

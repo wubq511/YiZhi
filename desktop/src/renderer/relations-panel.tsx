@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState, type Ref, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type Ref, type KeyboardEvent, type MouseEvent } from 'react';
 import type { CourseGraph } from '../shared';
 import type { FormalRelation, RelationBasis, RelationCommand, RequirementGroup } from '../relation-api';
 import './relations-panel.css';
 
 type Props = { graph: CourseGraph; sessionId: string; view: string; narrow: boolean; panelRef: Ref<HTMLElement>;
-  onClose(): void; onKeyDown(event: KeyboardEvent<HTMLElement>): void; onGraph(graph: CourseGraph): void; focusId?: string };
+  open: boolean; motion: boolean; onClose(event: MouseEvent<HTMLButtonElement>): void; onKeyDown(event: KeyboardEvent<HTMLElement>): void; onGraph(graph: CourseGraph): void; focusId?: string };
 const types: Record<string, string> = { requires: '前置', constructs: '构造', improves: '优化', inverse: '互逆' };
 
 /** Formal graph consumers reread after shared durable events, including cursor expiry. */
@@ -29,7 +29,7 @@ export function useRelationEvents(sessionId: string | undefined, onGraph: (graph
   }, [sessionId, onGraph]);
 }
 
-export function RelationsPanel({ graph, sessionId, view, narrow, panelRef, onClose, onKeyDown, onGraph, focusId }: Props) {
+export function RelationsPanel({ graph, sessionId, view, narrow, panelRef, open, motion, onClose, onKeyDown, onGraph, focusId }: Props) {
   const [basis, setBasis] = useState<RelationBasis>();
   const [draft, setDraft] = useState<FormalRelation>();
   const [route, setRoute] = useState('none');
@@ -111,7 +111,7 @@ export function RelationsPanel({ graph, sessionId, view, narrow, panelRef, onClo
   const name = (id: string) => `${id} ${graph.nodes.find(node => node.id === id)?.name ?? ''}`;
   const shown = graph.edges.filter(edge => view === 'all' || edge.view === view);
   const refs = draft?.sourceRefs ?? [];
-  return <aside ref={panelRef} className="relations-panel" role={narrow ? 'dialog' : undefined} aria-modal={narrow || undefined} aria-label="关系详情" onKeyDown={onKeyDown}>
+  return <aside ref={panelRef} className="relations-panel" role={narrow ? 'dialog' : undefined} aria-modal={narrow && open || undefined} aria-label="关系详情" aria-hidden={!open || undefined} inert={!open} data-motion={motion?'pointer':undefined} data-exiting={!open?'':undefined} onKeyDown={onKeyDown}>
     <h2>关系详情</h2><button onClick={onClose}>关闭关系详情</button>
     <p>个人箭头只作个人标注；正式关系在此独立审核。</p>
     <button disabled={busy || !!pending.current} onClick={() => void begin()}>新增正式关系</button>

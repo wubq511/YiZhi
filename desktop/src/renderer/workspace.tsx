@@ -28,7 +28,7 @@ import { BuiltinExperiment, StaticBuiltinExperiment, flushBuiltinExperiments } f
 
 import { AgentPanel, type AgentPanelHandle } from './agent-panel';
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { ReactFlow, ReactFlowProvider, MiniMap, useReactFlow, MarkerType, type Viewport } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import rough from 'roughjs';
@@ -157,7 +157,7 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
   const shell = usePanels();
   const directory = shell.visibleLeft === 'directory';
   const setDirectory = (open: boolean) => shell.set('directory', open);
-  const backupPanel = useRef<{open():void}>(null), retentionPanel = useRef<{open():void}>(null), restorePanel = useRef<{open():void}>(null);
+  const backupPanel = useRef<{open(pointer?:boolean):void}>(null), retentionPanel = useRef<{open(pointer?:boolean):void}>(null), restorePanel = useRef<{open(pointer?:boolean):void}>(null);
   const [drawingTool, setDrawingTool] = useState<DrawingToolState>({space:'board',pending:false});
   const capturedSelection = useRef<AnnotationSelection | undefined>(undefined);
   const [directoryTheme, setDirectoryTheme] = useState<string>();
@@ -192,10 +192,26 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
   const sourceDialog = useRef<HTMLElement | null>(null);
   const closeSource = () => { setSourceOpen(false); requestAnimationFrame(() => sourceTrigger.current?.focus()); };
   useEffect(() => { if (sourceOpen) sourceDialog.current?.querySelector<HTMLButtonElement>('button')?.focus(); }, [sourceOpen]);
-  const [relationsOpen, setRelationsOpen] = useState(false);
+  const [relationsOpen, setRelationsOpen] = useState(false), [relationsExiting, setRelationsExiting] = useState(false), [relationMotion, setRelationMotion] = useState(false);
   const [relationFocus, setRelationFocus] = useState<string>();
   const relationPanel = useRef<HTMLElement>(null);
-  const closeRelations = () => { setRelationsOpen(false); requestAnimationFrame(() => document.querySelector<HTMLButtonElement>('.canvas-toolbar [aria-label="关系"]')?.focus()); };
+  const relationExitTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined), restoreRelationFocus = useRef(false);
+  const openRelations = (pointer: boolean) => {
+    clearTimeout(relationExitTimer.current); restoreRelationFocus.current = false;
+    setRelationMotion(pointer); setRelationsExiting(false); setRelationsOpen(true);
+  };
+  const closeRelations = (pointer = false) => {
+    clearTimeout(relationExitTimer.current); restoreRelationFocus.current = true;
+    setRelationsOpen(false); setRelationMotion(pointer); setRelationsExiting(pointer);
+    if (pointer) relationExitTimer.current = setTimeout(() => setRelationsExiting(false), matchMedia('(prefers-reduced-motion: reduce)').matches ? 100 : 120);
+  };
+  useLayoutEffect(() => {
+    if (!relationsOpen && restoreRelationFocus.current) {
+      restoreRelationFocus.current = false;
+      document.querySelector<HTMLButtonElement>('.canvas-toolbar [aria-label="关系"]')?.focus({ preventScroll: true });
+    }
+  }, [relationsOpen]);
+  useEffect(() => () => clearTimeout(relationExitTimer.current), []);
   useEffect(() => { if (narrow && relationsOpen) { setDirectory(false); relationPanel.current?.querySelector<HTMLButtonElement>('button')?.focus(); } }, [narrow, relationsOpen]);
   const [relationView, setRelationView] = useState("main");
   const [course, setCourse] = useState<OpenedCourse>();
@@ -669,7 +685,7 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
   if(!course&&readonlyReport)return <><header className="app-header"><strong className="brand">绎知</strong><span>兼容范围只读 · 拒绝写入</span><button onClick={()=>void load()}>重新核对版本</button></header><ReadonlyCourse report={readonlyReport}/></>;
   return <>
     <header className="app-header">
-      <CourseMenu backup={() => backupPanel.current?.open()} history={() => historyPanel.current?.open()} restore={() => restorePanel.current?.open()} settings={() => retentionPanel.current?.open()}/>
+      <CourseMenu backup={pointer => backupPanel.current?.open(pointer)} history={pointer => historyPanel.current?.open(undefined, pointer)} restore={pointer => restorePanel.current?.open(pointer)} settings={pointer => retentionPanel.current?.open(pointer)}/>
       <SaveIndicator ready={!!course}/>
       <Button variant="ghost" className="agent-entry" aria-label="学习对话" aria-expanded={shell.visibleAgent} onPointerDown={captureSelection} onClick={() => { captureSelection(); shell.set('agent', !shell.visibleAgent); }}><MessageCircle size={19}/><span>学习对话</span></Button>
       {course&&<BackupPanel ref={backupPanel} sessionId={course.sessionId} prepare={prepareCourseSnapshot} onReturn={()=>{if(narrow)setDirectory(false);}}/>}
@@ -771,14 +787,14 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
         <div className="panel-heading"><h2>课程目录</h2><button className="panel-close" aria-label="收起目录" onClick={closeDirectory}><X size={18}/></button></div>
         <label className="review-filter"><span className="sr-only">复习状态筛选</span><select aria-label="复习状态筛选" value={reviewFilter} onChange={event => setReviewFilter(event.target.value as typeof reviewFilter)}><option value="all">全部单元</option><option value="pending">待复习</option><option value="weak">薄弱</option><option value="mastered">已掌握</option></select></label>
         {graph?.groups.map(group => { const counts = review?.themes[group.id]; const matches = graph.nodes.filter(node => node.themeId === group.id && (reviewFilter === 'all' ? (directoryTheme ?? selected?.theme.id) === group.id : review?.units[node.id]?.status === reviewFilter)); return <div key={group.id}><button aria-label={group.name} className="directory-theme" aria-expanded={(directoryTheme ?? selected?.theme.id) === group.id} onClick={() => { setDirectoryTheme(group.id); const first = matches[0] ?? graph.nodes.find(node => node.themeId === group.id); if (first) { void go(first.id); if (narrow) closeDirectory(); } }}><ChevronRight size={15}/><span className="directory-title">{group.name}</span>{counts ? <span className="directory-count" aria-label={`${counts.mastered} 个已掌握`}>{counts.mastered}/{counts.pending+counts.weak+counts.mastered}</span> : ''}</button>{matches.map(node => <button aria-label={node.name} aria-describedby={`review-state-${node.id}`} className="directory-unit" aria-current={selected?.id === node.id ? "page" : undefined} key={node.id} onClick={() => { void go(node.id); if (narrow) closeDirectory(); }}><span className="directory-title">{node.name}</span>{review ? <span id={`review-state-${node.id}`} className={`directory-status status-${review.units[node.id]?.status ?? "pending"}`} title={{pending:'待复习',weak:'薄弱',mastered:'已掌握'}[review.units[node.id]?.status ?? 'pending']}><span className="sr-only">{{pending:'待复习',weak:'薄弱',mastered:'已掌握'}[review.units[node.id]?.status ?? 'pending']}</span>{review.units[node.id]?.status === 'mastered' ? <CircleCheck size={13} aria-hidden="true"/> : review.units[node.id]?.status === 'weak' ? <CircleAlert size={13} aria-hidden="true"/> : <Circle size={5} aria-hidden="true"/>}</span> : ''}</button>)}</div>; })}</nav></PanelDock>
-      <main onWheelCapture={event => { if (!((event.target as HTMLElement).closest('.board-tools, .relations-panel, .source-dialog, input, select, textarea, .mux, .builtin-formula-editor, math-field'))) camera.takeover(); }} onPointerDownCapture={event => { pinchFrame.cancel(); const target = event.target as HTMLElement; if (target.closest('.react-flow__pane, .react-flow__minimap, .board-tools')) camera.takeover(); }} ref={boardRef} className="board" aria-label="知识画板" role="region" inert={(narrow && (!!shell.visibleLeft || shell.visibleAgent || accessoryOpen)) || !cameraReady && !loadError}>
-        <div className="board-background" inert={sourceOpen || (narrow && relationsOpen)}><ReactFlow onlyRenderVisibleElements nodes={nodes} edges={edges} onInit={() => setNodesReady(true)} onEdgeClick={(_event, edge) => { setRelationFocus(edge.id); setRelationsOpen(true); }} minZoom={0.04} maxZoom={2} nodesDraggable={false} panOnScroll zoomOnScroll={false} zoomOnPinch panOnDrag={tool === "select" ? [1] : [0, 1]} selectionOnDrag={tool === "select"} panActivationKeyCode="Space" onMoveStart={event => { if (event) { pinchFrame.cancel(); camera.takeover(); } }} onMove={(event, next) => { updateReadingProtection(); if (event) camera.takeover(); setViewport(next); }} onMoveEnd={(_event, next) => { const current = readingRef.current; if (current) persist({ ...current, camera: next }); }} onNodeClick={(_event, node) => { const first = graph?.nodes.find(item => item.id === node.id || item.themeId === node.id); if (first) void go(first.id); }}>
+      <main onWheelCapture={event => { if (!((event.target as HTMLElement).closest('.board-tools, .relations-panel, .source-dialog, input, select, textarea, .mux, .builtin-formula-editor, math-field'))) camera.takeover(); }} onPointerDownCapture={event => { pinchFrame.cancel(); const target = event.target as HTMLElement; if (target.closest('.react-flow__pane, .react-flow__minimap, .board-tools')) camera.takeover(); }} ref={boardRef} className="board" data-relations-open={relationsOpen?'':undefined} aria-label="知识画板" role="region" inert={(narrow && (!!shell.visibleLeft || shell.visibleAgent || accessoryOpen)) || !cameraReady && !loadError}>
+        <div className="board-background" inert={sourceOpen || (narrow && relationsOpen)}><ReactFlow onlyRenderVisibleElements nodes={nodes} edges={edges} onInit={() => setNodesReady(true)} onEdgeClick={(event, edge) => { setRelationFocus(edge.id); openRelations(event.detail > 0); }} minZoom={0.04} maxZoom={2} nodesDraggable={false} panOnScroll zoomOnScroll={false} zoomOnPinch panOnDrag={tool === "select" ? [1] : [0, 1]} selectionOnDrag={tool === "select"} panActivationKeyCode="Space" onMoveStart={event => { if (event) { pinchFrame.cancel(); camera.takeover(); } }} onMove={(event, next) => { updateReadingProtection(); if (event) camera.takeover(); setViewport(next); }} onMoveEnd={(_event, next) => { const current = readingRef.current; if (current) persist({ ...current, camera: next }); }} onNodeClick={(_event, node) => { const first = graph?.nodes.find(item => item.id === node.id || item.themeId === node.id); if (first) void go(first.id); }}>
 
 
 
           {minimap && boardRef.current && createPortal(<MiniMap ariaLabel="小地图" style={{width:narrow?150:190,height:narrow?95:120}} nodeColor="#7798bc" nodeStrokeColor="#345d88" maskColor="rgba(105,101,219,.12)" pannable zoomable />, boardRef.current)}
         </ReactFlow>
-        <CanvasToolbar tool={tool} chooseTool={chooseTool} drawing={drawingTool} capture={captureSelection} chooseDrawing={kind => drawingPanel.current?.choose(kind)} changeSpace={space => drawingPanel.current?.setSpace(space)} manageDrawings={() => drawingPanel.current?.manage()} highlight={() => { const selection = capturedSelection.current; if (selection?.fragments.length) { void drawingPanel.current?.highlight(selection); capturedSelection.current = undefined; } else drawingPanel.current?.choose('highlighter'); }} relations={() => setRelationsOpen(true)} relationView={relationView} changeRelations={setRelationView}/>
+        <CanvasToolbar tool={tool} chooseTool={chooseTool} drawing={drawingTool} capture={captureSelection} chooseDrawing={kind => drawingPanel.current?.choose(kind)} changeSpace={space => drawingPanel.current?.setSpace(space)} manageDrawings={pointer => drawingPanel.current?.manage(pointer)} highlight={() => { const selection = capturedSelection.current; if (selection?.fragments.length) { void drawingPanel.current?.highlight(selection); capturedSelection.current = undefined; } else drawingPanel.current?.choose('highlighter'); }} relations={openRelations} relationView={relationView} changeRelations={setRelationView}/>
         <CanvasNavigation minimap={minimap} toggle={() => setMinimap(!minimap)} zoom={viewport.zoom} zoomIn={() => { camera.takeover(); void flow.zoomIn({duration:0}); }} zoomOut={() => { camera.takeover(); void flow.zoomOut({duration:0}); }} fit={() => { camera.takeover(); pinchFrame.cancel(); void flow.fitBounds(flow.getNodesBounds(flow.getNodes()),{duration:0}); }}/>
         {(searchReturn || !!reading?.returnStack.length) && <div className="reading-return"><Button variant="outline" onClick={() => { if (searchReturn) void searchReturn().catch(e => setReadError(e.message)); else if (reading?.returnStack.length) { const previous = reading.returnStack.at(-1)!; void go(previous.unitId, {...reading,unitId:previous.unitId,scrollTop:previous.scrollTop,camera:previous.camera,returnStack:reading.returnStack.slice(0,-1)}); } }}><ArrowLeft size={16}/>{searchReturn ? '返回搜索前位置' : '返回引用位置'}</Button></div>}
         {loadError && <div className="load-error" role="alert"><h1>课程未打开</h1><p>{loadError}</p><button onClick={() => void load()}>重新打开课程</button></div>}
@@ -787,7 +803,7 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
           <ReadingSurface id={unit.id} name={unit.name} position={position} baseline={graph!.layout.nodes.find(node => node.unitId === unit.id)!} active={selected?.id === unit.id} articleRef={articleRef} measure={local.measure} gesture={local.gesture} commit={place} takeover={() => camera.takeover()}>
             <RoughFrame id={unit.id} />
 
-            <h1 data-search-field="name">{unit.name}</h1><button onClick={()=>historyPanel.current?.open(unit.id)}>单元历史</button><div className="unit-aliases">{Array.isArray(unit.aliases) && unit.aliases.map((alias: string, i: number) => <span key={i} data-search-field={`aliases.${i}`}>{alias}</span>)}</div><p className="unit-meta">课程重要性 {unit.rating.stars} / 5 · {unit.id}</p>{review && <ReviewControls unitId={unit.id} snapshot={review} change={status => void changeReview(unit.id, status)} confirm={(id, adjust) => void confirmReview(id, adjust)} />}<p className="outcome" data-search-field="outcome">{unit.outcome}</p>
+            <h1 data-search-field="name">{unit.name}</h1><button onClick={event=>historyPanel.current?.open(unit.id,event.detail>0)}>单元历史</button><div className="unit-aliases">{Array.isArray(unit.aliases) && unit.aliases.map((alias: string, i: number) => <span key={i} data-search-field={`aliases.${i}`}>{alias}</span>)}</div><p className="unit-meta">课程重要性 {unit.rating.stars} / 5 · {unit.id}</p>{review && <ReviewControls unitId={unit.id} snapshot={review} change={status => void changeReview(unit.id, status)} confirm={(id, adjust) => void confirmReview(id, adjust)} />}<p className="outcome" data-search-field="outcome">{unit.outcome}</p>
             {unit.id==='KU-001'&&!course.contentScope&&<ExtensionExperiment sessionId={course.sessionId} active={viewport.zoom>=0.55&&selected?.id===unit.id} disabled={closing}/>}
             <SourceReferences citations={sourceCitations.filter(citation => citation.target?.unitId === unit.id)} onOpen={citation => sourcesPanel.current?.openCitation(citation)} />
             {unit.id === 'KU-001' && channel.current ? <ContinuousUnitEditor course={course} channel={channel.current} disabled={closing || accessoryBusy || !cameraReady} saveError={state.status === 'error'}
@@ -825,7 +841,7 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
         {course && <div inert={sourceOpen||(narrow&&relationsOpen)}><Drawings onToolChange={setDrawingTool} ref={drawingPanel} sessionId={course.sessionId} viewport={viewport} takeover={()=>camera.takeover()} pan={(dx,dy)=>camera.pan(dx,dy)} prepare={async()=>!!await channel.current?.flush() && await flushUnitInputs()} paint={notes=>{void continuous.current?.paintDrawings(notes);for(const input of unitInputs.current.values())void input.editor()?.paintDrawings(notes);}} contentKey={`${course.revision}:${mounted.map(u=>u.id).join(',')}`} waitLayout={async()=>{await layoutWrites.current;return !layoutPending.current.length;}} restorePlacement={enqueuePlacement}  /></div>}
         {followState !== 'idle' && <div className="follow-control"><span role="status" aria-label="修改跟随">{followState === 'following' ? '正在跟随修改' : followState === 'paused' ? '已由你控制视野' : '修改已结束'}</span>{followState !== 'following' && <button onClick={() => { camera.resume(); }}>{followState === 'finished' ? '查看修改结果' : '返回并继续跟随'}</button>}</div>}
 
-        {relationsOpen && graph && course && <RelationsPanel graph={graph} sessionId={course.sessionId} view={relationView} narrow={narrow} panelRef={relationPanel} onClose={closeRelations} onKeyDown={event => trap(event, closeRelations)} onGraph={setGraph} focusId={relationFocus} />}
+        {(relationsOpen || relationsExiting) && graph && course && <RelationsPanel graph={graph} sessionId={course.sessionId} view={relationView} narrow={narrow} panelRef={relationPanel} open={relationsOpen} motion={relationMotion} onClose={event => closeRelations(event.detail > 0)} onKeyDown={event => trap(event, () => closeRelations())} onGraph={setGraph} focusId={relationFocus} />}
         {sourceOpen && <section ref={sourceDialog} className="source-dialog" role="dialog" aria-modal="true" aria-label="TI 74153 原页" onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); closeSource(); } else if (event.key === 'Tab') { event.preventDefault(); sourceDialog.current?.querySelector<HTMLButtonElement>('button')?.focus(); } }}><button onClick={closeSource}>返回正文</button><h2>TI 74153 原页 · 第 1 页</h2><img src="./ti74153-1.png" alt="TI 74153 手册第 1 页" /></section>}
       </main>
       <PanelDock side="agent"/>

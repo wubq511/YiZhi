@@ -6,14 +6,14 @@ import './history-panel.css';
 import './retention-panel.css';
 const bytes=(n:number)=>n<1024?`${n} B`:n<1048576?`${(n/1024).toFixed(1)} KB`:`${(n/1048576).toFixed(1)} MB`;
 const date=(s:string)=>new Date(s).toLocaleString('zh-CN',{hour12:false});
-export const RetentionPanel = forwardRef<{ open(): void }, {sessionId:string;prepare():Promise<void>;onReturn():void}>(function RetentionPanel({sessionId,prepare,onReturn}, ref) {
- const [open,setOpen]=useState(false),[status,setStatus]=useState<RetentionStatus>(),[space,setSpace]=useState<RetentionSpace>();
+export const RetentionPanel = forwardRef<{ open(pointer?:boolean): void }, {sessionId:string;prepare():Promise<void>;onReturn():void}>(function RetentionPanel({sessionId,prepare,onReturn}, ref) {
+ const [open,setOpen]=useState(false),[motion,setMotion]=useState(false),[status,setStatus]=useState<RetentionStatus>(),[space,setSpace]=useState<RetentionSpace>();
  const [days,setDays]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[result,setResult]=useState('');
  const trigger=useRef<HTMLButtonElement>(null),alive=useRef(true);
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
  const work=async(run:()=>Promise<void>)=>{setBusy(true);setError('');try{await run();}catch(e){if(alive.current)setError((e as Error).message);}finally{if(alive.current)setBusy(false);}};
  const refresh=async()=>{const [s,p]=await Promise.all([window.yizhi.retention.get({sessionId}),window.yizhi.retention.space({sessionId})]);if(alive.current){setStatus(s);setSpace(p);}return s;};
- const show=()=>{setOpen(true);setResult('');void work(async()=>{await prepare();const s=await refresh();setDays(String(s.days));});};
+ const show=(pointer=false)=>{setMotion(pointer);setOpen(true);setResult('');void work(async()=>{await prepare();const s=await refresh();setDays(String(s.days));});};
  const close=()=>{if(busy)return;setOpen(false);onReturn();requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('[aria-label="课程菜单"]')?.focus());};
  useEffect(()=>{
   if(!open)return;
@@ -22,7 +22,7 @@ export const RetentionPanel = forwardRef<{ open(): void }, {sessionId:string;pre
   return()=>{cancelled=true;clearInterval(timer);};
  },[open,sessionId]);
  useImperativeHandle(ref, () => ({ open: show }));
- return <>{open&&createPortal(<dialog className="history-panel retention-panel" aria-label="历史与空间" ref={node=>{if(node&&!node.open)node.showModal();}} onCancel={e=>{e.preventDefault();close();}} onKeyDown={e=>e.stopPropagation()}>
+ return <>{open&&createPortal(<dialog className="history-panel retention-panel" aria-label="历史与空间" data-motion={motion?'pointer':undefined} ref={node=>{if(node&&!node.open)node.showModal();}} onCancel={e=>{e.preventDefault();close();}} onKeyDown={e=>e.stopPropagation()}>
   <header className="history-heading"><h2>历史与空间</h2><button disabled={busy} onClick={close}>返回课程</button></header>
   {error&&<p role="alert" className="history-error">{error}</p>}
   <section aria-labelledby="retention-heading"><h3 id="retention-heading">正式历史期限</h3>

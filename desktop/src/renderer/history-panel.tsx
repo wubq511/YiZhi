@@ -4,7 +4,7 @@ import katex from 'katex';
 import type { HistoryActivity,HistoryGroup,HistoryPreview,HistorySelection,HistoryResult } from '../history-api';
 import type { ReadingBlock } from '../shared';
 import './history-panel.css';
-export interface HistoryPanelHandle { open(unitId?:string):void }
+export interface HistoryPanelHandle { open(unitId?:string, pointer?:boolean):void }
 interface Props {
   sessionId:string; units:Array<{id:string;name:string}>;
   prepare():Promise<void>; capture():()=>Promise<void>; changed(result:HistoryResult):Promise<void>;
@@ -26,7 +26,7 @@ function OldBlock({block}:{block:ReadingBlock}) {
   </section>;
 }
 export const HistoryPanel=forwardRef<HistoryPanelHandle,Props>(function HistoryPanel({sessionId,units,prepare,capture,changed},ref) {
-  const [open,setOpen]=useState(false),[scope,setScope]=useState<string>(),[activities,setActivities]=useState<HistoryActivity[]>([]),[next,setNext]=useState<string>();
+  const [open,setOpen]=useState(false),[motion,setMotion]=useState(false),[scope,setScope]=useState<string>(),[activities,setActivities]=useState<HistoryActivity[]>([]),[next,setNext]=useState<string>();
   const [details,setDetails]=useState<Record<string,HistoryGroup[]>>({}),[preview,setPreview]=useState<HistoryPreview>(),[result,setResult]=useState<HistoryResult>();
   const [busy,setBusy]=useState(false),[error,setError]=useState('');
   const dialog=useRef<HTMLDialogElement>(null),origin=useRef<(()=>Promise<void>)|undefined>(undefined),trigger=useRef<HTMLButtonElement>(null);
@@ -40,7 +40,7 @@ export const HistoryPanel=forwardRef<HistoryPanelHandle,Props>(function HistoryP
     setActivities(old=>before?[...old,...page.activities]:page.activities);setNext(page.next);
   };
   const work=async(run:()=>Promise<void>)=>{setBusy(true);setError('');try{await run();}catch(e){setError((e as Error).message);}finally{setBusy(false);}};
-  const show=(unitId?:string)=>{origin.current=capture();setScope(unitId);setOpen(true);setResult(undefined);if(!pending.current)replacePreview(undefined);setDetails({});void work(async()=>{await prepare();await load(unitId);});};
+  const show=(unitId?:string,pointer=false)=>{origin.current=capture();setMotion(pointer);setScope(unitId);setOpen(true);setResult(undefined);if(!pending.current)replacePreview(undefined);setDetails({});void work(async()=>{await prepare();await load(unitId);});};
   useImperativeHandle(ref,()=>({open:show}));
   const close=()=>{if(busy)return;setOpen(false);if(!pending.current)replacePreview(undefined);void origin.current?.().catch(e=>setError(e.message));};
   const inspect=async(activity:HistoryActivity,count=10)=>{
@@ -58,7 +58,7 @@ export const HistoryPanel=forwardRef<HistoryPanelHandle,Props>(function HistoryP
     await changed(receipt);await load(scope);
   });
   const names=(ids:string[])=>ids.map(id=>units.find(u=>u.id===id)?.name??id).join('、');
-  return <>{open&&createPortal(<dialog className="history-panel" aria-label="修改历史" ref={node=>{dialog.current=node;if(node&&!node.open)node.showModal();}} onCancel={e=>{e.preventDefault();close();}} onKeyDown={e=>{
+  return <>{open&&createPortal(<dialog className="history-panel" aria-label="修改历史" data-motion={motion?'pointer':undefined} ref={node=>{dialog.current=node;if(node&&!node.open)node.showModal();}} onCancel={e=>{e.preventDefault();close();}} onKeyDown={e=>{
     e.stopPropagation();if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z')e.preventDefault();
   }}>
     <header className="history-heading"><h2>修改历史</h2><button disabled={busy} onClick={close}>返回原阅读位置</button></header>

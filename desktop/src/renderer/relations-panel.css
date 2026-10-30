@@ -15,3 +15,28 @@
 .relations-panel :focus-visible { outline: 2px solid #6965c7; outline-offset: 3px; }
 .relations-panel input::placeholder { color: #596978; }
 .relations-panel button:disabled { opacity: .55; cursor: default; }
+
+.relations-panel[data-motion="pointer"] {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 180ms var(--shell-motion-ease), transform 180ms var(--shell-motion-ease);
+}
+.relations-panel[data-motion="pointer"][data-exiting] {
+  opacity: 0;
+  transform: translateX(12px);
+  transition-duration: 120ms;
+  pointer-events: none;
+}
+@starting-style {
+  .relations-panel[data-motion="pointer"]:not([data-exiting]) { opacity: 0; transform: translateX(12px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .relations-panel[data-motion="pointer"] {
+    transform: none;
+    transition: opacity 100ms var(--shell-motion-ease) !important;
+  }
+  .relations-panel[data-motion="pointer"][data-exiting] { transform: none; }
+  @starting-style {
+    .relations-panel[data-motion="pointer"]:not([data-exiting]) { transform: none; }
+  }
+}
