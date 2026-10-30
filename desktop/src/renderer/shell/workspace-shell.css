@@ -92,7 +92,30 @@ button.panel-close:hover { background: #efecf5; color: #4e426e; }
   .board[data-relations-open] :is(.canvas-navigation, .react-flow__minimap) { display: none; }
 }
 .editor-formula math-field, .editor-formula button { scroll-margin: 90px 24px 24px; }
-.reading-return { position: absolute; top: 78px; left: 14px; z-index: 6; }
+.reading-return { position: absolute; top: 16px; left: 16px; z-index: 9; display: flex; align-items: center; height: 50px; padding: 5px; background: #fff; border-radius: 12px; box-shadow: var(--shell-shadow); }
+.reading-return [data-slot=button] { height: 40px; padding: 0 14px 0 11px; gap: 7px; color: #5e586b; background: transparent; border: 0; border-radius: 8px; font-size: 13px; font-weight: 500; }
+.reading-return [data-slot=button]:hover { color: #41394c; background: #f1eef7; }
+.reading-return [data-slot=button]:focus-visible { outline: none; }
+.reading-return:has([data-slot=button]:focus-visible) { outline: 2px solid #7568cd; outline-offset: 2px; }
+.reading-return svg { width: 16px; height: 16px; stroke-width: 1.8; }
+/* The centered toolbar reaches the corner as the board narrows: collapse the label before they meet, then stack. */
+@container learning-board (max-width: 760px) {
+  .reading-return [data-slot=button] { width: 40px; padding: 0; }
+  .reading-return .reading-return-label { display: none; }
+}
+@container learning-board (max-width: 540px) { .reading-return { top: 74px; } }
+/* The relations panel shifts the toolbar toward the corner; keep the same clearance in the remaining width. */
+@container learning-board (min-width: 701px) and (max-width: 1080px) {
+  .board[data-relations-open] .reading-return [data-slot=button] { width: 40px; padding: 0; }
+  .board[data-relations-open] .reading-return .reading-return-label { display: none; }
+}
+@container learning-board (min-width: 701px) and (max-width: 880px) {
+  .board[data-relations-open] .reading-return { top: 74px; }
+}
+@media (max-width: 760px) {
+  .reading-return { height: 44px; padding: 4px; }
+  .reading-return [data-slot=button] { height: 36px; width: 36px; }
+}
 [data-slot^=dropdown-menu] { font-family: "PingFang SC", system-ui, sans-serif; box-sizing: border-box; }
 [data-slot=dropdown-menu-content] { min-width: 210px; padding: 6px; border: 0; background: #fff; box-shadow: 0 8px 30px #2f23401a, 0 2px 6px #2f23400a; border-radius: 10px; color: #41394c; }
 [data-slot=dropdown-menu-item], [data-slot=dropdown-menu-radio-item] { min-height: 36px; padding: 7px 10px; font-size: 13px; gap: 9px; }
