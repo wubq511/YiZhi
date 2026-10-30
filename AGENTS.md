@@ -19,6 +19,7 @@
 ## 运行与验证
 
 - 桌面应用的启动与验证见 [desktop/README.md](desktop/README.md)；旧版基线使用 `python3 legacy/review-board/start.py`，验证见 [旧版运行说明](legacy/review-board/README.md#验证)。
+- 完成需要 Robert 打开应用验收的桌面改动后，按 [macOS 本地应用包](desktop/docs/macos-package.md) 重新打包并安装到 `/Applications/YiZhi.app`，让他直接查看最新效果。
 - 课程／教材工具和检查命令见 [tools/README.md](tools/README.md)。
 - 只读查询或目录整理先检查现有数据；只有权威数据或生成器实际变化时才重建派生视图。
 - 原学习目录已清空，不创建软链、兼容副本或对旧目录的依赖。
