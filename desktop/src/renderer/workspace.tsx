@@ -6,6 +6,7 @@ import { SaveIndicator, useSaveReport, resetSaves, reportSave } from './shell/sa
 import { CanvasToolbar, CanvasNavigation } from './shell/canvas-toolbar';
 import { Button } from './components/ui/button';
 import { Toaster } from './components/ui/sonner';
+import { toast } from 'sonner';
 import { MessageCircle, ArrowLeft } from 'lucide-react';
 import type { DrawingToolState } from './drawings';
 import type { AnnotationSelection } from '../annotation-api';
@@ -226,7 +227,14 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
   const [loadError, setLoadError] = useState<string>();
   const [state, setState] = useState<SaveState>({ status: 'saved' });
   const [closing, setClosing] = useState(false);
-  const [inputRecovery,setInputRecovery]=useState<OpenedCourse['inputRecovery']>();
+  useEffect(() => {
+    if (!state.error) { toast.dismiss('save-error'); return; }
+    toast.error(`${visibleError(state.error)}${state.error.includes('冲突部分') ? '' : ' 输入仍保留，请重试保存。'}`, { id: 'save-error', duration: Infinity });
+  }, [state.error]);
+  useEffect(() => {
+    if (!readError) { toast.dismiss('read-error'); return; }
+    toast.info(visibleError(readError), { id: 'read-error', duration: Infinity });
+  }, [readError]);
   const [accessoryBusy, setAccessoryBusy] = useState(false);
   const [accessoryOpen, setAccessoryOpen] = useState(false);
   const accessoryRunning = useRef(false);
@@ -400,7 +408,8 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
       const opened = await window.yizhi.open();
       channel.current?.dispose();
       channel.current = new ParagraphSaveChannel(window.yizhi, opened, setState, { onSnapshot: setCourse });
-      setCourse(opened);setInputRecovery(opened.inputRecovery);
+      setCourse(opened);
+      if (opened.inputRecovery?.unconfirmedTail) toast.warning(opened.inputRecovery.detail, { id: 'input-recovery', duration: Infinity });
       const [loadedGraph, savedReading, reviewSnapshot] = await Promise.all([window.yizhi.graph(opened.sessionId), window.yizhi.readingState(opened.sessionId), window.yizhi.reviewStates(opened.sessionId)]);
       if (savedReading?.pinnedUnitId === 'KU-001' || savedReading?.modification) setMounted([opened.unit]);
       if (savedReading?.modification) { workTarget.current = savedReading.modification.targetId; camera.restore(savedReading.modification.ended); }
@@ -784,8 +793,6 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
         setMounted(previous => previous.map(item => item.id === current.unit.id ? current.unit : item));
       }} settled={() => { accessoryRunning.current = false; setAccessoryBusy(false); }} />}
     </header>
-    {inputRecovery?.unconfirmedTail && <div className="save-error" role="status">{inputRecovery.detail}</div>}
-    {state.error && <div className="save-error" role="alert">{visibleError(state.error)}{!state.error.includes('冲突部分') && ' 输入仍保留，请重试保存。'}</div>}
     <div className="workspace board-workspace" aria-busy={!cameraReady && !loadError}>
       <NavigationRail beforeOpen={id => { captureSelection(); if (id === 'search' && shell.visibleLeft !== 'search') searchOrigin.current = captureSearchScene(); }}/>
       <PanelDock side="left">
@@ -802,7 +809,6 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
         <CanvasNavigation minimap={minimap} toggle={() => setMinimap(!minimap)} zoom={viewport.zoom} zoomIn={() => { camera.takeover(); void flow.zoomIn({duration:0}); }} zoomOut={() => { camera.takeover(); void flow.zoomOut({duration:0}); }} fit={() => { camera.takeover(); pinchFrame.cancel(); void flow.fitBounds(flow.getNodesBounds(flow.getNodes()),{duration:0}); }}/>
         {(searchReturn || !!reading?.returnStack.length) && <div className="reading-return"><Button variant="ghost" aria-label={returnLabel} onClick={() => { if (searchReturn) void searchReturn().catch(e => setReadError(e.message)); else if (reading?.returnStack.length) { const previous = reading.returnStack.at(-1)!; void go(previous.unitId, {...reading,unitId:previous.unitId,scrollTop:previous.scrollTop,camera:previous.camera,returnStack:reading.returnStack.slice(0,-1)}); } }}><ArrowLeft data-icon="inline-start"/><span className="reading-return-label">{returnLabel}</span></Button></div>}
         {loadError && <div className="load-error" role="alert"><h1>课程未打开</h1><p>{loadError}</p><Button variant="outline" size="sm" onClick={() => void load()}>重新打开课程</Button></div>}
-        {readError && <div className="read-error" role="status">{visibleError(readError)}</div>}
         {course && mounted.filter(unit=>unit.id===selected?.id||unit.id==='KU-001'||readingRange.includes(unit.id)||heldReading.includes(unit.id)||unit.id===mutationUnit).map(unit => { const position = local.placements.find(node => node.unitId === unit.id); if (!position) return null; return <div key={unit.id} className="reading-layer" data-unit-id={unit.id} style={{ width: position.width >= 360 ? position.width : 650, transform: `translate(${viewport.x + position.x * viewport.zoom}px, ${viewport.y + position.y * viewport.zoom}px) scale(${viewport.zoom})`, visibility: viewport.zoom >= 0.55 ? 'visible' : 'hidden' }}>
           <ReadingSurface id={unit.id} name={unit.name} position={position} baseline={graph!.layout.nodes.find(node => node.unitId === unit.id)!} active={selected?.id === unit.id} articleRef={articleRef} measure={local.measure} gesture={local.gesture} commit={place} takeover={() => camera.takeover()}>
             <RoughFrame id={unit.id} />

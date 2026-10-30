@@ -49,7 +49,6 @@ test('missing example units do not interrupt reading, while other read failures 
     }, target);
     await waitForReadingLayout(page);
     await expect.poll(() => app.evaluate(() => (globalThis as any).__missingUnitTest.calls.some((call: any) => call.message === '该单元不存在或正文尚未加入课程副本'))).toBe(true);
-    await expect(page.locator('.read-error')).toHaveCount(0);
     await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
 
     // Returning to a valid unit and clicking the missing one keeps the student's place.
@@ -63,12 +62,11 @@ test('missing example units do not interrupt reading, while other read failures 
     await expect.poll(() => app.evaluate(count => (globalThis as any).__missingUnitTest.calls.slice(count).some((call: any) => call.unitId === 'KU-007'), before)).toBe(true);
     await expect(page.locator('article[data-unit-id="KU-001"]')).toHaveAttribute('data-reading-active', 'true');
     expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
-    await expect(page.locator('.read-error')).toHaveCount(0);
     await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
 
     await app.evaluate(() => { (globalThis as any).__missingUnitTest.override = true; });
     await missing.click();
-    await expect(page.locator('.read-error')).toHaveText('读取暂时失败，请重试');
+    await expect(page.getByText('读取暂时失败，请重试')).toBeVisible();
     await expect(board).toBeVisible();
   } finally {
     await app.close();

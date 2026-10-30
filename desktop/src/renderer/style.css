@@ -58,7 +58,6 @@ pre { white-space: pre-wrap; font-size: 1rem; }
 .board { position: relative; flex: 1; min-width: 0; overflow: hidden; padding: 0; scroll-behavior: auto; }
 .reading-layer { position: absolute; z-index: 3; left: 0; top: 0; transform-origin: 0 0; width: 650px; pointer-events: none; }
 .reading-layer article { pointer-events: auto; width: 650px; max-width: none; padding: 35px 38px; background: white; border: 1.5px solid #7798bc; }
-.read-error { position: absolute; top: 55px; left: 12px; background: #f0f5fa; padding: 12px; z-index: 5; }
 .react-flow__node { font-family: var(--hand); color: #27343e; }
 .reading-layer article { max-height: 82vh; overflow: auto; overscroll-behavior: contain; }
 .reading-layer article { position: relative; border: 0; }

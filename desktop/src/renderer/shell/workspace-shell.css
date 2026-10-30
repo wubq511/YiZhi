@@ -155,7 +155,6 @@ button.panel-close:hover { background: #efecf5; color: #4e426e; }
 }
 .board .drawing-tools h2 { font-size: 15px; }
 .board .follow-control { bottom: 18px; left: 18px; max-width: calc(100% - 285px); background: #f6f3fc; border: 0; color: #675181; box-shadow: var(--shell-shadow); }
-.read-error { top: 80px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .source-heading-actions { display: flex; align-items: center; gap: 3px; }
 .shell-dock .source-heading { margin-bottom: 4px; }
