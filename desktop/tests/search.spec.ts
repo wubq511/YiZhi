@@ -23,6 +23,43 @@ async function captureSearchFailure(page: Page, name: string, error: unknown) {
   } catch (captureError) { console.error('Search location failure evidence:', captureError); }
 }
 
+test('scope filters work with the keyboard and retain the search when the panel is reopened', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-search-scopes-ui-'));
+  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
+  try {
+    const page = await app.firstWindow(); await resizeBoardWindow(app, page);
+    await page.getByRole('button', { name: '搜索课程', exact: true }).click();
+    const input = page.getByRole('searchbox', { name: '查找已有内容' });
+    const results = page.getByRole('region', { name: '搜索结果' });
+    await input.fill('基数');
+    await expect(results.getByRole('button', { name: '定位命中' }).first()).toBeVisible();
+    await expect(results.locator('.search-excerpt mark').first()).toHaveText('基数');
+    const knowledge = page.getByRole('checkbox', { name: '知识', exact: true });
+    await knowledge.click();
+    await expect(results.getByRole('button', { name: '定位命中' })).toHaveCount(0);
+    await knowledge.focus(); await page.keyboard.press('Space');
+    await expect(results.getByRole('button', { name: '定位命中' }).first()).toBeVisible();
+    for (const name of ['知识', '个人笔记', '学习对话', '来源原文']) {
+      const scope = page.getByRole('checkbox', { name, exact: true });
+      await scope.focus(); await page.keyboard.press('Space');
+      await expect(scope).not.toBeChecked();
+    }
+    await expect(results).toContainText('请选择至少一个搜索范围');
+    await expect(results.getByRole('button', { name: '定位命中' })).toHaveCount(0);
+    await knowledge.focus(); await page.keyboard.press('Space');
+    await expect(results.getByRole('button', { name: '定位命中' }).first()).toBeVisible();
+    await page.getByRole('button', { name: '收起搜索' }).click();
+    await page.getByRole('button', { name: '搜索课程', exact: true }).click();
+    await expect(input).toHaveValue('基数'); await expect(knowledge).toBeChecked();
+    await expect(page.getByRole('checkbox', { name: '个人笔记', exact: true })).not.toBeChecked();
+    await resizeBoardWindow(app, page, 700, 700);
+    const close = page.getByRole('button', { name: '收起搜索' });
+    await close.focus(); await page.keyboard.press('Shift+Tab');
+    await expect(results.getByRole('button', { name: '定位命中' }).last()).toBeFocused();
+    await page.keyboard.press('Tab'); await expect(close).toBeFocused();
+  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+});
+
 test('offline real IPC search reveals a delivered deep answer and restores the original camera and disclosures', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-search-ui-'));
   const launch = () => electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_OBSERVE: '1', YIZHI_DATA_HOME: join(root, 'profile') } });

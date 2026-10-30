@@ -143,10 +143,11 @@ components:
     padding: "0 10px"
     typography: "{typography.body}"
   input-search:
-    backgroundColor: "#f8f8fa"
-    textColor: "{colors.ink}"
-    rounded: "9px"
-    padding: "10px"
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.shell-ink}"
+    rounded: "{rounded.control}"
+    height: "42px"
+    padding: "0 11px"
     typography: "{typography.control}"
   nav-item-active:
     backgroundColor: "{colors.shell-selected}"
@@ -277,6 +278,8 @@ components:
 ### Inputs / Fields
 
 搜索、资料页序、选择器和对话草稿使用规则字体。输入边界轻而清楚，placeholder 保持可读，长文本可以滚动。公式保留 MathLive 专业排版与独立输入历史。
+
+搜索面板以输入、四个可多选范围和结果为主，记忆线索与覆盖状态按需展开。结果显示内容类型、摘录和定位入口，可确定的匹配词在摘录中标出。
 
 ### Navigation
 

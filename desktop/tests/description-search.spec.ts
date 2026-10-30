@@ -77,7 +77,7 @@ test('offline and a genuinely missing CLI preserve basic short-word/symbol searc
     await expect(page.getByRole('region', { name: '搜索结果', exact: true })).toContainText('已有内容');
     await resizeBoardWindow(app, page, 700, 700);
     await expect(page.getByRole('dialog', { name: '搜索课程', exact: true })).toBeVisible();
-    await expect(page.locator('.workspace')).toHaveAttribute('inert', '');
+    await expect(page.locator('main.board')).toHaveAttribute('inert', '');
     await page.getByRole('textbox', { name: '记忆线索' }).focus();
     await page.keyboard.press('Shift+Tab');
     await expect(page.getByRole('dialog', { name: '搜索课程', exact: true })).toContainText('当前离线');

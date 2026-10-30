@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { DescriptionRun } from '../description-api';
 import type { ExecutorStatus } from '../agent-api';
 import type { SearchHit, SearchScope } from '../search-api';
+import { ChevronDown, Sparkles } from 'lucide-react';
+import { Button } from './components/ui/button';
 import { SearchHitCard } from './search-hit';
 import './description-search.css';
 
@@ -43,14 +45,15 @@ export function DescriptionSearch({ state, scopes, locate }: { state: ReturnType
   const unreadable = run?.queries.some(q => q.status.unreadable.length > 0);
   const completeLabel = !run ? '' : run.state === 'running' ? '正在改写查询并检查已有内容…' : run.state === 'cancelled' ? '描述检索已停止；基础检索仍可使用。' : run.state === 'failed' ? '描述检索未完成；基础检索仍可使用。' : run.hits.length ? `检索完成 · ${run.hits.length} 处已有内容` : run.outcome === 'no-selection' ? '本次描述未选出仍有效的匹配；可核对实际查询或补充线索。' : partial ? '已检查部分未命中；仍有未索引或不可用内容。' : unreadable ? '可读范围未命中；仍有内容不可读。' : '执行查询未命中已有内容。';
   return <details className="description-search" onToggle={event => { if (event.currentTarget.open && !executor && !checking && online) void state.check(); }}>
-    <summary>按记忆线索查找（Agent）</summary>
+    <summary className="search-tool-summary"><Sparkles size={16} aria-hidden="true"/><span>按记忆线索查找（Agent）</span><ChevronDown className="search-tool-chevron" size={15} aria-hidden="true"/></summary>
+    <div className="description-content">
     <p className="description-help">让 Agent 改写关键词并重排已有命中。点击查找时，会将这段描述与命中摘录交给所选模型。</p>
     {!online && <p role="status">当前离线。上方关键词、别名和符号查找继续可用。</p>}
     {checking && <p role="status">正在检查本机 CLI 与模型目录…</p>}
     {executor && <p className="description-executor" role="status" aria-label="描述检索可用性">{executor.available ? `${executor.version} · 本机 CLI 与模型目录已检查。` : `描述增强暂不可用：${executor.error} 基础检索继续可用。`}</p>}
     <label className="description-input">记忆线索<textarea aria-label="记忆线索" value={description} maxLength={4000} placeholder="例如：把输入的编号变成只有一条输出为 1 的电路" onChange={e => setDescription(e.target.value)} /></label>
     {executor?.available && <label className="description-model">检索模型<select aria-label="描述检索模型" value={model} disabled={pending} onChange={e => setModel(e.target.value)}>{executor.models.map(m => <option key={m.id} value={m.model}>{m.displayName}</option>)}</select></label>}
-    <div className="description-actions"><button disabled={!online || checking || pending || !description.trim() || !scopes.length || executor?.available === false} onClick={() => void state.start(scopes)}>用描述查找已有内容</button>{run?.state === 'running' && <button onClick={() => void state.cancel()}>停止描述检索</button>}{!pending && <button disabled={!online || checking} onClick={() => void state.check()}>检查执行器</button>}</div>
+    <div className="description-actions"><Button size="sm" disabled={!online || checking || pending || !description.trim() || !scopes.length || executor?.available === false} onClick={() => void state.start(scopes)}>用描述查找已有内容</Button>{run?.state === 'running' && <Button variant="outline" size="sm" onClick={() => void state.cancel()}>停止描述检索</Button>}{!pending && <Button variant="ghost" size="sm" className="description-recheck" disabled={!online || checking} onClick={() => void state.check()}>重新检查</Button>}</div>
     {error && <p role="alert" className="search-error">{error}</p>}
     {run && <section data-description-id={run.id} role="region" aria-label="描述检索结果" className="description-results" aria-busy={run.state === 'running'}>
       <p role="status" aria-label="描述检索状态">{completeLabel}</p>
@@ -70,5 +73,6 @@ export function DescriptionSearch({ state, scopes, locate }: { state: ReturnType
       {run.toolErrors.length > 0 && <details className="description-evidence"><summary>被拒绝的工具请求</summary>{run.toolErrors.map((item, i) => <p key={i}>{item.callId} · {item.tool}：{item.reason}</p>)}</details>}
       {run.hits.map(selected => <SearchHitCard key={selected.id} hit={selected.hit} locate={locate}><details className="description-evidence"><summary>查询与排序依据</summary><p>实际命中 {selected.id} · 描述排序 {selected.rank}</p>{selected.basis.map(b => <p key={b.queryId}>{b.queryId}：{b.query} · 原查询第 {b.originalRank} 处 · 工具调用 {b.callId}</p>)}<p>选择调用 {run.ranking?.callId}</p></details></SearchHitCard>)}
     </section>}
+    </div>
   </details>;
 }
