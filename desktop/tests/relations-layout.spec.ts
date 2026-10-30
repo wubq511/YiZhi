@@ -23,7 +23,8 @@ test('relation details and canvas controls remain unobstructed at desktop and na
     const minimap = page.locator('.react-flow__minimap');
     const close = panel.getByRole('button', { name: '关闭关系详情', exact: true });
 
-    for (const [width, toolbarVisible, navigationVisible] of [[1440, true, true], [1024, true, true], [900, false, true], [700, false, false]] as const) {
+    // The shared 330px left dock leaves the 1024px board too narrow for both the relation panel and toolbar.
+    for (const [width, toolbarVisible, navigationVisible] of [[1440, true, true], [1100, true, true], [1024, false, true], [900, false, false], [700, false, false]] as const) {
       await app.evaluate(({ BrowserWindow }, width) => BrowserWindow.getAllWindows()[0].setContentSize(width, 800), width);
       // Let the existing side dock and relation entrance finish before checking the rendered layout.
       await page.waitForTimeout(250);

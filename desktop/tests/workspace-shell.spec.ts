@@ -33,7 +33,7 @@ test('shell retains panels and targets, uses real tool histories and returns key
       await page.getByRole('button',{name:'搜索课程',exact:true}).click();await expect(search).toHaveValue(query);
       expect(await searchInput!.evaluate(input=>input.isConnected)).toBe(true);
     }
-    await search.fill('权展开');await expect(page.getByRole('region',{name:'搜索结果'}).getByRole('button',{name:'定位命中'}).first()).toBeVisible();
+    await search.fill('权展开');await expect(page.getByRole('region',{name:'搜索结果'}).getByRole('button',{name:'前往',exact:true}).first()).toBeVisible();
     await expect(page.getByRole('navigation',{name:'课程目录',exact:true})).toBeHidden();
     await search.press('Escape');await expect(page.getByRole('button',{name:'搜索课程',exact:true})).toBeFocused();
     expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(camera);
@@ -70,6 +70,41 @@ test('shell retains panels and targets, uses real tool histories and returns key
     await page.getByRole('button',{name:'返回课程',exact:true}).click();await expect(page.getByRole('button',{name:'课程菜单',exact:true})).toBeFocused();
     expect(errors).toEqual([]);
     await writeFile(evidencePath('implementation-ui.json'),JSON.stringify({sizes:[size,medium,narrow],errors,scope:'Independent initialized course fixture; real Electron and core APIs, no mocked renderer'},null,2));
+  } finally { await app.close(); await rm(root,{recursive:true,force:true}); }
+});
+
+test('left panels share one draggable width and the agent dock resizes independently', async () => {
+  await mkdir(scratch,{recursive:true});const root=await mkdtemp(join(scratch,'resize-'));
+  const app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});
+  try {
+    const page=await app.firstWindow();await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');
+    await app.evaluate(({BrowserWindow})=>{const win=BrowserWindow.getAllWindows()[0];win.setContentSize(1440,900);win.show();win.focus();});
+    const leftDock=page.locator('.shell-dock-left'), left=page.getByRole('separator',{name:'调整左侧面板宽度',exact:true});
+    await expect(leftDock).toHaveCSS('width','330px');
+    await page.screenshot({path:evidencePath('panels-resize-default-1440x900.png'),animations:'disabled'});
+    const box=(await left.boundingBox())!;
+    await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();
+    await page.mouse.move(box.x+box.width/2+90,box.y+box.height/2,{steps:8});await page.mouse.up();
+    await expect(left).toHaveAttribute('aria-valuenow','420');
+    await expect(leftDock).toHaveCSS('width','420px');
+    await page.screenshot({path:evidencePath('panels-resize-left-1440x900.png'),animations:'disabled'});
+    await page.getByRole('button',{name:'搜索课程',exact:true}).click();
+    await expect(page.getByRole('searchbox',{name:'查找已有内容',exact:true})).toBeVisible();
+    await expect(leftDock).toHaveCSS('width','420px');
+    await left.focus();await page.keyboard.press('ArrowLeft');
+    await expect(left).toHaveAttribute('aria-valuenow','404');
+    await left.dblclick();await expect(left).toHaveAttribute('aria-valuenow','330');
+    await expect(leftDock).toHaveCSS('width','330px');
+    await page.getByRole('button',{name:'学习对话',exact:true}).click();
+    const agent=page.getByRole('separator',{name:'调整学习对话宽度',exact:true}), agentDock=page.locator('.shell-dock-agent');
+    await expect(agentDock).toHaveCSS('width','360px');
+    const agentBox=(await agent.boundingBox())!;
+    await page.mouse.move(agentBox.x+agentBox.width/2,agentBox.y+agentBox.height/2);await page.mouse.down();
+    await page.mouse.move(agentBox.x+agentBox.width/2-110,agentBox.y+agentBox.height/2,{steps:8});await page.mouse.up();
+    await expect(agent).toHaveAttribute('aria-valuenow','470');
+    await expect(agentDock).toHaveCSS('width','470px');
+    await page.screenshot({path:evidencePath('panels-resize-agent-1440x900.png'),animations:'disabled'});
+    expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('yizhi.shell.panel-widths.v1')!))).toEqual({left:330,agent:470});
   } finally { await app.close(); await rm(root,{recursive:true,force:true}); }
 });
 

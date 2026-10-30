@@ -25,10 +25,20 @@
 .rail-item > svg, .rail-item > span:not(.rail-selection) { position: relative; z-index: 1; }
 .shell-rail .rail-item[aria-expanded=true] { color: var(--shell-accent); }
 .rail-item .rail-selection { position: absolute; inset: 0; background: var(--shell-selected); border-radius: 10px; }
-.shell-dock { position: relative; z-index: 15; flex-shrink: 0; overflow: hidden; min-height: 0; background: var(--shell-panel); }
-.shell-dock-inner { height: 100%; min-height: 0; position: relative; overflow: hidden; }
+.shell-dock { position: relative; z-index: 15; flex-shrink: 0; overflow: visible; min-height: 0; background: var(--shell-panel); transition: width 180ms var(--shell-motion-ease); }
+.shell-dock-clip { position: absolute; inset: 0; overflow: hidden; }
+.shell-dock-inner { position: absolute; top: 0; bottom: 0; min-height: 0; overflow: hidden; }
+.shell-dock-left .shell-dock-inner { left: 0; }
+.shell-dock-agent .shell-dock-inner { right: 0; }
 .shell-dock-left[data-open=true] { border-right: 1px solid var(--shell-line); }
 .shell-dock-agent[data-open=true] { border-left: 1px solid var(--shell-line); }
+.shell-dock-resizer { position: absolute; z-index: 6; top: 0; bottom: 0; width: 12px; display: grid; align-items: center; padding: 0; border: 0; background: transparent; color: var(--shell-muted); cursor: col-resize; touch-action: none; transition: opacity 140ms var(--shell-motion-ease); }
+.shell-dock-left .shell-dock-resizer { right: -12px; justify-items: start; }
+.shell-dock-agent .shell-dock-resizer { left: -12px; justify-items: end; }
+.shell-dock:not([data-open=true]) .shell-dock-resizer { opacity: 0; pointer-events: none; }
+.shell-dock-resizer::before { content: ""; width: 2px; height: 40px; border-radius: 2px; background: #c9c2d6; transition: background-color 140ms var(--shell-motion-ease), height 140ms var(--shell-motion-ease); }
+.shell-dock-resizer:hover::before, .shell-dock-resizer:focus-visible::before, .shell-dock-resizer[data-active]::before { background: var(--shell-accent); height: 56px; }
+.shell-dock .shell-dock-resizer:focus-visible { outline: 2px solid var(--shell-accent); outline-offset: -3px; border-radius: 8px; }
 .shell-panel-slot { height: 100%; }
 [hidden] { display: none !important; }
 .directory-panel { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; color: var(--shell-ink); font-size: 13px; background: var(--shell-panel); }
@@ -69,7 +79,7 @@ button.panel-close:hover { background: #efecf5; color: #4e426e; }
 .directory-empty p { margin: 0 0 8px; }
 .directory-empty button { height: auto; padding: 0; border: 0; background: transparent; color: #5a4ba6; font: inherit; }
 .directory-empty button:hover { text-decoration: underline; text-underline-offset: 3px; }
-@media (prefers-reduced-motion: reduce) { .directory-theme-row > .directory-chevron { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .directory-theme-row > .directory-chevron, .shell-dock, .shell-dock-resizer, .shell-dock-resizer::before { transition: none; } }
 .board { --relation-panel-width: min(330px, 90%); container: learning-board / inline-size; flex: 1; min-width: 0; position: relative; overflow: hidden; padding: 0; background: #fff; }
 .canvas-toolbar.board-tools { position: absolute; z-index: 10; left: 50%; top: 16px; transform: translateX(-50%); display: flex; flex-wrap: nowrap; gap: 4px; align-items: center; padding: 5px; height: 50px; border-radius: 12px; background: #fff; box-shadow: var(--shell-shadow); color: #5e586b; width: max-content; max-width: calc(100% - 24px); }
 .board[data-relations-open] .canvas-toolbar.board-tools { left: calc((100% - var(--relation-panel-width)) / 2); }
@@ -133,7 +143,7 @@ button.panel-close:hover { background: #efecf5; color: #4e426e; }
 .save-channel button { min-height: 36px; white-space: normal; height: auto; text-align: left; }
 .save-confirmed summary { color: #706878; padding: 6px 0; font-size: 12px; }
 .save-confirmed > div { display: flex; gap: 8px; padding: 5px 0; color: #746c7c; }
-.shell-dock :is(.search-panel, .annotation-panel, .source-panel, .agent-panel) { position: relative; inset: auto; width: 100%; max-width: none; height: 100%; border: 0; border-radius: 0; box-shadow: none; background: var(--shell-panel); color: var(--shell-ink); padding: 18px 16px; scrollbar-width: thin; scrollbar-color: #cfc8d9 transparent; }
+.shell-dock :is(.search-panel, .annotation-panel, .source-panel, .agent-panel) { position: relative; inset: auto; z-index: auto; width: 100%; max-width: none; height: 100%; border: 0; border-radius: 0; box-shadow: none; background: var(--shell-panel); color: var(--shell-ink); padding: 18px 16px; scrollbar-width: thin; scrollbar-color: #cfc8d9 transparent; }
 .shell-dock :is(input, textarea, select) { font-family: inherit; font-size: 13px; accent-color: #6555be; }
 .shell-dock .agent-panel { overflow-y: auto; }
 .shell-dock .agent-panel .agent-composer { margin-top: 16px; padding-top: 14px; max-height: none; overflow: visible; }
