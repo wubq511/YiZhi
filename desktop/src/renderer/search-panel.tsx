@@ -1,5 +1,5 @@
 import { PanelPortal, useDockPanel } from './shell/panels';
-import { ChevronDown, CircleAlert, Search, Sparkles, X } from 'lucide-react';
+import { ChevronDown, CircleAlert, Sparkles, X } from 'lucide-react';
 import { Checkbox } from './components/ui/checkbox';
 import { Button } from './components/ui/button';
 import { InputGroup, InputGroupButton, InputGroupTextarea } from './components/ui/input-group';
@@ -90,7 +90,6 @@ export function SearchPanel({ sessionId, narrow, locate }: { sessionId: string; 
     <div className="search-heading"><h2>搜索课程</h2><Button variant="ghost" size="icon-sm" className="panel-close" aria-label="收起搜索" onClick={() => show(false)}><X size={18}/></Button></div>
     <InputGroup className="search-field" data-ai={aiMode || undefined} data-motion={aiMotion ? 'pointer' : undefined}>
       <div className="search-field-main">
-        <Search size={17} aria-hidden="true"/>
         <InputGroupTextarea ref={input} role="searchbox" rows={1} aria-label="查找已有内容" defaultValue={query} placeholder="搜索关键词、公式或描述" maxLength={4000} onInput={event => {
           const field = event.currentTarget; field.style.height = 'auto'; field.style.height = `${Math.min(field.scrollHeight, 100)}px`;
           setQuery(field.value); if (described.run || described.starting) setResultView('local');

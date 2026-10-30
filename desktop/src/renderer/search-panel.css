@@ -4,12 +4,11 @@
 .search-heading h2 { margin:0; font-size:15px; font-weight:600; letter-spacing:-.01em; }
 
 .search-field { position:relative; display:flex; flex-direction:column; align-items:stretch; gap:0; height:auto; min-height:42px; padding:0; color:#777080; background:#fff; border:1px solid #dedbe6; border-radius:10px; opacity:1; }
-.search-field-main { display:flex; align-items:flex-start; gap:9px; width:100%; min-height:40px; padding:4px 4px 4px 11px; }
+.search-field-main { display:flex; align-items:flex-start; gap:8px; width:100%; min-height:40px; padding:4px 4px 4px 11px; }
 .search-field::after { content:""; position:absolute; inset:-1px; padding:1.5px; border-radius:inherit; background:linear-gradient(115deg,#6756c5,#a272d2,#6b88c9); mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); mask-composite:exclude; opacity:0; pointer-events:none; }
 .search-field[data-motion="pointer"]::after { transition:opacity 180ms var(--shell-motion-ease); }
 .search-field[data-ai]::after { opacity:1; }
 .search-field:focus-within { border-color:#7568cd; box-shadow:0 0 0 2px #7568cd26; }
-.search-field-main > svg { flex:none; margin-top:7px; }
 .search-field textarea { flex:1; field-sizing:fixed; width:100%; min-width:0; min-height:22px; max-height:100px; margin:5px 0; padding:0; overflow-y:auto; resize:none; color:var(--shell-ink); background:transparent; border:0; outline:none; font:inherit; line-height:22px; caret-color:var(--shell-accent); scrollbar-width:thin; }
 .search-field textarea::placeholder { color:#73707c; opacity:1; }
 .shell-dock .search-field textarea:focus-visible { outline:none; }

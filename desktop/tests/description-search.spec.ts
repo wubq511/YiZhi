@@ -199,3 +199,39 @@ test('AI model selection survives mode toggles and an Electron restart in the sa
     expect(run.executor?.model).toBe('fixture-second');
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
+
+test('a long model menu stays compact and supports scrolling and keyboard selection', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'yizhi-description-model-list-ui-')); await chmod(fixture, 0o755);
+  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile'), YIZHI_CODEX_PATH: fixture, YIZHI_DESCRIPTION_FIXTURE: 'many-models' } });
+  try {
+    const page = await app.firstWindow(); await resizeBoardWindow(app, page);
+    await page.getByRole('button', { name: '搜索课程', exact: true }).click();
+    await page.getByRole('button', { name: 'AI 检索', exact: true }).click();
+    const model = page.getByRole('button', { name: '检索模型' });
+    await expect(model).toBeEnabled();
+    await model.click();
+    const menu = page.getByRole('menu', { name: '检索模型' });
+    await expect(menu.getByRole('menuitemradio')).toHaveCount(20);
+    const bounds = (await menu.boundingBox())!;
+    expect(bounds.height).toBeLessThanOrEqual(300);
+    await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+    await page.mouse.wheel(0, 2000);
+    await expect.poll(() => menu.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
+    const penultimate = menu.getByRole('menuitemradio', { name: 'Description fixture 19', exact: true });
+    await expect(penultimate).toBeInViewport();
+    await penultimate.click();
+    await expect(model).toContainText('Description fixture 19');
+
+    await model.click();
+    await page.keyboard.press('Home');
+    await page.keyboard.press('End');
+    const last = menu.getByRole('menuitemradio', { name: 'Description fixture 20', exact: true });
+    await expect(last).toBeFocused();
+    await expect(last).toBeInViewport();
+    await page.keyboard.press('Enter');
+    await expect(model).toContainText('Description fixture 20');
+    await model.click();
+    await page.keyboard.press('Escape');
+    await expect(model).toBeFocused();
+  } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+});
