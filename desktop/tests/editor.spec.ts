@@ -1,3 +1,4 @@
+import { openFirstUnit } from './shell-actions';
 import { controlledElectron } from './controlled-launch';
 import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
@@ -30,7 +31,7 @@ test('independent producer range update survives student Undo and complete SQLit
   try {
     let page = await app.firstWindow();
     await resizeBoardWindow(app, page);
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     const original = await page.evaluate(() => (window as any).yizhi.open());
     const first = page.getByRole('textbox', { name: '编辑首段正文', exact: true });
     await first.fill('学生在第一段的已保存输入');
@@ -82,7 +83,7 @@ test('copy assigns fresh identities recursively, an explicit internal move keeps
     const emptyClipboard = await snapshotClipboard(app);
     expect(await emptyClipboard.evaluate(items => items.length)).toBe(0);
     await emptyClipboard.dispose();
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     const first = page.getByRole('textbox', { name: '编辑首段正文', exact: true });
     await first.fill('复制与移动');
     const editor = page.getByRole('textbox', { name: '连续编辑正文', exact: true });
@@ -151,7 +152,7 @@ test('MathLive owns inner Undo once, incomplete input survives host death separa
       if (response.ok()) fontLoads.add(response.url()); else fontFailures.push(response.url());
     } });
     page.on('requestfailed', request => { if (request.url().includes('/mathlive-fonts/')) fontFailures.push(request.url()); });
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     await page.getByRole('textbox', { name: '编辑首段正文', exact: true }).fill('保留正文与公式的独立撤销。');
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     await revealBoardControl(page, page.locator('.editor-formula').first().getByRole('button', { name: '编辑公式', exact: true }));
@@ -241,7 +242,7 @@ test('continuous editor saves split/merge and cross-paragraph replacement throug
   try {
     let page = await app.firstWindow();
     await resizeBoardWindow(app, page);
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     const editor = page.getByRole('textbox', { name: '连续编辑正文', exact: true });
     await expect(editor).toBeVisible({ timeout: 3000 });
     const original = await page.evaluate(() => (window as any).yizhi.open());

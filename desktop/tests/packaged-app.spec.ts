@@ -1,4 +1,4 @@
-import { sourceAction } from './shell-actions';
+import { sourceAction, openFirstUnit } from './shell-actions';
 import { test, expect, _electron as electron } from '@playwright/test';
 import type { ElectronApplication } from '@playwright/test';
 import { cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile, access } from 'node:fs/promises';
@@ -57,7 +57,7 @@ test('installed macOS app opens offline without checkout tools, decodes real res
     const bridge = await page.evaluate(() => ({ keys: Object.keys(window.yizhi), commands: Object.keys(window.yizhi.commands) }));
     for (const name of ['migration', 'exchange', 'upgrade']) expect(bridge.keys).not.toContain(name);
     for (const name of ['startAttempt', 'read', 'commit', 'stop']) expect(bridge.commands).not.toContain(name);
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     const editor = page.getByRole('textbox', { name: '编辑首段正文', exact: true });
     await editor.fill('安装副本离线输入：独立运行并自动保存 📝。');
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');

@@ -1,3 +1,4 @@
+import { openFirstUnit, expandDirectoryTheme } from './shell-actions';
 import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron, type Page } from '@playwright/test';
 import { mkdtemp, rm, chmod, writeFile } from 'node:fs/promises';
@@ -15,7 +16,7 @@ test('actual active B edits and Undo save to that B and reopen without changing 
     let page = await app.firstWindow(); await resizeBoardWindow(app, page);
     inputPage=page;
     const before = await page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return { first: c.unit, other: await b.readUnit(c.sessionId, 'KU-057') }; });
-    await page.getByRole('button', { name: '复用器与分配器', exact: true }).click();
+    await expandDirectoryTheme(page, '复用器与分配器');
     await page.getByRole('button', { name: 'MUX 器件、级联与扩展', exact: true }).first().click();
     const reader = page.locator('[data-agent-unit="KU-057"]');
     const editor = reader.getByRole('textbox', { name: '连续编辑正文', exact: true });
@@ -91,7 +92,7 @@ test('an active B annotation retains its actual selection and locates back to B 
   try {
     const page = await app.firstWindow(); await resizeBoardWindow(app, page);
     const original = await page.evaluate(() => window.yizhi.open());
-    await page.getByRole('button', { name: '复用器与分配器', exact: true }).click();
+    await expandDirectoryTheme(page, '复用器与分配器');
     await page.getByRole('button', { name: 'MUX 器件、级联与扩展', exact: true }).first().click();
     const reader = page.locator('[data-agent-unit="KU-057"]'), editor = reader.getByRole('textbox', { name: '连续编辑正文', exact: true });
     await expect(editor).toBeVisible();
@@ -105,7 +106,7 @@ test('an active B annotation retains its actual selection and locates back to B 
     await page.getByRole('textbox', { name: '批注内容', exact: true }).fill('MUX 的个人理解');
     await expect(page.getByRole('status', { name: '批注同步状态' })).toHaveText('已保存');
     await page.getByRole('button', { name: '关闭批注', exact: true }).click();
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     await page.getByRole('button', { name: '个人批注', exact: true }).click();
     await page.getByRole('button', { name: '定位当前选段', exact: true }).click();
     await expect.poll(() => page.evaluate(async () => window.yizhi.readingState((await window.yizhi.open()).sessionId).then(s => s?.unitId))).toBe('KU-057');

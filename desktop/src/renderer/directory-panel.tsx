@@ -33,18 +33,15 @@ function DirectoryTheme({ group, nodes, counts, expanded, selectedId, review, on
   const total = counts && counts.pending + counts.weak + counts.mastered;
   const countLabel = counts ? `已掌握 ${counts.mastered} 个，共 ${total} 个单元` : undefined;
   return <Collapsible className="directory-group" open={expanded} onOpenChange={onExpandedChange} disabled={nodes.length === 0}>
-    <div className="directory-theme-row">
-      <CollapsibleTrigger className="directory-toggle" aria-label={`${expanded ? '收起' : '展开'}${group.name}`}>
-        <ChevronRight size={15} aria-hidden="true"/>
-      </CollapsibleTrigger>
-      <Button variant="ghost" type="button" className="directory-theme" disabled={nodes.length === 0} aria-describedby={counts ? countId : undefined}
-        onClick={() => { onExpandedChange(true); onNavigate(nodes[0].id); }}>
+    <CollapsibleTrigger asChild>
+      <Button variant="ghost" type="button" className="directory-theme-row" disabled={nodes.length === 0} aria-label={group.name} aria-describedby={counts ? countId : undefined}>
+        <ChevronRight className="directory-chevron" data-icon="inline-start" aria-hidden="true"/>
         <span className="directory-title">{group.name}</span>
+        {counts && <span id={countId} className="directory-count" title={countLabel}>
+          <CircleCheck size={12} aria-hidden="true"/><span aria-hidden="true">{counts.mastered}/{total}</span><span className="sr-only">{countLabel}</span>
+        </span>}
       </Button>
-      {counts && <span id={countId} className="directory-count" title={countLabel}>
-        <CircleCheck size={12} aria-hidden="true"/><span aria-hidden="true">{counts.mastered}/{total}</span><span className="sr-only">{countLabel}</span>
-      </span>}
-    </div>
+    </CollapsibleTrigger>
     <CollapsibleContent className="directory-units">
       {nodes.map(node => <DirectoryUnit key={node.id} node={node} selected={selectedId === node.id}
         status={review ? review.units[node.id]?.status ?? 'pending' : undefined} onNavigate={onNavigate}/>)}
@@ -58,13 +55,13 @@ export function DirectoryPanel({ navRef, open, inert, graph, review, selectedId,
 }) {
   const [filter, setFilter] = useState<Filter>('all');
   const [filterOpen, setFilterOpen] = useState(false);
-  const [expandedTheme, setExpandedTheme] = useState<string>();
+  const [expandedThemes, setExpandedThemes] = useState<Set<string>>(() => new Set());
   const [collapsedMatches, setCollapsedMatches] = useState<Set<string>>(() => new Set());
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!selectedThemeId) return;
-    setExpandedTheme(selectedThemeId);
+    setExpandedThemes(previous => previous.has(selectedThemeId) ? previous : new Set(previous).add(selectedThemeId));
   }, [selectedId, selectedThemeId]);
   useEffect(() => { if (!open || inert) setFilterOpen(false); }, [open, inert]);
 
@@ -85,7 +82,11 @@ export function DirectoryPanel({ navRef, open, inert, graph, review, selectedId,
   };
   const setExpanded = (id: string, expanded: boolean) => {
     if (filter === 'all') {
-      setExpandedTheme(previous => expanded ? id : previous === id ? undefined : previous);
+      setExpandedThemes(previous => {
+        const next = new Set(previous);
+        if (expanded) next.add(id); else next.delete(id);
+        return next;
+      });
       return;
     }
     setCollapsedMatches(previous => {
@@ -115,7 +116,7 @@ export function DirectoryPanel({ navRef, open, inert, graph, review, selectedId,
     </div>
     <div className="directory-list" ref={listRef}>
       {groups?.map(({ group, nodes }) => <DirectoryTheme key={group.id} group={group} nodes={nodes} counts={review?.themes[group.id]}
-        expanded={filter === 'all' ? expandedTheme === group.id : !collapsedMatches.has(group.id)}
+        expanded={filter === 'all' ? expandedThemes.has(group.id) : !collapsedMatches.has(group.id)}
         selectedId={selectedId} review={review} onExpandedChange={value => setExpanded(group.id, value)} onNavigate={navigate}/>)}
       {graph && groups?.length === 0 && filter !== 'all' && <div className="directory-empty" role="status">
         <p>没有{filterLabels[filter]}的单元</p>

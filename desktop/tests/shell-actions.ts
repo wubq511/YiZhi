@@ -1,4 +1,16 @@
 import { expect, type Page } from '@playwright/test';
+export async function expandDirectoryTheme(page: Page, name: string) {
+  const directory = page.getByRole('navigation', { name: '课程目录', exact: true });
+  const theme = directory.getByRole('button', { name, exact: true });
+  if (await theme.getAttribute('aria-expanded') !== 'true') await theme.click();
+}
+export async function openDirectoryUnit(page: Page, theme: string, unit: string) {
+  await expandDirectoryTheme(page, theme);
+  await page.getByRole('navigation', { name: '课程目录', exact: true }).getByRole('button', { name: unit, exact: true }).click();
+}
+export async function openFirstUnit(page: Page) {
+  await openDirectoryUnit(page, '数制与数制转换', '位置记数法与权展开');
+}
 export async function courseAction(page: Page, name: string) {
   await page.getByRole('button', {name:'课程菜单',exact:true}).click();
   await page.getByRole('menuitem', {name:name==='历史与空间'?'课程设置 · 历史与空间':name,exact:true}).click();

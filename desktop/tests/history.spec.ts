@@ -1,4 +1,4 @@
-import { courseAction } from './shell-actions';
+import { courseAction, openFirstUnit, expandDirectoryTheme } from './shell-actions';
 import type { DatabaseSync } from 'node:sqlite';
 import { openFaultDatabase } from './fault-database';
 import { test,expect,_electron as electron } from '@playwright/test';
@@ -20,7 +20,7 @@ test('real history UI expands real differences, previews read-only and restores 
  const app=await electron.launch({args:[resolve('.'),`--course=${directory}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});
  try {
   const page=await app.firstWindow();await resizeBoardWindow(app,page);
-  await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();
+  await openFirstUnit(page);
   await expect(page.getByRole('heading',{name:'位置记数法与权展开',exact:true})).toBeVisible();
   const camera=await page.locator('.react-flow__viewport').getAttribute('style');
   await courseAction(page, '课程历史');
@@ -63,7 +63,7 @@ test('real incomplete formula remains a draft through failed history restore, ex
  let app=await launch(),fault:DatabaseSync|undefined;
  try {
   let page=await app.firstWindow();await resizeBoardWindow(app,page);
-  await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();
+  await openFirstUnit(page);
   const formula=page.locator('.editor-formula').first();await revealBoardControl(page,formula.getByRole('button',{name:'编辑公式',exact:true}));await formula.getByRole('button',{name:'编辑公式',exact:true}).click();
   await formula.locator('math-field').evaluate((el:any)=>{el.executeCommand('selectAll');el.executeCommand(['insert','\\frac{1}{#?}']);});
   await courseAction(page, '课程历史');
@@ -99,7 +99,7 @@ test('history stops an executing protocol task before withdrawing its complete b
  try{
   const page=await app.firstWindow();await resizeBoardWindow(app,page);
   const original=await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return {unit:c.unit,graph:await b.graph(c.sessionId)};});
-  await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();
+  await openFirstUnit(page);
   await page.getByRole('button',{name:'学习对话',exact:true}).click();
   await expect(page.getByText('本机 Codex CLI · 已连接',{exact:true})).toBeVisible();
   await page.getByLabel('Agent 请求方式').selectOption('modify');
@@ -129,7 +129,7 @@ test('active B history preserves a failed input tail before preview and restores
  try{
   const page=await app.firstWindow();await resizeBoardWindow(app,page);
   const original=await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return {first:c.unit,other:await b.readUnit(c.sessionId,'KU-057')};});
-  await page.getByRole('button',{name:'复用器与分配器',exact:true}).click();
+  await expandDirectoryTheme(page, '复用器与分配器');
   await page.getByRole('button',{name:'MUX 器件、级联与扩展',exact:true}).first().click();
   const reader=page.locator('[data-agent-unit="KU-057"]'),editor=reader.getByRole('textbox',{name:'连续编辑正文',exact:true});
   const block=original.other.reading.blocks.find((b:any)=>b.kind==='paragraph');

@@ -1,4 +1,4 @@
-import { sourceAction } from './shell-actions';
+import { sourceAction, openFirstUnit } from './shell-actions';
 import { openFaultDatabase } from './fault-database';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, chmod, writeFile } from 'node:fs/promises';
@@ -18,7 +18,7 @@ test('Agent sidebar keeps drafts, native composer Undo, fixed source selection a
   let app: ElectronApplication | undefined;
   try {
     app = await launch(); let page = await app.firstWindow();
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     await expect.poll(() => page.evaluate(async () => { const b = (window as any).yizhi; const c = await b.open(); return (await b.readingState(c.sessionId))?.camera?.zoom; })).toBe(0.85);
     const original = await page.evaluate(async () => { const b = (window as any).yizhi; const c = await b.open(); return { body: c.unit, state: await b.readingState(c.sessionId) }; });
     await page.getByRole('textbox', { name: '编辑首段正文' }).evaluate(element => { const range = document.createRange(); const node = element.firstChild!; const at = node.textContent!.indexOf('位置记数法'); range.setStart(node, at); range.setEnd(node, at + 5); const selection = window.getSelection()!; selection.removeAllRanges(); selection.addRange(range); element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true })); });
@@ -85,7 +85,7 @@ test('missing executor retains offline reading; failed composer save blocks clos
   const root = await mkdtemp(join(tmpdir(), 'yizhi-agent-offline-'));
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile'), YIZHI_CODEX_PATH: join(root, 'absent') } });
   try {
-    const page = await app.firstWindow(); await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click(); await openAgent(page);
+    const page = await app.firstWindow(); await openFirstUnit(page); await openAgent(page);
     await expect(page.getByText(/生成暂不可用/)).toBeVisible(); await expect(page.getByRole('button', { name: '发送问题' })).toBeDisabled();
     await page.getByRole('textbox', { name: '学习对话草稿' }).fill('离线留下问题'); await expect(page.getByRole('status', { name: '对话草稿保存' })).toHaveText('草稿已保存');
     const fault = openFaultDatabase(join(root, 'course/course.sqlite'));
@@ -113,7 +113,7 @@ test('actual installed executor answers a small cited question through the Elect
   const evidence: any = { runtime: null, executor: null, tasks: [], assertions: [] };
   try {
     app = await launch(); let page = await app.firstWindow();
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     const original = await page.evaluate(async () => (window as any).yizhi.open()); evidence.runtime = original.runtime;
     const pdf = join(root, 'evidence.pdf'); await sourceFixture(pdf, 'Place value depends on position.');
     await app.evaluate(({ dialog }, path) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] }); }, pdf);
@@ -171,7 +171,7 @@ test('closing only the learning window keeps the host-owned answer running and t
   const root = await mkdtemp(join(tmpdir(), 'yizhi-agent-window-'));
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile'), YIZHI_CODEX_PATH: fixture, YIZHI_FIXTURE_MODE: 'linger' } });
   try {
-    let page = await app.firstWindow(); await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click(); await openAgent(page);
+    let page = await app.firstWindow(); await openFirstUnit(page); await openAgent(page);
     await expect(page.getByText('本机 Codex CLI · 已连接', { exact: true })).toBeVisible();
     await page.getByRole('textbox', { name: '学习对话草稿' }).fill('关窗后继续回答'); await page.getByRole('button', { name: '发送问题', exact: true }).click();
     await expect(page.getByRole('status', { name: '回答状态' })).toHaveText('正在回答');

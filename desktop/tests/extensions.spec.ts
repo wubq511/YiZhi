@@ -1,3 +1,4 @@
+import { openDirectoryUnit, openFirstUnit } from './shell-actions';
 import type { DatabaseSync } from 'node:sqlite';
 import { openFaultDatabase } from './fault-database';
 import { evidencePath } from './evidence-paths';
@@ -30,7 +31,7 @@ test('a real sandboxed browser Worker verifies learning results, saves complete 
  let app=await launch();
  try {
   let page=await app.firstWindow();await resizeBoardWindow(app,page);
-  await page.getByRole('button',{name:'数制与数制转换',exact:true}).click();
+  await openFirstUnit(page);
   await revealBoardControl(page,page.getByRole('button',{name:'奇偶校验扩展实验',exact:true}));
   await page.getByRole('button',{name:'奇偶校验扩展实验',exact:true}).click();
   const lab=()=>page.getByRole('region',{name:'奇偶校验扩展实验',exact:true});
@@ -42,12 +43,12 @@ test('a real sandboxed browser Worker verifies learning results, saves complete 
   await lab().getByRole('button',{name:'开始模拟',exact:true}).click();
   const read=()=>page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return b.extensions.read({sessionId:c.sessionId});});
   await expect.poll(async()=>(await read()).state.step).toBeGreaterThan(0);
-  await page.getByRole('button',{name:'组合逻辑分析与设计',exact:true}).click();
+  await openDirectoryUnit(page, '复用器与分配器', 'MUX 器件、级联与扩展');
   await expect.poll(async()=>(await read()).phase).toBe('paused');
   const offscreen=(await read()).state;await page.waitForTimeout(650);expect((await read()).state).toEqual(offscreen);
   // A short native viewport puts the lab below the unit header after navigation.
   await resizeBoardWindow(app,page,1024,600);
-  await page.getByRole('button',{name:'数制与数制转换',exact:true}).click();
+  await openFirstUnit(page);
   await verifyVisibility(app,page,'return-to-running',async()=>{
    await revealBoardControl(page,lab().getByRole('button',{name:'暂停模拟',exact:true}));
    await expect.poll(async()=>(await read()).visible).toBe(true);
@@ -91,7 +92,7 @@ test('actual Worker nonresponse reports incomplete; destroyed generations cannot
  const app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});
  const child=app.process();
  try{
-  const page=await app.firstWindow();await page.getByRole('button',{name:'数制与数制转换',exact:true}).click();
+  const page=await app.firstWindow();await openFirstUnit(page);
   await page.getByRole('button',{name:'奇偶校验扩展实验',exact:true}).click();
   const lab=page.getByRole('region',{name:'奇偶校验扩展实验',exact:true});
   await expect(lab.getByRole('status',{name:'扩展保存状态'})).toHaveText('现场已保存');
@@ -116,7 +117,7 @@ test('actual Worker nonresponse reports incomplete; destroyed generations cannot
   await expect(lab.getByRole('button',{name:'按新定义重新开始',exact:true})).toBeVisible();
   expect((await read()).definition.packageVersion).toBe('1.1.0');
   await resizeBoardWindow(app,page,1024,600);
-  await page.getByRole('button',{name:'数制与数制转换',exact:true}).click();
+  await openFirstUnit(page);
   await verifyVisibility(app,page,'return-to-visible',async()=>{
    await revealBoardControl(page,lab.getByRole('button',{name:'开始模拟',exact:true}));
    await expect.poll(async()=>(await read()).visible).toBe(true);
@@ -159,7 +160,7 @@ test('actual generated DOM height enters reading measurements while the live edi
  const app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});
  const child=app.process();
  try{
-  const page=await app.firstWindow();await page.getByRole('button',{name:'数制与数制转换',exact:true}).click();
+  const page=await app.firstWindow();await openFirstUnit(page);
   await page.getByRole('button',{name:'奇偶校验扩展实验',exact:true}).click();
   const lab=page.getByRole('region',{name:'奇偶校验扩展实验',exact:true});
   await expect(lab.getByRole('status',{name:'扩展保存状态'})).toHaveText('现场已保存');
@@ -182,7 +183,7 @@ test('new input during an actual target-frame migration invalidates its held res
  try{
   const page=await app.firstWindow();
   await page.addInitScript(()=>{if(location.pathname.includes('/1.1.0/'))addEventListener('message',e=>{if(e.data?.kind==='migrate'&&e.data.state.step!==7&&!sessionStorage.getItem('migration-gate-used')){sessionStorage.setItem('migration-gate-used','yes');(window as any).__heldMigration=e.data;e.stopImmediatePropagation();}},true);});
-  await page.getByRole('button',{name:'数制与数制转换',exact:true}).click();await page.getByRole('button',{name:'奇偶校验扩展实验',exact:true}).click();
+  await openFirstUnit(page);await page.getByRole('button',{name:'奇偶校验扩展实验',exact:true}).click();
   const lab=page.getByRole('region',{name:'奇偶校验扩展实验',exact:true});await expect(lab.getByRole('status',{name:'扩展保存状态'})).toHaveText('现场已保存');
   const act=(action:any)=>page.evaluate(async a=>{const b=(window as any).yizhi,c=await b.open(),v=await b.extensions.read({sessionId:c.sessionId});return b.extensions.act({sessionId:c.sessionId,instanceId:v.instanceId,generation:v.generation,operationId:crypto.randomUUID(),action:a});},action);
   const read=()=>page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return b.extensions.read({sessionId:c.sessionId});});
@@ -203,7 +204,7 @@ test('an actual confirmation disk fault stops browser steps and offers explicit 
  const root=await mkdtemp(join(tmpdir(),'yizhi-extension-disk-fault-'));
  const app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});const child=app.process();let fault:DatabaseSync|undefined;
  try{
-  const page=await app.firstWindow();await resizeBoardWindow(app,page);await page.getByRole('button',{name:'数制与数制转换',exact:true}).click();await revealBoardControl(page,page.getByRole('button',{name:'奇偶校验扩展实验',exact:true}));
+  const page=await app.firstWindow();await resizeBoardWindow(app,page);await openFirstUnit(page);await revealBoardControl(page,page.getByRole('button',{name:'奇偶校验扩展实验',exact:true}));
   await page.getByRole('button',{name:'奇偶校验扩展实验',exact:true}).click();
   const lab=page.getByRole('region',{name:'奇偶校验扩展实验',exact:true});await expect(lab.getByRole('status',{name:'扩展保存状态'})).toHaveText('现场已保存');
   const frame=page.frames().find(f=>f.url().startsWith('yizhi-extension:'))!;

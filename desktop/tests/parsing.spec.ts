@@ -1,4 +1,4 @@
-import { sourceAction } from './shell-actions';
+import { sourceAction, openFirstUnit } from './shell-actions';
 import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -13,7 +13,7 @@ test('actual host parsing UI shows immutable artifacts, correction, original-pag
   let app=await launch();
   try {
     let page=await app.firstWindow();
-    await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();
+    await openFirstUnit(page);
     const editor=page.getByRole('textbox',{name:'编辑首段正文'});
     await editor.fill('解析资料期间保留的正文');
     await expect(page.getByRole('status',{name:'保存状态'})).toHaveText('已保存');

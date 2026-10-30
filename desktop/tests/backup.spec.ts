@@ -1,4 +1,4 @@
-import { courseAction } from './shell-actions';
+import { courseAction, openFirstUnit } from './shell-actions';
 import { test,expect,_electron as electron } from '@playwright/test';
 import { mkdtemp,rm,access,readFile,writeFile } from 'node:fs/promises';
 import { join,resolve } from 'node:path';
@@ -12,7 +12,7 @@ test('manual full backup reports completion only after verification and opens in
  let app=await electron.launch({args:[resolve('.'),`--course=${directory}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile'),YIZHI_CODEX_PATH:join(root,'not-used')}});
  try{
   let page=await app.firstWindow();await resizeBoardWindow(app,page);
-  await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();
+  await openFirstUnit(page);
   await page.getByRole('textbox',{name:'编辑首段正文',exact:true}).fill('备份前最后一次输入必须保留');
   await courseAction(page, '完整备份');const panel=page.getByRole('dialog',{name:'完整备份',exact:true});
   await expect(panel).toContainText('完整备份');

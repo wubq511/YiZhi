@@ -16,7 +16,12 @@ test('directory disclosure, navigation and status filters stay consistent', asyn
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setContentSize(1440, 900));
     const directory = page.getByRole('navigation', { name: '课程目录' });
     const firstTheme = directory.getByRole('button', { name: '数制与数制转换', exact: true });
+    const initialViewport = await page.locator('.react-flow__viewport').getAttribute('style');
     await firstTheme.click();
+    await expect(firstTheme).toHaveAttribute('aria-expanded', 'true');
+    await expect(directory.getByRole('button', { name: '位置记数法与权展开', exact: true })).toBeVisible();
+    expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(initialViewport);
+    await directory.getByRole('button', { name: '位置记数法与权展开', exact: true }).click();
     await expect(page.getByRole('heading', { name: '位置记数法与权展开', exact: true })).toBeVisible();
     await expect(firstTheme).toHaveAccessibleDescription('已掌握 0 个，共 5 个单元');
     await expect(directory.getByRole('button', { name: '位置记数法与权展开', exact: true })).toHaveAttribute('aria-current', 'page');
@@ -24,17 +29,24 @@ test('directory disclosure, navigation and status filters stay consistent', asyn
     await directory.screenshot({ path: evidencePath('directory-1440.png'), animations: 'disabled' });
 
     const viewport = await page.locator('.react-flow__viewport').getAttribute('style');
-    await directory.getByRole('button', { name: '收起数制与数制转换' }).click();
+    await firstTheme.click();
+    await expect(firstTheme).toHaveAttribute('aria-expanded', 'false');
     await expect(directory.getByRole('button', { name: '位置记数法与权展开', exact: true })).toHaveCount(0);
-    await directory.getByRole('button', { name: '展开数制与数制转换' }).click();
-    await directory.getByRole('button', { name: '展开有符号数与补码运算' }).click();
-    await expect(directory.getByRole('button', { name: '收起有符号数与补码运算' })).toHaveAttribute('aria-expanded', 'true');
-    await expect(directory.getByRole('button', { name: '展开数制与数制转换' })).toHaveAttribute('aria-expanded', 'false');
+    await firstTheme.focus(); await page.keyboard.press('Enter');
+    await expect(firstTheme).toHaveAttribute('aria-expanded', 'true');
+    const secondTheme = directory.getByRole('button', { name: '有符号数与补码运算', exact: true });
+    await secondTheme.click();
+    await expect(secondTheme).toHaveAttribute('aria-expanded', 'true');
+    await expect(firstTheme).toHaveAttribute('aria-expanded', 'true');
     expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(viewport);
-    await directory.getByRole('button', { name: '展开数制与数制转换' }).click();
+    await secondTheme.click();
+    await expect(secondTheme).toHaveAttribute('aria-expanded', 'false');
+    await expect(firstTheme).toHaveAttribute('aria-expanded', 'true');
+    await expect(directory.getByRole('button', { name: '位置记数法与权展开', exact: true })).toHaveAttribute('aria-current', 'page');
     await directory.getByRole('button', { name: '非十进制与十进制互转', exact: true }).click();
     await expect(page.getByRole('heading', { name: '非十进制与十进制互转', exact: true })).toBeVisible();
-    await firstTheme.click();
+    await expect(page.locator('.react-flow__viewport')).not.toHaveAttribute('style', viewport!);
+    await directory.getByRole('button', { name: '位置记数法与权展开', exact: true }).click();
     await expect(page.getByRole('heading', { name: '位置记数法与权展开', exact: true })).toBeVisible();
 
     await page.getByRole('group', { name: '设置复习状态' }).getByRole('button', { name: '薄弱', exact: true }).click();
@@ -48,9 +60,9 @@ test('directory disclosure, navigation and status filters stay consistent', asyn
     await expect(directory.getByRole('button', { name: '数制与数制转换', exact: true })).toBeVisible();
     await expect(directory.getByRole('button', { name: '有符号数与补码运算', exact: true })).toHaveCount(0);
     await expect(directory.getByRole('button', { name: '位置记数法与权展开', exact: true })).toHaveAccessibleDescription('薄弱');
-    await directory.getByRole('button', { name: '收起数制与数制转换' }).click();
+    await firstTheme.click();
     await expect(directory.getByRole('button', { name: '位置记数法与权展开', exact: true })).toHaveCount(0);
-    await directory.getByRole('button', { name: '展开数制与数制转换' }).click();
+    await firstTheme.click();
     await expect(directory.getByRole('button', { name: '位置记数法与权展开', exact: true })).toBeVisible();
     await page.getByRole('button', { name: '个人批注', exact: true }).click();
     await expect(directory).toBeHidden();
@@ -77,9 +89,9 @@ test('directory disclosure, navigation and status filters stay consistent', asyn
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setContentSize(700, 700));
     await expect(directory).toBeVisible();
     await directory.screenshot({ path: evidencePath('directory-700.png') });
-    await directory.getByRole('button', { name: '收起数制与数制转换' }).click();
+    await firstTheme.click();
     await expect(directory).toBeVisible();
-    await directory.getByRole('button', { name: '展开数制与数制转换' }).click();
+    await firstTheme.focus(); await page.keyboard.press('Space');
     await directory.getByRole('button', { name: '非十进制与十进制互转', exact: true }).click();
     await expect(directory).toBeHidden();
     await expect(page.getByRole('button', { name: '课程目录', exact: true })).toBeFocused();

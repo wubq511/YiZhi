@@ -1,3 +1,4 @@
+import { openFirstUnit } from './shell-actions';
 import { controlledElectron } from './controlled-launch';
 import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
@@ -13,7 +14,7 @@ test('review controls persist, answer reveal does not promote, and a substantive
   let app = await launch();
   try {
     let window = await app.firstWindow();
-    await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(window);
     await expect(window.getByRole('heading', { name: '位置记数法与权展开', exact: true })).toBeVisible();
     const choices = window.getByRole('group', { name: '设置复习状态' });
     await choices.getByRole('button', { name: '已掌握' }).click();
@@ -39,7 +40,7 @@ test('review controls persist, answer reveal does not promote, and a substantive
 
     await app.close();
     app = await launch(); window = await app.firstWindow();
-    await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(window);
     const reopenedChoices = window.getByRole('group', { name: '设置复习状态' });
     await expect(reopenedChoices.getByRole('button', { name: '薄弱' })).toHaveAttribute('aria-pressed', 'true');
     await window.screenshot({ path: evidencePath('t10-review.png'), fullPage: true });

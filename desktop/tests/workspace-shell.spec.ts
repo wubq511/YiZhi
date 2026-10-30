@@ -5,7 +5,7 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { resolve, join, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { evidencePath } from './evidence-paths';
-import { chooseShape, courseAction } from './shell-actions';
+import { chooseShape, courseAction, openFirstUnit } from './shell-actions';
 const repository = dirname(execFileSync('git',['rev-parse','--path-format=absolute','--git-common-dir'],{encoding:'utf8'}).trim());
 const scratch = join(repository,'artifacts','scratch','modern-workspace-shell');
 test('shell retains panels and targets, uses real tool histories and returns keyboard focus', async () => {
@@ -19,7 +19,7 @@ test('shell retains panels and targets, uses real tool histories and returns key
     await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setContentSize(1440,900));
     await expect(page.getByRole('navigation',{name:'课程目录',exact:true})).toBeVisible();
     expect(await page.locator('.source-pdf canvas').count()).toBe(0);
-    await page.getByRole('button',{name:'数制与数制转换',exact:true}).click();
+    await openFirstUnit(page);
     await expect(page.getByRole('heading',{name:'位置记数法与权展开',exact:true})).toBeVisible();
     const size=await page.evaluate(()=>({width:innerWidth,height:innerHeight}));
     await page.screenshot({path:evidencePath(`implementation-reading-${size.width}x${size.height}.png`)});
@@ -79,7 +79,7 @@ test('a failed review save remains visible after another channel saves and retri
   let fault: ReturnType<typeof openFaultDatabase> | undefined;
   try {
     const page=await app.firstWindow();await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');
-    await page.getByRole('button',{name:'数制与数制转换',exact:true}).click();
+    await openFirstUnit(page);
     fault=openFaultDatabase(join(root,'course','course.sqlite'));
     fault.exec("CREATE TRIGGER shell_review_failure BEFORE INSERT ON review_states BEGIN SELECT RAISE(ABORT,'test review failure'); END");
     await page.getByRole('group',{name:'设置复习状态',exact:true}).getByRole('button',{name:'已掌握',exact:true}).click();
@@ -103,7 +103,7 @@ test('full view is immediate and cannot overwrite the next directory navigation'
     const page=await app.firstWindow();await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');
     for(let i=0;i<3;i++){
       await page.getByRole('button',{name:'全图',exact:true}).click();
-      await page.getByRole('button',{name:'数制与数制转换',exact:true}).click();
+      await openFirstUnit(page);
       await expect(page.locator('.reading-layer[data-unit-id="KU-001"]')).toBeVisible();
       await expect.poll(()=>page.locator('.canvas-zoom').textContent()).toBe('85%');
       // Late measurement/persistence callbacks must not reapply the prior full-view request.
@@ -118,7 +118,7 @@ test('reading minimap stays above content and supports pan, zoom and collapse', 
   try {
     const page=await app.firstWindow();await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');
     await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setContentSize(1024,768));
-    await page.getByRole('button',{name:'数制与数制转换',exact:true}).click();
+    await openFirstUnit(page);
     await expect(page.locator('.canvas-zoom')).toHaveText('85%');
     const map=page.locator('.react-flow__minimap');await expect(map).toBeVisible();
     expect(await map.evaluate(el=>{

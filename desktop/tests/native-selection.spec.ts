@@ -1,3 +1,4 @@
+import { openFirstUnit } from './shell-actions';
 import { test, expect, _electron as electron, type Page } from '@playwright/test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -15,7 +16,7 @@ for (const zoom of [.85, 1.2]) test(`native caret click and precise drag selecti
   let initialEnvironment:Awaited<ReturnType<typeof nativeEnvironment>>|undefined;
   try {
     page = await app.firstWindow(); await resizeBoardWindow(app, page);
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     const board = (await page.locator('main.board').boundingBox())!;
     if (zoom !== .85) await page.locator('.react-flow__pane').dispatchEvent('wheel', { deltaY: -Math.log(zoom / .85) * 1000,
       metaKey: true, clientX: Math.round(board.x + 120), clientY: Math.round(board.y + 170), bubbles: true, cancelable: true });

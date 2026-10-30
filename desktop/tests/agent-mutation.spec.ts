@@ -1,3 +1,4 @@
+import { openFirstUnit, expandDirectoryTheme } from './shell-actions';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, chmod, writeFile, cp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -10,7 +11,7 @@ test('small actual Electron window follows real tool groups, keeps student takeo
  let app=await launch();
  try{
   let page=await app.firstWindow();await resizeBoardWindow(app,page);
-  await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();
+  await openFirstUnit(page);
   await page.getByRole('button',{name:'学习对话',exact:true}).click();
   await expect(page.getByText('本机 Codex CLI · 已连接',{exact:true})).toBeVisible();
   await page.getByLabel('Agent 请求方式').selectOption('modify');
@@ -61,7 +62,7 @@ test('linked experiment formula offers its shared student editor while actual in
   const {sessionId,citation,view}=await muxCopy(core,join(root,'course'));const result=await core.commands.commit(await correction(core,sessionId,citation.id,'correct-linked-copy'));expect(result.status).toBe('committed');
   let v=await core.experiments.read({sessionId,instanceId:view.instanceId});await core.experiments.act({sessionId,instanceId:v.instanceId,generation:v.generation,operationId:'adopt',action:{kind:'migrate',baseVersion:v.version}});await core.close();
   const launch=()=>electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile'),YIZHI_CODEX_PATH:join(root,'no-generation-needed')}});app=await launch();let page=await app.firstWindow();await resizeBoardWindow(app,page);
-  await page.getByRole('button',{name:'复用器与分配器',exact:true}).click();await page.getByRole('button',{name:'MUX 器件、级联与扩展',exact:true}).first().click();
+  await expandDirectoryTheme(page, '复用器与分配器');await page.getByRole('button',{name:'MUX 器件、级联与扩展',exact:true}).first().click();
   const lab=page.getByRole('region',{name:'交互 · 4 选 1 的选择语义',exact:true}),edit=lab.getByRole('button',{name:'编辑关联正文公式',exact:true});
   await revealBoardControl(page,edit);await expect(edit).toBeEnabled();await edit.click();
   await expect(page.locator('.editor-formula[data-block-id="mux-linked-formula"] math-field')).toBeVisible();

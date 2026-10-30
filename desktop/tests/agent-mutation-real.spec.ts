@@ -1,3 +1,4 @@
+import { openFirstUnit, expandDirectoryTheme } from './shell-actions';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp,rm,writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -22,7 +23,7 @@ test('installed CLI modifies one real B, removes an actual redundant paragraph, 
   const note=await core.annotations.create({sessionId:c.sessionId,operationId:'personal-note',text:'精简后仍保留我的记录',selection:{unitId:c.unit.id,fragments:[{blockId:duplicate.id,block:duplicate,field:'text',formalRevision:c.revision+1,source:'formal',projection:{version:1,encoding:'unicode-code-points',text:duplicate.payload.text},from:0,to:4,quote:Array.from(duplicate.payload.text).slice(0,4).join('')}]}});
   await core.setReviewStatus(c.sessionId,c.unit.id,'mastered');const baseline=await core.graph(c.sessionId);await core.close();
   const launch=()=>electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:env(root)});app=await launch();let page=await app.firstWindow();await resizeBoardWindow(app,page);
-  await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();await openAgent(page);
+  await openFirstUnit(page);await openAgent(page);
   result.executor=await page.evaluate(()=>(window as any).yizhi.agent.status());result.runtime=(await page.evaluate(()=>(window as any).yizhi.open())).runtime;
   await page.getByLabel('Agent 请求方式').selectOption('modify');
   const wording='位置记数法用数码、基数和位权表示数值，各位数码乘位权后相加。';
@@ -54,7 +55,7 @@ for(const incomplete of [false,true])test(`installed CLI corrects actual MUX cop
   await core.agent.saveDraft({sessionId:prepared.sessionId,conversationId:conv.id,seq:1,text:prompt,intent:'modify',target:{unitId:'KU-057'},citationIds:[prepared.citation.id,construction.id]});
   result.sources=[prepared.citation,construction];result.before={unit,view:prepared.view,graph:await core.graph(prepared.sessionId)};await core.close();
   const launch=()=>electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:env(root)});app=await launch();let page:Page=await app.firstWindow();await resizeBoardWindow(app,page);
-  await page.getByRole('button',{name:'复用器与分配器',exact:true}).click();
+  await expandDirectoryTheme(page, '复用器与分配器');
   await page.getByRole('button',{name:'MUX 器件、级联与扩展',exact:true}).first().click();await openAgent(page);
   result.executor=await page.evaluate(()=>(window as any).yizhi.agent.status());result.runtime=(await page.evaluate(()=>(window as any).yizhi.open())).runtime;
   await expect(page.getByLabel('Agent 请求方式')).toHaveValue('modify');await expect(page.locator('.agent-attachment')).toHaveCount(2);

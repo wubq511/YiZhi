@@ -1,3 +1,4 @@
+import { openFirstUnit } from './shell-actions';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -41,7 +42,7 @@ test('continuous camera gestures keep unchanged graph projection and the active 
   let app = await launch();
   try {
     let page = await app.firstWindow(); await resizeBoardWindow(app, page);
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     if (await page.getByRole('button', { name: '收起目录', exact: true }).count()) await page.getByRole('button', { name: '收起目录', exact: true }).click();
     const pane = page.locator('.react-flow__pane'), viewport = page.locator('.react-flow__viewport');
     const board = (await page.locator('main.board').boundingBox())!, clientX = Math.round(board.x + 8), clientY = Math.round(board.y + 180);
@@ -81,7 +82,7 @@ test('panning to an adjacent B reads static body without navigating or replacing
  const app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_OBSERVE:'1',YIZHI_DATA_HOME:join(root,'profile'),YIZHI_CODEX_PATH:join(root,'missing-cli')}});
  try{
   const page=await app.firstWindow();await resizeBoardWindow(app,page);
-  await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();
+  await openFirstUnit(page);
   if(await page.getByRole('button',{name:'收起目录',exact:true}).count())await page.getByRole('button',{name:'收起目录',exact:true}).click();
   const input=page.getByRole('textbox',{name:'编辑首段正文',exact:true});await input.fill('阅读范围不能清掉正在编辑的单元。');
   await expect(page.getByRole('status',{name:'保存状态'})).toHaveText('已保存');

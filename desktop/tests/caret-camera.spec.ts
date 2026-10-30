@@ -1,3 +1,4 @@
+import { openFirstUnit } from './shell-actions';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -10,7 +11,7 @@ test('keyboard caret navigation keeps board controls fixed and reopens at the ac
   let app = await launch();
   try {
     let page = await app.firstWindow();
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     const first = page.getByRole('textbox', { name: '编辑首段正文', exact: true });
     await first.fill('连续输入的长正文应当保持同一个画板相机和输入现场。'.repeat(90));
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');

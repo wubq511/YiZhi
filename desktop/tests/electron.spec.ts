@@ -1,4 +1,4 @@
-import { openRelations, relationScope } from './shell-actions';
+import { openRelations, relationScope, openFirstUnit, expandDirectoryTheme } from './shell-actions';
 import { controlledElectron } from './controlled-launch';
 import {expectBoundedReading} from './board-test-helpers';
 import type { DatabaseSync } from 'node:sqlite';
@@ -44,7 +44,7 @@ test('controlled producer uses real IPC: stale premise is retained, reread integ
     env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const window = await app.firstWindow();
-    await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(window);
     await expect(window.getByRole('heading', { name: '位置记数法与权展开', exact: true })).toBeVisible();
     const entry = window.getByText('可控生产者 · 验证入口', { exact: true });
     await expect(entry).toBeVisible({ timeout: 3000 });
@@ -92,7 +92,7 @@ test('real Electron IPC saves, retains failed input, retries, drains quit, reope
   try {
     app = await launch();
     let window = await app.firstWindow();
-    await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(window);
     await expect(window.getByRole('heading', { name: '位置记数法与权展开', exact: true })).toBeVisible();
     let editor = window.getByRole('textbox', { name: '编辑首段正文' });
     await expect(editor).toContainText('位置记数法');
@@ -138,7 +138,7 @@ test('real Electron IPC saves, retains failed input, retries, drains quit, reope
       app.emit('activate');
     });
     window = await app.firstWindow();
-    await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(window);
     editor = window.getByRole('textbox', { name: '编辑首段正文' });
     await expect(editor).toHaveText('保存失败后保留这段输入，重试仍是它。');
     const resumed = await window.evaluate(() => (window as any).yizhi.open());
@@ -150,7 +150,7 @@ test('real Electron IPC saves, retains failed input, retries, drains quit, reope
     await exited;
     app = await launch();
     const reopened = await app.firstWindow();
-    await reopened.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(reopened);
     await expect(reopened.getByRole('textbox', { name: '编辑首段正文' }))
       .toHaveText('退出前最后一次输入：位权由位置决定 📝。');
     const after = await reopened.evaluate(() => (window as any).yizhi.open());
@@ -173,7 +173,7 @@ test('board opens at overview and navigates the first unit within the workspace'
     await expect(window.getByRole('navigation', { name: '课程目录' })).toBeVisible();
     await expect(window.getByLabel('小地图')).toBeVisible();
     await window.screenshot({ path: evidencePath('t04-overview.png') });
-    await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(window);
     await expect(window.getByRole('heading', { name: '位置记数法与权展开', exact: true })).toBeVisible();
     await expect(window.getByRole('textbox', { name: '编辑首段正文' })).toBeVisible();
     await window.screenshot({ path: evidencePath('t04-reading.png') });
@@ -185,7 +185,7 @@ test('a knowledge reference opens its main unit and returns to the retained edit
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const window = await app.firstWindow();
-    await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(window);
     const editor = window.getByRole('textbox', { name: '编辑首段正文' });
     await editor.fill('阅读引用之前的输入');
     await reveal(window, window.getByRole('button', { name: /前往.*KU-002/, includeHidden: true }));
@@ -201,7 +201,7 @@ test('exercises show the question before revealing a hint or answer', async () =
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const window = await app.firstWindow();
-    await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(window);
     await expect(window.getByText('① 写出 11.01₂ 的权展开式并求十进制值；② 写出 1C4₁₆ 的权展开式并求十进制值。')).toBeVisible();
     await expect(window.getByText('① 11.01 的小数两位权是 0.5 和 0.25；② 1C4 是三位十六进制数，最高位权是 16²=256，C 对应 12。')).toBeHidden();
     const hint = window.locator('details.material').filter({ hasText: '练习 · 二进制小数与十六进制权展开自测' }).getByText('学习提示', { exact: true });
@@ -215,7 +215,7 @@ test('device sample has a working local multiplexer and source figure', async ()
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const window = await app.firstWindow();
-    await window.getByRole('button', { name: '复用器与分配器', exact: true }).click();
+    await expandDirectoryTheme(window, '复用器与分配器');
     await window.getByRole('navigation', { name: '课程目录' }).getByRole('button', { name: 'MUX 器件、级联与扩展' }).click();
     await expect(window.getByRole('img', { name: /TI官方74153/ })).toBeVisible();
     await expect(window.getByRole('status', { name: 'MUX 输出' })).toHaveText('输出 Z = 0');
@@ -231,7 +231,7 @@ test('reopening resumes an expanded hint and knowledge-reference return position
   let app = await launch();
   try {
     let window = await app.firstWindow();
-    await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(window);
     const exercise = window.locator('details.material').filter({ hasText: '练习 · 二进制小数与十六进制权展开自测' });
     await reveal(window, exercise.getByText('学习提示', { exact: true }));
     await exercise.getByText('学习提示', { exact: true }).click();
@@ -285,7 +285,7 @@ test('wheel routes pan and pointer-centered zoom without stealing text input', a
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const window = await app.firstWindow();
-    await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(window);
     const editor = window.getByRole('textbox', { name: '编辑首段正文' });
     await editor.fill('空格'); await window.keyboard.press('End'); await window.keyboard.press('Space'); await window.keyboard.press('X');
     await expect(editor).toHaveText('空格 X');
@@ -315,7 +315,7 @@ test('wheel over reading text moves the board', async () => {
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const window = await app.firstWindow();
-    await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(window);
     const paragraph = window.getByText('能写出任意进制数的位权展开式并解释基数与位权的含义。');
     await paragraph.hover();
     const transform = () => window.locator('.react-flow__viewport').evaluate(el => getComputedStyle(el).transform);
@@ -345,7 +345,7 @@ test('the local device source opens and returns focus to its reading context', a
   try {
     const window = await app.firstWindow();
     await resizeBoardWindow(app, window, 1024, 600);
-    await window.getByRole('button', { name: '复用器与分配器', exact: true }).click();
+    await expandDirectoryTheme(window, '复用器与分配器');
     await window.getByRole('navigation', { name: '课程目录' }).getByRole('button', { name: 'MUX 器件、级联与扩展' }).click();
     const source = window.getByRole('button', { name: '查看 TI 74153 原页', includeHidden: true });
     try {
@@ -377,7 +377,7 @@ test('zoomed-out graph does not expose invisible unit nodes to keyboard focus', 
     const window = await app.firstWindow();
     const node = window.locator('[data-id="KU-001"]');
     await expect(node).not.toHaveAttribute('tabindex', '0');
-    await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(window);
     await expect(node).toHaveAttribute('tabindex', '0');
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
@@ -389,7 +389,7 @@ test('offscreen reading controls are excluded from keyboard navigation until in 
     const window = await app.firstWindow();
     await expect(window.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1024, 768));
-    await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(window);
     const summary = window.getByText('练习 · 二进制小数与十六进制权展开自测');
     const boundary = summary.locator('xpath=ancestor::*[@data-reading-block][1]');
     await expect(boundary).toHaveAttribute('inert', '');
@@ -434,7 +434,7 @@ test('a rejected reading position stays visible and can be retried', async () =>
     await expect(window.getByRole('button', { name: '数制与数制转换', exact: true }).first()).toBeVisible();
     fault = openFaultDatabase(join(root, 'course/course.sqlite'));
     fault.exec("CREATE TRIGGER reject_reading BEFORE INSERT ON reading_state BEGIN SELECT RAISE(ABORT, 'reading storage unavailable'); END");
-    await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(window);
     await expect(window.getByRole('status', { name: '保存状态', exact: true })).toContainText('未保存');
     fault.exec('DROP TRIGGER reject_reading');
     await window.getByRole('button', { name: '重试保存阅读位置' }).click();
@@ -461,7 +461,7 @@ test('camera can step from reading through unit overview to theme overview in on
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const window = await app.firstWindow();
-    await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(window);
     await expect(window.getByRole('heading', { name: '位置记数法与权展开' })).toBeVisible();
     const board = (await window.locator('main.board').boundingBox())!;
     await window.mouse.move(board.x + board.width - 30, board.y + 150);
@@ -497,7 +497,7 @@ test('two actual IPC editors save both paragraphs, split once and recover an unf
   try {
     app = await launch();
     let window = await app.firstWindow();
-    await window.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(window);
     const first = window.getByRole('textbox', { name: '编辑首段正文' });
     const second = window.getByRole('textbox', { name: '编辑第二段正文' });
     await first.fill('甲乙丙丁');
@@ -541,7 +541,7 @@ test('moving among sample units bounds static reading bodies and protects the ac
   try {
     const window = await app.firstWindow();
     const nav = window.getByRole('navigation', { name: '课程目录' });
-    await nav.getByRole('button', { name: '数制与数制转换', exact: true }).click();
+    await openFirstUnit(window);
     for (const name of ['非十进制与十进制互转', '二进制、八进制与十六进制互转', '位、字节与存储容量单位']) {
       await nav.getByRole('button', { name, exact: true }).click();
       await expect(window.getByRole('heading', { name, exact: true })).toBeVisible();

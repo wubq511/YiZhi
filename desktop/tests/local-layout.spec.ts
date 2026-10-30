@@ -1,3 +1,4 @@
+import { openFirstUnit } from './shell-actions';
 import { controlledElectron } from './controlled-launch';
 import type { DatabaseSync } from 'node:sqlite';
 import { openFaultDatabase, holdFaultWriter } from './fault-database';
@@ -78,7 +79,7 @@ test('manual width and drag remain after collapse and reopen without replacing t
   let completed = false;
   try {
     let page = await app.firstWindow();
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     const editor = page.getByRole('textbox', { name: '编辑首段正文' });
     await expect(editor).toBeVisible();
     await editor.fill('局部布局保持这个编辑实例与输入');
@@ -147,7 +148,7 @@ test('actual producer follows only actual changes, student takeover cancels moti
     const observations: unknown[] = [];
     try {
       await resizeBoardWindow(app, page, 900, 688);
-      await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+      await openFirstUnit(page);
       await page.getByText('可控生产者 · 验证入口', { exact: true }).click();
       await page.getByRole('button', { name: '读取当前依据', exact: true }).click();
       await expect(page.getByRole('status', { name: '修改跟随' })).toHaveText('正在跟随修改');
@@ -230,7 +231,7 @@ test('growth displaces the local chain while the current reading anchor and stud
   let app = await launch();
   try {
     let page = await app.firstWindow();
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     await expect(page.getByRole('textbox', { name: '编辑首段正文' })).toBeVisible();
     const nav = page.getByRole('navigation', { name: '课程目录' });
     await nav.getByRole('button', { name: '非十进制与十进制互转', exact: true }).click();
@@ -280,7 +281,7 @@ test('layout persistence failure retains the visible placement and retry confirm
   let completed=false;
   try {
     const page = await app.firstWindow();
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     fault = openFaultDatabase(join(root, 'course/course.sqlite'));
     setupWriter = await holdFaultWriter(join(root, 'course/course.sqlite'));
     setupWriter.postMessage('release');

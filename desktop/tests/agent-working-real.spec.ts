@@ -1,3 +1,4 @@
+import { openFirstUnit } from './shell-actions';
 import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron, type Page } from '@playwright/test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -14,7 +15,7 @@ test('installed CLI integrates student typing, correction and new same-target ma
   let app=await launch(); const evidence: any = {};
   try {
     let page=await app.firstWindow(); await resizeBoardWindow(app,page);
-    await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();
+    await openFirstUnit(page);
     await expect.poll(() => page.evaluate(async () => (await window.yizhi.agent.list({sessionId:(await window.yizhi.open()).sessionId})).selectedId)).not.toBeNull();
     const initial=await page.evaluate(async()=>({course:await window.yizhi.open(),status:await window.yizhi.agent.status()}));
     expect(initial.status.available).toBe(true);expect(initial.status.path).not.toContain('fixture');evidence.executor=initial.status;

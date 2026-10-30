@@ -1,3 +1,4 @@
+import { openFirstUnit } from './shell-actions';
 import { controlledElectron } from './controlled-launch';
 import { evidencePath } from './evidence-paths';
 import { resizeBoardWindow, revealBoardControl } from './board-test-helpers';
@@ -21,7 +22,7 @@ test('actual cross-paragraph selection holds the shown basis while independent f
   const app = await controlledElectron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const page = await app.firstWindow();
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     const editor = page.getByRole('textbox', { name: '连续编辑正文', exact: true });
     const before = await page.evaluate(() => (window as any).yizhi.open());
     await editor.evaluate((el: any) => {
@@ -72,7 +73,7 @@ test('real persisted overlapping versions expose only the conflict and the stude
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const page = await app.firstWindow();
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     const editor = page.getByRole('textbox', { name: '连续编辑正文', exact: true });
     const instance = await editor.evaluateHandle((el: any) => el.editor);
     const conflict = page.getByRole('region', { name: '学生草稿冲突', exact: true });
@@ -100,7 +101,7 @@ test('synthetic composition regression uses real IPC: independent range renders,
   let closed = false;
   try {
     const page = await app.firstWindow();
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     const editor = page.getByRole('textbox', { name: '连续编辑正文', exact: true });
     await editor.evaluate((el: any) => { el.editor.commands.setTextSelection(1); el.editor.view.focus(); el.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true, data: 'zhong' })); });
     await editor.evaluate((el: any) => el.editor.storage.courseSelection.settle());
@@ -152,7 +153,7 @@ test('caret pause and application blur retain the same paragraph, independent up
   try {
     let page = await app.firstWindow();
     await resizeBoardWindow(app, page);
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     let editor = page.getByRole('textbox', { name: '连续编辑正文', exact: true });
     const first = page.getByRole('textbox', { name: '编辑首段正文', exact: true });
     const original = await page.evaluate(() => (window as any).yizhi.open());

@@ -1,4 +1,4 @@
-import { openRelations, sourceAction } from './shell-actions';
+import { openRelations, sourceAction, openFirstUnit } from './shell-actions';
 import type { DatabaseSync } from 'node:sqlite';
 import { openFaultDatabase } from './fault-database';
 import { evidencePath } from './evidence-paths';
@@ -18,7 +18,7 @@ test('local PDF.js renders a real text layer, cites actual selection, preserves 
   try {
     const page = await app.firstWindow();
     await resizeBoardWindow(app, page);
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     const editor = page.getByRole('textbox', { name: '编辑首段正文' });
     await editor.fill('阅读原文时保留的正文与编辑实例');
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
@@ -149,7 +149,7 @@ test('host IPC denies paths and unregistered routes; real storage faults retain 
   let fault: DatabaseSync | undefined;
   try {
     const page = await app.firstWindow();
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     await app.evaluate(({ dialog }, path) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] }); }, path);
     fault = openFaultDatabase(join(root, 'course/course.sqlite'));
     fault.exec("CREATE TRIGGER source_failure BEFORE INSERT ON source_versions BEGIN SELECT RAISE(ABORT,'source registry unavailable'); END");

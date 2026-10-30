@@ -4,6 +4,7 @@ import { mkdtemp, rm, chmod, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { resizeBoardWindow } from './board-test-helpers';
+import { openFirstUnit } from './shell-actions';
 const fixture = resolve('dist/tests/description-executor-fixture.cjs');
 
 async function captureDescriptionFailure(page: Page) {
@@ -30,7 +31,7 @@ test('explicit description search uses real hits and query/rank evidence while o
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile'), YIZHI_CODEX_PATH: fixture, YIZHI_DESCRIPTION_FIXTURE: 'paragraph' } });
   try {
     const page = await app.firstWindow(); await resizeBoardWindow(app, page);
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     await page.getByRole('button', { name: '学习对话', exact: true }).click();
     await page.getByRole('textbox', { name: '学习对话草稿' }).fill('尚未发送，不要替我提问');
     await expect(page.getByRole('status', { name: '对话草稿保存' })).toHaveText('草稿已保存');

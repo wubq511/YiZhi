@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { Page, Locator } from '@playwright/test';
 import { legacyFixture } from './migration-fixture';
+import { openDirectoryUnit } from './shell-actions';
 import { DevelopmentCourseService as CourseService } from '../../tools/desktop/course-service';
 
 async function reveal(page: Page, target: Locator) {
@@ -28,7 +29,7 @@ test('converted last unit and actual fixed image/source PDF remain readable offl
     app=await electron.launch({args:[resolve('.'),`--course=${moved}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});
     await app.evaluate(async ({session})=>{await session.defaultSession.clearCache();});
     const page=await app.firstWindow(); await page.context().setOffline(true);
-    await page.getByRole('button',{name:'末主题',exact:true}).first().click();
+    await openDirectoryUnit(page, '末主题', '持久化末单元');
     const article=page.locator('article[data-unit-id="KU-086"]');
     await expect(article).toContainText('末单元完整正文');
     const image=article.getByRole('img',{name:'实际固定来源第一页'});
@@ -79,7 +80,7 @@ test('actual 84-unit candidate reads every persisted body and image offline, inc
     for(const unit of evidence.units){const {theme,...raw}=unit;expect(createHash('sha256').update(JSON.stringify(raw)).digest('hex')).toBe(report.unitHashes[unit.id]);}
     for(const image of evidence.images)expect(image.sha256).toBe(report.resources.find((r:any)=>r.asset===image.asset).sha256);
     // A late course unit, not a permanent sample, drives actual canvas navigation.
-    await page.getByRole('button',{name:'逻辑门器件理论',exact:true}).first().click();
+    await openDirectoryUnit(page, '逻辑门器件理论', '开关电路与分立元件门');
     await expect(page.locator('article[data-unit-id="KU-078"]')).toContainText('二极管');
     const images=page.locator('article[data-unit-id="KU-078"] img');
     await expect(images.first()).toHaveAttribute('src',/^yizhi-resource:/);

@@ -1,3 +1,4 @@
+import { openFirstUnit } from './shell-actions';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -36,7 +37,7 @@ test('native macOS pinch deltas use normalized pinch gain with a fixed pointer a
     env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile'), YIZHI_CODEX_PATH: join(root, 'missing-cli') } });
   try {
     const page = await app.firstWindow(); await resizeBoardWindow(app, page);
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     const viewport = page.locator('.react-flow__viewport'), before = await readCameraTransform(viewport);
     expect(before.zoom).toBe(.85); // Public normal navigation supplies a midrange camera.
     const board = (await page.locator('main.board').boundingBox())!;

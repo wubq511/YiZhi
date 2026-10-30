@@ -1,3 +1,4 @@
+import { expandDirectoryTheme } from './shell-actions';
 import {test,expect,_electron as electron} from '@playwright/test';
 import {mkdtemp,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
@@ -25,7 +26,7 @@ for(const nested of [false,true])test(`student reaches an existing ${nested?'nes
    }finally{seed.close();}
   }
   app=await electron.launch({args:[resolve('.'),`--course=${course}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile'),YIZHI_CODEX_PATH:join(root,'no-cli')}});
-  const page=await app.firstWindow();await resizeBoardWindow(app,page);await page.getByRole('button',{name:'复用器与分配器',exact:true}).click();await page.getByRole('button',{name:'MUX 器件、级联与扩展',exact:true}).first().click();
+  const page=await app.firstWindow();await resizeBoardWindow(app,page);await expandDirectoryTheme(page, '复用器与分配器');await page.getByRole('button',{name:'MUX 器件、级联与扩展',exact:true}).first().click();
   const button=page.getByRole('button',{name:'编辑关联正文公式',exact:true});await revealBoardControl(page,button);await button.click();
   const field=page.locator('.editor-formula[data-block-id="mux-linked-formula"] math-field');await expect(field).toBeVisible();
   await field.evaluate((el:any)=>{el.setValue('Z=S_{10}');el.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertText'}));});

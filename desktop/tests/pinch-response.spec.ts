@@ -1,3 +1,4 @@
+import { openFirstUnit } from './shell-actions';
 import { controlledElectron } from './controlled-launch';
 import { test, expect, _electron as electron, type Page, type ElectronApplication } from '@playwright/test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -48,7 +49,7 @@ async function openCourse(run: (page: Page, app: ElectronApplication) => Promise
   const page = await app.firstWindow();
   try {
     await resizeBoardWindow(app, page);
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     await expect.poll(async () => (await readCameraTransform(page.locator('.react-flow__viewport'))).zoom).toBe(.85);
     await waitForReadingLayout(page);
     await run(page, app);
@@ -107,7 +108,7 @@ test('coalescing preserves the accepted trace, moving anchors and per-event clam
     await holdFrames(page);
     const sequential = await replay(true);
     // Public navigation reset; DOM click avoids driver actionability RAF while held.
-    await page.locator('nav .directory-theme').first().evaluate((el: HTMLButtonElement) => el.click());
+    await page.getByRole('button', { name: '位置记数法与权展开', exact: true }).evaluate((el: HTMLButtonElement) => el.click());
     await expect.poll(() => readCameraTransform(viewport)).toEqual(initial);
     const batched = await replay(false);
     expect(batched.zoom).toBeCloseTo(sequential.zoom, 12);
@@ -140,7 +141,8 @@ test('pan consumes pending pinch once and newer navigation or pointer takeover c
     expect((anchor.y - (pan.y + 40)) / pan.zoom).toBeCloseTo((anchor.y - before.y) / before.zoom, 8);
     await stepFrame(page); expect(await readCameraTransform(viewport)).toEqual(pan);
     await sendPinch(page, -20);
-    await page.locator('nav .directory-theme').nth(1).evaluate((el: HTMLButtonElement) => el.click());
+    await page.getByRole('button', { name: '有符号数与补码运算', exact: true }).evaluate((el: HTMLButtonElement) => el.click());
+    await page.getByRole('button', { name: '模运算与补码原理', exact: true }).evaluate((el: HTMLButtonElement) => el.click());
     await expect.poll(async () => (await readCameraTransform(viewport)).zoom).toBe(.85);
     const navigation = await readCameraTransform(viewport);
     await stepFrame(page); expect(await readCameraTransform(viewport)).toEqual(navigation);

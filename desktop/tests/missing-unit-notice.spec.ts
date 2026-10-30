@@ -3,6 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { waitForReadingLayout } from './board-test-helpers';
+import { openFirstUnit } from './shell-actions';
 
 test('missing example units do not interrupt reading, while other read failures remain visible', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-missing-unit-'));
@@ -29,7 +30,7 @@ test('missing example units do not interrupt reading, while other read failures 
       });
     });
     const directory = page.getByRole('navigation', { name: '课程目录' });
-    await directory.getByRole('button', { name: '数制与数制转换', exact: true }).click();
+    await openFirstUnit(page);
     await expect(page.locator('article[data-unit-id="KU-001"]')).toHaveAttribute('data-reading-active', 'true');
     await waitForReadingLayout(page);
 
@@ -52,9 +53,9 @@ test('missing example units do not interrupt reading, while other read failures 
     await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
 
     // Returning to a valid unit and clicking the missing one keeps the student's place.
-    await directory.getByRole('button', { name: '数制与数制转换', exact: true }).click();
+    await openFirstUnit(page);
     await waitForReadingLayout(page);
-    await directory.getByRole('button', { name: '展开有符号数与补码运算' }).click();
+    await directory.getByRole('button', { name: '有符号数与补码运算', exact: true }).click();
     const missing = directory.getByRole('button', { name: '原码、反码、补码表示与转换', exact: true });
     const before = await app.evaluate(() => (globalThis as any).__missingUnitTest.calls.length);
     const camera = await page.locator('.react-flow__viewport').getAttribute('style');

@@ -1,4 +1,4 @@
-import { courseAction } from './shell-actions';
+import { courseAction, openFirstUnit } from './shell-actions';
 import type { DatabaseSync } from 'node:sqlite';
 import { openFaultDatabase } from './fault-database';
 import { test,expect,_electron as electron } from '@playwright/test';
@@ -19,7 +19,7 @@ test('independent whole-course UI preserves personal state and a real incomplete
  let app=await launch();
  try{
   let page=await app.firstWindow();await resizeBoardWindow(app,page);
-  await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();
+  await openFirstUnit(page);
   const old=await page.evaluate(()=>(window as any).yizhi.open());
   const formula=page.locator('.editor-formula').first();await revealBoardControl(page,formula.getByRole('button',{name:'编辑公式',exact:true}));await formula.getByRole('button',{name:'编辑公式',exact:true}).click();
   await formula.locator('math-field').evaluate((el:any)=>{el.executeCommand('selectAll');el.executeCommand(['insert','\\frac{1}{#?}']);});
@@ -119,7 +119,7 @@ test('whole-course recovery interrupts an actual host protocol turn while its or
  const app=await electron.launch({args:[resolve('.'),`--course=${directory}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile'),YIZHI_CODEX_PATH:cli,YIZHI_FIXTURE_MODE:'history-stop'}});
  try{
   const page=await app.firstWindow();await resizeBoardWindow(app,page);
-  await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();
+  await openFirstUnit(page);
   await page.getByRole('button',{name:'学习对话',exact:true}).click();await expect(page.getByText('本机 Codex CLI · 已连接',{exact:true})).toBeVisible();
   await page.getByLabel('Agent 请求方式').selectOption('modify');await page.getByRole('textbox',{name:'学习对话草稿'}).fill('恢复整课前提交真实协议组并保持运行');await page.getByRole('button',{name:'发送修改请求',exact:true}).click();
   await expect(page.getByRole('textbox',{name:'编辑首段正文'})).toContainText('受控协议回归');

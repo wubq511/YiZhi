@@ -1,4 +1,4 @@
-import { chooseShape, drawingSpace, manageDrawings } from './shell-actions';
+import { chooseShape, drawingSpace, manageDrawings, openFirstUnit } from './shell-actions';
 import { controlledElectron } from './controlled-launch';
 import type { DatabaseSync } from 'node:sqlite';
 import { openFaultDatabase } from './fault-database';
@@ -99,7 +99,7 @@ test('text highlighter follows the actual Unicode range, survives deletion as or
   const launch=()=>electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});
   let app=await launch();
   try{
-    let page=await app.firstWindow();await resizeBoardWindow(app,page);await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();
+    let page=await app.firstWindow();await resizeBoardWindow(app,page);await openFirstUnit(page);
     const editor=page.getByRole('textbox',{name:'连续编辑正文',exact:true});
     await editor.evaluate((el:any)=>{el.editor.commands.setTextSelection({from:2,to:5});el.editor.view.focus();});
     const quote=await page.evaluate(()=>getSelection()?.toString());expect(quote?.length).toBe(3);
@@ -121,7 +121,7 @@ test('text highlighter follows the actual Unicode range, survives deletion as or
     await expect.poll(async()=>(await snapshot(page)).drawings[0].status).toBe('attached');
     await expect(editor.locator('.drawing-text-highlight')).toHaveText(quote!);
     expect((await snapshot(page)).drawings[0].original).toEqual(original.original);
-    await app.close();app=await launch();page=await app.firstWindow();await resizeBoardWindow(app,page);await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();await expect(page.getByRole('textbox',{name:'连续编辑正文',exact:true}).locator('.drawing-text-highlight')).toHaveText(quote!);
+    await app.close();app=await launch();page=await app.firstWindow();await resizeBoardWindow(app,page);await openFirstUnit(page);await expect(page.getByRole('textbox',{name:'连续编辑正文',exact:true}).locator('.drawing-text-highlight')).toHaveText(quote!);
   }finally{await app.close();await rm(root,{recursive:true,force:true,maxRetries:5,retryDelay:50});}
 });
 
@@ -132,7 +132,7 @@ test('image marks follow relative geometry after width changes and deleted targe
   }finally{await core.close();}
   const app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});
   try{
-    const page=await app.firstWindow();await resizeBoardWindow(app,page);await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');
+    const page=await app.firstWindow();await resizeBoardWindow(app,page);await openFirstUnit(page);await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');
     const image=page.getByRole('img',{name:'TI 74153 几何标注',exact:true}),board=(await page.locator('main.board').boundingBox())!;
     await image.evaluate((el:HTMLImageElement)=>el.decode());
     const before=(await image.boundingBox())!;await page.mouse.move(board.x+10,board.y+150);await page.mouse.wheel(0,before.y-board.y-160);await page.waitForTimeout(200);
@@ -158,7 +158,7 @@ test('image marks follow relative geometry after width changes and deleted targe
 test('unit adjustment and drawing share the board context in gesture order and Escape cancels a unit gesture without saving',async()=>{
   const root=await mkdtemp(join(tmpdir(),'yizhi-board-order-ui-')),app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});
   try{
-    const page=await app.firstWindow();await resizeBoardWindow(app,page);await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');
+    const page=await app.firstWindow();await resizeBoardWindow(app,page);await openFirstUnit(page);await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');
     await manageDrawings(page);await chooseShape(page, '矩形');
     const board=(await page.locator('main.board').boundingBox())!;await drag(page,board.x+450,board.y+150,100,70);
     // Await this gesture's actual receipt, not the initial or previous saved label.
@@ -187,7 +187,7 @@ test('body, MathLive, personal note and conversation input consume their own sho
     const page=await app.firstWindow();await resizeBoardWindow(app,page);await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');await manageDrawings(page);await chooseShape(page, '矩形');
     const board=(await page.locator('main.board').boundingBox())!;await drag(page,board.x+450,board.y+150);await expect(page.getByRole('status',{name:'保存状态',exact:true})).toHaveText('已保存');
     const drawing=(await snapshot(page)).drawings[0];
-    await manageDrawings(page);await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();
+    await manageDrawings(page);await openFirstUnit(page);
     const editor=page.getByRole('textbox',{name:'连续编辑正文',exact:true});
     const beforeBody=await editor.evaluate((el:any)=>el.editor.state.doc.firstChild.textContent);await editor.evaluate((el:any)=>{el.editor.commands.setTextSelection(1);el.editor.view.focus();});await page.keyboard.insertText('独立正文');await expect.poll(()=>editor.evaluate((el:any)=>el.editor.state.doc.firstChild.textContent)).toBe('独立正文'+beforeBody);await page.keyboard.press('Meta+z');await expect.poll(()=>editor.evaluate((el:any)=>el.editor.state.doc.firstChild.textContent)).toBe(beforeBody);
     expect((await snapshot(page)).drawings[0]).toEqual(drawing);
@@ -221,7 +221,7 @@ test('object-coordinate marks follow a unit move; Space and middle drag pan duri
   const root=await mkdtemp(join(tmpdir(),'yizhi-drawing-object-')),app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});
   let complete=false;
   try{
-    const page=await app.firstWindow();await resizeBoardWindow(app,page);await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');
+    const page=await app.firstWindow();await resizeBoardWindow(app,page);await openFirstUnit(page);await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');
     await manageDrawings(page);await drawingSpace(page, 'object');await chooseShape(page, '矩形');
     const article=(await page.locator('article[data-unit-id="KU-001"]').boundingBox())!;await drag(page,article.x+60,article.y+140,100,50);await expect(page.getByRole('status',{name:'保存状态',exact:true})).toHaveText('已保存');
     const record=(await snapshot(page)).drawings[0];expect(record.value.anchor.space).toBe('object');const before=(await page.locator('[data-drawing-id] .drawing-ink').boundingBox())!;

@@ -1,3 +1,4 @@
+import { openFirstUnit } from './shell-actions';
 import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { cp, mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -17,7 +18,7 @@ test('actual installed CLI rewrites one memory description into existing hits, p
   try {
     const page = await app.firstWindow(); await resizeBoardWindow(app, page);
     if (await page.locator('.source-panel').isVisible()) await page.getByRole('button', { name: '返回画板', exact: true }).click();
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     await expect(page.locator('.reading-layer[data-unit-id="KU-001"]')).toBeVisible();
     await page.getByRole('button', { name: '学习对话', exact: true }).click();
     await page.getByRole('textbox', { name: '学习对话草稿' }).fill('真实描述检索验收：这个未发问题必须原样保留。');

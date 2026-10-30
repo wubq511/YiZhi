@@ -1,3 +1,4 @@
+import { openFirstUnit } from './shell-actions';
 import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -74,7 +75,7 @@ test('offline real IPC search reveals a delivered deep answer and restores the o
   let current: Page | undefined;
   try {
     const page = await app.firstWindow(); current = page; await resizeBoardWindow(app, page);
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     const first = page.getByRole('textbox', { name: '编辑首段正文' });
     await revealBoardControl(page, first); await first.click();
     await first.evaluate(el => { const range = document.createRange(); range.setStart(el.firstChild!, 0); range.setEnd(el.firstChild!, 3); const selection = getSelection()!; selection.removeAllRanges(); selection.addRange(range); document.dispatchEvent(new Event('selectionchange')); });

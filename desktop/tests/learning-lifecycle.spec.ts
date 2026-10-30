@@ -1,4 +1,4 @@
-import { chooseShape, manageDrawings } from './shell-actions';
+import { chooseShape, manageDrawings, openFirstUnit } from './shell-actions';
 import type { DatabaseSync } from 'node:sqlite';
 import { openFaultDatabase } from './fault-database';
 import { test,expect,_electron as electron } from '@playwright/test';
@@ -10,7 +10,7 @@ import { CourseService } from '../src/core/course-service';
 import { resizeBoardWindow,revealBoardControl } from './board-test-helpers';
 async function resize(app:ElectronApplication,page:Page){await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');const handle=await app.browserWindow(page);const size=await handle.evaluate(w=>{w.setSize(1024,688);return w.getContentSize();});await expect.poll(()=>page.evaluate(()=>[innerWidth,innerHeight])).toEqual(size);}
 async function choose(app:ElectronApplication,directory:string){await app.evaluate(({dialog,Menu},directory)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[directory]});const menu=Menu.getApplicationMenu()!.items.find(i=>i.label==='课程')!.submenu!.items[0];menu.click(undefined,undefined,undefined);},directory);}
-async function body(page:Page,text:string){await page.getByRole('button',{name:'数制与数制转换',exact:true}).first().click();const editor=page.getByRole('textbox',{name:'连续编辑正文',exact:true});await editor.evaluate((el:any)=>{el.editor.commands.setTextSelection({from:1,to:el.editor.state.doc.firstChild.nodeSize-1});el.editor.view.focus();});await page.keyboard.insertText(text);}
+async function body(page:Page,text:string){await openFirstUnit(page);const editor=page.getByRole('textbox',{name:'连续编辑正文',exact:true});await editor.evaluate((el:any)=>{el.editor.commands.setTextSelection({from:1,to:el.editor.state.doc.firstChild.nodeSize-1});el.editor.view.focus();});await page.keyboard.insertText(text);}
 async function composer(page:Page,text:string){await page.getByRole('button',{name:'学习对话',exact:true}).click();await page.getByRole('textbox',{name:'学习对话草稿'}).fill(text);}
 
 test('explicit quit collects actual latest input in both course windows, rejects a failed barrier, preserves both scenes, then saves and reopens both authorities',async()=>{

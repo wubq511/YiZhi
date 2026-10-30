@@ -1,3 +1,4 @@
+import { openFirstUnit } from './shell-actions';
 import { controlledElectron } from './controlled-launch';
 import type { DatabaseSync } from 'node:sqlite';
 import { openFaultDatabase } from './fault-database';
@@ -17,7 +18,7 @@ test('actual displayed Unicode selection creates one note; note Undo/autosave/re
   let app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     let page = await app.firstWindow();
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     const editor = page.getByRole('textbox', { name: '连续编辑正文', exact: true });
     const instance = await editor.evaluateHandle((el: any) => el.editor);
     await editor.evaluate((el: any) => { let end = 0, n = 0; el.editor.state.doc.forEach((node: any, pos: number) => { if (node.type.name === 'paragraph' && ++n === 2) end = pos + 5; }); el.editor.commands.setTextSelection({ from: 2, to: end }); el.editor.view.focus(); });
@@ -85,7 +86,7 @@ test('real MathLive nested selection uses a lazy reading field, proven independe
   try {
     // Use a real Electron window at the compact macOS CI size.
     await resizeBoardWindow(app, page);
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     await expect(page.locator('math-field')).toHaveCount(0);
     const formula = page.locator('.editor-formula').first();
     await formula.getByRole('button', { name: '选择公式片段', exact: true }).click();
@@ -206,7 +207,7 @@ test('held displayed selection creates an old-version orphan and explicit reasso
   const root = await mkdtemp(join(tmpdir(), 'yizhi-held-note-'));
   const app = await controlledElectron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
-    const page = await app.firstWindow(); await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    const page = await app.firstWindow(); await openFirstUnit(page);
     const editor = page.getByRole('textbox', { name: '连续编辑正文', exact: true });
     await editor.evaluate((el: any) => { el.editor.commands.setTextSelection({ from: 2, to: 7 }); el.editor.view.focus(); });
     const captured = await editor.evaluate((el: any) => el.editor.storage.courseSelection.capture());
@@ -246,7 +247,7 @@ test('actual note autosave failure retains newer input and retries the original 
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   let fault: DatabaseSync | undefined;
   try {
-    const page = await app.firstWindow(); await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    const page = await app.firstWindow(); await openFirstUnit(page);
     const editor = page.getByRole('textbox', { name: '连续编辑正文', exact: true });
     await editor.evaluate((el: any) => { el.editor.commands.setTextSelection({ from: 2, to: 5 }); el.editor.view.focus(); });
     await page.getByRole('button', { name: '批注所选文字', exact: true }).click();

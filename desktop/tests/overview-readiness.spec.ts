@@ -1,3 +1,4 @@
+import { openFirstUnit } from './shell-actions';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, writeFile, readFile, mkdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -56,7 +57,7 @@ test('initial overview fits declared graph geometry while actual graph node meas
     expect(geometry.extent.right).toBeLessThan(geometry.board.right-1);
     expect(geometry.extent.bottom).toBeLessThan(geometry.board.bottom-1);
     await page.evaluate(() => (window as any).__overviewMeasurements.release());
-    await page.getByRole('button', { name: '数制与数制转换', exact: true }).first().click();
+    await openFirstUnit(page);
     await expect(page.locator('article[data-unit-id="KU-001"] .tiptap')).toBeVisible();
   } catch (error) { failure = error; throw error; }
   finally { if (failure) await closeFailedBoard(app, failure); else await app.close(); if(!input)await rm(root, { recursive: true, force: true }); }

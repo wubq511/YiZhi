@@ -1,3 +1,4 @@
+import { expandDirectoryTheme } from './shell-actions';
 import type { DatabaseSync } from 'node:sqlite';
 import { openFaultDatabase } from './fault-database';
 import { test, expect, _electron as electron } from '@playwright/test';
@@ -104,7 +105,7 @@ test('actual built-in controls, diagram, offscreen stop and formula confirmation
   let app = await launch();
   try {
     let page = await smallExperimentWindow(app);
-    await page.getByRole('button', { name: '复用器与分配器', exact: true }).click();
+    await expandDirectoryTheme(page, '复用器与分配器');
     await page.getByRole('button', { name: 'MUX 器件、级联与扩展', exact: true }).first().click();
     let lab = page.getByRole('region', { name: '交互 · 4 选 1 的选择语义', exact: true });
     await reveal(page, lab.getByRole('checkbox', { name: 'I0', exact: true, includeHidden: true }));
@@ -143,12 +144,12 @@ test('actual built-in controls, diagram, offscreen stop and formula confirmation
     await expect(lab.getByRole('status', { name: '实验保存状态' })).toHaveText('现场已保存');
     await expect(lab.getByText('公式需要核对；当前不显示计算结果。', { exact: true })).toBeVisible();
     await expect(lab.getByRole('status', { name: 'MUX 输出' })).toHaveCount(0);
-    await page.getByRole('button', { name: '编码器与译码器', exact: true }).click();
+    await expandDirectoryTheme(page, '编码器与译码器');
     await page.getByRole('button', { name: '译码器功能与 2:4/3:8 译码器', exact: true }).first().click();
     const decoder = page.getByRole('region', { name: '交互 · 74LS138 式低有效输出', exact: true }); await reveal(page, decoder.getByRole('checkbox', { name: 'E3', exact: true, includeHidden: true }));
     await decoder.getByRole('checkbox', { name: 'E3', exact: true }).uncheck();
     await expect(decoder.getByRole('status', { name: '译码器输出' })).toHaveText('未使能 · Y0–Y7 = 11111111');
-    await page.getByRole('button', { name: '卡诺图基础与化简', exact: true }).click();
+    await expandDirectoryTheme(page, '卡诺图基础与化简');
     await page.getByRole('button', { name: '2–4 变量卡诺图化简', exact: true }).first().click();
     const kmap = page.getByRole('region', { name: '固定卡诺图 · 跨边四格', exact: true }); await reveal(page, kmap.getByRole('checkbox', { name: '显示跨边四格', exact: true, includeHidden: true }));
     await kmap.getByRole('checkbox', { name: '显示跨边四格', exact: true }).check();
@@ -168,7 +169,7 @@ test('actual IPC pause failure shows incomplete and confirmed recovery can run a
   let fault: DatabaseSync | undefined;
   try {
     const page = await smallExperimentWindow(app);
-    await page.getByRole('button', { name: '复用器与分配器', exact: true }).click();
+    await expandDirectoryTheme(page, '复用器与分配器');
     const unit = page.getByRole('navigation', { name: '课程目录' }).getByRole('button', { name: 'MUX 器件、级联与扩展', exact: true }); await unit.click();
     const lab = page.getByRole('region', { name: '交互 · 4 选 1 的选择语义', exact: true });
     await reveal(page, lab.getByRole('button', { name: '开始遍历输入', exact: true, includeHidden: true }));

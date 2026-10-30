@@ -23,7 +23,12 @@ app.on('browser-window-created',(_event,w:BrowserWindow)=>{
     if(await wc.executeJavaScript(`!!document.querySelector('button[aria-label="数制与数制转换"]')`))break;
     await delay(100);if(i===99)throw Error('course UI not loaded');
    }
-   await wc.executeJavaScript(`document.querySelector('button[aria-label="数制与数制转换"]').click()`);
+   await wc.executeJavaScript(`(()=>{const theme=document.querySelector('button[aria-label="数制与数制转换"]');if(theme.getAttribute('aria-expanded')!=='true')theme.click();})()`);
+   for(let i=0;i<100;i++){
+    if(await wc.executeJavaScript(`!!document.querySelector('button[aria-label="位置记数法与权展开"]')`))break;
+    await delay(100);if(i===99)throw Error('first unit not available');
+   }
+   await wc.executeJavaScript(`document.querySelector('button[aria-label="位置记数法与权展开"]').click()`);
    for(let i=0;i<100;i++){
     if(await wc.executeJavaScript(`!![...document.querySelectorAll('button')].find(x=>x.textContent==='奇偶校验扩展实验')`))break;
     await delay(100);if(i===99)throw Error('extension entry not loaded');
