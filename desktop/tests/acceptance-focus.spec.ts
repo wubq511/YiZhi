@@ -8,7 +8,9 @@ test('closing the narrow Agent dialog with keyboard returns focus to its enabled
   const root = await mkdtemp(join(tmpdir(), 'yizhi-narrow-focus-'));
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile'), YIZHI_CODEX_PATH: join(root, 'missing-cli') } });
   try {
-    const page = await app.firstWindow(); await resizeBoardWindow(app, page, 700, 700);
+    const page = await app.firstWindow();
+    await expect(page.locator('.workspace')).toHaveAttribute('aria-busy', 'false', { timeout: 15_000 });
+    await resizeBoardWindow(app, page, 700, 700);
     await page.getByRole('button', { name: '收起目录', exact: true }).click();
     await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
     const trigger = page.getByRole('button', { name: '学习对话', exact: true });
