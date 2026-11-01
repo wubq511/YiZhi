@@ -1,0 +1,42 @@
+.react-flow__node.board-theme {
+  display: block;
+  padding: 0;
+  border: 2px solid #bbc9d5;
+  border-radius: 8px;
+  background: transparent;
+  color: #27343e;
+  font-size: var(--board-theme-font, 40px);
+  line-height: 1.1;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.react-flow__node.board-theme > span { position: absolute; left: 0; top: 0; width: 100%; transform: translateY(-100%); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.react-flow__node.board-unit {
+  display: block;
+  padding: 12px 18px;
+  border: 2px solid #7798bc;
+  border-radius: 4px;
+  background: #fff;
+  font-size: var(--board-unit-font, 36px);
+  line-height: 1.4;
+  text-align: left;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.react-flow__node.board-unit-thumbnail {
+  background: #f0f5fc;
+  border-color: #c7d7e8;
+  color: transparent;
+  font-size: 0;
+}
+.react-flow__node.board-unit-thumbnail::after { content: ''; display: block; width: 58%; height: 18px; margin: 28px 18px; border-radius: 9px; background: #96b0ca; }
+.board-route-layer { position: absolute; inset: 0 auto auto 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+.board-route { fill: none; stroke: #345d88; stroke-width: 2; pointer-events: none; }
+.board-route-hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; }
+.board-route-arrow { fill: #345d88; pointer-events: none; }
+.board-route-label { pointer-events: none; fill: #27343e; font: 12px 'PingFang SC', sans-serif; paint-order: stroke; stroke: white; stroke-width: 4px; stroke-linejoin: round; }
+.react-flow__edge:focus-visible .board-route { stroke: #6555be; stroke-width: 3; }
+.board-route-group[data-related] .board-route { stroke: #6555be; stroke-width: 3; }
+.board-route-group[data-related] .board-route-arrow { fill: #6555be; }
+.relation-member + .relation-member { margin-top: 16px; }
+.board-route-notice { position: absolute; z-index: 9; left: 16px; bottom: 16px; display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 12px; max-width: calc(100% - 32px); border-radius: 10px; background: #fff; color: #27343e; box-shadow: var(--shell-shadow); font-size: 13px; }

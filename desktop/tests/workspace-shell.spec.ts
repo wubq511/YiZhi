@@ -48,6 +48,7 @@ test('shell retains panels and targets, uses real tool histories and returns key
     await expect.poll(()=>page.evaluate(async()=>{const b=window.yizhi,c=await b.open();return (await b.drawings.list({sessionId:c.sessionId}))[0]?.status;})).toBe('deleted');
     await page.getByRole('button',{name:'重做画板',exact:true}).click();await expect.poll(()=>page.locator('[data-drawing-id]').count()).toBe(1);
     await page.getByRole('button',{name:'阅读工具',exact:true}).click();
+    await openFirstUnit(page);
     const editor=page.getByRole('textbox',{name:'连续编辑正文',exact:true}).first();
     await editor.evaluate((el:any)=>{el.editor.commands.setTextSelection({from:1,to:7});el.editor.view.focus();});
     const quote=await page.evaluate(()=>getSelection()?.toString());

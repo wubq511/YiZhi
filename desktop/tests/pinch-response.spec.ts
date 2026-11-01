@@ -41,7 +41,10 @@ async function openCourse(run: (page: Page, app: ElectronApplication) => Promise
     const core = new CourseService(resolve('dist/worker.cjs'));
     try {
       const course = await core.open(join(root, 'course'));
-      await core.setLayout(course.sessionId, [{ unitId: isolatedNavigation, x: 20_000, y: 20_000, width: 650 }]);
+      const graph = await core.graph(course.sessionId);
+      const theme = graph.nodes.find(node => node.id === isolatedNavigation)!.themeId;
+      const units = graph.nodes.filter(node => node.themeId === theme).sort((a, b) => a.id === isolatedNavigation ? -1 : b.id === isolatedNavigation ? 1 : a.id.localeCompare(b.id));
+      await core.setLayout(course.sessionId, units.map((node, index) => ({ unitId: node.id, x: 50_000 + index * 1_200, y: 50_000, width: 650 })));
     } finally { await core.close(); }
   }
   const app = await controlledElectron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`],
@@ -115,7 +118,7 @@ test('coalescing preserves the accepted trace, moving anchors and per-event clam
     expect(batched.x).toBeCloseTo(sequential.x, 8); expect(batched.y).toBeCloseTo(sequential.y, 8);
     // Clamp and reversal in the SAME frame must not be reduced to a summed delta.
     await sendPinch(page, 100000); await sendPinch(page, -1); await stepFrame(page);
-    await expect.poll(async () => (await readCameraTransform(viewport)).zoom).toBeCloseTo(.04055837919160117, 12);
+    await expect.poll(async () => (await readCameraTransform(viewport)).zoom).toBeCloseTo(.010139594797900291, 12);
     await sendPinch(page, -100000); await sendPinch(page, 1); await stepFrame(page);
     await expect.poll(async () => (await readCameraTransform(viewport)).zoom).toBeCloseTo(1.9724654089867184, 12);
     await sendPinch(page, 100, 100, 150, true); await stepFrame(page);

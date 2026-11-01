@@ -3,13 +3,17 @@ import type { CourseGraph } from '../shared';
 import type { LayoutPlacement } from '../layout';
 import { transaction } from './save-store';
 export function initializeLayout(db: DatabaseSync) {
-  db.exec('CREATE TABLE IF NOT EXISTS layout_baseline(unit_id TEXT PRIMARY KEY, x REAL NOT NULL, y REAL NOT NULL, width REAL NOT NULL); CREATE TABLE IF NOT EXISTS layout_versions(unit_id TEXT PRIMARY KEY, version INTEGER NOT NULL)');
+  db.exec('CREATE TABLE IF NOT EXISTS layout_baseline(unit_id TEXT PRIMARY KEY, x REAL NOT NULL, y REAL NOT NULL, width REAL NOT NULL); CREATE TABLE IF NOT EXISTS layout_versions(unit_id TEXT PRIMARY KEY, version INTEGER NOT NULL); CREATE TABLE IF NOT EXISTS layout_size_cache(unit_id TEXT PRIMARY KEY, width REAL NOT NULL, height REAL NOT NULL, unit_revision INTEGER NOT NULL, policy INTEGER NOT NULL)');
 }
 export function layoutGraph(db: DatabaseSync, graph: CourseGraph): CourseGraph {
   const saved = new Map(db.prepare('SELECT * FROM layout_baseline').all().map(row => [String(row.unit_id), row]));
+  const sizes = new Map(db.prepare('SELECT s.*, coalesce(u.revision,0) AS current_revision FROM layout_size_cache s LEFT JOIN units u ON u.id=s.unit_id').all()
+    .filter(row => Number(row.unit_revision) === Number(row.current_revision)).map(row => [String(row.unit_id), row]));
   return { ...graph, layout: { ...graph.layout, nodes: graph.layout.nodes.map(node => {
     const row = saved.get(node.unitId);
-    return row ? { ...node, x: Number(row.x), y: Number(row.y), width: Number(row.width) } : node;
+    const placement = row ? { ...node, x: Number(row.x), y: Number(row.y), width: Number(row.width) } : node;
+    const size = sizes.get(node.unitId);
+    return size && Number(size.width) === placement.width ? { ...placement, height: Number(size.height) } : placement;
   }) } };
 }
 export function saveLayout(db: DatabaseSync, graph: CourseGraph, updates: LayoutPlacement[]) {

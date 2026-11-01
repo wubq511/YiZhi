@@ -18,7 +18,7 @@ export const BackupPanel = forwardRef<{ open(pointer?: boolean): void }, {sessio
   finally{setBusy(false);}
  };
  useImperativeHandle(ref, () => ({ open: show }));
- return <>{open&&createPortal(<dialog aria-label="完整备份" className="history-panel backup-panel" data-motion={motion?'pointer':undefined} ref={node=>{if(node&&!node.open)node.showModal();}} onCancel={e=>{e.preventDefault();close();}} onKeyDown={e=>e.stopPropagation()}>
+ return <>{open&&createPortal(<dialog aria-label="完整备份" className="history-panel backup-panel" data-motion={motion?'pointer':undefined} ref={node=>{if(node&&!node.open)node.showModal();}} onCancel={e=>{e.preventDefault();close();}} onKeyDown={e=>{e.stopPropagation();if(e.key==='Escape'){e.preventDefault();close();}}}>
   <header className="history-heading"><h2>完整备份</h2><Button variant="outline" size="sm" onClick={close}>返回课程</Button></header>
   <section><p>保存此刻的正文、个人记录、已确认草稿、固定资料与保留的历史。备份独立保存，原课程之后整理历史不会追删副本。</p>
    <div className="backup-actions"><Button size="sm" className="history-confirm" disabled={busy} onClick={()=>void run(false)}>新建完整备份</Button><Button variant="outline" size="sm" disabled={busy} onClick={()=>void run(true)}>继续未完成备份</Button></div>

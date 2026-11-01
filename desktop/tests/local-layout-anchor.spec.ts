@@ -11,7 +11,7 @@ test('late upstream measurements compensate a measured reading body but never an
    import {useRef,useState} from 'react';
    import {createRoot} from 'react-dom/client';
    import {useLocalLayout,ReadingSurface} from './src/renderer/local-layout';
-   const graph={layout:{nodes:[
+   const graph={groups:[{id:'T'}],nodes:[{id:'UPSTREAM',themeId:'T'},{id:'ANCHOR',themeId:'T'}],layout:{groups:[],nodes:[
     {unitId:'UPSTREAM',x:0,y:0,width:650,height:100},
     {unitId:'ANCHOR',x:0,y:200,width:268,height:86}
    ]}};

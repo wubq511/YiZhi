@@ -17,7 +17,7 @@ test('a stopped legacy copy converts every persisted unit and opaque material, t
     assert.equal(report.scope, 'content-candidate');
     assert.deepEqual(report.counts, { themes: 2, units: 2, answerableQuestions: 1, questionRecords: 2, mappings: 1, relations: 0 });
     const opened = await core.open(candidate);
-    assert.equal(opened.courseId, 'COURSE-FIXTURE');
+    assert.equal(opened.courseId, original.manifest.courseId);
     assert.deepEqual((await core.migration.content({ sessionId: opened.sessionId })).knowledge, original.knowledge);
     assert.deepEqual((await core.readUnit(opened.sessionId, 'KU-086')).reading, original.last.reading);
     assert.equal((await core.readUnit(opened.sessionId, 'KU-086')).theme.id, 'TH-20');

@@ -95,6 +95,10 @@ export class CourseService {
   readUnit(sessionId: string, unitId: string): Promise<CourseUnit> { return this.request('readUnit', { sessionId, unitId }); }
   setLayout(sessionId: string, updates: import('../layout').LayoutPlacement[]): Promise<void> { return this.request('setLayout', { sessionId, updates }); }
   projectLayout(sessionId: string, sizes: import('../layout').LayoutSizes, fixed?: import('../layout').LayoutPlacement): Promise<import('../layout').LayoutNode[]> { return this.request('projectLayout', { sessionId, sizes, fixed }); }
+  /** Host-only: explicit course arrangement; never called when opening or zooming. */
+  planLayout(sessionId:string):Promise<import('../board-layout-api').LayoutArrangementPlan> {return this.request('layout:plan',{sessionId});}
+  arrangeLayout(request:{sessionId:string;operationId:string;basis:string}):Promise<import('../board-layout-api').LayoutArrangementReceipt> {return this.request('layout:arrange',request);}
+  queryLayout(request:{sessionId:string;operationId:string}):Promise<import('../board-layout-api').LayoutArrangementReceipt|null> {return this.request('layout:query',request);}
   readingState(sessionId: string): Promise<ReadingState | null> { return this.request('readingState', { sessionId }); }
   setReadingState(sessionId: string, state: ReadingState): Promise<void> { return this.request('setReadingState', { sessionId, state }); }
   reviewStates(sessionId: string): Promise<ReviewSnapshot> { return this.request('reviewStates', { sessionId }); }

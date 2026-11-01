@@ -22,6 +22,8 @@ import { Drawings } from './drawings';
 import { Annotations } from './annotations';
 import { initializeLayout, layoutGraph, saveLayout } from './local-layout';
 import { projectLayout } from '../layout';
+import { BOARD_LAYOUT_POLICY_VERSION, planInitialLayout } from '../board-layout';
+import { prepareLayoutArrangement, commitLayoutArrangement, queryLayoutArrangement } from './layout-arrangement';
 
 import { Extensions } from './extensions';
 import { BuiltinExperiments } from './builtin-experiments';
@@ -117,6 +119,7 @@ function open(directory: string,preparing=false): OpenedCourse {
   if(!preparing)admitDirectory(canonical);
   const existing = courses.get(canonical);
   if (existing) {if(existing.upgradeFrozen)throw new Error('该课程正在升级，已停写');return snapshot(existing);}
+  const newCourse = !existsSync(join(canonical, 'course.sqlite'));
   if(existsSync(join(canonical,'course.sqlite')))assertWritableFormat(canonical);
   // A separate DB holds an OS-backed exclusive transaction for the entire session.
   // It survives window closure and is released by SQLite on process death; no stale PID lock.
@@ -145,14 +148,26 @@ function open(directory: string,preparing=false): OpenedCourse {
       CREATE TABLE IF NOT EXISTS units(id TEXT PRIMARY KEY, payload TEXT NOT NULL, revision INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS operations(id TEXT PRIMARY KEY, digest TEXT NOT NULL, receipt TEXT NOT NULL,
         unit_id TEXT NOT NULL REFERENCES units(id), before_text TEXT NOT NULL, after_text TEXT NOT NULL);
+      ${newCourse ? "INSERT INTO metadata VALUES('example-initializing','1');" : ''}
       PRAGMA user_version=${version||2}; COMMIT;`);
     if(version===0)db.prepare("INSERT OR IGNORE INTO metadata VALUES('minimum-reader','2')").run();
     if (!db.prepare('SELECT 1 FROM units LIMIT 1').get()) {
       const seed = readFileSync(join(__dirname, 'fixtures/unit-001.json'), 'utf8');
+      const examplePending=!!db.prepare("SELECT 1 FROM metadata WHERE key='example-initializing'").get();
+      // Calculate before taking SQLite's writer; the marker makes failures retryable.
+      const exampleGraph=examplePending ? JSON.parse(readFileSync(join(__dirname, 'fixtures/graph.json'), 'utf8')) as CourseGraph : undefined;
+      if(exampleGraph)exampleGraph.layout = { ...planInitialLayout(exampleGraph), policyVersion: BOARD_LAYOUT_POLICY_VERSION } as CourseGraph['layout'];
       db.exec('BEGIN IMMEDIATE');
       try {
         db.prepare('INSERT INTO units VALUES (?, ?, 1)').run('KU-001', seed);
         db.prepare('INSERT INTO metadata VALUES (?, ?)').run('courseId', randomUUID());
+        if (exampleGraph) {
+          // The built-in example has a partial, lazily supplied body. Persist
+          // its layout separately so upgrade validation does not mistake the
+          // example's graph for a fully imported course.
+          db.prepare("INSERT INTO metadata VALUES('example-layout',?)").run(JSON.stringify(exampleGraph.layout));
+          db.prepare("DELETE FROM metadata WHERE key='example-initializing'").run();
+        }
         db.exec('COMMIT');
       } catch (error) { db.exec('ROLLBACK'); throw error; }
     }
@@ -166,6 +181,8 @@ function open(directory: string,preparing=false): OpenedCourse {
     };
     const storedGraph = db.prepare("SELECT value FROM metadata WHERE key='course-graph'").get();
     const graph = JSON.parse(storedGraph ? String(storedGraph.value) : readFileSync(join(__dirname, 'fixtures/graph.json'), 'utf8')) as CourseGraph;
+    const exampleLayout = !storedGraph && db.prepare("SELECT value FROM metadata WHERE key='example-layout'").get();
+    if (exampleLayout) graph.layout = JSON.parse(String(exampleLayout.value));
     initializeReviewState(db);
     const annotations = new Annotations(db);
     let consistency!: CommandConsistency;
@@ -352,6 +369,9 @@ async function dispatch({ id, action, payload }: { id: number; action: string; p
     }
     else if (action === 'setLayout') { const course = session(payload.sessionId,action); saveLayout(course.db, course.graph, payload.updates); }
     else if (action === 'projectLayout') { const course = session(payload.sessionId,action); value = projectLayout(layoutGraph(course.db, course.graph).layout.nodes, payload.sizes, payload.fixed); }
+    else if (action === 'layout:plan') { const course=session(payload.sessionId,action); value=prepareLayoutArrangement(course.db,course.relations.graph()); }
+    else if (action === 'layout:arrange') { const course=session(payload.sessionId,action); value=commitLayoutArrangement(course.db,course.relations.graph(),payload); }
+    else if (action === 'layout:query') { const course=session(payload.sessionId,action); value=queryLayoutArrangement(course.db,payload.operationId); }
     else if (action === 'reviewStates') { const course = session(payload.sessionId,action); value = reviewSnapshot(course.db, course.graph); }
     else if (action === 'setReviewStatus') { const course = session(payload.sessionId,action); value = transaction(course.db, () => setReviewStatus(course.db, course.graph, payload.unitId, payload.status)); }
     else if (action === 'confirmReviewPrompt') { const course = session(payload.sessionId,action); value = transaction(course.db, () => confirmReviewPrompt(course.db, course.graph, payload.promptId, payload.adjust)); }

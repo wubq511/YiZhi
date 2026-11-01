@@ -183,8 +183,8 @@ test('caret pause and application blur retain the same paragraph, independent up
     await page.getByRole('button', { name: '收起目录', exact: true }).click();
     await expect(first).toHaveText('最新 学生前缀 ' + original.unit.reading.blocks[0].payload.text + ' 外部后缀');
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
+    await editor.focus();
     const undo = page.getByRole('button', { name: '撤销正文', exact: true });
-    await revealBoardControl(page, undo);
     await undo.click();
     await expect(first).toHaveText('学生前缀 ' + original.unit.reading.blocks[0].payload.text + ' 外部后缀');
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');

@@ -47,7 +47,7 @@ for (const zoom of [.85, 1.2]) test(`native caret click and precise drag selecti
     await expect.poll(() => nativeSelection(page!, paragraph)).toMatchObject({ anchorInText: true, anchor: points.first.offset,
       focusInText: true, focus: points.first.offset, collapsed: true, sameEditor: true,
       pm: { from: points.first.offset + 1, to: points.first.offset + 1 } });
-    await page.mouse.click(points.last.x, points.last.y, { clickCount: 1 });
+    await page.mouse.click(points.last.x, points.last.y, { clickCount: 1, delay: 80 });
     await expect.poll(() => nativeSelection(page!, paragraph)).toMatchObject({ anchor: points.last.offset, focus: points.last.offset, collapsed: true,
       pm:{from:points.last.offset+1,to:points.last.offset+1} });
     await nativeDragText(page, points.first, points.last, 8);
@@ -57,7 +57,7 @@ for (const zoom of [.85, 1.2]) test(`native caret click and precise drag selecti
       focusInText: true, focus: points.last.offset, collapsed: false, text: points.expected, sameEditor: true });
     if (!points.wrapped) throw new Error('Need a native range across a soft wrap');
     // This is a separate drag, not another click in a native multi-click sequence at the first glyph.
-    await page.mouse.click(points.last.x, points.last.y, { clickCount: 1 });
+    await page.mouse.click(points.last.x, points.last.y, { clickCount: 1, delay: 80 });
     await expect.poll(() => nativeSelection(page!, paragraph)).toMatchObject({ anchor: points.last.offset, focus: points.last.offset, collapsed: true,
       pm:{from:points.last.offset+1,to:points.last.offset+1} });
     await nativeDragText(page, points.first, points.wrapped, 12);
@@ -65,7 +65,7 @@ for (const zoom of [.85, 1.2]) test(`native caret click and precise drag selecti
     await page.mouse.up();
     await expect.poll(() => nativeSelection(page!, paragraph)).toMatchObject({ anchor: points.first.offset,
       focus: points.wrapped!.offset, text: points.wrappedExpected, sameEditor: true });
-    await page.mouse.click(points.last.x, points.last.y, { clickCount: 1 });
+    await page.mouse.click(points.last.x, points.last.y, { clickCount: 1, delay: 80 });
     await expect.poll(() => nativeSelection(page!, paragraph)).toMatchObject({ collapsed: true, anchor: points.last.offset,
       pm: { from: points.last.offset + 1, to: points.last.offset + 1 } });
     const marker = '[native pointer test]'; await page.keyboard.insertText(marker);

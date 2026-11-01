@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { waitForReadingLayout } from './board-test-helpers';
 import { openFirstUnit } from './shell-actions';
+import { projectCourseReadingLayout } from '../src/layout';
 
 test('missing example units do not interrupt reading, while other read failures remain visible', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-missing-unit-'));
@@ -36,18 +37,26 @@ test('missing example units do not interrupt reading, while other read failures 
 
     // Bring an unimplemented sample node into the read-ahead range.
     const board = page.locator('main.board');
-    const target = await page.evaluate(async () => {
-      const course = await window.yizhi.open(), graph = await window.yizhi.graph(course.sessionId);
-      return graph.layout.nodes.find(node => node.unitId === 'KU-007')!;
-    });
-    await board.evaluate((board, target) => {
-      const boardRect = board.getBoundingClientRect();
-      const transform = new DOMMatrixReadOnly(getComputedStyle(board.querySelector('.react-flow__viewport')!).transform);
-      board.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true,
-        clientX: boardRect.left + 30, clientY: boardRect.top + 100,
-        deltaX: transform.e + target.x * transform.a - 80, deltaY: transform.f + target.y * transform.d - 100 }));
-    }, target);
-    await waitForReadingLayout(page);
+    let sizes: Record<string, { width: number; height: number }> = {};
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const state = await page.evaluate(async () => {
+        const course = await window.yizhi.open(), graph = await window.yizhi.graph(course.sessionId);
+        const sizes = Object.fromEntries([...document.querySelectorAll<HTMLElement>('article[data-unit-id]')].map(article =>
+          [article.dataset.unitId!, { width: article.offsetWidth, height: article.offsetHeight }]));
+        return { graph, sizes };
+      });
+      sizes = { ...sizes, ...state.sizes };
+      const target = projectCourseReadingLayout(state.graph, sizes, undefined, 'KU-001').find(node => node.unitId === 'KU-007')!;
+      await board.evaluate((board, target) => {
+        const boardRect = board.getBoundingClientRect();
+        const transform = new DOMMatrixReadOnly(getComputedStyle(board.querySelector('.react-flow__viewport')!).transform);
+        board.querySelector('.react-flow__pane')!.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true,
+          clientX: boardRect.left + 30, clientY: boardRect.top + 100,
+          deltaX: transform.e + target.x * transform.a - 80, deltaY: transform.f + target.y * transform.d - 100 }));
+      }, target);
+      await waitForReadingLayout(page);
+      if (await app.evaluate(() => (globalThis as any).__missingUnitTest.calls.some((call: any) => call.unitId === 'KU-007'))) break;
+    }
     await expect.poll(() => app.evaluate(() => (globalThis as any).__missingUnitTest.calls.some((call: any) => call.message === '该单元不存在或正文尚未加入课程副本'))).toBe(true);
     await expect(page.locator('[data-sonner-toast]')).toHaveCount(0);
 

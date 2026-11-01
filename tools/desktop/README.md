@@ -27,6 +27,13 @@ node "$development_out/cli.cjs" pending '{"directory":"/absolute/new-complete-co
 
 中断后使用相同参数／身份重试 `migrate`；`status` / `recover` 接受 `directory`，`transition` / `abandon` 接受 `sourceDirectory` 和 `operationId`。`operation` 接受课程 `directory` 与原 `operationId`；`content`、`records`、`history`、`pending` 接受课程 `directory`，支持原 API 的分页字段。`snapshot` 接受源 `sourceDirectory` 与全新 `directory`，生成一致副本；它不执行转换。
 
+明确要求整理既有课程的全图时，先正常退出占用该课程的应用并保留完整备份。`layout-plan` 对已存在的课程生成统一布局和带版本的依据；`layout-arrange` 以该 `basis` 和独立 `operationId` 提交同一方案，依据过期会拒绝。整理记录为一个正式历史操作，可按现有历史恢复；普通打开、缩放和备份恢复不运行整理。该开发入口不加工原始课程材料，也不进入学生界面。
+
+```sh
+node "$development_out/cli.cjs" layout-plan '{"directory":"/absolute/stopped-course"}'
+node "$development_out/cli.cjs" layout-arrange '{"directory":"/absolute/stopped-course","basis":"<layout-plan 返回的 basis>","operationId":"unique-layout-id"}'
+```
+
 编程接口为 `DevelopmentCourseService`（`course-service.ts`），构造器传入 `join(developmentDirectory(), 'worker.cjs')`。正式 `CourseService` 只保留课程资源读取和历史兼容，不提供这些开发命令。开发输出和 Python helper 只进入上述开发输出目录；正式 `--production` 构建不带入它们。
 
 ## 可控生产者与完整副本验证

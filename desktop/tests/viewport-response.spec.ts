@@ -3,7 +3,7 @@ import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { readCameraTransform, resizeBoardWindow, closeFailedBoard, expectBoundedReading } from './board-test-helpers';
+import { readCameraTransform, resizeBoardWindow, closeFailedBoard, expectBoundedReading, waitForReadingLayout } from './board-test-helpers';
 import { CourseService } from '../src/core/course-service';
 
 test('returning to an uncached unit with the same saved camera preserves visible static reading bodies',async()=>{
@@ -44,6 +44,7 @@ test('continuous camera gestures keep unchanged graph projection and the active 
     let page = await app.firstWindow(); await resizeBoardWindow(app, page);
     await openFirstUnit(page);
     if (await page.getByRole('button', { name: '收起目录', exact: true }).count()) await page.getByRole('button', { name: '收起目录', exact: true }).click();
+    await waitForReadingLayout(page);
     const pane = page.locator('.react-flow__pane'), viewport = page.locator('.react-flow__viewport');
     const board = (await page.locator('main.board').boundingBox())!, clientX = Math.round(board.x + 8), clientY = Math.round(board.y + 180);
     const reading = await page.evaluate(async () => { const c = await (window as any).yizhi.open(); return (window as any).yizhi.readingState(c.sessionId); });

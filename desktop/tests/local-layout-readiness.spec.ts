@@ -18,7 +18,7 @@ test('a detached reading surface cannot poison reopening measurements before boa
         import {useEffect,useRef,useState} from 'react';
         import {createRoot} from 'react-dom/client';
         import {useLocalLayout,ReadingSurface} from './src/renderer/local-layout';
-        const graph={layout:{nodes:[
+        const graph={groups:[{id:'T'}],nodes:[{id:'KU-001',themeId:'T'},{id:'KU-087',themeId:'T'}],layout:{groups:[],nodes:[
           {unitId:'KU-001',x:0,y:0,width:650,height:100},
           {unitId:'KU-087',x:800,y:0,width:650,height:100}
         ]}};
@@ -43,7 +43,8 @@ test('a detached reading surface cannot poison reopening measurements before boa
         plugins: [{ name: 'measurement-control', setup(b) {
           b.onLoad({ filter: /renderer\/local-layout\.tsx$/ }, () => ({ contents: guarded ? source : source.replace(guard, ''), loader: 'tsx' }));
           b.onLoad({ filter: /src\/layout\.ts$/ }, async args => ({ loader: 'ts', contents: (await readFile(args.path, 'utf8')).replace(
-            '  if (!sizes', '  (window as any).__projections.push({ids:baseline.map(n=>n.unitId),sizes:structuredClone(sizes)});\n  if (!sizes') }));
+            '  if (!sizes || typeof sizes !== \'object\' || Array.isArray(sizes))',
+            '  (window as any).__projections.push({ids:Array.from(baseline.keys()),sizes:structuredClone(sizes)});\n  if (!sizes || typeof sizes !== \'object\' || Array.isArray(sizes))') }));
         } }],
       });
       const html = join(root, `${variant}.html`);

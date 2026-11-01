@@ -1,5 +1,6 @@
 import type { Viewport } from '@xyflow/react';
 
+export const MIN_BOARD_ZOOM = .01;
 const sameViewport = (a: Viewport, b: Viewport) => a.x === b.x && a.y === b.y && a.zoom === b.zoom;
 
 /** Incremental wheel transforms awaiting the next paint, never a second live camera.
@@ -19,7 +20,7 @@ export class PinchViewportFrame {
 
   pinch(factor: number, px: number, py: number) {
     const current = this.current();
-    const zoom = Math.max(.04, Math.min(2, current.zoom * factor)), ratio = zoom / current.zoom;
+    const zoom = Math.max(MIN_BOARD_ZOOM, Math.min(2, current.zoom * factor)), ratio = zoom / current.zoom;
     this.pending = { base: this.pending?.base ?? current,
       next: { x: px - (px - current.x) * ratio, y: py - (py - current.y) * ratio, zoom } };
     if (this.frame !== undefined) return;

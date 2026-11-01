@@ -1,4 +1,5 @@
 import { BookOpen, MousePointer2, Hand, Highlighter, Shapes, Square, Circle, ArrowUpRight, Minus, Waves, GitBranch, Undo2, Redo2, ChevronDown, Archive, Map, Plus, Maximize, ChevronUp } from 'lucide-react';
+import { useRef } from 'react';
 import { Button } from '../components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuGroup, DropdownMenuLabel } from '../components/ui/dropdown-menu';
 import { useEditHistory } from './edit-history';
@@ -10,6 +11,7 @@ export function CanvasToolbar({ tool, chooseTool, drawing, chooseDrawing, change
   relations(pointer: boolean): void; relationView: string; changeRelations(view: string): void; capture(): void;
 }) {
   const history = useEditHistory();
+  const relationHandoff = useRef(false);
   const shapeIcons = {rectangle:Square,ellipse:Circle,arrow:ArrowUpRight,line:Minus,wave:Waves,highlighter:Highlighter};
   const Shape = drawing.kind && drawing.kind !== 'highlighter' ? shapeIcons[drawing.kind] : Shapes;
   return <div className="canvas-toolbar board-tools" role="toolbar" aria-label="画板工具" onPointerDownCapture={capture}>
@@ -22,7 +24,7 @@ export function CanvasToolbar({ tool, chooseTool, drawing, chooseDrawing, change
         </DropdownMenuRadioGroup><DropdownMenuSeparator/><DropdownMenuGroup><DropdownMenuLabel>绘制位置</DropdownMenuLabel><DropdownMenuRadioGroup value={drawing.space} onValueChange={value => changeSpace(value as DrawingToolState['space'])}><DropdownMenuRadioItem value="board">画板</DropdownMenuRadioItem><DropdownMenuRadioItem value="object">当前对象</DropdownMenuRadioItem><DropdownMenuRadioItem value="image">图像内部</DropdownMenuRadioItem></DropdownMenuRadioGroup></DropdownMenuGroup><DropdownMenuSeparator/><DropdownMenuItem onClick={event => manageDrawings(event.detail > 0)}><Archive/>管理与找回图形</DropdownMenuItem></DropdownMenuContent>
       </DropdownMenu></div>
     <span className="toolbar-divider"/>
-    <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="tool-menu-trigger" aria-label="关系"><GitBranch/><ChevronDown size={12}/></Button></DropdownMenuTrigger><DropdownMenuContent className="relation-menu" sideOffset={10}><DropdownMenuRadioGroup value={relationView} onValueChange={changeRelations}><DropdownMenuRadioItem value="main">主关系</DropdownMenuRadioItem><DropdownMenuRadioItem value="auxiliary">辅助关系</DropdownMenuRadioItem><DropdownMenuRadioItem value="all">全部关系</DropdownMenuRadioItem></DropdownMenuRadioGroup><DropdownMenuSeparator/><DropdownMenuItem onClick={event => relations(event.detail > 0)}>查看与编辑正式关系</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
+    <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="tool-menu-trigger" aria-label="关系"><GitBranch/><ChevronDown size={12}/></Button></DropdownMenuTrigger><DropdownMenuContent className="relation-menu" sideOffset={10} onCloseAutoFocus={event => { if (relationHandoff.current) { relationHandoff.current = false; event.preventDefault(); document.querySelector<HTMLButtonElement>('.relations-panel button')?.focus({preventScroll:true}); } }}><DropdownMenuRadioGroup value={relationView} onValueChange={changeRelations}><DropdownMenuRadioItem value="main">主关系</DropdownMenuRadioItem><DropdownMenuRadioItem value="auxiliary">辅助关系</DropdownMenuRadioItem><DropdownMenuRadioItem value="all">全部关系</DropdownMenuRadioItem></DropdownMenuRadioGroup><DropdownMenuSeparator/><DropdownMenuItem onClick={event => { relationHandoff.current = true; relations(event.detail > 0); }}>查看与编辑正式关系</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
     <span className="toolbar-divider"/>
     <div className="tool-group"><Button variant="ghost" size="icon" aria-label={`撤销${history.label}`} title={`撤销${history.label} ⌘Z`} disabled={!history.canUndo} onMouseDown={e=>e.preventDefault()} onClick={history.undo}><Undo2/></Button><Button variant="ghost" size="icon" aria-label={`重做${history.label}`} title={`重做${history.label} ⇧⌘Z`} disabled={!history.canRedo} onMouseDown={e=>e.preventDefault()} onClick={history.redo}><Redo2/></Button></div>
   </div>;

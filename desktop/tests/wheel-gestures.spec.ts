@@ -53,7 +53,7 @@ test('native macOS pinch deltas use normalized pinch gain with a fixed pointer a
     const after = await readCameraTransform(viewport);
     const world = (camera: typeof before) => ({ x: (pointer.x - camera.x) / camera.zoom, y: (pointer.y - camera.y) / camera.zoom });
     expect(world(after).x).toBeCloseTo(world(before).x, 8); expect(world(after).y).toBeCloseTo(world(before).y, 8);
-    await send(100000); await expect.poll(async () => (await readCameraTransform(viewport)).zoom).toBe(.04);
+    await send(100000); await expect.poll(async () => (await readCameraTransform(viewport)).zoom).toBe(.01);
     const minimum = await readCameraTransform(viewport); expect(world(minimum).x).toBeCloseTo(world(before).x, 8); expect(world(minimum).y).toBeCloseTo(world(before).y, 8);
     await send(-100000); await expect.poll(async () => (await readCameraTransform(viewport)).zoom).toBe(2);
     const maximum = await readCameraTransform(viewport); expect(world(maximum).x).toBeCloseTo(world(before).x, 8); expect(world(maximum).y).toBeCloseTo(world(before).y, 8);

@@ -80,6 +80,7 @@ test('pointer surfaces animate, while keyboard and reduced motion retain immedia
     await keyboardMenuItem(page, '课程菜单', '完整备份');
     await expect(backup).toBeVisible();
     await expect(backup).not.toHaveAttribute('data-motion');
+    await expect(backup.getByRole('button', { name: '返回课程', exact: true })).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(backup).toHaveCount(0);
 

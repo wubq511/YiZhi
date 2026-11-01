@@ -16,6 +16,8 @@ import { readDrafts,draftReadVersions,draftVersion,transaction,appendEvent } fro
 import { selectorEvidence, exampleEvidence } from './generation-evidence';
 import { initializeGenerationLifecycle,graphObjectRevision,layoutRevision,bumpLayoutRevision } from './generation-lifecycle';
 import { historyTimestamp } from './history-clock';
+import { planIncrementalLayout } from '../board-layout';
+import { layoutGraph } from './local-layout';
 
 const json=(v:unknown)=>JSON.stringify(v);
 const hash=(v:unknown)=>createHash('sha256').update(json(v)).digest('hex');
@@ -263,10 +265,23 @@ export class Generation {
     else if(!next.nodes.some(n=>n.themeId===spec.themeId && n.id!==unit.id))
       (group as typeof group & {coreOutcome?:string}).coreOutcome=unit.outcome;
     if(!next.layout.nodes.some(n=>n.unitId===unit.id)) {
-      const bottom=Math.max(0,...next.layout.nodes.map(n=>n.y+n.height));
-      const layoutNode={elementId:`VE-N-${unit.id}`,unitId:unit.id,x:104,y:bottom+180,width:300,height:86};
-      next.layout.nodes.push(layoutNode);
-      if(!next.layout.groups.some(g=>g.themeId===spec.themeId))next.layout.groups.push({elementId:`VE-G-${spec.themeId}`,themeId:spec.themeId,title:spec.themeName,x:64,y:layoutNode.y-90,width:750,height:270});
+      const effective=layoutGraph(this.db,next);
+      const planned=planIncrementalLayout(effective,unit.id);
+      // This publication records the new node and its theme only. Never silently
+      // publish changes to unrelated objects outside the corresponding history.
+      for(const old of effective.layout.nodes) {
+        if(json(planned.nodes.find(n=>n.unitId===old.unitId))!==json(old))throw new Error('增量布局改变了已有单元');
+      }
+      for(const old of effective.layout.groups) {
+        if(old.themeId!==spec.themeId && json(planned.groups.find(g=>g.themeId===old.themeId))!==json(old))throw new Error('增量布局改变了其他主题');
+      }
+      const added=planned.nodes.filter(n=>n.unitId===unit.id);
+      const theme=planned.groups.filter(g=>g.themeId===spec.themeId);
+      if(added.length!==1 || theme.length!==1 || planned.nodes.length!==effective.layout.nodes.length+1 ||
+          planned.groups.length!==effective.layout.groups.length+(effective.layout.groups.some(g=>g.themeId===spec.themeId)?0:1))
+        throw new Error('增量布局缺少或包含额外对象');
+      next.layout={...next.layout,nodes:[...next.layout.nodes,added[0]],
+        groups:[...next.layout.groups.filter(g=>g.themeId!==spec.themeId),theme[0]]};
     }
     return next;
   }
@@ -292,6 +307,15 @@ export class Generation {
     const ready=current!;
     let result=initial,nextGraph:CourseGraph|undefined;
     try {
+      // Search for a location before taking SQLite's writer. The basis also
+      // includes manual placement versions so an intervening move is not lost.
+      const layoutBasis=()=>hash([this.graph,layoutGraph(this.db,this.graph).layout,
+        this.db.prepare('SELECT unit_id,version FROM layout_versions ORDER BY unit_id').all()]);
+      const plannedBasis=layoutBasis();
+      const plannedUnit={...(before??{}),id:spec.unitId,
+        name:input.stage==='lesson'?input.title!:before!.name,
+        outcome:input.stage==='lesson'?input.outcome!:before!.outcome} as CourseUnit;
+      const plannedGraph=this.nextGraph(spec,plannedUnit.name,plannedUnit);
       result=transaction(this.db,()=>{
         this.agent.active(r);
         const latest=this.db.prepare('SELECT * FROM generation_bases WHERE id=?').get(input.basisId);
@@ -300,6 +324,7 @@ export class Generation {
           parse(this.db.prepare('SELECT payload FROM units WHERE id=?').get(spec.unitId)!.payload):undefined);
         if(checked.some(c=>c.status==='failed'))throw new Error(checked.find(c=>c.status==='failed')!.detail);
         if(this.completed(root).some(s=>s.stage===input.stage))throw new Error('该阶段已被其他提交确认');
+        if(layoutBasis()!==plannedBasis)throw new Error('布局依据已变化，请重新读取后发布');
         const oldRow=this.db.prepare('SELECT payload,revision FROM units WHERE id=?').get(spec.unitId);
         const old=oldRow?parse(oldRow.payload) as CourseUnit:undefined;
         const added=this.material(spec,input,ready.version.sourceId,ready.ref.digest,ready.page);
@@ -320,7 +345,7 @@ export class Generation {
         const beforeLayoutVersion=layoutRevision(this.db,spec.unitId);
         const beforeUnitVersion=Number(this.db.prepare('SELECT version FROM cg_objects WHERE id=?').get(`unit:${spec.unitId}`)?.version??0);
         this.db.prepare('INSERT INTO units(id,payload,revision) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,revision=excluded.revision').run(spec.unitId,json(unit),revision);
-        nextGraph=this.nextGraph(spec,unit.name,unit);
+        nextGraph=plannedGraph;
         if(json(nextGraph)!==json(beforeGraph))this.db.prepare("INSERT INTO metadata VALUES('course-graph',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(json(nextGraph));
         if(!beforeGraph.layout.nodes.some(n=>n.unitId===spec.unitId)&&nextGraph.layout.nodes.some(n=>n.unitId===spec.unitId))bumpLayoutRevision(this.db,spec.unitId);
         const afterGraphVersions=new Map(graphObjectIds.map(id=>[id,graphObjectRevision(this.db,id)]));

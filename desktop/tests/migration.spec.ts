@@ -6,13 +6,13 @@ import { tmpdir } from 'node:os';
 import type { Page, Locator } from '@playwright/test';
 import { legacyFixture } from './migration-fixture';
 import { openDirectoryUnit } from './shell-actions';
+import { boardWheelPoint } from './board-test-helpers';
 import { DevelopmentCourseService as CourseService } from '../../tools/desktop/course-service';
 
 async function reveal(page: Page, target: Locator) {
   await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');
   const board=(await page.locator('main.board').boundingBox())!;
-  await page.mouse.move(board.x+10,board.y+board.height/2);
-  for(let i=0;i<60;i++) {const box=(await target.boundingBox())!,delta=box.y-board.y-board.height/2;if(Math.abs(delta)<board.height/3)return;await page.mouse.wheel(0,Math.max(-500,Math.min(500,delta)));await page.waitForTimeout(30);}
+  for(let i=0;i<60;i++) {const box=(await target.boundingBox())!,delta=box.y-board.y-board.height/2;if(Math.abs(delta)<board.height/3)return;const point=await boardWheelPoint(page);await page.mouse.move(point.x,point.y);await page.mouse.wheel(0,Math.max(-500,Math.min(500,delta)));await page.waitForTimeout(30);}
   throw new Error('课程图片未能进入实际阅读视口');
 }
 

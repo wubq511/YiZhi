@@ -43,6 +43,23 @@ export async function resizeBoardWindow(app: ElectronApplication, page: Page, wi
   await expect.poll(() => page.evaluate(() => [innerWidth, innerHeight])).toEqual(size);
 }
 
+/** Choose a real, unobstructed point that delivers a wheel event to the board. */
+export async function boardWheelPoint(page: Page) {
+  return page.evaluate(() => {
+    const board = document.querySelector('main.board')!, rect = board.getBoundingClientRect();
+    const left = Math.max(12, rect.left + 12), right = Math.min(innerWidth - 12, rect.right - 12);
+    const top = Math.max(12, rect.top + 12), bottom = Math.min(innerHeight - 12, rect.bottom - 12);
+    const blocked = '.board-tools, .relations-panel, .source-dialog, .react-flow__minimap, .drawing-tools, .drawing-entry, .follow-control, input, select, textarea, button, .mux, .builtin-formula-editor, math-field';
+    for (const y of [top + (bottom - top) / 2, top + (bottom - top) * .75, top + (bottom - top) / 3]) {
+      for (const x of [left + 38, (left + right) / 2, right - 24]) {
+        const hit = document.elementFromPoint(x, y);
+        if (x >= left && x <= right && y >= top && y <= bottom && hit?.closest('main.board') === board && !hit.closest(blocked) && !hit.closest('[inert]')) return { x, y };
+      }
+    }
+    throw new Error('没有无遮挡的画板滚轮起点：' + JSON.stringify({ board: rect.toJSON(), viewport: [innerWidth, innerHeight] }));
+  });
+}
+
 export async function revealBoardControl(page: Page, target: Locator) {
   await expect(page.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
   const board = (await page.locator('main.board').boundingBox())!;

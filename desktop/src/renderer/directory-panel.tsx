@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, Circle, CircleAlert, CircleCheck, X } from 'lucide-react';
-import { useEffect, useId, useMemo, useRef, useState, type Ref } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type Ref } from 'react';
 import type { CourseGraph, ReviewSnapshot, ReviewStatus } from '../shared';
 import { Button } from './components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './components/ui/collapsible';
@@ -49,9 +49,9 @@ function DirectoryTheme({ group, nodes, counts, expanded, selectedId, review, on
   </Collapsible>;
 }
 
-export function DirectoryPanel({ navRef, open, inert, graph, review, selectedId, selectedThemeId, narrow, onClose, onNavigate }: {
+export function DirectoryPanel({ navRef, open, inert, graph, review, selectedId, selectedThemeId, narrow, onClose, onKeyDown, onNavigate }: {
   navRef: Ref<HTMLElement>; open: boolean; inert: boolean; graph?: CourseGraph; review?: ReviewSnapshot;
-  selectedId?: string; selectedThemeId?: string; narrow: boolean; onClose(): void; onNavigate(id: string): void;
+  selectedId?: string; selectedThemeId?: string; narrow: boolean; onClose(): void; onKeyDown(event: KeyboardEvent<HTMLElement>): void; onNavigate(id: string): void;
 }) {
   const [filter, setFilter] = useState<Filter>('all');
   const [filterOpen, setFilterOpen] = useState(false);
@@ -97,7 +97,7 @@ export function DirectoryPanel({ navRef, open, inert, graph, review, selectedId,
   };
 
   return <nav ref={navRef} className="directory-panel" hidden={!open} inert={!open || inert} aria-label="课程目录"
-    onKeyDown={event => { if (event.key === 'Escape' && !filterOpen && !event.defaultPrevented) onClose(); }}>
+    onKeyDown={event => { if (filterOpen || event.defaultPrevented) return; if (narrow) onKeyDown(event); else if (event.key === 'Escape') onClose(); }}>
     <div className="directory-header">
       <h2>课程目录</h2>
       <DropdownMenu open={filterOpen} onOpenChange={setFilterOpen}>

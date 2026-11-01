@@ -1,7 +1,7 @@
 import { Button } from './components/ui/button';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type PointerEvent } from 'react';
 import type { CourseGraph } from '../shared';
-import { projectLayout, type LayoutNode, type LayoutPlacement, type LayoutSizes } from '../layout';
+import { projectCourseReadingLayout, readingWidth, type LayoutNode, type LayoutPlacement, type LayoutSizes } from '../layout';
 import type { CameraController } from './camera-controller';
 import './local-layout.css';
 import { observation } from '../acceptance-observation';
@@ -32,13 +32,19 @@ export function useLocalLayout(graph: CourseGraph | undefined, activeId: string 
   useEffect(() => () => { if (frame.current !== undefined) cancelAnimationFrame(frame.current);
     observed.pending.close(); observed.frame.close(); observed.metadata.close(); }, []);
   useLayoutEffect(() => { observed.metadata.set(Object.keys(sizes).length); }, [sizes, observed]);
+  const anchorRef = useRef<string | undefined>(undefined);
+  anchorRef.current = readingAnchorId ?? activeId;
+  const overviewPlacements = useMemo(() => graph ? projectCourseReadingLayout(graph, {}) : [], [graph]);
   const placements = useMemo(() => {
     if(!graph)return [];
+    if(!enabled && !gesture)return overviewPlacements;
     const ids=new Set(graph.layout.nodes.map(n=>n.unitId));
     const known=Object.fromEntries(Object.entries(sizes).filter(([id])=>ids.has(id)));
-    // Only a live placement gesture may override the latest manual baseline.
-    return projectLayout(graph.layout.nodes,enabled?known:{},gesture);
-  },[graph,enabled,sizes,gesture]);
+    // Reading expansion is temporary: overview returns to the saved default
+    // geometry instead of reserving the entire open article in every thumbnail.
+    const anchor=anchorRef.current && ids.has(anchorRef.current) ? anchorRef.current : undefined;
+    return projectCourseReadingLayout(graph,enabled?known:{},gesture,anchor);
+  },[graph,enabled,sizes,gesture,overviewPlacements]);
   const manual = useRef<LayoutPlacement | undefined>(undefined);
   const previous = useRef<{ id?: string; fixed?: string; nodes: LayoutNode[] }>({ nodes: [] });
   useLayoutEffect(() => {
@@ -67,7 +73,7 @@ export function useLocalLayout(graph: CourseGraph | undefined, activeId: string 
     }
     throw new Error('阅读尺寸尚未就绪');
   };
-  return { placements, measure, waitForMeasurements, gesture: setGesture, manual: (placement: LayoutPlacement) => { manual.current = placement; } };
+  return { placements, overviewPlacements, measure, waitForMeasurements, gesture: setGesture, manual: (placement: LayoutPlacement) => { manual.current = placement; } };
 }
 
 export function ReadingSurface({ id, name, position, baseline, measure, gesture, commit, takeover, children, active, articleRef }: {
@@ -79,7 +85,7 @@ export function ReadingSurface({ id, name, position, baseline, measure, gesture,
   const latest = useRef(measure); latest.current = measure;
   const drag = useRef<{ x: number; y: number; placement: LayoutPlacement; kind: 'move' | 'width' } | undefined>(undefined);
   const [width, setWidth] = useState<number>();
-  const readWidth = width ?? (position.width >= 360 ? position.width : 650);
+  const readWidth = width ?? readingWidth(position.width);
   useEffect(() => {
     const node = element.current!;
     const resource = observation.resource('reading.surfaces'); resource.set(1);
@@ -107,7 +113,7 @@ export function ReadingSurface({ id, name, position, baseline, measure, gesture,
   };
   const cancel = () => { if (drag.current?.kind === 'width') setWidth(drag.current.placement.width); drag.current = undefined; gesture(undefined); };
   useEffect(()=>{const key=(event:globalThis.KeyboardEvent)=>{if(event.key==='Escape'&&drag.current){event.preventDefault();cancel();}};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[]);
-  useEffect(()=>{if(!drag.current)setWidth(baseline.width>=360?baseline.width:650);},[baseline.width]);
+  useEffect(()=>{if(!drag.current)setWidth(readingWidth(baseline.width));},[baseline.width]);
   return <article ref={element} className="nodrag nopan nowheel" style={{ width: readWidth }} data-unit-id={id} data-agent-unit={id} data-reading-active={active ? "true" : undefined}>
     <div className="layout-controls" aria-label={`${name}布局`}>
       <Button variant="outline" size="sm" aria-label={`移动${name}`} onPointerDown={e => start(e, 'move')} onPointerMove={e => move(e)} onPointerUp={e => move(e, true)} onPointerCancel={cancel} onLostPointerCapture={cancel}

@@ -76,7 +76,6 @@ export interface DesktopBridge extends SaveBridge {
   open(): Promise<OpenedCourse>;
   graph(sessionId: string): Promise<CourseGraph>;
   readUnit(sessionId: string, unitId: string): Promise<CourseUnit>;
-  setLayout(sessionId: string, updates: import('./layout').LayoutPlacement[]): Promise<void>;
   projectLayout(sessionId: string, sizes: import('./layout').LayoutSizes, fixed?: import('./layout').LayoutPlacement): Promise<import('./layout').LayoutNode[]>;
   readingState(sessionId: string): Promise<ReadingState | null>;
   setReadingState(sessionId: string, state: ReadingState): Promise<void>;
@@ -111,7 +110,7 @@ export interface CourseGraph {
   edges: Array<{ id: string; fromUnitId: string; toUnitId: string; type: string; directed: boolean; view: string; value: string; sourceRefs: Array<{ sourceId: string; versionId?: string; section?: string; pdfPages?: number[]; note?: string }>; requirementGroupId?: string }>;
   requirementGroups: Array<{ id: string; targetUnitId: string; mode: "all" | "any"; unitIds: string[]; relationIds: string[]; value: string; sourceRefs?: Array<{ sourceId: string; versionId?: string; pdfPages?: number[]; section?: string }> }>;
   counts?: { units: number; themes: number; relations: number };
-  themeEdges?: Array<{ fromThemeId: string; toThemeId: string; type: string; relationIds: string[]; count: number }>;
+  themeEdges?: Array<{ fromThemeId: string; toThemeId: string; type: string; directed?: boolean; relationIds: string[]; count: number }>;
   conditions: Record<string, { required: string[]; groups: string[] }>;
   layout: { nodes: Array<{ unitId: string; x: number; y: number; width: number; height: number }>; groups: Array<any> };
 }

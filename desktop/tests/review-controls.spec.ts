@@ -16,7 +16,7 @@ test('review controls persist, answer reveal does not promote, and a substantive
     let window = await app.firstWindow();
     await openFirstUnit(window);
     await expect(window.getByRole('heading', { name: '位置记数法与权展开', exact: true })).toBeVisible();
-    const choices = window.getByRole('group', { name: '设置复习状态' });
+    const choices = window.locator('[data-agent-unit="KU-001"]').getByRole('group', { name: '设置复习状态' });
     await choices.getByRole('button', { name: '已掌握' }).click();
     await expect(choices.getByRole('button', { name: '已掌握' })).toHaveAttribute('aria-pressed', 'true');
     await window.evaluate(() => document.querySelector<HTMLElement>('.answer summary')?.click());
@@ -40,8 +40,8 @@ test('review controls persist, answer reveal does not promote, and a substantive
 
     await app.close();
     app = await launch(); window = await app.firstWindow();
-    await openFirstUnit(window);
-    const reopenedChoices = window.getByRole('group', { name: '设置复习状态' });
+    await expect(window.getByRole('heading', { name: '位置记数法与权展开', exact: true })).toBeVisible();
+    const reopenedChoices = window.locator('[data-agent-unit="KU-001"]').getByRole('group', { name: '设置复习状态' });
     await expect(reopenedChoices.getByRole('button', { name: '薄弱' })).toHaveAttribute('aria-pressed', 'true');
     await window.screenshot({ path: evidencePath('t10-review.png'), fullPage: true });
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }

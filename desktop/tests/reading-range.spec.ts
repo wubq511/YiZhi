@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
+import { DatabaseSync } from 'node:sqlite';
 import { CourseService } from '../src/core/course-service';
 import { unitBlocks } from '../src/reading-model';
 import { closeFailedBoard, expectBoundedReading, readCameraTransform, resizeBoardWindow } from './board-test-helpers';
@@ -48,7 +49,18 @@ test('all visible short bodies load beyond eight and a static native selection s
     await core.setReadingState(c.sessionId, { unitId: 'KU-001', pinnedUnitId: 'KU-001', expanded: {}, returnStack: [], scrollTop: 0,
       camera: { x: 10 - 20_000 * .55, y: 10 - 20_000 * .55, zoom: .55 } });
     for (const original of originals) expect(await core.readUnit(c.sessionId, original.id)).toEqual(original.unit);
+    const fixtureGraph = input ? undefined : await core.graph(c.sessionId);
     await core.close();
+    if (fixtureGraph) {
+      // This fixture tests many simultaneously visible bodies, so place its
+      // selected units in one real theme rather than overlapping unrelated themes.
+      const id = 'TH-READING-RANGE';
+      fixtureGraph.groups.push({ id, name: 'Reading range' } as typeof fixtureGraph.groups[number]);
+      for (const node of fixtureGraph.nodes) if (ids.includes(node.id)) { node.themeId = id; node.themeName = 'Reading range'; }
+      const db = new DatabaseSync(join(course, 'course.sqlite'));
+      try { db.prepare("INSERT INTO metadata(key,value) VALUES('course-graph',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(JSON.stringify(fixtureGraph)); }
+      finally { db.close(); }
+    }
     await mkdir(join(root, 'empty'));
     app = await electron.launch({ ...(input ? { executablePath: join(input.app, 'Contents/MacOS/YiZhi'), cwd: join(root, 'empty') } : {}),
       args: [...(input ? [] : [resolve('.')]), `--course=${course}`],

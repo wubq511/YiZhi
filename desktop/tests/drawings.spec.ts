@@ -3,7 +3,7 @@ import { controlledElectron } from './controlled-launch';
 import type { DatabaseSync } from 'node:sqlite';
 import { openFaultDatabase } from './fault-database';
 import { evidencePath } from './evidence-paths';
-import { resizeBoardWindow } from './board-test-helpers';
+import { resizeBoardWindow, revealBoardControl } from './board-test-helpers';
 import { test, expect, _electron as electron } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -61,7 +61,7 @@ test('one move or resize is one saved Undo; viewport and producer changes never 
   try {
     const page=await app.firstWindow();await resizeBoardWindow(app,page); await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');
     await manageDrawings(page);
-    const board=(await page.locator('main.board').boundingBox())!,x=board.x+450,y=board.y+150;
+    const board=(await page.locator('main.board').boundingBox())!,x=board.x+300,y=board.y+150;
     await chooseShape(page, '矩形'); await drag(page,x,y);
     await expect(page.getByRole('status',{name:'保存状态',exact:true})).toHaveText('已保存');
     const original=(await snapshot(page)).drawings[0];
@@ -80,6 +80,7 @@ test('one move or resize is one saved Undo; viewport and producer changes never 
     await expect.poll(async()=>(await snapshot(page)).drawings[0].value.geometry).toEqual(moved.value.geometry);
     const resize=page.getByRole('slider',{name:'调整个人图形尺寸'}),bounds=(await resize.boundingBox())!;
     await drag(page,bounds.x+bounds.width/2,bounds.y+bounds.height/2,60,40);
+    await expect.poll(async()=>(await snapshot(page)).history.length).toBe(5);
     await expect(page.getByRole('status',{name:'保存状态',exact:true})).toHaveText('已保存');
     s=await snapshot(page); expect(s.history).toHaveLength(5); expect(s.drawings[0].value.geometry.width).toBeGreaterThan(moved.value.geometry.width);
     await page.locator('.drawing-layer').focus(); await page.keyboard.press('Meta+z');
@@ -133,13 +134,14 @@ test('image marks follow relative geometry after width changes and deleted targe
   const app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});
   try{
     const page=await app.firstWindow();await resizeBoardWindow(app,page);await openFirstUnit(page);await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');
-    const image=page.getByRole('img',{name:'TI 74153 几何标注',exact:true}),board=(await page.locator('main.board').boundingBox())!;
+    const image=page.getByRole('img',{name:'TI 74153 几何标注',exact:true});
     await image.evaluate((el:HTMLImageElement)=>el.decode());
-    const before=(await image.boundingBox())!;await page.mouse.move(board.x+10,board.y+150);await page.mouse.wheel(0,before.y-board.y-160);await page.waitForTimeout(200);
+    await revealBoardControl(page,image);
     await manageDrawings(page);
     await drawingSpace(page, 'image');
     await chooseShape(page, '椭圆');
     const box=(await image.boundingBox())!;await drag(page,box.x+box.width*.15,box.y+box.height*.1,box.width*.2,box.height*.08);
+    await expect.poll(async()=>(await snapshot(page)).drawings.length).toBe(1);
     await expect(page.getByRole('status',{name:'保存状态',exact:true})).toHaveText('已保存');
     const mark=(await snapshot(page)).drawings[0];expect(mark.value.anchor.space).toBe('image');expect(mark.value.geometry.x).toBeCloseTo(.15,2);expect(mark.value.geometry.width).toBeCloseTo(.2,2);
     const width=page.getByRole('slider',{name:'调整位置记数法与权展开宽度'});await width.focus();await page.keyboard.press('ArrowRight');

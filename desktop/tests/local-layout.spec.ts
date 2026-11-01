@@ -10,19 +10,20 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import type { Locator, Page } from '@playwright/test';
 import { resizeBoardWindow } from './board-test-helpers';
+import { CourseService } from '../src/core/course-service';
 
 async function reveal(page: Page, target: Locator) {
   await expect(page.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
   const board = (await page.locator('main.board').boundingBox())!;
-  await page.mouse.move(board.x + 10, board.y + board.height / 2);
   for (let i = 0; i < 60; i++) {
     const box = (await target.boundingBox())!;
     const delta = box.y - board.y - board.height / 2;
     if (Math.abs(delta) < board.height / 3) return;
+    const point = await boardWheelPoint(page); await page.mouse.move(point.x, point.y);
     await page.mouse.wheel(0, Math.max(-500, Math.min(500, delta)));
     await page.waitForTimeout(30);
   }
-  throw new Error('没有找到阅读位置');
+  throw new Error('没有找到阅读位置：' + JSON.stringify(await target.boundingBox()));
 }
 
 
@@ -86,8 +87,11 @@ test('manual width and drag remain after collapse and reopen without replacing t
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     await editor.evaluate(el => { (window as any).savedEditor = el.closest('.tiptap'); });
     const width = page.getByRole('slider', { name: '调整位置记数法与权展开宽度' });
+    const initialWidth = Number(await width.getAttribute('aria-valuenow'));
+    const initial = await page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return (await b.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-001'); });
+    const initialScreenWidth = await page.locator('.reading-layer').first().evaluate(el => el.getBoundingClientRect().width);
     await width.focus(); await page.keyboard.press('ArrowRight');
-    await expect.poll(() => page.locator('.reading-layer').first().evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThan(552);
+    await expect.poll(() => page.locator('.reading-layer').first().evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThan(initialScreenWidth);
     await page.getByRole('textbox', { name: '连续编辑正文', exact: true }).evaluate((el: any) => { el.editor.commands.setTextSelection({ from: 1, to: 2 }); el.editor.view.focus(); });
     await expect.poll(() => page.evaluate(() => getSelection()?.toString())).toBe('局');
     const selection = await page.evaluate(() => getSelection()?.toString());
@@ -113,9 +117,9 @@ test('manual width and drag remain after collapse and reopen without replacing t
     await page.mouse.up();
     await expect(page.getByRole('status', { name: '保存状态', exact: true })).toHaveText('已保存');
     // The old saved label can still belong to the preceding width edit; wait for this move's durable result.
-    await expect.poll(() => page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return (await b.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-001').x; })).toBeGreaterThan(180);
+    await expect.poll(() => page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return (await b.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-001').x; })).toBeGreaterThan(initial.x + 20);
     const saved = await page.evaluate(async () => { const bridge = (window as any).yizhi; const c = await bridge.open(); return (await bridge.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-001'); });
-    expect(saved.width).toBe(674); expect(saved.x).toBeGreaterThan(180);
+    expect(saved.width).toBe(initialWidth + 24); expect(saved.x).toBeGreaterThan(initial.x + 20);
     await expect.poll(async()=>(await page.locator('.reading-layer').first().boundingBox())!.x).toBeCloseTo(duringDrag.x,1);
     await expect.poll(async()=>(await page.locator('.reading-layer').first().boundingBox())!.y).toBeCloseTo(duringDrag.y,1);
     expect(await editor.evaluate(el => el.closest('.tiptap') === (window as any).savedEditor)).toBe(true);
@@ -227,6 +231,14 @@ test('actual producer follows only actual changes, student takeover cancels moti
 
 test('growth displaces the local chain while the current reading anchor and student pan compose at unchanged zoom', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-anchor-ui-'));
+  const core = new CourseService(resolve('dist/worker.cjs'));
+  try {
+    const opened = await core.open(join(root, 'course'));
+    await core.setLayout(opened.sessionId, [
+      { unitId: 'KU-001', x: 20000, y: 20000, width: 650 },
+      { unitId: 'KU-002', x: 20000, y: 20400, width: 650 },
+    ]);
+  } finally { await core.close(); }
   const launch = () => controlledElectron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   let app = await launch();
   try {
@@ -238,10 +250,11 @@ test('growth displaces the local chain while the current reading anchor and stud
     const heading = page.getByRole('heading', { name: '非十进制与十进制互转', exact: true });
     await expect(heading).toBeVisible();
     const width = page.getByRole('slider', { name: '调整非十进制与十进制互转宽度' });
+    const original = await page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return (await b.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-002'); });
     await width.focus(); await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('status', { name: '保存状态', exact: true })).toHaveText('已保存');
     const baseline = await page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return (await b.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-002'); });
-    expect(baseline.y).toBe(168); expect(baseline.width).toBe(674);
+    expect(baseline.y).toBe(original.y); expect(baseline.width).toBe(original.width + 24);
     const before = (await heading.boundingBox())!;
     const matrix = () => page.locator('.react-flow__viewport').evaluate(el => { const m = new DOMMatrixReadOnly(getComputedStyle(el).transform); return { x: m.e, y: m.f, zoom: m.a }; });
     const viewport = await matrix();
@@ -255,12 +268,12 @@ test('growth displaces the local chain while the current reading anchor and stud
       await window.yizhiControlled.commit({ sessionId: c.sessionId, attemptId: a.attemptId, operationId: 'anchor-growth', basisId: basis.basisId,
         changes: [{ objectId: target, value: { ...original, payload: { ...original.payload, text: '正文增长引起实际局部让位。'.repeat(180) } } }] });
     });
-    const board = (await page.locator('main.board').boundingBox())!;
     await page.evaluate(() => addEventListener('wheel', event => { (window as any).observedPan = event.deltaY; }, { once: true, capture: true }));
-    await page.mouse.move(board.x + 10, board.y + 180); await page.mouse.wheel(0, 100);
+    const point = await boardWheelPoint(page);
+    await page.mouse.move(point.x, point.y); await page.mouse.wheel(0, 100);
     const actualPan = await page.evaluate(() => (window as any).observedPan as number);
     await expect.poll(async () => (await matrix()).y).toBeLessThan(viewport.y - 100);
-    await expect.poll(async () => Math.abs((await heading.boundingBox())!.y - (before.y - actualPan))).toBeLessThan(3);
+    await expect.poll(async () => Math.abs((await heading.boundingBox())!.y - (before.y - actualPan)), { message: JSON.stringify({ before, viewport, actualPan }) }).toBeLessThan(3);
     expect((await matrix()).zoom).toBe(viewport.zoom);
     await expect(page.getByRole('status', { name: '修改跟随' })).toHaveCount(0);
     const finalY = (await heading.boundingBox())!.y;
@@ -287,9 +300,10 @@ test('layout persistence failure retains the visible placement and retry confirm
     setupWriter.postMessage('release');
     fault.exec("CREATE TRIGGER reject_ui_layout BEFORE INSERT ON layout_baseline BEGIN SELECT RAISE(ABORT, 'layout storage unavailable'); END");
     const width = page.getByRole('slider', { name: '调整位置记数法与权展开宽度' });
+    const originalWidth = Number(await width.getAttribute('aria-valuenow'));
     await width.focus(); await page.keyboard.press('ArrowRight');
-    await expect(page.getByRole('status', { name: '保存状态', exact: true })).toHaveText('布局未保存');
-    await expect(width).toHaveAttribute('aria-valuenow', '674');
+    await expect(page.getByRole('status', { name: '保存状态', exact: true })).toHaveText('有改动未保存');
+    await expect(width).toHaveAttribute('aria-valuenow', String(originalWidth + 24));
     await app.evaluate(({ app, ipcMain, dialog }) => {
       (globalThis as any).layoutCloseResult=null;
       (globalThis as any).layoutQuitError=null;
@@ -302,11 +316,12 @@ test('layout persistence failure retains the visible placement and retry confirm
     await expect.poll(()=>app.evaluate(()=> (globalThis as any).layoutQuitError?.title)).toBe('退出未完成');
     expect(await app.evaluate(()=> (globalThis as any).layoutQuitError.content)).toContain('仍有窗口的最新输入未确认保存');
     await expect.poll(()=>page.evaluate(()=>document.body.inert)).toBe(false);
-    await expect(page.getByRole('status', { name: '保存状态', exact: true })).toHaveText('布局未保存');
+    await expect(page.getByRole('status', { name: '保存状态', exact: true })).toHaveText('有改动未保存');
     fault.exec('DROP TRIGGER reject_ui_layout');
+    await page.getByRole('status', { name: '保存状态', exact: true }).click();
     await page.getByRole('button', { name: '重试保存布局' }).click();
     await expect(page.getByRole('status', { name: '保存状态', exact: true })).toHaveText('已保存');
     const saved = await page.evaluate(async () => { const b = (window as any).yizhi; const c = await b.open(); return (await b.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-001'); });
-    expect(saved.width).toBe(674);completed=true;
+    expect(saved.width).toBe(originalWidth + 24);completed=true;
   } finally { await setupWriter?.terminate();fault?.exec('DROP TRIGGER IF EXISTS reject_ui_layout');fault?.close(); if(completed)await app.close();else app.process().kill('SIGKILL'); await rm(root, { recursive: true, force: true }); }
 });

@@ -20,7 +20,10 @@ test('local read projection moves only the collision chain and collapse uses the
       { unitId: 'KU-004', x: -9700, y: 0, width: 200 },
     ]);
     assert.deepEqual((await service.relations.read({ sessionId: opened.sessionId })).graph.layout, (await service.graph(opened.sessionId)).layout);
-    const projected = await service.projectLayout(opened.sessionId, { 'KU-001': { width: 200, height: 240 } });
+    const projected = await service.projectLayout(opened.sessionId, {
+      'KU-001': { width: 200, height: 240 }, 'KU-002': { width: 200, height: 86 },
+      'KU-003': { width: 200, height: 86 }, 'KU-004': { width: 200, height: 86 },
+    });
     const at = (id: string) => projected.find(p => p.unitId === id)!;
     assert.equal(at('KU-002').y, 264);
     assert.equal(at('KU-003').y, 374);
@@ -48,11 +51,15 @@ test('width growth includes adjacent columns, active drag stays fixed, invalid b
       { unitId: 'KU-002', x: -9700, y: 0, width: 200 },
       { unitId: 'KU-003', x: -9700, y: 120, width: 200 },
     ]);
-    const projected = await service.projectLayout(opened.sessionId, { 'KU-001': { width: 600, height: 200 } });
+    const projected = await service.projectLayout(opened.sessionId, {
+      'KU-001': { width: 600, height: 200 }, 'KU-002': { width: 200, height: 86 }, 'KU-003': { width: 200, height: 86 },
+    });
     assert.equal(projected.find(n => n.unitId === 'KU-002')!.y, 224);
     assert.equal(projected.find(n => n.unitId === 'KU-003')!.y, 334);
     const fixed = { unitId: 'KU-002', x: -9990, y: 90, width: 200 };
-    const dragging = await service.projectLayout(opened.sessionId, { 'KU-001': { width: 600, height: 800 } }, fixed);
+    const dragging = await service.projectLayout(opened.sessionId, {
+      'KU-001': { width: 600, height: 800 }, 'KU-002': { width: 200, height: 86 }, 'KU-003': { width: 200, height: 86 },
+    }, fixed);
     assert.equal(dragging.find(n => n.unitId === 'KU-002')!.y, 90);
     assert.equal(dragging.find(n => n.unitId === 'KU-001')!.y, 200);
     const before = await service.graph(opened.sessionId);

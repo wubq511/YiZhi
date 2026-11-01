@@ -23,16 +23,16 @@ import type { SearchHit } from '../search-api';
 import { highlightSearch, paintFrame, waitForSearchElement } from './search-location';
 import { AnnotationPanel, type AnnotationPanelHandle } from './annotation-panel';
 import { CameraController, type FollowState } from './camera-controller';
-import { PinchViewportFrame } from './pinch-viewport-frame';
+import { MIN_BOARD_ZOOM, PinchViewportFrame } from './pinch-viewport-frame';
 import { useLocalLayout, ReadingSurface } from './local-layout';
-import type { LayoutPlacement } from '../layout';
+import { readingWidth, THEME_HEADER, THEME_PADDING, THEME_TITLE_SPACE, type LayoutPlacement } from '../layout';
 import {ExtensionExperiment,flushExtensions} from './extension-experiment';
 import { BuiltinExperiment, StaticBuiltinExperiment, flushBuiltinExperiments } from './builtin-experiment';
 
 import { AgentPanel, type AgentPanelHandle } from './agent-panel';
 
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { ReactFlow, ReactFlowProvider, MiniMap, useReactFlow, MarkerType, type Viewport } from '@xyflow/react';
+import { ReactFlow, ReactFlowProvider, MiniMap, getViewportForBounds, useReactFlow, type Viewport } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import rough from 'roughjs';
 import 'katex/dist/katex.min.css';
@@ -40,6 +40,9 @@ import './style.css';
 import { UNIT_NOT_FOUND_MESSAGE, type CourseGraph, type CourseUnit, type DesktopBridge, type OpenedCourse, type ReadingBlock, type ReadingState } from '../shared';
 import { ParagraphSaveChannel, type SaveState } from './save-channel';
 import { RelationsPanel, useRelationEvents } from './relations-panel';
+import { useBoardScene } from './use-board-scene';
+import { BoardRoutes } from './board-edge';
+import './board-scene.css';
 import { ContinuousUnitEditor } from './editor/continuous-editor';
 import { ActiveUnitEditor, type UnitInputHandle } from './editor/active-unit-editor';
 import { NestedFormula } from './editor/nested-formula';
@@ -176,7 +179,7 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
     if (!narrow) return;
     if (event.key === 'Escape') { event.preventDefault(); close(); return; }
     if (event.key !== 'Tab') return;
-    const items = [...event.currentTarget.querySelectorAll<HTMLElement>('button, select, input, textarea, [tabindex]:not([tabindex="-1"])')].filter(item => !item.matches(':disabled'));
+    const items = [...event.currentTarget.querySelectorAll<HTMLElement>('button, select, input, textarea, [tabindex]:not([tabindex="-1"])')].filter(item => !item.matches(':disabled') && item.getClientRects().length > 0 && !item.closest('[inert]'));
     if (!items.length) return;
     if (event.shiftKey && document.activeElement === items[0]) { event.preventDefault(); items[items.length - 1].focus(); }
     else if (!event.shiftKey && document.activeElement === items[items.length - 1]) { event.preventDefault(); items[0].focus(); }
@@ -200,13 +203,17 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
   const closeSource = () => { setSourceOpen(false); requestAnimationFrame(() => sourceTrigger.current?.focus()); };
   useEffect(() => { if (sourceOpen) sourceDialog.current?.querySelector<HTMLButtonElement>('button')?.focus(); }, [sourceOpen]);
   const [relationsOpen, setRelationsOpen] = useState(false), [relationsExiting, setRelationsExiting] = useState(false), [relationMotion, setRelationMotion] = useState(false);
-  const [relationFocus, setRelationFocus] = useState<string>();
+  const [relationFocus, setRelationFocus] = useState<string[]>();
   const relationPanel = useRef<HTMLElement>(null);
   const relationExitTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined), restoreRelationFocus = useRef(false);
   const openRelations = (pointer: boolean) => {
     clearTimeout(relationExitTimer.current); restoreRelationFocus.current = false;
     setRelationMotion(pointer); setRelationsExiting(false); setRelationsOpen(true);
   };
+  const openRelationMembers = useCallback((ids: string[],pointer=false) => {
+    clearTimeout(relationExitTimer.current); restoreRelationFocus.current = false;
+    setRelationFocus(ids); setRelationMotion(pointer); setRelationsExiting(false); setRelationsOpen(true);
+  }, []);
   const closeRelations = (pointer = false) => {
     clearTimeout(relationExitTimer.current); restoreRelationFocus.current = true;
     setRelationsOpen(false); setRelationMotion(pointer); setRelationsExiting(pointer);
@@ -301,6 +308,15 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
   },[viewport,cameraReady,graph,selected?.id]);
   const local = useLocalLayout(graph, selected?.id, camera, viewport.zoom >= .55, cameraReady,readingAnchorId);
   layoutMetadata.current=local.placements;
+  const unitDetail = viewport.zoom >= .35;
+  const readingDetail=viewport.zoom>=.55;
+  // The intermediate view shortens B silhouettes without changing their
+  // projected anchors; reading-only collision relief is applied separately.
+  const scenePlacements=useMemo(()=>unitDetail&&!readingDetail
+    ? local.placements.map(node=>({...node,height:Math.min(node.height,136)})) : local.placements,
+    [local.placements,unitDetail,readingDetail]);
+  const {scene,error:boardError}=useBoardScene(course?.sessionId,graph,scenePlacements,unitDetail?'units':'themes',relationView);
+  useEffect(()=>{if(boardError)setLoadError(`画板布局未能完成：${visibleError(boardError)}。请重新打开课程。`);},[boardError]);
   const [readingBounds,setReadingBounds]=useState({width:0,height:0});
   useEffect(()=>{const board=boardRef.current;if(!board)return;const update=()=>setReadingBounds({width:board.clientWidth,height:board.clientHeight});const observer=new ResizeObserver(update);observer.observe(board);update();return()=>observer.disconnect();},[course?.sessionId]);
   // Geometry only: the graph DTO/projection stays memoized throughout camera movement.
@@ -308,7 +324,7 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
     if(!cameraReady||viewport.zoom<.55)return [];
     const margin=100,left=(-viewport.x-margin)/viewport.zoom,top=(-viewport.y-margin)/viewport.zoom,right=(readingBounds.width-viewport.x+margin)/viewport.zoom,bottom=(readingBounds.height-viewport.y+margin)/viewport.zoom;
 
-    return local.placements.filter(n=>n.x+(n.width>=360?n.width:650)>=left&&n.x<=right&&n.y+n.height>=top&&n.y<=bottom).sort((a,b)=>Number(b.unitId===readingAnchorId)-Number(a.unitId===readingAnchorId)||a.y-b.y||a.x-b.x).map(n=>n.unitId);
+    return local.placements.filter(n=>n.x+readingWidth(n.width)>=left&&n.x<=right&&n.y+n.height>=top&&n.y<=bottom).sort((a,b)=>Number(b.unitId===readingAnchorId)-Number(a.unitId===readingAnchorId)||a.y-b.y||a.x-b.x).map(n=>n.unitId);
   },[cameraReady,viewport,readingBounds,local.placements,readingAnchorId]);
   const rangeKey=readingRange.join(','),rangeDemand=useRef<string[]>([]),rangePump=useRef<Promise<void>|undefined>(undefined),mountedRef=useRef(mounted);mountedRef.current=mounted;
   const pendingRangeReads=useMemo(()=>observation.resource('reading.pendingReads'),[]);
@@ -478,15 +494,43 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
     navigationAnchorRef.current=nextState?.camera?undefined:id;
     if (nextState?.camera) await flow.setViewport(nextState.camera, { duration: 0 });
     else {
-      const zoom = .85, width = position.width >= 360 ? position.width : 650;
+      const zoom = .85, width = readingWidth(position.width);
       await flow.setViewport({x:Math.max(24,((boardRef.current?.clientWidth ?? 800)-width*zoom)/2)-position.x*zoom,y:100-position.y*zoom,zoom},{duration:0});
     }
   };
   const go = (id: string, nextState?: ReadingState): Promise<void> => {
     const pending = navigate(id, nextState); navigation.current = pending; return pending;
   };
+  const fitOverview = async () => {
+    const board = boardRef.current;
+    const items = local.overviewPlacements;
+    if (!board || !board.clientWidth || !board.clientHeight || !graph) return;
+    const frame = board.getBoundingClientRect();
+    const toolbar = board.querySelector<HTMLElement>('.canvas-toolbar')?.getBoundingClientRect();
+    const controls = [...board.querySelectorAll<HTMLElement>('.canvas-navigation, .react-flow__minimap')]
+      .map(element => element.getBoundingClientRect()).filter(rect => rect.width && rect.height);
+    const relation = relationsOpen ? relationPanel.current?.getBoundingClientRect() : undefined;
+    // Theme titles sit above the frame. Account for their world-sized text as
+    // well as the minimum screen-sized font at a distant zoom.
+    const occupied = new Set(graph.nodes.map(node => node.themeId));
+    const rects = [
+      ...items.map(node => ({ x: node.x - THEME_PADDING, y: node.y - THEME_HEADER - 44,
+        width: node.width + THEME_PADDING * 2, height: node.height + THEME_HEADER + THEME_PADDING + 44 })),
+      ...(scene?.themes ?? graph.layout.groups).filter(group => !occupied.has(group.themeId)).map(group => ({...group, y: group.y - 44, height: group.height + 44})),
+    ];
+    if (!rects.length) return;
+    const left=Math.min(...rects.map(rect=>rect.x)),topEdge=Math.min(...rects.map(rect=>rect.y));
+    const titledBounds={x:left,y:topEdge,width:Math.max(...rects.map(rect=>rect.x+rect.width))-left,height:Math.max(...rects.map(rect=>rect.y+rect.height))-topEdge};
+    const top = Math.min(board.clientHeight * .4, toolbar?.height ? toolbar.bottom - frame.top + 18 : 32);
+    const right = Math.min(Math.max(24, board.clientWidth - 48), relation?.width ? frame.right - relation.left + 24 : 24);
+    const bottom = Math.min(board.clientHeight - top - 48, controls.length ? frame.bottom - Math.min(...controls.map(rect => rect.top)) + 16 : 24);
+    const px = (value: number): `${number}px` => `${Math.max(0, Math.round(value))}px`;
+    const target = getViewportForBounds(titledBounds, board.clientWidth, board.clientHeight, MIN_BOARD_ZOOM, 2,
+      { top: px(top), right: px(right), bottom: px(bottom), left: '24px' });
+    await flow.setViewport(target, { duration: 0 });
+  };
   useEffect(() => {
-    if (!course || !graph || !nodesReady || restored.current) return;
+    if (!course || !graph || !nodesReady || !scene || restored.current) return;
     restored.current = true;
     requestAnimationFrame(() => requestAnimationFrame(async () => {
       try {
@@ -497,13 +541,13 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
         }
         // Overview nodes already carry authoritative layout dimensions. Fitting
         // those bounds must not wait for offscreen graph DOM measurements.
-        else await flow.fitBounds(flow.getNodesBounds(flow.getNodes()), { duration: 0 });
+        else await fitOverview();
         // Expose navigation after the restored viewport reaches the DOM, so initial
         // placement cannot overwrite an early student gesture or navigation.
         requestAnimationFrame(() => setCameraReady(true));
       } catch { setLoadError('画板定位未完成，请重新打开课程。'); }
     }));
-  }, [course, graph, reading, nodesReady]);
+  }, [course, graph, reading, nodesReady, scene]);
   useEffect(() => {
     if (selected && reading?.unitId === selected.id && articleRef.current) articleRef.current.scrollTop = reading.scrollTop;
   }, [selected?.id]);
@@ -541,28 +585,15 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
     board.addEventListener('scroll', nativeScroll, { passive: true });
     return () => { pinchFrame.cancel(); board.removeEventListener('wheel', wheel, true); board.removeEventListener('scroll', nativeScroll); };
   }, [flow, camera, pinchFrame]);
-  const unitDetail = viewport.zoom >= .35;
   const nodes = useMemo(() => {
     observation.count('scene.graphProjections');
-    const placements = new Map(local.placements.map(node => [node.unitId, node]));
-    return graph ? [
-    ...graph.layout.groups.map(group => ({ id: group.themeId, position: { x: group.x, y: group.y }, data: { label: group.title }, width: group.width, height: group.height, style: { width: group.width, height: group.height, fontSize: 50, border: "1px solid #bbc9d5", background: "#fff", opacity: unitDetail ? .35 : 1 }, selectable: false, draggable: false })),
-    ...graph.nodes.map(node => { const pos = placements.get(node.id)!; return { id: node.id, position: { x: pos.x, y: pos.y }, data: { label: node.name }, width: pos.width, height: pos.height, style: { width: pos.width, height: pos.height, opacity: unitDetail ? 1 : 0, pointerEvents: unitDetail ? "auto" as const : "none" as const }, draggable: false, focusable: unitDetail }; })
-  ] : []; }, [graph, local.placements, unitDetail]);
-  const edges = useMemo(() => {
-    if (!graph) return [];
-    const visible = graph.edges.filter(edge => relationView === 'all' || edge.view === relationView);
-    if (unitDetail) return visible.map(edge => ({ id: edge.id, source: edge.fromUnitId, target: edge.toUnitId, label: edge.requirementGroupId ? `${edge.type} · ${edge.requirementGroupId}（${graph.requirementGroups.find(g => g.id === edge.requirementGroupId)?.mode === "any" ? "或" : "且"}）` : edge.type, markerEnd: edge.directed ? { type: MarkerType.ArrowClosed } : undefined, animated: false }));
-    const groups = new Map<string, { source: string; target: string; count: number; type: string; directed: boolean }>();
-    for (const edge of visible) {
-      const source = graph.nodes.find(node => node.id === edge.fromUnitId)?.themeId;
-      const target = graph.nodes.find(node => node.id === edge.toUnitId)?.themeId;
-      if (!source || !target || source === target) continue;
-      const key = `${source}:${target}:${edge.type}:${edge.directed}`;
-      const group = groups.get(key) ?? { source, target, count: 0, type: edge.type, directed: edge.directed }; group.count++; groups.set(key, group);
-    }
-    return [...groups.entries()].map(([id, group]) => ({ id, source: group.source, target: group.target, label: `${group.type} · ${group.count} 条已有关系`, markerEnd: group.directed ? { type: MarkerType.ArrowClosed } : undefined, animated: false }));
-  }, [graph, relationView, unitDetail]);
+    if (!scene || !graph) return [];
+    const names = new Map(graph.nodes.map(node => [node.id, node.name]));
+    return [
+      ...scene.themes.map(theme => ({ id: theme.themeId, position: { x: theme.x, y: theme.y }, data: { label: <span title={theme.title}>{theme.title}</span> }, className: 'board-theme', width: theme.width, height: theme.height, style: { width: theme.width, height: theme.height }, selectable: false, draggable: false, zIndex: 0 })),
+      ...scene.units.map(node => ({ id: node.unitId, position: { x: node.x, y: node.y }, data: { label: names.get(node.unitId) ?? node.unitId }, className: unitDetail ? 'board-unit' : 'board-unit board-unit-thumbnail', width: node.width, height: node.height, style: { width: node.width, height: node.height, pointerEvents: unitDetail ? 'auto' as const : 'none' as const }, draggable: false, focusable: unitDetail, zIndex: 1 }))
+    ];
+  }, [scene, graph, unitDetail]);
   const reviewSequences = useRef(new Map<string, number>());
   const changeReview = async (unitId: string, status: ReviewStatus) => {
     if (!course) return;
@@ -797,19 +828,23 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
       <NavigationRail beforeOpen={id => { captureSelection(); if (id === 'search' && shell.visibleLeft !== 'search') searchOrigin.current = captureSearchScene(); }}/>
       <PanelDock side="left">
       <DirectoryPanel navRef={navRef} open={directory} inert={sourceOpen} graph={graph} review={review} selectedId={selected?.id}
-        selectedThemeId={selected?.theme.id} narrow={narrow} onClose={closeDirectory} onNavigate={id => { void go(id); }}/></PanelDock>
-      <main onWheelCapture={event => { if (!((event.target as HTMLElement).closest('.board-tools, .relations-panel, .source-dialog, input, select, textarea, .mux, .builtin-formula-editor, math-field'))) camera.takeover(); }} onPointerDownCapture={event => { pinchFrame.cancel(); const target = event.target as HTMLElement; if (target.closest('.react-flow__pane, .react-flow__minimap, .board-tools')) camera.takeover(); }} ref={boardRef} className="board" data-relations-open={relationsOpen?'':undefined} aria-label="知识画板" role="region" inert={(narrow && (!!shell.visibleLeft || shell.visibleAgent || accessoryOpen)) || !cameraReady && !loadError}>
-        <div className="board-background" inert={sourceOpen || (narrow && relationsOpen)}><ReactFlow onlyRenderVisibleElements nodes={nodes} edges={edges} onInit={() => setNodesReady(true)} onEdgeClick={(event, edge) => { setRelationFocus(edge.id); openRelations(event.detail > 0); }} minZoom={0.04} maxZoom={2} nodesDraggable={false} panOnScroll zoomOnScroll={false} zoomOnPinch panOnDrag={tool === "select" ? [1] : [0, 1]} selectionOnDrag={tool === "select"} panActivationKeyCode="Space" onMoveStart={event => { if (event) { pinchFrame.cancel(); camera.takeover(); } }} onMove={(event, next) => { updateReadingProtection(); if (event) camera.takeover(); setViewport(next); }} onMoveEnd={(_event, next) => { const current = readingRef.current; if (current) persist({ ...current, camera: next }); }} onNodeClick={(_event, node) => { const first = graph?.nodes.find(item => item.id === node.id || item.themeId === node.id); if (first) void go(first.id); }}>
+        selectedThemeId={selected?.theme.id} narrow={narrow} onClose={closeDirectory} onKeyDown={event => trap(event, closeDirectory)} onNavigate={id => { void go(id); }}/></PanelDock>
+      <main onWheelCapture={event => { if (!((event.target as HTMLElement).closest('.board-tools, .relations-panel, .source-dialog, input, select, textarea, .mux, .builtin-formula-editor, math-field'))) camera.takeover(); }} onPointerDownCapture={event => { pinchFrame.cancel(); const target = event.target as HTMLElement; if (target.closest('.react-flow__pane, .react-flow__minimap, .board-tools')) camera.takeover(); }} ref={boardRef} className="board" style={{ '--board-theme-font': `${Math.min(THEME_TITLE_SPACE / 1.1, Math.max(40, 12 / viewport.zoom))}px`, '--board-unit-font': `${Math.max(36, 13 / viewport.zoom)}px` } as React.CSSProperties} data-relations-open={relationsOpen?'':undefined} aria-label="知识画板" role="region" inert={(narrow && (!!shell.visibleLeft || shell.visibleAgent || accessoryOpen)) || !cameraReady && !loadError}>
+        <div className="board-background" inert={sourceOpen || (narrow && relationsOpen)}><ReactFlow onlyRenderVisibleElements nodes={nodes} edges={[]} onInit={() => setNodesReady(true)} minZoom={MIN_BOARD_ZOOM} maxZoom={2} nodesDraggable={false} panOnScroll zoomOnScroll={false} zoomOnPinch panOnDrag={tool === "select" ? [1] : [0, 1]} selectionOnDrag={tool === "select"} panActivationKeyCode="Space" onMoveStart={event => { if (event) { pinchFrame.cancel(); camera.takeover(); } }} onMove={(event, next) => { updateReadingProtection(); if (event) camera.takeover(); setViewport(next); }} onMoveEnd={(_event, next) => { const current = readingRef.current; if (current) persist({ ...current, camera: next }); }} onNodeClick={(_event, node) => { const first = graph?.nodes.find(item => item.id === node.id || item.themeId === node.id); if (first) void go(first.id); }}>
+          <BoardRoutes scene={scene} viewport={viewport} width={readingBounds.width} height={readingBounds.height} selectedUnitId={selected?.id} selectedThemeId={selected?.theme.id} onActivate={openRelationMembers}/>
 
 
 
           {minimap && boardRef.current && createPortal(<MiniMap ariaLabel="小地图" style={{width:narrow?150:190,height:narrow?95:120}} nodeColor="#7798bc" nodeStrokeColor="#345d88" maskColor="rgba(105,101,219,.12)" pannable zoomable />, boardRef.current)}
         </ReactFlow>
-        <CanvasToolbar tool={tool} chooseTool={chooseTool} drawing={drawingTool} capture={captureSelection} chooseDrawing={kind => drawingPanel.current?.choose(kind)} changeSpace={space => drawingPanel.current?.setSpace(space)} manageDrawings={pointer => drawingPanel.current?.manage(pointer)} highlight={() => { const selection = capturedSelection.current; if (selection?.fragments.length) { void drawingPanel.current?.highlight(selection); capturedSelection.current = undefined; } else drawingPanel.current?.choose('highlighter'); }} relations={openRelations} relationView={relationView} changeRelations={setRelationView}/>
-        <CanvasNavigation minimap={minimap} toggle={() => setMinimap(!minimap)} zoom={viewport.zoom} zoomIn={() => { camera.takeover(); void flow.zoomIn({duration:0}); }} zoomOut={() => { camera.takeover(); void flow.zoomOut({duration:0}); }} fit={() => { camera.takeover(); pinchFrame.cancel(); void flow.fitBounds(flow.getNodesBounds(flow.getNodes()),{duration:0}); }}/>
+        <CanvasToolbar tool={tool} chooseTool={chooseTool} drawing={drawingTool} capture={captureSelection} chooseDrawing={kind => drawingPanel.current?.choose(kind)} changeSpace={space => drawingPanel.current?.setSpace(space)} manageDrawings={pointer => drawingPanel.current?.manage(pointer)} highlight={() => { const selection = capturedSelection.current; if (selection?.fragments.length) { void drawingPanel.current?.highlight(selection); capturedSelection.current = undefined; } else drawingPanel.current?.choose('highlighter'); }} relations={pointer => { setRelationFocus(undefined); openRelations(pointer); }} relationView={relationView} changeRelations={setRelationView}/>
+        <CanvasNavigation minimap={minimap} toggle={() => setMinimap(!minimap)} zoom={viewport.zoom} zoomIn={() => { camera.takeover(); void flow.zoomIn({duration:0}); }} zoomOut={() => { camera.takeover(); void flow.zoomOut({duration:0}); }} fit={() => { camera.takeover(); pinchFrame.cancel(); void fitOverview(); }}/>
+        {!relationsOpen && scene?.edges.some(edge => edge.unrouted) && <div className="board-route-notice board-tools" role="status">
+          <span>部分关系暂时无法连线</span><Button variant="outline" size="sm" onClick={event => openRelationMembers(scene.edges.filter(edge => edge.unrouted).flatMap(edge => edge.memberIds), event.detail > 0)}>查看这些关系</Button>
+        </div>}
         {(searchReturn || !!reading?.returnStack.length) && <div className="reading-return"><Button variant="ghost" aria-label={returnLabel} onClick={() => { if (searchReturn) void searchReturn().catch(e => setReadError(e.message)); else if (reading?.returnStack.length) { const previous = reading.returnStack.at(-1)!; void go(previous.unitId, {...reading,unitId:previous.unitId,scrollTop:previous.scrollTop,camera:previous.camera,returnStack:reading.returnStack.slice(0,-1)}); } }}><ArrowLeft data-icon="inline-start"/><span className="reading-return-label">{returnLabel}</span></Button></div>}
         {loadError && <div className="load-error" role="alert"><h1>课程未打开</h1><p>{loadError}</p><Button variant="outline" size="sm" onClick={() => void load()}>重新打开课程</Button></div>}
-        {course && mounted.filter(unit=>unit.id===selected?.id||unit.id==='KU-001'||readingRange.includes(unit.id)||heldReading.includes(unit.id)||unit.id===mutationUnit).map(unit => { const position = local.placements.find(node => node.unitId === unit.id); if (!position) return null; return <div key={unit.id} className="reading-layer" data-unit-id={unit.id} style={{ width: position.width >= 360 ? position.width : 650, transform: `translate(${viewport.x + position.x * viewport.zoom}px, ${viewport.y + position.y * viewport.zoom}px) scale(${viewport.zoom})`, visibility: viewport.zoom >= 0.55 ? 'visible' : 'hidden' }}>
+        {course && mounted.filter(unit=>unit.id===selected?.id||unit.id==='KU-001'||readingRange.includes(unit.id)||heldReading.includes(unit.id)||unit.id===mutationUnit).map(unit => { const position = local.placements.find(node => node.unitId === unit.id); if (!position) return null; return <div key={unit.id} className="reading-layer" data-unit-id={unit.id} style={{ width: readingWidth(position.width), transform: `translate(${viewport.x + position.x * viewport.zoom}px, ${viewport.y + position.y * viewport.zoom}px) scale(${viewport.zoom})`, visibility: viewport.zoom >= 0.55 ? 'visible' : 'hidden' }}>
           <ReadingSurface id={unit.id} name={unit.name} position={position} baseline={graph!.layout.nodes.find(node => node.unitId === unit.id)!} active={selected?.id === unit.id} articleRef={articleRef} measure={local.measure} gesture={local.gesture} commit={place} takeover={() => camera.takeover()}>
             <RoughFrame id={unit.id} />
 
@@ -851,7 +886,7 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
         {course && <div inert={sourceOpen||(narrow&&relationsOpen)}><Drawings onToolChange={setDrawingTool} ref={drawingPanel} sessionId={course.sessionId} viewport={viewport} takeover={()=>camera.takeover()} pan={(dx,dy)=>camera.pan(dx,dy)} prepare={async()=>!!await channel.current?.flush() && await flushUnitInputs()} paint={notes=>{void continuous.current?.paintDrawings(notes);for(const input of unitInputs.current.values())void input.editor()?.paintDrawings(notes);}} contentKey={`${course.revision}:${mounted.map(u=>u.id).join(',')}`} waitLayout={async()=>{await layoutWrites.current;return !layoutPending.current.length;}} restorePlacement={enqueuePlacement}  /></div>}
         {followState !== 'idle' && <div className="follow-control"><span role="status" aria-label="修改跟随">{followState === 'following' ? '正在跟随修改' : followState === 'paused' ? '已由你控制视野' : '修改已结束'}</span>{followState !== 'following' && <Button variant="outline" size="sm" onClick={() => { camera.resume(); }}>{followState === 'finished' ? '查看修改结果' : '返回并继续跟随'}</Button>}</div>}
 
-        {(relationsOpen || relationsExiting) && graph && course && <RelationsPanel graph={graph} sessionId={course.sessionId} view={relationView} narrow={narrow} panelRef={relationPanel} open={relationsOpen} motion={relationMotion} onClose={event => closeRelations(event.detail > 0)} onKeyDown={event => trap(event, () => closeRelations())} onGraph={setGraph} focusId={relationFocus} />}
+        {(relationsOpen || relationsExiting) && graph && course && <RelationsPanel graph={graph} sessionId={course.sessionId} view={relationView} narrow={narrow} panelRef={relationPanel} open={relationsOpen} motion={relationMotion} onClose={event => closeRelations(event.detail > 0)} onKeyDown={event => trap(event, () => closeRelations())} onGraph={setGraph} focusIds={relationFocus} onNavigate={id => { if (narrow) closeRelations(); void go(id); }} />}
         {sourceOpen && <section ref={sourceDialog} className="source-dialog" role="dialog" aria-modal="true" aria-label="TI 74153 原页" onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); closeSource(); } else if (event.key === 'Tab') { event.preventDefault(); sourceDialog.current?.querySelector<HTMLButtonElement>('button')?.focus(); } }}><Button variant="outline" size="sm" onClick={closeSource}>返回正文</Button><h2>TI 74153 原页 · 第 1 页</h2><img src="./ti74153-1.png" alt="TI 74153 手册第 1 页" /></section>}
       </main>
       <PanelDock side="agent"/>

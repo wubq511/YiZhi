@@ -9,16 +9,16 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import type { ElectronApplication, Locator, Page } from '@playwright/test';
-import { resizeBoardWindow } from './board-test-helpers';
+import { boardWheelPoint, resizeBoardWindow } from './board-test-helpers';
 
 async function reveal(window: Page, target: Locator) {
   await expect(window.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
   const board = (await window.locator('main.board').boundingBox())!;
-  await window.mouse.move(board.x + 10, board.y + board.height / 2);
   for (let i = 0; i < 60; i++) {
     const box = (await target.boundingBox())!;
     const delta = box.y - board.y - board.height / 2;
     if (Math.abs(delta) < board.height / 3) return;
+    const point = await boardWheelPoint(window); await window.mouse.move(point.x, point.y);
     await window.mouse.wheel(0, Math.max(-500, Math.min(500, delta)));
     await window.waitForTimeout(30);
   }
@@ -105,7 +105,7 @@ test('real Electron IPC saves, retains failed input, retries, drains quit, reope
     const contenderProcess = contender.process();
     try {
       const blocked = await contender.firstWindow();
-      await expect(blocked.getByRole('alert')).toContainText('第二份写入资格');
+      await expect(blocked.getByRole('alert')).toContainText('课程暂时无法打开');
       await contender.evaluate(({ app }) => app.quit());
       await expect.poll(() => contenderProcess.exitCode, { timeout: 3000 }).not.toBeNull();
     } finally { if (contenderProcess.exitCode === null) contenderProcess.kill('SIGKILL'); }
@@ -119,8 +119,11 @@ test('real Electron IPC saves, retains failed input, retries, drains quit, reope
     await expect(window.getByRole('status', { name: '保存状态' })).toContainText('未保存');
     expect(window.isClosed()).toBe(false);
     await window.screenshot({ path: evidencePath('t01-error.png') });
+    await window.getByRole('status', { name: '保存状态', exact: true }).click();
+    const retry = window.getByRole('button', { name: '重试保存正文', exact: true });
+    await expect(retry).toBeVisible();
     fault.exec('DROP TRIGGER reject_write');
-    await window.getByRole('button', { name: '重试保存' }).click();
+    await retry.click();
     await expect(window.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     // A duplicate application process must exit, and focus/reuse the existing window.
     const second = spawn(app.process().spawnfile, [resolve('.'), `--course=${join(root, 'course')}`], {
@@ -138,7 +141,6 @@ test('real Electron IPC saves, retains failed input, retries, drains quit, reope
       app.emit('activate');
     });
     window = await app.firstWindow();
-    await openFirstUnit(window);
     editor = window.getByRole('textbox', { name: '编辑首段正文' });
     await expect(editor).toHaveText('保存失败后保留这段输入，重试仍是它。');
     const resumed = await window.evaluate(() => (window as any).yizhi.open());
@@ -150,7 +152,6 @@ test('real Electron IPC saves, retains failed input, retries, drains quit, reope
     await exited;
     app = await launch();
     const reopened = await app.firstWindow();
-    await openFirstUnit(reopened);
     await expect(reopened.getByRole('textbox', { name: '编辑首段正文' }))
       .toHaveText('退出前最后一次输入：位权由位置决定 📝。');
     const after = await reopened.evaluate(() => (window as any).yizhi.open());
@@ -160,7 +161,7 @@ test('real Electron IPC saves, retains failed input, retries, drains quit, reope
     await reopened.setViewportSize({ width: 660, height: 600 });
     await reopened.screenshot({ path: evidencePath('t01-narrow.png') });
     expect(await reopened.evaluate(() => document.documentElement.scrollWidth <= globalThis.innerWidth)).toBe(true);
-  } finally { fault?.close(); await app?.close(); await rm(root, { recursive: true, force: true }); }
+  } finally { fault?.exec('DROP TRIGGER IF EXISTS reject_write'); fault?.close(); await app?.close(); await rm(root, { recursive: true, force: true }); }
 });
 
 test('board opens at overview and navigates the first unit within the workspace', async () => {
@@ -171,7 +172,7 @@ test('board opens at overview and navigates the first unit within the workspace'
     const window = await app.firstWindow();
     await expect(window.getByRole('region', { name: '知识画板' })).toBeVisible();
     await expect(window.getByRole('navigation', { name: '课程目录' })).toBeVisible();
-    await expect(window.getByLabel('小地图')).toBeVisible();
+    await expect(window.getByRole('img', { name: '小地图', exact: true })).toBeVisible();
     await window.screenshot({ path: evidencePath('t04-overview.png') });
     await openFirstUnit(window);
     await expect(window.getByRole('heading', { name: '位置记数法与权展开', exact: true })).toBeVisible();
@@ -271,7 +272,7 @@ test('narrow directory traps keyboard focus and restores it when closed', async 
     await expect(nav).toBeVisible();
     await window.screenshot({ path: evidencePath('t04-narrow.png') });
     await expect(window.locator('main.board')).toHaveAttribute('inert', '');
-    await nav.getByRole('button', { name: '收起目录' }).focus();
+    await nav.getByRole('button', { name: '复习状态筛选：全部单元' }).focus();
     await window.keyboard.press('Shift+Tab');
     await expect(nav.locator('button').last()).toBeFocused();
     await window.keyboard.press('Escape');
@@ -333,9 +334,10 @@ test('narrow relationship overlay isolates the workspace and returns focus', asy
     const dialog = window.getByRole('dialog', { name: '关系详情' });
     await expect(dialog).toBeVisible();
     await expect(window.locator('.board-background')).toHaveAttribute('inert', '');
+    await expect(dialog.getByRole('button', { name: '关闭关系详情' })).toBeFocused();
     await window.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
-    await expect(window.getByRole('button', { name: '查看关系' })).toBeFocused();
+    await expect(window.getByRole('button', { name: '关系', exact: true })).toBeFocused();
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
@@ -437,9 +439,10 @@ test('a rejected reading position stays visible and can be retried', async () =>
     await openFirstUnit(window);
     await expect(window.getByRole('status', { name: '保存状态', exact: true })).toContainText('未保存');
     fault.exec('DROP TRIGGER reject_reading');
-    await window.getByRole('button', { name: '重试保存阅读位置' }).click();
+    await window.getByRole('status', { name: '保存状态', exact: true }).click();
+    await window.getByRole('button', { name: '重试保存阅读位置', exact: true }).click();
     await expect(window.getByRole('status', { name: '保存状态', exact: true })).toContainText('已保存');
-  } finally { fault?.close(); await app.close(); await rm(root, { recursive: true, force: true }); }
+  } finally { fault?.exec('DROP TRIGGER IF EXISTS reject_reading'); fault?.close(); await app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
 test('wheel inside the relationships panel scrolls it without panning the canvas', async () => {
@@ -471,7 +474,7 @@ test('camera can step from reading through unit overview to theme overview in on
     await expect(window.getByRole('heading', { name: '位置记数法与权展开' })).toBeHidden();
     await expect(window.locator('[data-id="KU-002"]')).toHaveCSS('opacity', '1');
     await window.getByRole('button', { name: '全图' }).click();
-    await expect(window.locator('[data-id="KU-002"]')).toHaveCSS('opacity', '0');
+    await expect(window.locator('[data-id="KU-002"]')).toHaveClass(/board-unit-thumbnail/);
     await expect(window.locator('[data-id="TH-01"]')).toHaveCSS('opacity', '1');
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });

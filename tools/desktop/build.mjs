@@ -19,6 +19,8 @@ for (const [entry, name] of [['controlled-main.ts', 'controlled-main'], ['contro
   await build({ entryPoints: [join(root, 'tools/desktop', entry)], outfile: join(output, name + '.cjs'),
     bundle: true, platform: 'node', format: 'cjs', target: 'node24', external: ['electron', 'pdfjs-dist/*', '@napi-rs/canvas'],
     nodePaths: [join(root, 'desktop/node_modules')] });
+await build({ entryPoints:[join(root,'desktop/src/renderer/board-worker.ts')],outfile:join(output,'renderer/board-worker.js'),
+  bundle:true,platform:'browser',format:'esm',target:'chrome140',nodePaths:[join(root,'desktop/node_modules')] });
 await build({ entryPoints: [join(root, 'tools/desktop/controlled-renderer.tsx')], outfile: join(output, 'renderer/app.js'),
   bundle: true, platform: 'browser', format: 'esm', target: 'chrome140', jsx: 'automatic',
   define: { 'process.env.NODE_ENV': '"production"' }, loader: { '.woff': 'file', '.woff2': 'file', '.ttf': 'file' },

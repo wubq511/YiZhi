@@ -6,8 +6,40 @@ import { join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
 import { CourseService } from '../src/core/course-service';
+import { planInitialLayout, planIncrementalLayout } from '../src/board-layout';
+import type { CourseGraph } from '../src/shared';
 
 import {tablePdf,prepared,lesson,practice} from './generation-fixture';
+
+test('new example persists its initial plan, manual placement and restored baseline survive reopening',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'yizhi-initial-plan-'));
+  let core=new CourseService(resolve('dist/worker.cjs'));
+  try{
+    let sessionId=(await core.open(root)).sessionId;
+    const seed=JSON.parse(await readFile(resolve('fixtures/graph.json'),'utf8')) as CourseGraph;
+    const initial=await core.graph(sessionId);
+    assert.deepEqual(initial.layout,{...planInitialLayout(seed),policyVersion:1});
+    const node=initial.layout.nodes[0];
+    await core.setLayout(sessionId,[{unitId:node.unitId,x:node.x+1234,y:node.y-567,width:node.width}]);
+    const manual=(await core.graph(sessionId)).layout;
+    await core.close(); core=new CourseService(resolve('dist/worker.cjs'));
+    sessionId=(await core.open(root)).sessionId;
+    assert.deepEqual((await core.graph(sessionId)).layout,manual);
+    await core.close();
+    const db=new DatabaseSync(join(root,'course.sqlite'));
+    try{
+      const graph=structuredClone(seed);
+      graph.layout.nodes[0].x=-4321;
+      // The original fixture represents a pre-policy native or restored graph.
+      db.prepare("INSERT INTO metadata VALUES('course-graph',?)").run(JSON.stringify(graph));
+      db.prepare('DELETE FROM layout_baseline').run();
+    }finally{db.close();}
+    core=new CourseService(resolve('dist/worker.cjs'));
+    sessionId=(await core.open(root)).sessionId;
+    assert.equal((await core.graph(sessionId)).layout.nodes[0].x,-4321);
+    assert.equal('policyVersion' in (await core.graph(sessionId)).layout,false);
+  }finally{await core.close();await rm(root,{recursive:true,force:true});}
+});
 
 test('invalid finite formula stays a recoverable candidate and never registers an invisible unit', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-generation-'));
@@ -72,10 +104,17 @@ test('complete lesson publishes one graph-owned unit, stop and explicit continue
     const {sessionId,task,conversation,opened}=await prepared(core,root);
     const identity={sessionId,taskId:task.id,attemptId:task.attemptId,generation:task.generation};
     const basis=await core.readAgentGeneration(identity);
+    const original=(await core.graph(sessionId)).layout.nodes[0];
+    await core.setLayout(sessionId,[{unitId:original.unitId,x:original.x-2000,y:original.y-1000,width:original.width}]);
+    const oldGraph=await core.graph(sessionId);
     const first=await core.publishAgentGeneration({...identity,input:lesson(basis,'complete-lesson')});
     assert.equal(first.status,'committed',first.reason);
     assert.equal(first.checks.filter(c=>c.status==='passed').length,7);
     const graph=await core.graph(sessionId);
+    const planningInput={...graph,layout:oldGraph.layout};
+    const expected=planIncrementalLayout(planningInput,basis.spec.unitId);
+    assert.deepEqual(graph.layout.nodes.find(n=>n.unitId===basis.spec.unitId),expected.nodes.find(n=>n.unitId===basis.spec.unitId));
+    for(const old of oldGraph.layout.nodes)assert.deepEqual(graph.layout.nodes.find(n=>n.unitId===old.unitId),old);
     assert.equal(graph.nodes.filter(n=>n.id===basis.spec.unitId).length,1);
     assert.equal(graph.groups.filter(g=>g.id===basis.spec.themeId).length,1);
     const unit=await core.readUnit(sessionId,basis.spec.unitId);
@@ -135,6 +174,25 @@ test('complete lesson publishes one graph-owned unit, stop and explicit continue
   }finally{await core.close();await rm(root,{recursive:true,force:true});}
 });
 
+test('failed generated graph write rolls back unit, layout and history while retaining the candidate',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'yizhi-generation-layout-fault-'));
+  const core=new CourseService(resolve('dist/worker.cjs'));
+  let db:DatabaseSync|undefined;
+  try{
+    const {sessionId,task}=await prepared(core,root);
+    const identity={sessionId,taskId:task.id,attemptId:task.attemptId,generation:task.generation};
+    const basis=await core.readAgentGeneration(identity),before=await core.graph(sessionId);
+    db=new DatabaseSync(join(root,'course/course.sqlite'));
+    db.exec("PRAGMA busy_timeout=1000; CREATE TRIGGER fail_generation_layout BEFORE INSERT ON metadata WHEN new.key='course-graph' BEGIN SELECT RAISE(ABORT,'layout write failed'); END");
+    const result=await core.publishAgentGeneration({...identity,input:lesson(basis,'layout-failure')});
+    assert.equal(result.status,'retained');assert.match(result.reason!,/layout write failed/);
+    assert.deepEqual(await core.graph(sessionId),before);
+    await assert.rejects(core.readUnit(sessionId,basis.spec.unitId),/不存在/);
+    assert.equal((await core.commands.history({sessionId})).some(h=>h.operationId===result.operationId),false);
+    assert.deepEqual(await core.queryAgentGeneration({...identity,operationId:'layout-failure'}),result);
+  }finally{if(db){db.exec('DROP TRIGGER IF EXISTS fail_generation_layout');db.close();}await core.close();await rm(root,{recursive:true,force:true});}
+});
+
 test('formal task history withdraws and restores generated unit with both stages and preserves personal annotation',async()=>{
   const root=await mkdtemp(join(tmpdir(),'yizhi-generation-history-'));
   let core=new CourseService(resolve('dist/worker.cjs'));
@@ -143,6 +201,7 @@ test('formal task history withdraws and restores generated unit with both stages
     const initial=await core.readAgentGeneration(identity);
     const first=await core.publishAgentGeneration({...identity,input:lesson(initial,'history-lesson')});
     assert.equal(first.status,'committed');
+    const generatedLayout=(await core.graph(sessionId)).layout;
     const unit=await core.readUnit(sessionId,initial.spec.unitId);
     const block=unit.reading.blocks[0],text=String(block.payload.text);
     const note=await core.annotations.create({sessionId,operationId:'history-personal-note',text:'自己整理的理解',selection:{unitId:unit.id,
@@ -165,6 +224,8 @@ test('formal task history withdraws and restores generated unit with both stages
     assert.equal(restore.status,'committed',JSON.stringify(restore.conflicts));
     assert.equal((await core.readUnit(sessionId,unit.id)).reading.blocks.filter(item=>item.kind==='exercise').length,2);
     assert.equal((await core.graph(sessionId)).nodes.filter(node=>node.id===unit.id).length,1);
+    assert.deepEqual((await core.graph(sessionId)).layout.nodes.find(node=>node.unitId===unit.id),generatedLayout.nodes.find(node=>node.unitId===unit.id));
+    assert.deepEqual((await core.graph(sessionId)).layout.groups.find(group=>group.themeId===initial.spec.themeId),generatedLayout.groups.find(group=>group.themeId===initial.spec.themeId));
     assert.deepEqual((await core.annotations.list({sessionId})).find(item=>item.id===note.id),note);
     await core.close();core=new CourseService(resolve('dist/worker.cjs'));
     const reopened=await core.open(join(root,'course'));

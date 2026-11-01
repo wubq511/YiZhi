@@ -106,6 +106,7 @@ test('an active B annotation retains its actual selection and locates back to B 
     await page.getByRole('textbox', { name: '批注内容', exact: true }).fill('MUX 的个人理解');
     await expect(page.getByRole('status', { name: '批注同步状态' })).toHaveText('已保存');
     await page.getByRole('button', { name: '关闭批注', exact: true }).click();
+    await page.getByRole('button', { name: '课程目录', exact: true }).click();
     await openFirstUnit(page);
     await page.getByRole('button', { name: '个人批注', exact: true }).click();
     await page.getByRole('button', { name: '定位当前选段', exact: true }).click();

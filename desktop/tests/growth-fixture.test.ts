@@ -23,7 +23,8 @@ test('growth copy preserves original raw payloads/revisions and identities while
     graph.nodes = graph.nodes.filter((n: any) => original.some(u => u.id === n.id));
     const themes = new Set(graph.nodes.map((n: any) => n.themeId));
     graph.groups = graph.groups.filter((g: any) => themes.has(g.id));
-    graph.edges = []; graph.layout.nodes = graph.layout.nodes.filter((n: any) => original.some(u => u.id === n.unitId));
+    graph.edges = []; graph.requirementGroups = []; graph.conditions = {};
+    graph.layout.nodes = graph.layout.nodes.filter((n: any) => original.some(u => u.id === n.unitId));
     graph.layout.groups = graph.layout.groups.filter((g: any) => themes.has(g.themeId));
     const db = new DatabaseSync(join(source, 'course.sqlite'));
     db.exec('CREATE TABLE metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL); CREATE TABLE units(id TEXT PRIMARY KEY,payload TEXT NOT NULL,revision INTEGER NOT NULL); PRAGMA user_version=1');

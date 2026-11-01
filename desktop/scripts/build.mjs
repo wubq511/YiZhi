@@ -24,6 +24,9 @@ for (const [entry, outfile] of entries) {
   } catch (error) { throw error; }
 }
 try {
+  const worker=await build({ entryPoints:['src/renderer/board-worker.ts'],outfile:'dist/renderer/board-worker.js',bundle:true,
+    platform:'browser',format:'esm',target:'chrome140',metafile:true });
+  runtimeInputs['renderer/board-worker.js']=Object.keys(worker.metafile.inputs).sort();
   const result=await build({ entryPoints: ['src/renderer/app.tsx'], outfile: 'dist/renderer/app.js', bundle: true,
     platform: 'browser', format: 'esm', target: 'chrome140', define: { 'process.env.NODE_ENV': '"production"' },
     loader: { '.woff': 'file', '.woff2': 'file', '.ttf': 'file' },metafile:true });

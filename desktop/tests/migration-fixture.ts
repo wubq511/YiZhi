@@ -27,7 +27,10 @@ export async function legacyFixture(root: string) {
     sources: [{ id: 'SRC-TEST', title: '固定原件', path: '原始 资料.pdf', totalPages: 99, versions: [{ id: 'VER-TEST', sha256, path: '原始 资料.pdf', totalPages: 99 }] }], extra: { untouched: true } };
   const layout = { schemaVersion: 'midterm-layout-1', groups: [], edges: [], nodes: [
     { unitId: 'KU-001', x: 104, y: 168, width: 650, height: 86 }, { unitId: 'KU-086', x: 900, y: 168, width: 650, height: 86 }] };
-  const manifest = { schemaVersion: 'review-course-1', courseId: 'COURSE-FIXTURE', name: '测试课程', knowledge: 'data/map.json', layout: 'data/layout.json', state: '.review-board/state.sqlite3' };
+  // Independent test courses need independent portable identities even when
+  // Node and Electron suites execute the same fixture at the same time.
+  const courseId = `COURSE-FIXTURE-${createHash('sha256').update(root).digest('hex').slice(0, 16)}`;
+  const manifest = { schemaVersion: 'review-course-1', courseId, name: '测试课程', knowledge: 'data/map.json', layout: 'data/layout.json', state: '.review-board/state.sqlite3' };
   const localRefs = (value: any) => { if (Array.isArray(value)) value.forEach(localRefs); else if (value && typeof value === 'object') {
     if (Array.isArray(value.sourceRefs)) value.sourceRefs = value.sourceRefs.map((ref: any) => ({ ...ref, sourceId:'SRC-TEST', versionId:'VER-TEST', pdfPages:[1] }));
     Object.values(value).forEach(localRefs);

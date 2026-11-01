@@ -6,6 +6,7 @@ import type { GroupHistory } from '../command-api';
 import type { CourseGraph } from '../shared';
 import type { RelationBasis, RelationCommand, RelationRead, RelationReceipt, RelationSource } from '../relation-api';
 import { transaction, appendEvent } from './save-store';
+import { aggregateThemeRelations } from '../board-layout';
 
 const parse = (value: unknown) => JSON.parse(String(value));
 const json = (value: unknown) => JSON.stringify(value);
@@ -76,16 +77,7 @@ export class FormalRelations {
       if (edge.requirementGroupId) { if (!conditions.groups.includes(edge.requirementGroupId)) conditions.groups.push(edge.requirementGroupId); }
       else conditions.required.push(edge.fromUnitId);
     }
-    const aggregates = new Map<string, NonNullable<CourseGraph['themeEdges']>[number]>();
-    for (const edge of graph.edges) {
-      const fromThemeId = graph.nodes.find(n => n.id === edge.fromUnitId)!.themeId;
-      const toThemeId = graph.nodes.find(n => n.id === edge.toUnitId)!.themeId;
-      if (fromThemeId === toThemeId) continue;
-      const key = `${fromThemeId}:${toThemeId}:${edge.type}`;
-      const aggregate = aggregates.get(key) ?? { fromThemeId, toThemeId, type: edge.type, relationIds: [], count: 0 };
-      aggregate.relationIds.push(edge.id); aggregate.count++; aggregates.set(key, aggregate);
-    }
-    graph.themeEdges = [...aggregates.values()];
+    graph.themeEdges = aggregateThemeRelations(graph);
     graph.counts = { units: graph.nodes.length, themes: graph.groups.length, relations: graph.edges.length };
     return graph;
   }

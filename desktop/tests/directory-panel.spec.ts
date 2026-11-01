@@ -49,7 +49,7 @@ test('directory disclosure, navigation and status filters stay consistent', asyn
     await directory.getByRole('button', { name: '位置记数法与权展开', exact: true }).click();
     await expect(page.getByRole('heading', { name: '位置记数法与权展开', exact: true })).toBeVisible();
 
-    await page.getByRole('group', { name: '设置复习状态' }).getByRole('button', { name: '薄弱', exact: true }).click();
+    await page.locator('[data-agent-unit="KU-001"]').getByRole('group', { name: '设置复习状态' }).getByRole('button', { name: '薄弱', exact: true }).click();
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setContentSize(1024, 768));
     const filter = directory.getByRole('button', { name: '复习状态筛选：全部单元' });
     await filter.click();

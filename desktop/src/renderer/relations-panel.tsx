@@ -9,7 +9,7 @@ import type { FormalRelation, RelationBasis, RelationCommand, RequirementGroup }
 import './relations-panel.css';
 
 type Props = { graph: CourseGraph; sessionId: string; view: string; narrow: boolean; panelRef: Ref<HTMLElement>;
-  open: boolean; motion: boolean; onClose(event: MouseEvent<HTMLButtonElement>): void; onKeyDown(event: KeyboardEvent<HTMLElement>): void; onGraph(graph: CourseGraph): void; focusId?: string };
+  open: boolean; motion: boolean; onClose(event: MouseEvent<HTMLButtonElement>): void; onKeyDown(event: KeyboardEvent<HTMLElement>): void; onGraph(graph: CourseGraph): void; focusIds?: string[]; onNavigate(id: string): void };
 const types: Record<string, string> = { requires: '前置', constructs: '构造', improves: '优化', inverse: '互逆' };
 
 /** Formal graph consumers reread after shared durable events, including cursor expiry. */
@@ -34,7 +34,7 @@ export function useRelationEvents(sessionId: string | undefined, onGraph: (graph
   }, [sessionId, onGraph]);
 }
 
-export function RelationsPanel({ graph, sessionId, view, narrow, panelRef, open, motion, onClose, onKeyDown, onGraph, focusId }: Props) {
+export function RelationsPanel({ graph, sessionId, view, narrow, panelRef, open, motion, onClose, onKeyDown, onGraph, focusIds, onNavigate }: Props) {
   const [basis, setBasis] = useState<RelationBasis>();
   const [draft, setDraft] = useState<FormalRelation>();
   const [route, setRoute] = useState('none');
@@ -62,7 +62,6 @@ export function RelationsPanel({ graph, sessionId, view, narrow, panelRef, open,
     } catch (failure) { setError((failure as Error).message); }
     finally { setBusy(false); }
   };
-  useEffect(() => { if (focusId?.startsWith('REL-')) void begin(focusId); }, [focusId]);
   const reread = async () => {
     setBusy(true);
     try { const next = await window.yizhi.relations.read({ sessionId }); setBasis(next); onGraph(next.graph);
@@ -123,6 +122,14 @@ export function RelationsPanel({ graph, sessionId, view, narrow, panelRef, open,
     {error && <p role="alert">{error} 候选仍保留，可修改后重试。</p>}
     <p role="status" aria-label="正式关系结果">{busy ? '正在核对正式关系…' : result}</p>
     {uncertain && <Button variant="outline" size="sm" disabled={busy} onClick={() => void submit()}>核对原操作结果</Button>}
+    {focusIds && <section aria-label="所选关系成员"><h3>所选关系 · {focusIds.length} 条</h3>
+      {focusIds.map(id => { const edge = graph.edges.find(item => item.id === id); return edge ? <div className="relation-member" key={id}>
+        <p>{types[edge.type] ?? edge.type}：{name(edge.fromUnitId)} {edge.directed ? '→' : '↔'} {name(edge.toUnitId)}</p>
+        <Button variant="outline" size="sm" onClick={() => onNavigate(edge.fromUnitId)}>定位起点</Button>{' '}
+        <Button variant="outline" size="sm" onClick={() => onNavigate(edge.toUnitId)}>定位终点</Button>{' '}
+        <Button variant="outline" size="sm" disabled={busy} onClick={() => void begin(edge.id)}>审核 {edge.id}</Button>
+      </div> : <p key={id}>关系 {id} 已不可用</p>; })}
+    </section>}
     {draft && basis && <form ref={form} className="relation-editor" onSubmit={event => { event.preventDefault(); void submit(); }}>
       <h3>正式关系审核</h3><p>{draft.id}</p><fieldset disabled={busy || uncertain}>
         <label>起点单元<Input list="relation-units" value={draft.fromUnitId} onChange={e => changed({ ...draft, fromUnitId: e.target.value })} /></label>

@@ -51,11 +51,12 @@ test('installed macOS app opens offline without checkout tools, decodes real res
     finally { await backupCheck.close(); }
     const manifest = JSON.parse(await readFile(join(installed, 'Contents/Resources/app/package-manifest.json'), 'utf8'));
     expect(manifest.productionPackages.some((item: { name: string }) => item.name === 'electron' || item.name === '@playwright/test')).toBe(false);
+    expect(manifest.runtimeFiles.some((item: { path: string }) => item.path === 'dist/renderer/board-worker.js')).toBe(true);
     expect(Object.values(manifest.runtimeInputs).flat().some(input => String(input).includes('tools/desktop/'))).toBe(false);
     for (const file of ['scripts/migrate-course.mjs', 'dist/legacy-lock.py', 'dist/directory_authority.py', 'dist/development'])
       expect(await access(join(installed, 'Contents/Resources/app', file)).then(() => true, () => false)).toBe(false);
     const bridge = await page.evaluate(() => ({ keys: Object.keys(window.yizhi), commands: Object.keys(window.yizhi.commands) }));
-    for (const name of ['migration', 'exchange', 'upgrade']) expect(bridge.keys).not.toContain(name);
+    for (const name of ['migration', 'exchange', 'upgrade', 'setLayout']) expect(bridge.keys).not.toContain(name);
     for (const name of ['startAttempt', 'read', 'commit', 'stop']) expect(bridge.commands).not.toContain(name);
     await openFirstUnit(page);
     const editor = page.getByRole('textbox', { name: '编辑首段正文', exact: true });
