@@ -57,7 +57,15 @@ function avoidsRoutes(points:StrokePoint[],routes:StrokePoint[][]):boolean {
   for(const route of routes)for(let i=1;i<route.length;i++) {
     const a=route[i-1],b=route[i],left=Math.min(a.x,b.x)-separation,right=Math.max(a.x,b.x)+separation;
     const top=Math.min(a.y,b.y)-separation,bottom=Math.max(a.y,b.y)+separation;
-    for(const p of points)if(p.x>=left&&p.x<=right&&p.y>=top&&p.y<=bottom&&distanceToSegment(p,a,b)<separation)return false;
+    for(let j=1;j<points.length;j++) {
+      const p=points[j-1],q=points[j];
+      if(Math.max(p.x,q.x)<left||Math.min(p.x,q.x)>right||Math.max(p.y,q.y)<top||Math.min(p.y,q.y)>bottom)continue;
+      // Sampling bounds curve work, but never leaves holes between samples:
+      // a short transverse neighbour may sit wholly inside one sampled span.
+      const cross=(u:StrokePoint,v:StrokePoint,w:StrokePoint)=>(v.x-u.x)*(w.y-u.y)-(v.y-u.y)*(w.x-u.x);
+      if(cross(a,b,p)*cross(a,b,q)<0&&cross(p,q,a)*cross(p,q,b)<0)return false;
+      if(Math.min(distanceToSegment(p,a,b),distanceToSegment(q,a,b),distanceToSegment(a,p,q),distanceToSegment(b,p,q))<separation)return false;
+    }
   }
   return true;
 }
@@ -67,7 +75,7 @@ export function directCurve(points:StrokePoint[],obstacles:StrokeObstacle[],fore
   if(points.length<2)return undefined;
   const a=points[0],b=points[points.length-1],next=points[1],previous=points[points.length-2];
   const dx=b.x-a.x;
-  if(dx<30||Math.abs(b.y-a.y)<8||next.x<=a.x||b.x<=previous.x)return undefined;
+  if(dx<30||Math.abs(b.y-a.y)<.01||next.x<=a.x||b.x<=previous.x)return undefined;
   const c={x:a.x+dx*.45,y:a.y},d={x:b.x-dx*.45,y:b.y};
   const steps=Math.max(40,Math.min(256,Math.ceil((dx+Math.abs(b.y-a.y))/6)));
   const samples=Array.from({length:steps+1},(_,i)=>{
@@ -75,10 +83,7 @@ export function directCurve(points:StrokePoint[],obstacles:StrokeObstacle[],fore
     return {x:u*u*u*a.x+3*u*u*t*c.x+3*u*t*t*d.x+t*t*t*b.x,y:u*u*u*a.y+3*u*u*t*c.y+3*u*t*t*d.y+t*t*t*b.y};
   });
   if(!clears(samples.slice(1,-1),obstacles))return undefined;
-  for(const p of samples.slice(1,-1)) {
-    if(length(p,a)<8||length(p,b)<8)continue;
-    for(const route of foreign)for(let i=1;i<route.length;i++)if(distanceToSegment(p,route[i-1],route[i])<4)return undefined;
-  }
+  if(!avoidsRoutes(samples.filter(p=>length(p,a)>=8&&length(p,b)>=8),foreign))return undefined;
   return {path:`M ${pair(a)} C ${pair(c)} ${pair(d)} ${pair(b)}`,samples};
 }
 
@@ -92,7 +97,7 @@ export function organicRoute(points:StrokePoint[],obstacles:StrokeObstacle[],see
     const start=current,dist=length(start,end);
     if(dist<28){result+=` L ${pair(end)}`;current=end;samples.push(end);return;}
     const normal={x:-(end.y-start.y)/dist,y:(end.x-start.x)/dist};
-    const magnitude=Math.min(4,Math.max(2,dist*.04));
+    const magnitude=Math.min(2.6,Math.max(.9,dist*.018));
     const sign=((seed+index)%2===0?1:-1);
     const curve=(amount:number)=>{
       const offset=(p:StrokePoint)=>({x:p.x+normal.x*amount,y:p.y+normal.y*amount});
@@ -119,7 +124,31 @@ export function organicRoute(points:StrokePoint[],obstacles:StrokeObstacle[],see
   for(let i=1;i<points.length-1;i++) {
     const before=points[i-1],corner=points[i],after=points[i+1],a=length(before,corner),b=length(corner,after);
     if(!a||!b)continue;
-    let radius=Math.min(24,a/3,b/3),entry=corner,exit=corner;
+    // A short cross-lane segment is one change of direction, not two corners.
+    // Share the room on its long neighbours so a 2px offset never becomes a
+    // 90-degree stair. Try narrower sweeps when content constrains the channel.
+    const following=points[i+2],outgoing=following?length(after,following):0;
+    const incoming={x:(corner.x-before.x)/a,y:(corner.y-before.y)/a};
+    const sameDirection=following&&outgoing>0&&
+      incoming.x*(following.x-after.x)/outgoing+incoming.y*(following.y-after.y)/outgoing>.999;
+    if(sameDirection&&b<=36&&length(current,corner)>.01) {
+      const reach=Math.min(72,Math.max(24,b*3));
+      let swept=false;
+      for(const fraction of [1,.75,.5,.25,.125]) {
+        const entry=point(corner,current,Math.min(reach*fraction,length(current,corner)*.8)/length(current,corner));
+        const exit=point(after,following,Math.min(reach*fraction,outgoing*.45)/outgoing);
+        const run=(exit.x-entry.x)*incoming.x+(exit.y-entry.y)*incoming.y;
+        const c={x:entry.x+incoming.x*run*.45,y:entry.y+incoming.y*run*.45};
+        const d={x:exit.x-incoming.x*run*.45,y:exit.y-incoming.y*run*.45};
+        const steps=Math.max(16,Math.ceil((run+b)/4));
+        const sweep=Array.from({length:steps+1},(_,j)=>cubic(entry,c,d,exit,j/steps));
+        if(!clears(sweep,obstacles)||!avoidsRoutes(sweep,foreign))continue;
+        segment(entry,i);result+=` C ${pair(c)} ${pair(d)} ${pair(exit)}`;
+        samples.push(...sweep.slice(1));current=exit;i++;swept=true;break;
+      }
+      if(swept)continue;
+    }
+    let radius=Math.min(48,length(current,corner)*.5,b*.5),entry=corner,exit=corner;
     while(radius>=.75) {
       entry=point(corner,before,radius/a);exit=point(corner,after,radius/b);
       const arc=Array.from({length:11},(_,j)=>{const t=j/10,u=1-t;return {x:u*u*entry.x+2*u*t*corner.x+t*t*exit.x,y:u*u*entry.y+2*u*t*corner.y+t*t*exit.y};});

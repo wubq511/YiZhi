@@ -40,7 +40,7 @@
 .board-route[data-type="improves"], .board-route-ink[data-type="improves"] { stroke-dasharray: 1 6; }
 .board-route[data-type="inverse"], .board-route-ink[data-type="inverse"] { stroke-dasharray: 9 4 1 4; }
 .board-route-hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; cursor: pointer; }
-.board-route-arrow { fill: none; stroke: #294b72; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.board-route-arrow { fill: none; stroke: #294b72; stroke-width: 1.55; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 .board-route-arrow .board-route-arrow-fill { fill: #294b72; stroke: none; }
 .board-route-arrow .board-route-arrow-paper { fill: white; stroke: none; }
 .board-route-label { pointer-events: none; fill: #27343e; font: 12px 'PingFang SC', sans-serif; paint-order: stroke; stroke: white; stroke-width: 4px; stroke-linejoin: round; }

@@ -16,8 +16,7 @@ export function boardRouteLabel(route:BoardRoute) {
 type Label={x:number;y:number;text:string};
 type Rect={left:number;top:number;right:number;bottom:number};
 const overlaps=(a:Rect,b:Rect)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
-const touchesSegment=(rect:Rect,a:Point,b:Point)=>{
-  const pad=5;
+const touchesSegment=(rect:Rect,a:Point,b:Point,pad=5)=>{
   return Math.max(a.x,b.x)>rect.left-pad&&Math.min(a.x,b.x)<rect.right+pad&&
     Math.max(a.y,b.y)>rect.top-pad&&Math.min(a.y,b.y)<rect.bottom+pad;
 };
@@ -52,29 +51,30 @@ function makeInk(route:BoardRoute):RouteInk {
   return {start:endpoint(first,next),end:endpoint(last,previous),marks:generator.toPaths(shape).map(path=>path.d)};
 }
 
-/** Use the longest segment and keep labels out of content and other labels at this zoom. */
+/** Place labels along the visible curve, clear of content, ink and other labels. */
 function labelsFor(routes:BoardRoute[],scene:BoardScene,viewport:Viewport,drawings:Map<string,StrokeDrawing>):Map<string,Label> {
   const z=viewport.zoom, occupied:Rect[]=[], labels=new Map<string,Label>();
   const obstacles=scene.units.map(n=>({left:viewport.x+n.x*z,top:viewport.y+n.y*z,right:viewport.x+(n.x+n.width)*z,bottom:viewport.y+(n.y+n.height)*z}));
   for(const theme of scene.themes)obstacles.push({left:viewport.x+theme.x*z,top:viewport.y+(theme.y-themeTitleSpace(theme,scene.themes))*z,right:viewport.x+(theme.x+themeTitleWidth(theme,scene.themes))*z,bottom:viewport.y+(theme.y+80)*z});
+  const paths=new Map(routes.map(route=>[route.id,(drawings.get(route.id)?.samples??route.points.map(p=>({x:p.x*z,y:p.y*z})))
+    .map(p=>({x:viewport.x+p.x,y:viewport.y+p.y}))]));
   for(const route of routes) {
     // Individual relations stay visible as lines in overview; selecting them
     // or entering the unit view reveals their complete meaning.
     if(route.kind==='internal')continue;
-    let segment=0,length=-1;
-    for(let i=1;i<route.points.length;i++) {const a=route.points[i-1],b=route.points[i],candidate=Math.abs(a.x-b.x)+Math.abs(a.y-b.y);if(candidate>length){length=candidate;segment=i-1;}}
-    if(length*z<100)continue;
-    const a=route.points[segment],b=route.points[segment+1],x=(a.x+b.x)/2,y=(a.y+b.y)/2,text=boardRouteLabel(route);
-    const sx=viewport.x+x*z,sy=viewport.y+y*z,width=Math.max(24,[...text].reduce((sum,c)=>sum+(/[^\x00-\x7f]/.test(c)?12:7),0));
-    const rect={left:sx-width/2-3,right:sx+width/2+3,top:sy-20,bottom:sy-3};
-    if(obstacles.some(item=>overlaps(rect,item))||occupied.some(item=>overlaps(rect,item)))continue;
-    if(routes.some(other=>{
-      if(other.id===route.id)return false;
-      const points=drawings.get(other.id)?.samples?.map(p=>({x:viewport.x+p.x,y:viewport.y+p.y}))
-        ??other.points.map(p=>({x:viewport.x+p.x*z,y:viewport.y+p.y*z}));
-      return points.slice(1).some((p,i)=>touchesSegment(rect,points[i],p));
-    }))continue;
-    occupied.push(rect);labels.set(route.id,{x,y,text});
+    const points=paths.get(route.id)!,distances=[0];
+    for(let i=1;i<points.length;i++)distances.push(distances[i-1]+Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y));
+    const length=distances.at(-1)??0;if(length<100)continue;
+    const text=boardRouteLabel(route),width=Math.max(24,[...text].reduce((sum,c)=>sum+(/[^\x00-\x7f]/.test(c)?12:7),0));
+    for(const fraction of [.5,.4,.6,.3,.7]) {
+      const distance=length*fraction,index=distances.findIndex(d=>d>=distance),a=points[index-1],b=points[index];
+      const t=(distance-distances[index-1])/(distances[index]-distances[index-1]);
+      const sx=a.x+(b.x-a.x)*t,sy=a.y+(b.y-a.y)*t;
+      const rect={left:sx-width/2-3,right:sx+width/2+3,top:sy-20,bottom:sy-4};
+      if(obstacles.some(item=>overlaps(rect,item))||occupied.some(item=>overlaps(rect,item)))continue;
+      if([...paths].some(([id,path])=>path.slice(1).some((p,i)=>touchesSegment(rect,path[i],p,id===route.id?1.5:5))))continue;
+      occupied.push(rect);labels.set(route.id,{x:(sx-viewport.x)/z,y:(sy-viewport.y)/z,text});break;
+    }
   }
   return labels;
 }
@@ -142,9 +142,9 @@ export function BoardRoutes({scene,viewport,width,height,selectedUnitId,selected
         const direct=route.kind==='theme'?directCurve(points,nearby,foreign):undefined;
         const seed=routeSeed(route.id),organic=direct?undefined:organicRoute(points,nearby,seed,foreign);
         const path=direct?.path??organic!.path;
-        const shape=generator.path(path,{seed,roughness:1.25,bowing:1,maxRandomnessOffset:.8,preserveVertices:true});
+        const shape=generator.path(path,{seed,roughness:.65,bowing:.7,maxRandomnessOffset:.45,preserveVertices:true,disableMultiStroke:true});
         drawing={ink:generator.toPaths(shape).map(item=>item.d),path,direct:!!direct,
-          samples:route.kind==='theme'?direct?.samples??organic?.samples:undefined};cache.set(route.id,drawing);
+          samples:direct?.samples??organic?.samples};cache.set(route.id,drawing);
       }
       return drawing;
     };
@@ -171,7 +171,7 @@ export function BoardRoutes({scene,viewport,width,height,selectedUnitId,selected
         {drawing?.marks.map((path,i)=><path key={i} d={path} />)}
         </g>
       </g>;};
-      const stroke=strokes.get(route.id),label=stroke?.direct?undefined:labels.get(route.id),name=boardRouteLabel(route);
+      const stroke=strokes.get(route.id),label=labels.get(route.id),name=boardRouteLabel(route);
       const related=selectedThemeId && (route.kind==='theme' ? route.source===selectedThemeId||route.target===selectedThemeId
         : route.kind==='internal' ? themeByUnit.get(route.source)===selectedThemeId : route.source===selectedUnitId||route.target===selectedUnitId);
       return <g key={route.id} className="react-flow__edge board-route-group" role="button" tabIndex={0}

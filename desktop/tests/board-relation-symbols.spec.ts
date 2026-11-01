@@ -3,6 +3,36 @@ import { build } from 'esbuild';
 import { readFile } from 'node:fs/promises';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
 
+test('small routed offsets stay fluid in the actual ink and keep a matching hit target', async ({ page }) => {
+  const bundle=await build({bundle:true,write:false,platform:'browser',format:'iife',jsx:'automatic',stdin:{resolveDir:process.cwd(),sourcefile:'relation-shallow-step.tsx',loader:'tsx',contents:`
+    import React from 'react';
+    import {createRoot} from 'react-dom/client';
+    import {ReactFlow,ReactFlowProvider} from '@xyflow/react';
+    import {BoardRoutes} from './src/renderer/board-edge';
+    const edge={id:'shallow',source:'a',target:'b',type:'requires',directed:true,memberIds:['shallow'],kind:'unit',label:'requires',points:[{x:80,y:100},{x:112,y:100},{x:112,y:98},{x:340,y:98}]};
+    const scene={themes:[],units:[],edges:[edge]};
+    createRoot(document.getElementById('root')!).render(<ReactFlowProvider><div style={{width:600,height:250}}><ReactFlow nodes={[]} edges={[]} viewport={{x:0,y:0,zoom:1}}><BoardRoutes scene={scene} viewport={{x:0,y:0,zoom:1}} width={600} height={250} onActivate={ids=>document.body.dataset.activated=ids.join(',')} /></ReactFlow></div></ReactFlowProvider>);
+  `}});
+  await page.setContent('<div id="root"></div>');
+  await page.addStyleTag({content:await readFile('node_modules/@xyflow/react/dist/style.css','utf8')});
+  await page.addStyleTag({content:await readFile('src/renderer/board-scene.css','utf8')});
+  await page.addScriptTag({content:bundle.outputFiles[0].text});
+  const ink=page.locator('.board-route-ink');
+  await expect(ink).toBeAttached();
+  const measured=await ink.evaluate(element=>{
+    const path=element as SVGPathElement,total=path.getTotalLength();let angle=0;
+    for(let distance=2;distance<=total;distance+=2) {
+      const a=path.getPointAtLength(distance-2),b=path.getPointAtLength(distance);
+      angle=Math.max(angle,Math.abs(Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI));
+    }
+    const point=path.getPointAtLength(35),m=path.getScreenCTM()!;
+    return {angle,x:m.a*point.x+m.c*point.y+m.e,y:m.b*point.x+m.d*point.y+m.f};
+  });
+  expect(measured.angle,'a tiny route offset must not render as a vertical stair').toBeLessThan(20);
+  await page.mouse.click(measured.x,measured.y);
+  await expect(page.locator('body')).toHaveAttribute('data-activated','shallow');
+});
+
 test('a clear theme relation uses a clickable curve and yields to an obstacle', async ({ page }) => {
   const bundle=await build({bundle:true,write:false,platform:'browser',format:'iife',jsx:'automatic',stdin:{resolveDir:process.cwd(),sourcefile:'relation-curve.tsx',loader:'tsx',contents:`
     import React from 'react';
@@ -59,7 +89,8 @@ test('a distant solid relation remains visibly continuous and curved', async ({ 
     for(let i=0;i<=100;i++)max=Math.max(max,Math.abs(path.getPointAtLength(total*i/100).y-25));
     return max;
   });
-  expect(deviation,'the line should have a visible, gentle hand-drawn bend').toBeGreaterThan(2);
+  expect(deviation,'the line should retain a gentle hand-drawn bend').toBeGreaterThan(.65);
+  expect(deviation,'short overview strokes should not acquire a decorative wave').toBeLessThan(2.5);
 });
 
 test('hand-drawn strokes do not merge when separate routes run close together', async ({ page }) => {
