@@ -453,10 +453,12 @@ test('wheel inside the relationships panel scrolls it without panning the canvas
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const window = await app.firstWindow();
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1024, 684));
     await openRelations(window);
     const panel = window.getByLabel('关系详情');
+    await expect.poll(() => panel.evaluate(el => el.scrollHeight - el.clientHeight)).toBeGreaterThan(300);
     const transform = () => window.locator('.react-flow__viewport').evaluate(el => getComputedStyle(el).transform);
-    const before = await transform(); await panel.hover(); await window.mouse.wheel(0, 300);
+    const before = await transform(); await panel.hover({ position: { x: 10, y: 120 } }); await window.mouse.wheel(0, 300);
     await expect.poll(() => panel.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
     expect(await transform()).toBe(before);
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
