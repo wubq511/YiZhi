@@ -18,6 +18,7 @@ test('Agent sidebar keeps drafts, native composer Undo, fixed source selection a
   let app: ElectronApplication | undefined;
   try {
     app = await launch(); let page = await app.firstWindow();
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1440, 900));
     await openFirstUnit(page);
     await expect.poll(() => page.evaluate(async () => { const b = (window as any).yizhi; const c = await b.open(); return (await b.readingState(c.sessionId))?.camera?.zoom; })).toBe(0.85);
     const original = await page.evaluate(async () => { const b = (window as any).yizhi; const c = await b.open(); return { body: c.unit, state: await b.readingState(c.sessionId) }; });

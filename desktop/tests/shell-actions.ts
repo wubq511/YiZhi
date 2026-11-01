@@ -45,8 +45,12 @@ export async function openRelations(page: Page) {
   await page.getByRole('menuitem',{name:'查看与编辑正式关系',exact:true}).click();
 }
 export async function relationScope(page: Page, scope: string) {
+  const panel = page.getByLabel('关系详情');
+  const hiddenToolbar = await panel.isVisible() && !await page.locator('.canvas-toolbar [aria-label="关系"]').isVisible();
+  if (hiddenToolbar) await panel.getByRole('button', { name: '关闭关系详情', exact: true }).click();
   await page.getByRole('button',{name:'关系',exact:true}).click();
   await page.getByRole('menuitemradio',{name:({main:'主关系',auxiliary:'辅助关系',all:'全部关系'} as Record<string,string>)[scope],exact:true}).click();
+  if (hiddenToolbar) await openRelations(page);
 }
 export async function conversationTitles(page: Page) {
   await page.getByRole('button',{name:'学习对话列表',exact:true}).click();

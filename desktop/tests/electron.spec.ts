@@ -255,6 +255,7 @@ test('relationship browser preserves required and alternative prerequisite route
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const window = await app.firstWindow();
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1024, 684));
     await openRelations(window);
     await expect(window.getByText('KU-029：真值表与标准式互转')).toBeVisible();
     await expect(window.getByText(/任选一条.*KU-033.*KU-035/)).toBeVisible();
@@ -466,6 +467,7 @@ test('camera can step from reading through unit overview to theme overview in on
   const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile') } });
   try {
     const window = await app.firstWindow();
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1024, 684));
     await openFirstUnit(window);
     await expect(window.getByRole('heading', { name: '位置记数法与权展开' })).toBeVisible();
     const initialZoom = await window.locator('.react-flow__viewport').evaluate(el => new DOMMatrixReadOnly(getComputedStyle(el).transform).a);
@@ -475,7 +477,7 @@ test('camera can step from reading through unit overview to theme overview in on
     for (let i = 0; i < 3; i++) await window.mouse.wheel(0, 180);
     await window.keyboard.up('Meta');
     await expect.poll(() => window.locator('.react-flow__viewport').evaluate(el => new DOMMatrixReadOnly(getComputedStyle(el).transform).a)).toBeLessThan(initialZoom);
-    await expect(window.locator('[data-id="KU-002"]')).toHaveCSS('opacity', '1');
+    await expect(window.locator('[data-id="KU-001"]')).toHaveCSS('opacity', '1');
     await window.getByRole('button', { name: '全图' }).click();
     await expect(window.locator('[data-id="KU-002"]')).toHaveClass(/board-unit-thumbnail/);
     await expect(window.locator('[data-id="TH-01"]')).toHaveCSS('opacity', '1');

@@ -76,6 +76,8 @@ jobs:
           cache-dependency-path: desktop/package-lock.json
       - run: npm ci
       - run: npm run build
+      - name: Install Chromium headless shell for browser UI tests
+        run: npx playwright install chromium --only-shell
       - name: UI shard ${{ matrix.shard }}/4 (one visible worker)
         run: npm run test:smoke:built -- --fully-parallel --shard=${{ matrix.shard }}/4 --workers=1
       - name: Upload failed desktop UI evidence

@@ -12,6 +12,7 @@ test('formal relation editor rejects incomplete evidence, saves a reviewed corre
   let app = await launch();
   try {
     let window = await app.firstWindow();
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1024, 684));
     await openRelations(window);
     const panel = window.getByLabel('关系详情');
     await expect(panel.getByText('个人箭头只作个人标注；正式关系在此独立审核。')).toBeVisible();

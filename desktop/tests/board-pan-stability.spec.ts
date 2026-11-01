@@ -13,10 +13,6 @@ for(const gesture of ['drag','wheel'] as const)test(`overview ${gesture} keeps t
     const page=await app.firstWindow();await resizeBoardWindow(app,page,1024,768);
     await page.getByRole('button',{name:'全图',exact:true}).click();
     await expect(page.locator('.board-route-ink').first()).toBeAttached();
-    const cdp=await page.context().newCDPSession(page),frames:string[]=[],screenTimes:Array<{at:number;timestamp?:number}>=[],ackErrors:string[]=[];
-    let stopping=false;
-    cdp.on('Page.screencastFrame',frame=>{if(frames.length<200){frames.push(frame.data);screenTimes.push({at:nodePerformance.now(),timestamp:frame.metadata?.timestamp});}void cdp.send('Page.screencastFrameAck',{sessionId:frame.sessionId}).catch(error=>{if(!stopping)ackErrors.push(String(error));});});
-    await cdp.send('Page.startScreencast',{format:'jpeg',quality:75,everyNthFrame:1});
     const point=await boardWheelPoint(page);
     const clock=async()=>{const before=nodePerformance.now(),pageTime=await page.evaluate(()=>performance.now()),after=nodePerformance.now();return {before,after,pageTime,uncertainty:(after-before)/2};};
     const native=()=>app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().map(w=>({focused:w.isFocused(),visible:w.isVisible(),minimized:w.isMinimized(),bounds:w.getBounds()})));
@@ -26,6 +22,15 @@ for(const gesture of ['drag','wheel'] as const)test(`overview ${gesture} keeps t
     for(let i=1;i<=80;i++){const sent=nodePerformance.now();if(gesture==='drag')await page.mouse.move(point.x+i*2,point.y+i);else await page.mouse.wheel(2,1);commands.push({step:i,sent,done:nodePerformance.now()});}
     if(gesture==='drag')await page.mouse.up();await page.waitForTimeout(100);
     const probe=await finishPanProbe(page),result=probe.samples,clockAfter=await clock(),nativeAfter=await native();
+    // Screencast JPEG encoding and CDP acknowledgements compete with input and rAF on hosted runners.
+    // Observe frame pacing first, then exercise the same gesture while checking the fixed shell visually.
+    const cdp=await page.context().newCDPSession(page),frames:string[]=[],screenTimes:Array<{at:number;timestamp?:number}>=[],ackErrors:string[]=[];
+    let stopping=false;
+    cdp.on('Page.screencastFrame',frame=>{if(frames.length<200){frames.push(frame.data);screenTimes.push({at:nodePerformance.now(),timestamp:frame.metadata?.timestamp});}void cdp.send('Page.screencastFrameAck',{sessionId:frame.sessionId}).catch(error=>{if(!stopping)ackErrors.push(String(error));});});
+    await cdp.send('Page.startScreencast',{format:'jpeg',quality:75,everyNthFrame:1});
+    await page.mouse.move(point.x,point.y);if(gesture==='drag')await page.mouse.down();
+    for(let i=1;i<=80;i++){if(gesture==='drag')await page.mouse.move(point.x+i*2,point.y+i);else await page.mouse.wheel(2,1);}
+    if(gesture==='drag')await page.mouse.up();await page.waitForTimeout(100);
     stopping=true;await cdp.send('Page.stopScreencast');await cdp.detach();
     const shellSamples:number[][]=[];
     for(const frame of frames){const image=await loadImage(Buffer.from(frame,'base64')),canvas=createCanvas(10,30),ctx=canvas.getContext('2d');ctx.drawImage(image,8,100,48,300,0,0,10,30);shellSamples.push([...ctx.getImageData(0,0,10,30).data]);}

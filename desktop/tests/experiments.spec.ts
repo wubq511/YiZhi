@@ -67,14 +67,15 @@ async function reveal(page: Page, target: Locator) {
       } else {
         stable = 0;
         // Reading tables own their wheel; find an actual board hit that can pan.
-        const origin = await page.evaluate(({ left, right, top, height }) => {
+        const origin = await page.evaluate(({ left, width, top, height }) => {
           const ownsWheel = '.board-tools, .relations-panel, .source-dialog, .react-flow__minimap, .table-scroll, input, select, textarea, .mux, .builtin-formula-editor, math-field';
-          for (const fraction of [.5, .25, .75]) for (const x of [left, right]) {
-            const y = top + height * fraction, hit = document.elementFromPoint(x, y);
-            if (hit?.closest('main.board') && !hit.closest(ownsWheel)) return { x, y, hit: hit.outerHTML.slice(0, 280) };
+          for (const yFraction of [.5, .25, .75]) for (const xFraction of [.25, .5, .75, .02, .98]) {
+            const x = left + width * xFraction, y = top + height * yFraction;
+            const hit = document.elementFromPoint(x, y);
+            if (hit?.closest('main.board') && !hit.closest(ownsWheel) && !hit.closest('[inert]')) return { x, y, hit: hit.outerHTML.slice(0, 280) };
           }
           return null;
-        }, { left: board.x + 8, right: board.right - 8, top: board.y, height: board.height });
+        }, { left: board.x, width: board.width, top: board.y, height: board.height });
         last = { ...scene, wheelOrigin: origin };
         if (!origin) break;
         await page.mouse.move(origin.x, origin.y);
