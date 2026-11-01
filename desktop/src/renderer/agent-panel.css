@@ -8,10 +8,12 @@
 .agent-panel select { font: inherit; font-size: 13px; max-width: 100%; }
 .agent-panel [data-slot="button"] { max-width: 100%; }
 /* The bottom fade belongs to the pill's lane, so the viewport's own scroll fade is dropped rather than washing the same line twice. */
-.agent-panel [data-slot="message-scroller-viewport"] { min-height: 45%; mask-image: none; -webkit-mask-image: none; scrollbar-width: thin; scrollbar-color: #cfc8d9 transparent; }
+.agent-panel [data-slot="message-scroller-viewport"] { mask-image: none; -webkit-mask-image: none; scrollbar-width: thin; scrollbar-color: #cfc8d9 transparent; }
 /* Learning conversations stay short; skipping off-screen rows would hide answers from the accessibility tree. */
 .agent-panel [data-slot="message-scroller-item"] { content-visibility: visible; }
-.agent-panel [data-slot="message-scroller-content"] { gap: 20px; padding-block: 6px 52px; }
+/* The pill's lane is only owed while the stream has more below; a short conversation keeps its bottom for the next turn. */
+.agent-panel [data-slot="message-scroller-content"] { gap: 20px; padding-block: 6px 8px; }
+.agent-panel [data-slot="message-scroller"]:has([data-slot="message-scroller-button"][data-active="true"]) [data-slot="message-scroller-content"] { padding-bottom: 52px; }
 .agent-empty { color: #626b79; margin-block: 8px; }
 .agent-panel [data-slot="bubble-content"] { font: 14px/1.7 "PingFang SC", system-ui, sans-serif; }
 .agent-quote { margin: 0; padding: 6px 10px; border-radius: 8px; background: #f4f2fa; color: #57506b; font-size: 12.5px; line-height: 1.6; overflow-wrap: anywhere; }
@@ -50,7 +52,8 @@
 .agent-citation-meta { color: #696575; font-size: 12px; }
 .agent-citation-card [data-slot="button"][data-variant="link"] { border: 0; background: none; appearance: none; }
 .agent-nowrap { white-space: nowrap; }
-.agent-composer { flex: 0 1 auto; min-height: 0; max-height: 46%; overflow-y: auto; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e5e5eb; scrollbar-width: thin; scrollbar-color: #cfc8d9 transparent; }
+/* The composer is a fixed tool: it spends only what its content needs so the stream keeps the rest. */
+.agent-composer { container-type: inline-size; flex: 0 1 auto; min-height: 0; max-height: 55%; overflow-y: auto; margin-top: 10px; padding-top: 10px; border-top: 1px solid #e5e5eb; scrollbar-width: thin; scrollbar-color: #cfc8d9 transparent; }
 .agent-composer label { display: block; }
 .agent-target { margin: 0 0 8px; font-size: 12px; color: #5f6479; overflow-wrap: anywhere; }
 .agent-composer [data-slot="toggle-group"] { width: 100%; margin-bottom: 8px; }
@@ -72,18 +75,23 @@
 .agent-generation-candidate ul { padding-left: 18px; margin: 8px 0; }
 .agent-generation-candidate li + li { margin-top: 4px; }
 .agent-generation-candidate code { white-space: normal; overflow-wrap: anywhere; }
-.agent-composer textarea { width: 100%; min-height: 92px; height: 112px; max-height: 30vh; resize: vertical; margin: 8px 0; box-sizing: border-box; font: 14px/1.75 "PingFang SC", system-ui, sans-serif; color: #30303b; background: #fff; caret-color: #6965db; }
+/* field-sizing lets the draft start at one line and pay for itself as it grows. */
+.agent-composer textarea { width: 100%; min-height: 44px; max-height: 140px; resize: none; margin: 0 0 8px; box-sizing: border-box; font: 14px/1.6 "PingFang SC", system-ui, sans-serif; color: #30303b; background: #fff; caret-color: #6965db; }
 .agent-composer textarea::placeholder { color: #687080; }
 .agent-panel ::selection { color: #27343e; background: #eeedff; }
 .agent-panel select:focus-visible, .agent-panel summary:focus-visible, .agent-panel input:focus-visible { outline: 2px solid #7568cd; outline-offset: 2px; }
-.agent-send { display: flex; gap: 8px; align-items: end; }
+.agent-send { display: flex; gap: 8px; align-items: center; }
 .agent-send > button { flex: 0 0 auto; }
-.agent-send label { min-width: 0; flex: 1; font-size: 12px; color: #5f6479; }
-.agent-send label + label { flex: 0 0 104px; }
-.agent-send [data-slot="native-select-wrapper"] { width: 100%; min-width: 0; }
+/* The model control already names itself; only the effort value needs a word beside it to be read. */
+.agent-send .agent-model { flex: 1 1 0; width: auto; min-width: 0; }
+.agent-send .agent-effort { display: flex; align-items: center; gap: 5px; flex: 0 0 auto; font-size: 12px; line-height: 1; color: #5f6479; }
+.agent-send .agent-effort [data-slot="native-select-wrapper"] { width: auto; min-width: 0; }
 .agent-send [data-slot="native-select"] { padding-right: 32px; text-overflow: ellipsis; }
+/* Near the drag minimum the model name earns the room the effort label was using. */
+@container (max-width: 300px) { .agent-send .agent-effort > span { display: none; } }
 /* The jump-to-latest pill must never bisect a line of answers: it owns a lane opaque across its whole band at the bottom of the scroller. */
-.agent-panel [data-slot="message-scroller"]::after { content: ""; position: absolute; inset-inline: 0; inset-block-end: 0; height: 48px; pointer-events: none; background: linear-gradient(to top, var(--shell-panel) 0 34px, transparent); }
+.agent-panel [data-slot="message-scroller"]::after { content: ""; position: absolute; inset-inline: 0; inset-block-end: 0; height: 48px; pointer-events: none; opacity: 0; background: linear-gradient(to top, var(--shell-panel) 0 34px, transparent); transition: opacity 200ms var(--shell-motion-ease); }
+.agent-panel [data-slot="message-scroller"]:has([data-slot="message-scroller-button"][data-active="true"])::after { opacity: 1; }
 .agent-panel [data-slot="message-scroller-button"] { bottom: 8px; z-index: 1; }
 .agent-focal { font-size: 13px; color: #696575; }
 .agent-composer [role="status"] { font-size: 12px; color: #5f6479; overflow-wrap: anywhere; }
@@ -96,7 +104,7 @@
   .agent-composer { margin-top: 8px; padding-top: 8px; }
   .agent-composer .agent-target { margin: 0 0 4px; }
   .agent-composer [role="status"] { margin: 4px 0 0; }
-  .agent-composer textarea { height: 92px; margin: 4px 0; }
+  .agent-composer textarea { min-height: 38px; margin: 0 0 4px; }
 }
 
 .agent-prose .katex { font-size: 1.08em; }

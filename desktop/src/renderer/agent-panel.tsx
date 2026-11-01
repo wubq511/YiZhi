@@ -247,13 +247,13 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
       const next=await api.continue({sessionId,taskId:task.id,operationId:crypto.randomUUID()});
       await watch(next); await refresh();
     })}>继续剩余工作</Button>}
-    {answer && task.status === 'completed' && (!task.snapshot.intent || task.snapshot.intent === 'question') && <Button variant="outline" size="xs" disabled={busy||!executor?.available} title="把这条回答整理为画板上的补充材料" onClick={()=>void guard(async()=>{
+    {answer && task.status === 'completed' && (!task.snapshot.intent || task.snapshot.intent === 'question') && <Button variant="link" size="xs" disabled={busy||!executor?.available} title="把这条回答整理为画板上的补充材料" onClick={()=>void guard(async()=>{
       if(!current.current||!await flush())return;
       await prepareMutation();
       const next=await api.submit({sessionId,conversationId:current.current,operationId:crypto.randomUUID(),generation,
         intent:'add-to-board',mode:'queue',text:boardRequest(answer),target:task.snapshot.target,...(model?{model}:{})});
       await watch(next); await refresh();
-    })}>加入画板</Button>}
+    })}><Plus data-icon="inline-start"/>加入画板</Button>}
   </MessageFooter>;
   return <PanelPortal id="agent"><aside ref={panel} className="agent-panel" role={narrow ? 'dialog' : 'complementary'} aria-modal={narrow || undefined} aria-label="Agent 学习对话" onKeyDown={event => {
       // Let native textarea Undo edit only the composer. No board/editor command receives it.
@@ -298,7 +298,7 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
                     : <Message align="start"><MessageContent>
                       {status && (!task || current) && <MessageHeader role="status" aria-label="回答状态">{status}</MessageHeader>}
                       {current && <AgentTrace task={task!} reasonings={view.reasonings.filter(r => r.taskId === task!.id)} facts={view.toolFacts.filter(f => f.taskId === task!.id)} live={liveStatus.includes(task!.status)} receipts={receipts(task!)}/>}
-                      <Bubble variant="outline" className="max-w-full"><BubbleContent className="agent-prose w-full"><AgentProse text={message.text}/></BubbleContent></Bubble>
+                      <AgentProse text={message.text}/>
                       {task?.snapshot.intent === 'generate' && current && <GenerationTask sessionId={sessionId} task={task}/>}
                       {current && task?.snapshot.citations.length ? <AgentCitations references={task!.snapshot.citations} open={openCitation}/> : null}
                       {current && note(task!)}
@@ -338,8 +338,8 @@ export const AgentPanel = forwardRef<AgentPanelHandle, {
           draft.current = event.currentTarget.value; markDirty();
         }} />
         <div className="agent-send">
-          <label>模型<NativeSelect aria-label="问答模型" value={model} onChange={e => setModel(e.target.value)} disabled={!executor?.available || busy}>{executor?.models.map(m => <NativeSelectOption key={m.model} value={m.model}>{m.displayName || m.model}</NativeSelectOption>)}</NativeSelect></label>
-          {showEffort && <label>思考强度<NativeSelect aria-label="思考强度" value={effort} disabled={!executor?.available || busy} onChange={e => setEffort(e.target.value)}>{effortOptions.map(o => <NativeSelectOption key={o.effort} value={o.effort} title={o.description}>{effortLabel[o.effort] ?? o.effort}</NativeSelectOption>)}</NativeSelect></label>}
+          <NativeSelect className="agent-model" aria-label="问答模型" title={model || undefined} value={model} onChange={e => setModel(e.target.value)} disabled={!executor?.available || busy}>{executor?.models.map(m => <NativeSelectOption key={m.model} value={m.model}>{m.displayName || m.model}</NativeSelectOption>)}</NativeSelect>
+          {showEffort && <label className="agent-effort"><span>思考强度</span><NativeSelect aria-label="思考强度" value={effort} disabled={!executor?.available || busy} onChange={e => setEffort(e.target.value)}>{effortOptions.map(o => <NativeSelectOption key={o.effort} value={o.effort} title={o.description}>{effortLabel[o.effort] ?? o.effort}</NativeSelectOption>)}</NativeSelect></label>}
           <Button variant="default" size="default" disabled={busy || !executor?.available} onClick={() => void guard(async () => { if (!current.current) await create(); await send(); })}>{intent==='generate'?updateGenerated?'更新小主题':'生成小主题':working ? messageMode === 'queue' ? '排队发送' : '发送引导' : intent === 'question' ? '发送问题' : '发送修改请求'}</Button>
         </div>
         {draftState === '草稿未保存' && <p role="status" aria-label="对话草稿保存">草稿未保存</p>}
