@@ -1,16 +1,18 @@
 .react-flow__node.board-theme {
   display: block;
   padding: 0;
-  border: 2px solid #bbc9d5;
+  border: var(--board-theme-border, 2px) solid #9eafbf;
   border-radius: 8px;
   background: transparent;
   color: #27343e;
-  font-size: var(--board-theme-font, 40px);
+  font-size: min(var(--board-theme-font, 40px), 181.8px);
   line-height: 1.1;
   text-align: left;
   overflow-wrap: anywhere;
 }
 .react-flow__node.board-theme > span { position: absolute; left: 0; top: 0; width: 100%; transform: translateY(-100%); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.react-flow__node.board-theme-multiline { font-size: var(--board-theme-font, 40px); }
+.react-flow__node.board-theme-multiline > span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; overflow-wrap: anywhere; }
 .react-flow__node.board-unit {
   display: block;
   padding: 12px 18px;
@@ -24,19 +26,26 @@
   overflow-wrap: anywhere;
 }
 .react-flow__node.board-unit-thumbnail {
-  background: #f0f5fc;
-  border-color: #c7d7e8;
+  background: #e5eef8;
+  border-width: var(--board-thumbnail-border, 2px);
+  border-color: #a0b7cf;
   color: transparent;
   font-size: 0;
 }
-.react-flow__node.board-unit-thumbnail::after { content: ''; display: block; width: 58%; height: 18px; margin: 28px 18px; border-radius: 9px; background: #96b0ca; }
+.react-flow__node.board-unit-thumbnail::after { content: ''; display: block; width: 58%; height: var(--board-thumbnail-mark, 18px); margin: 28px 18px; border-radius: 9px; background: #829fbf; }
 .board-route-layer { position: absolute; inset: 0 auto auto 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
-.board-route { fill: none; stroke: #345d88; stroke-width: 2; pointer-events: none; }
-.board-route-hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; }
-.board-route-arrow { fill: #345d88; pointer-events: none; }
+.board-route, .board-route-ink { fill: none; stroke: #294b72; stroke-width: 1.45; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.board-route { stroke-opacity: 0; }
+.board-route[data-type="constructs"], .board-route-ink[data-type="constructs"] { stroke-dasharray: 9 6; }
+.board-route[data-type="improves"], .board-route-ink[data-type="improves"] { stroke-dasharray: 1 6; }
+.board-route[data-type="inverse"], .board-route-ink[data-type="inverse"] { stroke-dasharray: 9 4 1 4; }
+.board-route-hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; cursor: pointer; }
+.board-route-arrow { fill: none; stroke: #294b72; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.board-route-arrow .board-route-arrow-fill { fill: #294b72; stroke: none; }
+.board-route-arrow .board-route-arrow-paper { fill: white; stroke: none; }
 .board-route-label { pointer-events: none; fill: #27343e; font: 12px 'PingFang SC', sans-serif; paint-order: stroke; stroke: white; stroke-width: 4px; stroke-linejoin: round; }
-.react-flow__edge:focus-visible .board-route { stroke: #6555be; stroke-width: 3; }
-.board-route-group[data-related] .board-route { stroke: #6555be; stroke-width: 3; }
-.board-route-group[data-related] .board-route-arrow { fill: #6555be; }
+.board-route-group:hover .board-route-ink, .react-flow__edge:focus-visible .board-route-ink, .board-route-group[data-related] .board-route-ink { stroke: #6555be; stroke-width: 1.8; }
+.board-route-group:hover .board-route-arrow, .board-route-group[data-related] .board-route-arrow, .react-flow__edge:focus-visible .board-route-arrow { stroke: #6555be; }
+.board-route-group:hover .board-route-arrow-fill, .board-route-group[data-related] .board-route-arrow-fill, .react-flow__edge:focus-visible .board-route-arrow-fill { fill: #6555be; }
 .relation-member + .relation-member { margin-top: 16px; }
 .board-route-notice { position: absolute; z-index: 9; left: 16px; bottom: 16px; display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 12px; max-width: calc(100% - 32px); border-radius: 10px; background: #fff; color: #27343e; box-shadow: var(--shell-shadow); font-size: 13px; }

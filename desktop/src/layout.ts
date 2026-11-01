@@ -5,9 +5,26 @@ export interface LayoutPlacement { unitId: string; x: number; y: number; width: 
 export interface LayoutNode extends LayoutPlacement { height: number }
 export type LayoutSizes = Record<string, { width: number; height: number }>;
 export const LAYOUT_GAP = 24;
-export const THEME_PADDING = 64, THEME_HEADER = 112, THEME_TITLE_SPACE = 200;
+// Keep the existing collision band for saved layouts. New arrangements reserve
+// additional room for a two-line title without moving earlier baselines.
+export const THEME_PADDING = 64, THEME_HEADER = 112, THEME_TITLE_SPACE = 200, THEME_TITLE_MAX = 1100;
 /** Historical narrow cards are rendered with a readable body width. */
 export const readingWidth = (width: number) => width >= 360 ? width : 650;
+
+/** Give legacy short thumbnails usable height without moving saved positions or
+ * expanding into the next unit or another theme's reserved heading. */
+export function overviewThumbnailPlacements(graph:CourseGraph,placements:LayoutNode[]):LayoutNode[] {
+  const theme=new Map(graph.nodes.map(node=>[node.id,node.themeId]));
+  return placements.map(node=>{
+    let height=Math.max(node.height,320);
+    for(const other of placements) {
+      if(other===node||other.y<=node.y||node.x>=other.x+other.width||node.x+node.width<=other.x)continue;
+      const gap=theme.get(node.unitId)===theme.get(other.unitId)?LAYOUT_GAP:THEME_PADDING+THEME_HEADER+THEME_TITLE_MAX;
+      height=Math.min(height,Math.max(node.height,other.y-node.y-gap));
+    }
+    return height===node.height?node:{...node,height};
+  });
+}
 
 /** Apply compatibility widths only to the disposable reading projection. */
 export function projectReadingLayout(baseline: LayoutNode[], sizes: LayoutSizes, fixed?: LayoutPlacement): LayoutNode[] {

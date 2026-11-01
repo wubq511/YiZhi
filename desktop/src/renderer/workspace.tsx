@@ -25,7 +25,8 @@ import { AnnotationPanel, type AnnotationPanelHandle } from './annotation-panel'
 import { CameraController, type FollowState } from './camera-controller';
 import { MIN_BOARD_ZOOM, PinchViewportFrame } from './pinch-viewport-frame';
 import { useLocalLayout, ReadingSurface } from './local-layout';
-import { readingWidth, THEME_HEADER, THEME_PADDING, THEME_TITLE_SPACE, type LayoutPlacement } from '../layout';
+import { overviewThumbnailPlacements, readingWidth, THEME_HEADER, THEME_PADDING, THEME_TITLE_MAX, THEME_TITLE_SPACE, type LayoutPlacement } from '../layout';
+import { themeTitleSpace, themeTitleWidth } from '../board-layout';
 import {ExtensionExperiment,flushExtensions} from './extension-experiment';
 import { BuiltinExperiment, StaticBuiltinExperiment, flushBuiltinExperiments } from './builtin-experiment';
 
@@ -312,9 +313,9 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
   const readingDetail=viewport.zoom>=.55;
   // The intermediate view shortens B silhouettes without changing their
   // projected anchors; reading-only collision relief is applied separately.
-  const scenePlacements=useMemo(()=>unitDetail&&!readingDetail
+  const scenePlacements=useMemo(()=>!unitDetail&&graph ? overviewThumbnailPlacements(graph,local.placements) : unitDetail&&!readingDetail
     ? local.placements.map(node=>({...node,height:Math.min(node.height,136)})) : local.placements,
-    [local.placements,unitDetail,readingDetail]);
+    [graph,local.placements,unitDetail,readingDetail]);
   const {scene,error:boardError}=useBoardScene(course?.sessionId,graph,scenePlacements,unitDetail?'units':'themes',relationView);
   useEffect(()=>{if(boardError)setLoadError(`画板布局未能完成：${visibleError(boardError)}。请重新打开课程。`);},[boardError]);
   const [readingBounds,setReadingBounds]=useState({width:0,height:0});
@@ -503,7 +504,7 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
   };
   const fitOverview = async () => {
     const board = boardRef.current;
-    const items = local.overviewPlacements;
+    const items = graph ? overviewThumbnailPlacements(graph,local.overviewPlacements) : local.overviewPlacements;
     if (!board || !board.clientWidth || !board.clientHeight || !graph) return;
     const frame = board.getBoundingClientRect();
     const toolbar = board.querySelector<HTMLElement>('.canvas-toolbar')?.getBoundingClientRect();
@@ -514,13 +515,14 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
     // well as the minimum screen-sized font at a distant zoom.
     const occupied = new Set(graph.nodes.map(node => node.themeId));
     const rects = [
-      ...items.map(node => ({ x: node.x - THEME_PADDING, y: node.y - THEME_HEADER - 44,
-        width: node.width + THEME_PADDING * 2, height: node.height + THEME_HEADER + THEME_PADDING + 44 })),
-      ...(scene?.themes ?? graph.layout.groups).filter(group => !occupied.has(group.themeId)).map(group => ({...group, y: group.y - 44, height: group.height + 44})),
+      ...items.map(node => ({ x: node.x - THEME_PADDING, y: node.y - THEME_HEADER - THEME_TITLE_MAX,
+        width: node.width + THEME_PADDING * 2, height: node.height + THEME_HEADER + THEME_PADDING + THEME_TITLE_MAX })),
+      ...(scene?.themes ?? graph.layout.groups).filter(group => !occupied.has(group.themeId)).map(group => ({...group, y: group.y - THEME_TITLE_MAX, height: group.height + THEME_TITLE_MAX})),
     ];
     if (!rects.length) return;
     const left=Math.min(...rects.map(rect=>rect.x)),topEdge=Math.min(...rects.map(rect=>rect.y));
-    const titledBounds={x:left,y:topEdge,width:Math.max(...rects.map(rect=>rect.x+rect.width))-left,height:Math.max(...rects.map(rect=>rect.y+rect.height))-topEdge};
+    const titleRight=scene?.themes.map(theme=>theme.x+themeTitleWidth(theme,scene.themes))??[];
+    const titledBounds={x:left,y:topEdge,width:Math.max(...rects.map(rect=>rect.x+rect.width),...titleRight)-left,height:Math.max(...rects.map(rect=>rect.y+rect.height))-topEdge};
     const top = Math.min(board.clientHeight * .4, toolbar?.height ? toolbar.bottom - frame.top + 18 : 32);
     const right = Math.min(Math.max(24, board.clientWidth - 48), relation?.width ? frame.right - relation.left + 24 : 24);
     const bottom = Math.min(board.clientHeight - top - 48, controls.length ? frame.bottom - Math.min(...controls.map(rect => rect.top)) + 16 : 24);
@@ -590,7 +592,7 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
     if (!scene || !graph) return [];
     const names = new Map(graph.nodes.map(node => [node.id, node.name]));
     return [
-      ...scene.themes.map(theme => ({ id: theme.themeId, position: { x: theme.x, y: theme.y }, data: { label: <span title={theme.title}>{theme.title}</span> }, className: 'board-theme', width: theme.width, height: theme.height, style: { width: theme.width, height: theme.height }, selectable: false, draggable: false, zIndex: 0 })),
+      ...scene.themes.map(theme => ({ id: theme.themeId, position: { x: theme.x, y: theme.y }, data: { label: <span title={theme.title} style={{width:themeTitleWidth(theme,scene.themes)}}>{theme.title}</span> }, className: themeTitleSpace(theme,scene.themes) > THEME_TITLE_SPACE ? 'board-theme board-theme-multiline' : 'board-theme', width: theme.width, height: theme.height, style: { width: theme.width, height: theme.height }, selectable: false, draggable: false, zIndex: 0 })),
       ...scene.units.map(node => ({ id: node.unitId, position: { x: node.x, y: node.y }, data: { label: names.get(node.unitId) ?? node.unitId }, className: unitDetail ? 'board-unit' : 'board-unit board-unit-thumbnail', width: node.width, height: node.height, style: { width: node.width, height: node.height, pointerEvents: unitDetail ? 'auto' as const : 'none' as const }, draggable: false, focusable: unitDetail, zIndex: 1 }))
     ];
   }, [scene, graph, unitDetail]);
@@ -829,7 +831,7 @@ function App({Accessory}: {Accessory?: import('react').ComponentType<WorkspaceAc
       <PanelDock side="left">
       <DirectoryPanel navRef={navRef} open={directory} inert={sourceOpen} graph={graph} review={review} selectedId={selected?.id}
         selectedThemeId={selected?.theme.id} narrow={narrow} onClose={closeDirectory} onKeyDown={event => trap(event, closeDirectory)} onNavigate={id => { void go(id); }}/></PanelDock>
-      <main onWheelCapture={event => { if (!((event.target as HTMLElement).closest('.board-tools, .relations-panel, .source-dialog, input, select, textarea, .mux, .builtin-formula-editor, math-field'))) camera.takeover(); }} onPointerDownCapture={event => { pinchFrame.cancel(); const target = event.target as HTMLElement; if (target.closest('.react-flow__pane, .react-flow__minimap, .board-tools')) camera.takeover(); }} ref={boardRef} className="board" style={{ '--board-theme-font': `${Math.min(THEME_TITLE_SPACE / 1.1, Math.max(40, 12 / viewport.zoom))}px`, '--board-unit-font': `${Math.max(36, 13 / viewport.zoom)}px` } as React.CSSProperties} data-relations-open={relationsOpen?'':undefined} aria-label="知识画板" role="region" inert={(narrow && (!!shell.visibleLeft || shell.visibleAgent || accessoryOpen)) || !cameraReady && !loadError}>
+      <main onWheelCapture={event => { if (!((event.target as HTMLElement).closest('.board-tools, .relations-panel, .source-dialog, input, select, textarea, .mux, .builtin-formula-editor, math-field'))) camera.takeover(); }} onPointerDownCapture={event => { pinchFrame.cancel(); const target = event.target as HTMLElement; if (target.closest('.react-flow__pane, .react-flow__minimap, .board-tools')) camera.takeover(); }} ref={boardRef} className="board" style={{ '--board-theme-font': `${Math.min(THEME_TITLE_MAX / 2.2, Math.max(40, 12 / viewport.zoom))}px`, '--board-unit-font': `${Math.max(36, 13 / viewport.zoom)}px`, '--board-theme-border': `${Math.max(2, .9 / viewport.zoom)}px`, '--board-thumbnail-border': `${Math.max(2, .8 / viewport.zoom)}px`, '--board-thumbnail-mark': `${Math.max(18, 1 / viewport.zoom)}px` } as React.CSSProperties} data-relations-open={relationsOpen?'':undefined} aria-label="知识画板" role="region" inert={(narrow && (!!shell.visibleLeft || shell.visibleAgent || accessoryOpen)) || !cameraReady && !loadError}>
         <div className="board-background" inert={sourceOpen || (narrow && relationsOpen)}><ReactFlow onlyRenderVisibleElements nodes={nodes} edges={[]} onInit={() => setNodesReady(true)} minZoom={MIN_BOARD_ZOOM} maxZoom={2} nodesDraggable={false} panOnScroll zoomOnScroll={false} zoomOnPinch panOnDrag={tool === "select" ? [1] : [0, 1]} selectionOnDrag={tool === "select"} panActivationKeyCode="Space" onMoveStart={event => { if (event) { pinchFrame.cancel(); camera.takeover(); } }} onMove={(event, next) => { updateReadingProtection(); if (event) camera.takeover(); setViewport(next); }} onMoveEnd={(_event, next) => { const current = readingRef.current; if (current) persist({ ...current, camera: next }); }} onNodeClick={(_event, node) => { const first = graph?.nodes.find(item => item.id === node.id || item.themeId === node.id); if (first) void go(first.id); }}>
           <BoardRoutes scene={scene} viewport={viewport} width={readingBounds.width} height={readingBounds.height} selectedUnitId={selected?.id} selectedThemeId={selected?.theme.id} onActivate={openRelationMembers}/>
 

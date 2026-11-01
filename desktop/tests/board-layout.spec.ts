@@ -25,7 +25,7 @@ test('fit keeps theme titles below the toolbar and inside the available board', 
         return themes.every(theme => {
           const box = theme.getBoundingClientRect(), title = theme.querySelector('span')!.getBoundingClientRect();
           const clearOfControls = controls.every(control => box.right <= control.left || box.left >= control.right || box.bottom <= control.top || box.top >= control.bottom);
-          return title.top >= toolbar.bottom && title.left >= board.left && box.right <= (panel?.left ?? board.right) && box.bottom <= board.bottom && clearOfControls;
+          return title.top >= toolbar.bottom && title.left >= board.left && title.right <= (panel?.left ?? board.right) && box.right <= (panel?.left ?? board.right) && box.bottom <= board.bottom && clearOfControls;
         });
       }, { withPanel })).toBe(true);
       const groupCount = await page.evaluate(async () => {
@@ -81,6 +81,46 @@ test('overview retains every main relation and opens its real members from the k
     await expect(page.locator('.board-route-group[data-related]').first()).toBeAttached();
     await expect.poll(() => page.locator('.board-route').evaluateAll(elements => elements.flatMap(element => JSON.parse(element.getAttribute('data-members')!)).sort())).toEqual(expected);
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('overview keeps prerequisite layers in columns and direction marks visible at both window sizes', async () => {
+  const root=await mkdtemp(join(tmpdir(),'yizhi-board-reading-order-'));
+  const app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});
+  try {
+    const page=await app.firstWindow();
+    await expect(page.locator('.workspace')).toHaveAttribute('aria-busy','false');
+    const expected=await page.evaluate(async()=>{
+      const course=await window.yizhi.open(),graph=await window.yizhi.graph(course.sessionId);
+      const theme=new Map(graph.nodes.map(node=>[node.id,node.themeId]));
+      const incoming=new Map(graph.groups.map(group=>[group.id,new Set<string>()]));
+      for(const edge of graph.edges)if(edge.type==='requires'){
+        const from=theme.get(edge.fromUnitId)!,to=theme.get(edge.toUnitId)!;if(from!==to)incoming.get(to)!.add(from);
+      }
+      const rank=new Map<string,number>();
+      while(rank.size<incoming.size){
+        const next=[...incoming].filter(([id,parents])=>!rank.has(id)&&[...parents].every(parent=>rank.has(parent)));
+        if(!next.length)throw new Error('example themes contain a cycle');
+        for(const [id,parents] of next)rank.set(id,1+Math.max(-1,...[...parents].map(parent=>rank.get(parent)!)));
+      }
+      return Object.fromEntries(rank);
+    });
+    for(const size of [{width:1440,height:900},{width:1024,height:768}]) {
+      await page.setViewportSize(size);
+      await page.getByRole('button',{name:'全图',exact:true}).click();
+      await expect.poll(()=>page.locator('.board-theme').count()).toBe(Object.keys(expected).length);
+      const positions=await page.locator('.board-theme').evaluateAll(elements=>elements.map(element=>({id:element.getAttribute('data-id')!,x:element.getBoundingClientRect().x})));
+      for(const a of positions)for(const b of positions){
+        const left=expected[a.id],right=expected[b.id];
+        if(left===right)expect(Math.abs(a.x-b.x)).toBeLessThan(.5);
+        if(left<right)expect(a.x).toBeLessThan(b.x);
+      }
+      await expect.poll(()=>page.locator('.board-route-group').evaluateAll(elements=>elements.length?elements.filter(element=>{
+        const route=element.querySelector('.board-route');
+        return route?.getAttribute('data-directed')==='true'&&!element.querySelector('.board-route-arrow');
+      }).length:-1)).toBe(0);
+      await expect(page.locator('.board-route-ink').first()).toBeAttached();
+    }
+  } finally {await app.close();await rm(root,{recursive:true,force:true});}
 });
 
 test('zooming between reading and overview does not move the measured unit in the course', async () => {

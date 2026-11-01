@@ -2,9 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { projectCourseReadingLayout, projectReadingLayout } from '../src/layout';
+import { overviewThumbnailPlacements, projectCourseReadingLayout, projectReadingLayout, THEME_TITLE_MAX, THEME_TITLE_SPACE } from '../src/layout';
 import type { LayoutNode, LayoutSizes } from '../src/layout';
-import { planInitialLayout, projectBoard } from '../src/board-layout';
+import { planInitialLayout, projectBoard, themeTitleSpace } from '../src/board-layout';
 import type { CourseGraph } from '../src/shared';
 
 function graph(sizes:number[]):CourseGraph {
@@ -40,6 +40,32 @@ function assertRigidThemes(graph:CourseGraph,actual:LayoutNode[],sizes:LayoutSiz
   }
 }
 function fixture():CourseGraph {return JSON.parse(readFileSync(resolve('fixtures/graph.json'),'utf8')) as CourseGraph;}
+
+test('legacy short thumbnails gain height only where there is room, without moving the baseline',()=>{
+  const g=graph([2,1]);
+  const positions=[{unitId:'u0-0',x:0,y:0,width:650,height:86},{unitId:'u0-1',x:0,y:420,width:650,height:86},{unitId:'u1-0',x:0,y:1700,width:650,height:86}];
+  const before=structuredClone(positions),result=overviewThumbnailPlacements(g,positions);
+  assert.deepEqual(positions,before);
+  assert.deepEqual(result.map(n=>[n.x,n.y,n.width]),positions.map(n=>[n.x,n.y,n.width]));
+  assert.equal(result[0].height,320);
+  assert.equal(result[1].height,86);
+  assert.equal(result[2].height,320);
+});
+
+test('saved layouts keep their positions when two-line titles do not fit',()=>{
+  const g=graph([1,1]);
+  g.layout.nodes=[{unitId:'u0-0',x:64,y:112,width:620,height:320},{unitId:'u1-0',x:64,y:828,width:620,height:320}];
+  const original=structuredClone(g);
+  const projected=projectCourseReadingLayout(g,{});
+  assert.deepEqual(projected,g.layout.nodes);
+  assert.deepEqual(g,original);
+  const scene=projectBoard(g,projected,'themes','main');
+  assert.equal(themeTitleSpace(scene.themes[1],scene.themes),THEME_TITLE_SPACE);
+  const fresh=graph(Array(8).fill(1));fresh.layout=planInitialLayout(fresh);
+  const freshScene=projectBoard(fresh,fresh.layout.nodes,'themes','main');
+  assert.ok(new Set(freshScene.themes.map(t=>t.y)).size>1);
+  assert.ok(freshScene.themes.every(t=>themeTitleSpace(t,freshScene.themes)===THEME_TITLE_MAX));
+});
 
 test('the 84-unit legacy fixture projects distinct themes and complete routable relationships without changing the baseline',()=>{
   const g=fixture(), before=structuredClone(g), result=projectCourseReadingLayout(g,{});

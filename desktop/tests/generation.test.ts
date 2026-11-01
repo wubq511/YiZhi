@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
 import { CourseService } from '../src/core/course-service';
-import { planInitialLayout, planIncrementalLayout } from '../src/board-layout';
+import { BOARD_LAYOUT_POLICY_VERSION, planInitialLayout, planIncrementalLayout } from '../src/board-layout';
 import type { CourseGraph } from '../src/shared';
 
 import {tablePdf,prepared,lesson,practice} from './generation-fixture';
@@ -18,7 +18,7 @@ test('new example persists its initial plan, manual placement and restored basel
     let sessionId=(await core.open(root)).sessionId;
     const seed=JSON.parse(await readFile(resolve('fixtures/graph.json'),'utf8')) as CourseGraph;
     const initial=await core.graph(sessionId);
-    assert.deepEqual(initial.layout,{...planInitialLayout(seed),policyVersion:1});
+    assert.deepEqual(initial.layout,{...planInitialLayout(seed),policyVersion:BOARD_LAYOUT_POLICY_VERSION});
     const node=initial.layout.nodes[0];
     await core.setLayout(sessionId,[{unitId:node.unitId,x:node.x+1234,y:node.y-567,width:node.width}]);
     const manual=(await core.graph(sessionId)).layout;

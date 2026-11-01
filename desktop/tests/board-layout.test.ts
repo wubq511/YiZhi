@@ -1,11 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { CourseGraph } from '../src/shared';
-import { aggregateThemeRelations, BOARD_LAYOUT_POLICY_VERSION, planInitialLayout, planIncrementalLayout, projectBoard } from '../src/board-layout';
+import { aggregateThemeRelations, BOARD_LAYOUT_POLICY_VERSION, planInitialLayout, planIncrementalLayout, projectBoard, themeTitleSpace } from '../src/board-layout';
 import type { BoardNode, BoardScene } from '../src/board-layout';
 import { routeIntersectsViewport } from '../src/board-layout/visibility';
 import { readingWidth } from '../src/layout';
 import { DatabaseSync } from 'node:sqlite';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { initializeLayout } from '../src/core/local-layout';
 import { prepareLayoutArrangement, commitLayoutArrangement } from '../src/core/layout-arrangement';
 
@@ -27,11 +29,26 @@ function assertAvoids(scene:BoardScene, routeId:string, blockers:Array<{x:number
   const r=scene.edges.find(e=>e.id===routeId)!;assert.ok(r);assert.ok(r.points.length>=2);
   for(let i=1;i<r.points.length;i++) for(const b of blockers) assert.equal(segmentCrosses(r.points[i-1],r.points[i],b),false,`${routeId} crosses an obstacle`);
 }
+function sharedCorridors(routes:BoardScene['edges']) {
+  const segments=routes.flatMap(route=>route.points.slice(1).map((b,i)=>({id:route.id,a:route.points[i],b})));
+  let shared=0,longest=0,total=0;
+  for(const segment of segments)total+=Math.abs(segment.a.x-segment.b.x)+Math.abs(segment.a.y-segment.b.y);
+  for(let i=0;i<segments.length;i++)for(let j=i+1;j<segments.length;j++) {
+    const a=segments[i],b=segments[j];if(a.id===b.id)continue;
+    const vertical=a.a.x===a.b.x;if(vertical!==(b.a.x===b.b.x))continue;
+    if(Math.abs((vertical?a.a.x:a.a.y)-(vertical?b.a.x:b.a.y))>1e-6)continue;
+    const ar=vertical?[a.a.y,a.b.y]:[a.a.x,a.b.x],br=vertical?[b.a.y,b.b.y]:[b.a.x,b.b.x];
+    const overlap=Math.max(0,Math.min(Math.max(...ar),Math.max(...br))-Math.max(Math.min(...ar),Math.min(...br)));
+    shared+=overlap;longest=Math.max(longest,overlap);
+  }
+  return {shared,longest,total};
+}
 
 test('a route remains visible when its detour crosses the viewport with both endpoints offscreen',()=>{
   const viewport={left:0,top:0,right:100,bottom:100};
   assert.equal(routeIntersectsViewport({points:[{x:-40,y:-50},{x:50,y:-50},{x:50,y:150},{x:140,y:150}]},viewport),true);
   assert.equal(routeIntersectsViewport({points:[{x:-40,y:-50},{x:-20,y:-50},{x:-20,y:150}]},viewport),false);
+  assert.equal(routeIntersectsViewport({kind:'theme',points:[{x:-40,y:10},{x:-40,y:150},{x:140,y:150},{x:140,y:90}]},viewport),true);
 });
 
 test('initial layout uses real prerequisites, published order and variable theme sizes deterministically',()=>{
@@ -49,19 +66,23 @@ test('initial layout uses real prerequisites, published order and variable theme
   assert.deepEqual(first.groups.map(group=>group.themeId),g.groups.map(group=>group.id));
 });
 
-test('theme prerequisite direction changes layout even against published order',()=>{
+test('a prerequisite contrary to directory order puts its source in the earlier column',()=>{
   const g=graph([1,1]);edge(g,'reverse','u1-0','u0-0');
   const reversed=planInitialLayout(g);
   assert.ok(reversed.groups[1].x<reversed.groups[0].x);
+  const actual=projectBoard(g,reversed.nodes,'themes','all').edges[0];
+  assert.deepEqual([actual.source,actual.target,actual.directed],['t1','t0',true]);
   g.edges[0].fromUnitId='u0-0';g.edges[0].toUnitId='u1-0';
   const forward=planInitialLayout(g);assert.ok(forward.groups[0].x<forward.groups[1].x);
 });
 
-test('within a theme, prerequisites override published order and available ties retain it',()=>{
+test('a prerequisite contrary to published unit order does not silently reorder the directory',()=>{
   const g=graph([4]);edge(g,'requires','u0-3','u0-0');
   const result=planInitialLayout(g).nodes;
   const order=[...result].sort((a,b)=>a.y-b.y||a.x-b.x).map(n=>n.unitId);
-  assert.deepEqual(order,['u0-1','u0-2','u0-3','u0-0']);
+  assert.deepEqual(order,['u0-0','u0-1','u0-2','u0-3']);
+  const actual=projectBoard(g,result,'units','all').edges[0];
+  assert.deepEqual([actual.source,actual.target,actual.directed],['u0-3','u0-0',true]);
 });
 
 test('arranging an existing layout preserves widths and reserves measured or conservative reading dimensions',()=>{
@@ -119,10 +140,12 @@ test('theme cycles preserve all directed edges, internal edges and undirected ag
   assert.equal(scene.edges.find(e=>e.id==='internal')!.kind,'internal');
   assert.equal(scene.edges.find(e=>e.memberIds.includes('return'))!.source,'t1');
   const main=projectBoard(g,layout.nodes,'themes','main');assert.deepEqual(main.edges.flatMap(e=>e.memberIds).sort(),g.edges.filter(e=>e.view==='main').map(e=>e.id).sort());
+  const reordered=structuredClone(g);reordered.edges.reverse();
+  assert.deepEqual(projectBoard(reordered,layout.nodes,'themes','all'),scene);
   const detail=projectBoard(g,layout.nodes,'units','all');assert.equal(detail.edges.length,g.edges.length);
   for(const e of detail.edges) {const original=g.edges.find(x=>x.id===e.id)!;assert.equal(e.source,original.fromUnitId);assert.equal(e.target,original.toUnitId);assert.deepEqual(e.memberIds,[e.id]);}
   const aggregates=aggregateThemeRelations(g);
-  assert.equal(BOARD_LAYOUT_POLICY_VERSION,1);
+  assert.equal(BOARD_LAYOUT_POLICY_VERSION,3);
   assert.deepEqual(aggregates.map(a=>a.relationIds).sort(),scene.edges.filter(e=>e.kind==='theme').map(e=>e.memberIds).sort());
   const reversed=structuredClone(g);reversed.edges.reverse();
   assert.deepEqual(aggregateThemeRelations(reversed).find(a=>a.relationIds.includes('inverse-a'))!.relationIds,['inverse-a','inverse-b']);
@@ -130,10 +153,12 @@ test('theme cycles preserve all directed edges, internal edges and undirected ag
   assert.equal((inverseAggregate as typeof inverseAggregate & {directed:boolean}).directed,false);
 });
 
-test('theme cycle remains intact while prerequisites leaving it point forward',()=>{
+test('an aggregate theme cycle shares a column and retains relations leaving it',()=>{
   const g=graph([2,1,1]);
   edge(g,'forward','u0-0','u1-0');edge(g,'back','u1-0','u0-1');edge(g,'after','u0-1','u2-0');
-  const layout=planInitialLayout(g);assert.equal(layout.groups[0].x,layout.groups[1].x);assert.ok(layout.groups[2].x>layout.groups[0].x);
+  const layout=planInitialLayout(g);
+  assert.equal(layout.groups[0].x,layout.groups[1].x);
+  assert.ok(layout.groups[2].x>layout.groups[0].x);
   for(const level of ['themes','units'] as const) {
     const scene=projectBoard(g,layout.nodes,level,'all');
     assert.deepEqual(scene.edges.flatMap(e=>e.memberIds).sort(),['after','back','forward']);
@@ -272,24 +297,127 @@ test('dense 500-unit detail retains every relation and finite geometry',()=>{
   assert.ok(scene.edges.every(e=>e.points.length>=2&&e.points.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y))));
 });
 
-test('a few prerequisites do not stack unrelated themes in one tall column',()=>{
+test('dense theme graphs retain every relation with obstacle-aware routing',()=>{
+  const g=graph(Array(9).fill(1));
+  for(let i=0;i<9;i++)for(let j=i+1;j<9;j++)edge(g,`dense-theme-${i}-${j}`,`u${i}-0`,`u${j}-0`);
+  const layout=planInitialLayout(g),start=performance.now();
+  const scene=projectBoard(g,layout.nodes,'themes','main');
+  const elapsed=performance.now()-start;
+  assert.deepEqual(scene.edges.flatMap(e=>e.memberIds).sort(),g.edges.map(e=>e.id).sort());
+  assert.ok(scene.edges.every(e=>!e.unrouted&&e.points.length>=2));
+  for(const route of scene.edges)assertAvoids(scene,route.id,scene.themes.filter(t=>t.themeId!==route.source&&t.themeId!==route.target));
+  console.log(`dense theme projection: ${scene.edges.length} routes in ${elapsed.toFixed(1)} ms`);
+});
+
+test('themes without a recorded prerequisite share the first column',()=>{
   const g=graph(Array(20).fill(1));edge(g,'only-prerequisite','u0-0','u1-0');
   const layout=planInitialLayout(g), groups=layout.groups;
   assert.ok(groups[0].x<groups[1].x);
   const counts=new Map<number,number>();for(const group of groups) counts.set(group.x,(counts.get(group.x)??0)+1);
-  assert.ok(counts.size>=4);assert.ok(Math.max(...counts.values())<=6);
+  assert.equal(counts.size,2);assert.deepEqual([...counts.values()].sort((a,b)=>a-b),[1,19]);
   assert.deepEqual(groups.map(group=>group.themeId),g.groups.map(group=>group.id));
   assert.equal(projectBoard(g,layout.nodes,'themes','all').edges.length,1);
 });
 
-test('wide prerequisite branches use available columns without reversing their direction',()=>{
+test('parallel prerequisite branches occupy one subsequent column',()=>{
   const g=graph(Array(7).fill(1));
   for(let i=1;i<7;i++) edge(g,`branch-${i}`,'u0-0',`u${i}-0`);
   const groups=planInitialLayout(g).groups;
-  assert.ok(groups.slice(1).every(group=>group.x>groups[0].x));
-  const countByColumn=new Map<number,number>();
-  for(const group of groups)countByColumn.set(group.x,(countByColumn.get(group.x)??0)+1);
-  assert.ok(Math.max(...countByColumn.values())<=3);
+  assert.equal(new Set(groups.slice(1).map(group=>group.x)).size,1);
+  assert.ok(groups[1].x>groups[0].x);
+  assert.deepEqual(groups.slice(1).sort((a,b)=>a.y-b.y).map(group=>group.themeId),g.groups.slice(1).map(group=>group.id));
+});
+
+test('fan-out and fan-in routes use separate corridors even when relation identities oppose spatial order',()=>{
+  const g=graph(Array(6).fill(1));
+  for(let i=1;i<=4;i++) {
+    edge(g,`out-${i}`,'u0-0',`u${i}-0`);
+    edge(g,`in-${i}`,`u${i}-0`,'u5-0');
+  }
+  const placements=g.nodes.map((node,i)=>({unitId:node.id,
+    x:i===0?0:i===5?12000:6000,
+    y:i===0||i===5?3000:(4-i)*1800,
+    width:900,height:700}));
+  const scene=projectBoard(g,placements,'themes','main');
+  const related=scene.edges.filter(route=>route.kind==='theme');
+  assert.equal(related.length,8);assert.ok(related.every(route=>!route.unrouted));
+  assert.equal(sharedCorridors(related).shared,0,'fan-in and fan-out lines must not merge');
+  const shuffled=structuredClone(g);shuffled.edges.reverse();
+  assert.deepEqual(projectBoard(shuffled,placements,'themes','main'),scene);
+});
+
+test('a dense many-to-many overview keeps relations distinct without depending on input order',()=>{
+  const count=8,g=graph(Array(count*2).fill(1));
+  for(let a=0;a<count;a++)for(let b=0;b<count;b++)edge(g,`e-${a}-${b}`,`u${a}-0`,`u${count+b}-0`);
+  const placements=g.nodes.map((node,i)=>({unitId:node.id,x:i<count?0:10000,
+    y:(i%count)*2000,width:900,height:900}));
+  const scene=projectBoard(g,placements,'themes','main');
+  assert.equal(scene.edges.length,count*count);assert.ok(scene.edges.every(route=>!route.unrouted));
+  assert.deepEqual(scene.edges.flatMap(route=>route.memberIds).sort(),g.edges.map(edge=>edge.id).sort());
+  const {shared,longest,total}=sharedCorridors(scene.edges);
+  assert.ok(shared/total<.005,`dense relations share too much ink: ${shared}/${total}`);
+  assert.ok(longest<=500,`a shared segment is too long: ${longest}`);
+  const shuffled=structuredClone(g);shuffled.edges.reverse();
+  assert.deepEqual(projectBoard(shuffled,placements,'themes','main'),scene);
+});
+
+test('a cross-theme route leaves visible space around an unrelated theme when space permits',()=>{
+  const g=graph([1,1,1]);edge(g,'skip','u0-0','u2-0');
+  const placements=g.nodes.map((node,i)=>({unitId:node.id,x:i*5000,y:2000,width:900,height:700}));
+  const scene=projectBoard(g,placements,'themes','main'),middle=scene.themes.find(theme=>theme.themeId==='t1')!;
+  const clearance=150;
+  assertAvoids(scene,scene.edges[0].id,[{x:middle.x-clearance,y:middle.y-clearance,
+    width:middle.width+2*clearance,height:middle.height+2*clearance}]);
+});
+
+test('short theme titles leave their unused second line available for relations',()=>{
+  const g=graph([1,1]);g.groups[0].name='卡诺图基础与化简';g.groups[1].name='需要两行展示的非常长的主题名称';
+  const placements=g.nodes.map((node,i)=>({unitId:node.id,x:0,y:i*4000,width:900,height:700}));
+  const scene=projectBoard(g,placements,'themes','main');
+  const short=scene.themes[0],long=scene.themes[1];
+  assert.ok(themeTitleSpace(short,scene.themes)>=550&&themeTitleSpace(short,scene.themes)<1100);
+  assert.equal(themeTitleSpace(long,scene.themes),1100);
+});
+
+test('variable theme sizes remain in their prerequisite columns without overlap',()=>{
+  const g=graph([5,1,6,2,4,1,3,5,2]);
+  edge(g,'first-to-last','u0-0','u8-0');edge(g,'later','u2-0','u6-0');
+  const layout=planInitialLayout(g);
+  assert.equal(layout.groups[0].x,layout.groups[2].x);
+  assert.equal(layout.groups[6].x,layout.groups[8].x);
+  assert.ok(layout.groups[6].x>layout.groups[0].x);
+  for(let i=0;i<layout.groups.length;i++)for(let j=i+1;j<layout.groups.length;j++)assert.equal(overlap(layout.groups[i],layout.groups[j]),false);
+});
+
+test('the course overview follows recorded prerequisites and separates its main relation lanes',()=>{
+  const course=JSON.parse(readFileSync(resolve('fixtures/graph.json'),'utf8')) as CourseGraph;
+  const layout=planInitialLayout(course,{preserveExistingSizes:true});
+  const nodeThemes=new Map(course.nodes.map(node=>[node.id,node.themeId]));
+  const groupById=new Map(layout.groups.map(group=>[group.themeId,group]));
+  for(const edge of course.edges.filter(edge=>edge.type==='requires')) {
+    const a=nodeThemes.get(edge.fromUnitId)!,b=nodeThemes.get(edge.toUnitId)!;
+    if(a!==b)assert.ok(groupById.get(a)!.x<groupById.get(b)!.x);
+  }
+  assert.deepEqual([...new Set(layout.groups.map(group=>group.x))].sort((a,b)=>a-b).map(x=>layout.groups.filter(group=>group.x===x).length),[11,6,2,1]);
+  const reordered=structuredClone(course);reordered.edges.reverse();
+  assert.deepEqual(planInitialLayout(reordered,{preserveExistingSizes:true}),layout);
+  const reading=layout.nodes.map(node=>({...node,width:readingWidth(node.width)}));
+  const scene=projectBoard({...course,layout},reading,'themes','main');
+  assert.deepEqual(scene.edges.flatMap(route=>route.memberIds).sort(),course.edges.filter(edge=>edge.view==='main').map(edge=>edge.id).sort());
+  assert.ok(scene.edges.every(route=>!route.unrouted));
+  const segments=scene.edges.flatMap(route=>route.points.slice(1).map((b,i)=>({id:route.id,a:route.points[i],b})));
+  let length=0,shared=0;
+  for(const segment of segments)length+=Math.abs(segment.a.x-segment.b.x)+Math.abs(segment.a.y-segment.b.y);
+  for(let i=0;i<segments.length;i++)for(let j=i+1;j<segments.length;j++) {
+    const a=segments[i],b=segments[j];if(a.id===b.id)continue;
+    if(a.a.x===a.b.x && b.a.x===b.b.x && a.a.x===b.a.x)
+      shared+=Math.max(0,Math.min(Math.max(a.a.y,a.b.y),Math.max(b.a.y,b.b.y))-Math.max(Math.min(a.a.y,a.b.y),Math.min(b.a.y,b.b.y)));
+    if(a.a.y===a.b.y && b.a.y===b.b.y && a.a.y===b.a.y)
+      shared+=Math.max(0,Math.min(Math.max(a.a.x,a.b.x),Math.max(b.a.x,b.b.x))-Math.max(Math.min(a.a.x,a.b.x),Math.min(b.a.x,b.b.x)));
+  }
+  assert.ok(shared/length<.05,`main relations share too much line: ${shared}/${length}`);
+  for(const route of scene.edges.filter(route=>route.kind==='theme'))
+    assertAvoids(scene,route.id,scene.themes.filter(theme=>theme.themeId!==route.source&&theme.themeId!==route.target));
 });
 
 test('reports reproducible projection timings for 84- and 500-unit synthetic courses',()=>{
