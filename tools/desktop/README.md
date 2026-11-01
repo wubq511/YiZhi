@@ -41,3 +41,19 @@ node "$development_out/cli.cjs" layout-arrange '{"directory":"/absolute/stopped-
 可控生产者有[独立 Electron 入口](controlled-README.md)，正式学习窗口不提供开发开关。内容候选核验使用 `node tools/desktop/verify-conversion.mjs verify /absolute/content-candidate`。
 
 验证窗口复用正式工作区与核心，额外桥接仅由独立开发入口注册，用于输入保护、候选冲突、停止和真实保存回归。`verify-upgrade.mjs` 核对完整个人课副本的历史、任务和资源，不以开发验证结果替代真实 Agent 或正式安装包验收。
+
+## 画板拖动诊断
+
+`diagnose-pan.mjs` 使用独立应用包、已停止且完成 checkpoint 的课程副本，以及独立 profile 记录拖动期间的帧、输入和采集时序。它会再复制课程并为运行副本分配临时身份，不连接日常运行的应用；应用、课程和证据目录均使用绝对路径。正式学习界面没有诊断开关。
+
+```sh
+node tools/desktop/diagnose-pan.mjs \
+  --app /absolute/YiZhi/artifacts/scratch/task/YiZhi.app \
+  --course /absolute/YiZhi/artifacts/scratch/task/course \
+  --out /absolute/YiZhi/artifacts/evidence/task \
+  --cold 20 --hot 80 --stop-on-gap 100
+```
+
+先用 `--cold 0 --hot 0 --calibrate on` 注入页面阻塞、驱动暂停和截帧确认延迟，检查采集能否区分三类信号。`--pair capture|retention|trace|driver|cadence|launch|focus --pairs 20` 交替比较单个因素；`--driver paced` 以有限未完成请求控制直接 CDP 输入的节奏。`--trace on` 使用有界 Chromium trace，只在帧、相机变化或命令间隔超过 50 ms 或校准时保留完整 trace。`--stop-on-gap` 和 `--stop-on-command` 在记录异常后结束采集；诊断信息与 `--help` 中的其他选项不改变既有测试的 100 ms 阈值。
+
+每个手势写一条原始 JSONL，汇总文件保留失败数量及分位数；时钟校准同时提供跨进程偏移和误差。截图只在进程内保留压缩帧以匹配原测试，不写入证据。rAF 和截帧时刻分别记录，不能代替实际屏幕呈现；自动化鼠标不等于实体输入。实验副本放在 `artifacts/scratch/` 并在进程结束后删除，证据按[本地产物管理](../../docs/development/本地产物管理.md)整理。

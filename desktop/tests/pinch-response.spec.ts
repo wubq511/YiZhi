@@ -118,7 +118,8 @@ test('coalescing preserves the accepted trace, moving anchors and per-event clam
     expect(batched.x).toBeCloseTo(sequential.x, 8); expect(batched.y).toBeCloseTo(sequential.y, 8);
     // Clamp and reversal in the SAME frame must not be reduced to a summed delta.
     await sendPinch(page, 100000); await sendPinch(page, -1); await stepFrame(page);
-    await expect.poll(async () => (await readCameraTransform(viewport)).zoom).toBeCloseTo(.010139594797900291, 12);
+    await expect.poll(async () => (await readCameraTransform(viewport)).zoom).toBeCloseTo(.0010139594797900291, 12);
+    await expect(page.locator('.canvas-zoom')).toHaveText('0.1%');
     await sendPinch(page, -100000); await sendPinch(page, 1); await stepFrame(page);
     await expect.poll(async () => (await readCameraTransform(viewport)).zoom).toBeCloseTo(1.9724654089867184, 12);
     await sendPinch(page, 100, 100, 150, true); await stepFrame(page);

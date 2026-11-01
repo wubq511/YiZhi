@@ -206,3 +206,38 @@ test('ink stays outside content and short arrows stay on their segment at overvi
   const shortPixels=overviewContext.getImageData(Math.round(overviewOrigin.x+62),Math.round(overviewOrigin.y+65),2,3).data;
   expect(Array.from({length:6},(_,i)=>shortPixels[i*4]).some(red=>red<230)).toBe(true);
 });
+
+test('relation labels follow pan and refresh when visible routes, zoom or scene change', async ({ page }) => {
+  const bundle=await build({bundle:true,write:false,platform:'browser',format:'iife',jsx:'automatic',stdin:{resolveDir:process.cwd(),sourcefile:'relation-label-viewport.tsx',loader:'tsx',contents:`
+    import React from 'react';
+    import {createRoot} from 'react-dom/client';
+    import {ReactFlow,ReactFlowProvider} from '@xyflow/react';
+    import {BoardRoutes} from './src/renderer/board-edge';
+    import {observation} from './src/acceptance-observation';
+    observation.enable();window.__labelObservation=()=>observation.snapshot();
+    const edge=(id,x,type='requires')=>({id,source:'a',target:'b',type,directed:true,memberIds:[id],kind:'unit',label:type,points:[{x,y:100},{x:x+270,y:100}]});
+    const scenes=[{themes:[],units:[],edges:[edge('first',30),edge('second',600)]},{themes:[],units:[],edges:[edge('first',30),edge('second',600,'improves')]}];
+    function App(){const [view,setView]=React.useState({x:0,y:0,zoom:1}),[revised,setRevised]=React.useState(false);return <ReactFlowProvider>
+      <button id="pan" onClick={()=>setView({x:10,y:0,zoom:1})}>pan</button>
+      <button id="next" onClick={()=>setView({x:-500,y:0,zoom:1})}>next</button>
+      <button id="zoom" onClick={()=>setView({x:0,y:0,zoom:.5})}>zoom</button>
+      <button id="revise" onClick={()=>setRevised(true)}>revise</button>
+      <div style={{width:400,height:300}}><ReactFlow nodes={[]} edges={[]} viewport={view}><BoardRoutes scene={scenes[Number(revised)]} viewport={view} width={400} height={300} onActivate={ids=>document.body.dataset.activated=ids.join(',')} /></ReactFlow></div>
+    </ReactFlowProvider>};createRoot(document.getElementById('root')!).render(<App/>);
+  `}});
+  await page.setContent('<div id="root"></div>');
+  await page.addStyleTag({content:await readFile('node_modules/@xyflow/react/dist/style.css','utf8')});
+  await page.addStyleTag({content:await readFile('src/renderer/board-scene.css','utf8')});
+  await page.addScriptTag({content:bundle.outputFiles[0].text});
+  const routes=page.locator('.board-route-group'),count=()=>page.evaluate(()=>(window as any).__labelObservation()['board.labelLayouts']?.count??0);
+  await expect(routes).toHaveCount(1);await expect(routes.locator('.board-route')).toHaveAttribute('data-members','["first"]');
+  const label=routes.locator('.board-route-label');await expect(label).toHaveText('前置');
+  const before=(await label.boundingBox())!,initial=await count();
+  await page.locator('#pan').click();await expect(routes).toHaveCount(1);
+  const after=(await label.boundingBox())!;expect(after.x-before.x).toBeCloseTo(10,4);expect(await count()).toBe(initial);
+  await page.locator('#next').click();await expect(routes).toHaveCount(1);await expect(routes.locator('.board-route')).toHaveAttribute('data-members','["second"]');
+  await expect(routes.locator('.board-route-label')).toHaveText('前置');expect(await count()).toBeGreaterThan(initial);
+  const afterCulling=await count();await page.locator('#revise').click();await expect(routes.locator('.board-route-label')).toHaveText('优化');expect(await count()).toBeGreaterThan(afterCulling);
+  const afterScene=await count();await page.locator('#zoom').click();await expect(routes).toHaveCount(2);expect(await count()).toBeGreaterThan(afterScene);
+  await routes.nth(1).dispatchEvent('click',{detail:1});await expect(page.locator('body')).toHaveAttribute('data-activated','second');
+});

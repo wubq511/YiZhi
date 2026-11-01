@@ -3,7 +3,7 @@ import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { readCameraTransform, resizeBoardWindow, closeFailedBoard, expectBoundedReading, waitForReadingLayout } from './board-test-helpers';
+import { boardWheelPoint, readCameraTransform, resizeBoardWindow, closeFailedBoard, expectBoundedReading, waitForReadingLayout } from './board-test-helpers';
 import { CourseService } from '../src/core/course-service';
 
 test('returning to an uncached unit with the same saved camera preserves visible static reading bodies',async()=>{
@@ -110,4 +110,33 @@ test('panning to an adjacent B reads static body without navigating or replacing
   await writeFile(test.info().outputPath('reading-range.json'),JSON.stringify({target,counters,selection:await page.evaluate(()=>getSelection()?.toString()),physical:false},null,2));
  }catch(error){failure=error;throw error;}
  finally{if(failure)await closeFailedBoard(app,failure);else await app.close();await rm(root,{recursive:true,force:true});}
+});
+
+test('stable overview pan keeps labels attached without redoing their layout',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'yizhi-label-pan-'));
+ const app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_OBSERVE:'1',YIZHI_DATA_HOME:join(root,'profile')}});
+ try{
+  const page=await app.firstWindow();await resizeBoardWindow(app,page,1024,768);
+  await page.getByRole('button',{name:'全图',exact:true}).click();
+  await expect(page.locator('.board-route-ink').first()).toBeAttached();
+  await page.getByRole('button',{name:'缩小画板'}).click();
+  await page.getByRole('button',{name:'缩小画板'}).click();
+  const read=()=>page.evaluate(()=>({count:(window as any).__yizhiObservation()['board.labelLayouts']?.count??0,
+   routes:[...document.querySelectorAll('.board-route-group')].map(g=>g.querySelector('.board-route')?.getAttribute('data-members')),
+   labels:[...document.querySelectorAll('.board-route-group')].flatMap(g=>{const label=g.querySelector('.board-route-label');if(!label)return [];
+    const transform=label.getAttribute('transform')!,match=transform.match(/translate\(([-\d.e+]+)[, ]+([-\d.e+]+)\)/)!;
+    return [{members:g.querySelector('.board-route')!.getAttribute('data-members'),text:label.textContent,x:Number(match[1]),y:Number(match[2])}];})}));
+  await expect.poll(async()=>(await read()).count).toBeGreaterThan(0);
+  let previous=-1,stable=0;await expect.poll(async()=>{const count=(await read()).count;stable=count===previous?stable+1:0;previous=count;return stable;}).toBeGreaterThanOrEqual(2);
+  const before=await read(),camera=await readCameraTransform(page.locator('.react-flow__viewport'));expect(before.labels.length).toBeGreaterThan(0);
+  const point=await boardWheelPoint(page);await page.mouse.move(point.x,point.y);await page.mouse.down();
+  for(let i=1;i<=6;i++)await page.mouse.move(point.x+i*2,point.y+i);
+  await page.mouse.up();await page.evaluate(()=>new Promise<void>(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>done()))));
+  const after=await read(),moved=await readCameraTransform(page.locator('.react-flow__viewport'));
+  expect(moved.x-camera.x).toBeGreaterThan(8);expect(after.routes).toEqual(before.routes);
+  expect(after.labels.map(l=>[l.members,l.text])).toEqual(before.labels.map(l=>[l.members,l.text]));
+  for(let i=0;i<after.labels.length;i++){expect(after.labels[i].x).toBeCloseTo(before.labels[i].x,6);expect(after.labels[i].y).toBeCloseTo(before.labels[i].y,6);}
+  expect(after.count-before.count,'pure translation with unchanged visible routes must not recalculate label placement').toBe(0);
+  await page.getByRole('button',{name:'放大画板'}).click();await expect.poll(async()=>(await read()).count).toBeGreaterThan(after.count);
+ }finally{await app.close();await rm(root,{recursive:true,force:true});}
 });

@@ -108,6 +108,46 @@ export async function readCameraTransform(target: Locator): Promise<{x:number;y:
   });
 }
 
+type PanFrame={t:number;now:number;x:number;y:number;zoom:number};
+type PanInput={type:string;now:number;eventTime:number};
+type PanLongTask={start:number;duration:number};
+export type PanProbeData={samples:PanFrame[];inputs:PanInput[];longtasks:PanLongTask[];dropped:number;visibility:string;focused:boolean;longTasksSupported:boolean};
+
+/** Keep input timing and callback time alongside rAF's frame timestamp. */
+export async function startPanProbe(page:Page) {
+ await page.evaluate(()=>{
+  const p:any={samples:[],inputs:[],longtasks:[],running:true,dropped:0,visibility:document.visibilityState,focused:document.hasFocus()};
+  const push=(items:any[],value:any)=>{if(items.length<4096)items.push(value);else p.dropped++;};
+  p.input=(event:Event)=>push(p.inputs,{type:event.type,now:performance.now(),eventTime:event.timeStamp});
+  document.addEventListener('pointermove',p.input,{capture:true,passive:true});document.addEventListener('wheel',p.input,{capture:true,passive:true});
+  p.longTasksSupported=PerformanceObserver.supportedEntryTypes.includes('longtask');
+  if(p.longTasksSupported){p.observer=new PerformanceObserver(list=>{for(const e of list.getEntries())push(p.longtasks,{start:e.startTime,duration:e.duration});});p.observer.observe({type:'longtask'});}
+  (window as any).__panProbe=p;
+  const tick=(t:number)=>{if(!p.running)return;
+   const el=document.querySelector<HTMLElement>('.react-flow__viewport')!,v=Array.from((el as any).attributeStyleMap.get('transform')) as any[];
+   push(p.samples,{t,now:performance.now(),x:v[0].x.value,y:v[0].y.value,zoom:v[1].x.value});requestAnimationFrame(tick);};requestAnimationFrame(tick);
+ });
+}
+export async function finishPanProbe(page:Page):Promise<PanProbeData> {
+ return page.evaluate(()=>{const p=(window as any).__panProbe;p.running=false;
+  if(p.observer){for(const e of p.observer.takeRecords())if(p.longtasks.length<4096)p.longtasks.push({start:e.startTime,duration:e.duration});else p.dropped++;p.observer.disconnect();}
+  document.removeEventListener('pointermove',p.input,true);document.removeEventListener('wheel',p.input,true);
+  return {samples:p.samples,inputs:p.inputs,longtasks:p.longtasks,dropped:p.dropped,visibility:p.visibility,focused:p.focused,longTasksSupported:p.longTasksSupported};
+ });
+}
+
+/** Frame intervals from the first through the last observed camera movement.
+ * Keep stationary frames within the gesture so a real stall is not discarded.
+ */
+export function cameraMovementGaps(samples:Array<{t:number;x:number;y:number}>) {
+ let first=-1,last=-1;
+ for(let i=1;i<samples.length;i++)if(samples[i].x!==samples[i-1].x||samples[i].y!==samples[i-1].y){if(first<0)first=i;last=i;}
+ if(first<0)return [];
+ const gaps:Array<{start:number;end:number;gap:number}>=[];
+ for(let i=first;i<=last;i++)gaps.push({start:samples[i-1].t,end:samples[i].t,gap:samples[i].t-samples[i-1].t});
+ return gaps;
+}
+
 /** Counts static reading bodies as well as protected editing hosts; no excluded DOM category. */
 export async function expectBoundedReading(page:Page) {
  const layers=await page.locator('.reading-layer').count();

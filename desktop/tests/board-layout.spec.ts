@@ -83,7 +83,7 @@ test('overview retains every main relation and opens its real members from the k
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
-test('overview keeps prerequisite layers in columns and direction marks visible at both window sizes', async () => {
+test('overview keeps prerequisites left to right and direction marks visible at both window sizes', async () => {
   const root=await mkdtemp(join(tmpdir(),'yizhi-board-reading-order-'));
   const app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});
   try {
@@ -92,28 +92,15 @@ test('overview keeps prerequisite layers in columns and direction marks visible 
     const expected=await page.evaluate(async()=>{
       const course=await window.yizhi.open(),graph=await window.yizhi.graph(course.sessionId);
       const theme=new Map(graph.nodes.map(node=>[node.id,node.themeId]));
-      const incoming=new Map(graph.groups.map(group=>[group.id,new Set<string>()]));
-      for(const edge of graph.edges)if(edge.type==='requires'){
-        const from=theme.get(edge.fromUnitId)!,to=theme.get(edge.toUnitId)!;if(from!==to)incoming.get(to)!.add(from);
-      }
-      const rank=new Map<string,number>();
-      while(rank.size<incoming.size){
-        const next=[...incoming].filter(([id,parents])=>!rank.has(id)&&[...parents].every(parent=>rank.has(parent)));
-        if(!next.length)throw new Error('example themes contain a cycle');
-        for(const [id,parents] of next)rank.set(id,1+Math.max(-1,...[...parents].map(parent=>rank.get(parent)!)));
-      }
-      return Object.fromEntries(rank);
+      return {ids:graph.groups.map(group=>group.id),edges:graph.edges.filter(edge=>edge.type==='requires').map(edge=>[theme.get(edge.fromUnitId)!,theme.get(edge.toUnitId)!]).filter(([a,b])=>a!==b)};
     });
     for(const size of [{width:1440,height:900},{width:1024,height:768}]) {
       await page.setViewportSize(size);
       await page.getByRole('button',{name:'全图',exact:true}).click();
-      await expect.poll(()=>page.locator('.board-theme').count()).toBe(Object.keys(expected).length);
+      await expect.poll(()=>page.locator('.board-theme').count()).toBe(expected.ids.length);
       const positions=await page.locator('.board-theme').evaluateAll(elements=>elements.map(element=>({id:element.getAttribute('data-id')!,x:element.getBoundingClientRect().x})));
-      for(const a of positions)for(const b of positions){
-        const left=expected[a.id],right=expected[b.id];
-        if(left===right)expect(Math.abs(a.x-b.x)).toBeLessThan(.5);
-        if(left<right)expect(a.x).toBeLessThan(b.x);
-      }
+      for(const [from,to] of expected.edges)expect(positions.find(p=>p.id===from)!.x).toBeLessThan(positions.find(p=>p.id===to)!.x);
+      for(const position of positions)expect(positions.filter(other=>Math.abs(other.x-position.x)<.5).length).toBeLessThanOrEqual(3);
       await expect.poll(()=>page.locator('.board-route-group').evaluateAll(elements=>elements.length?elements.filter(element=>{
         const route=element.querySelector('.board-route');
         return route?.getAttribute('data-directed')==='true'&&!element.querySelector('.board-route-arrow');

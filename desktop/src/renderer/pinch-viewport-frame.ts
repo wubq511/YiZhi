@@ -1,6 +1,7 @@
 import type { Viewport } from '@xyflow/react';
 
-export const MIN_BOARD_ZOOM = .01;
+// Wide courses still need to fit when the directory and relation panel are open.
+export const MIN_BOARD_ZOOM = .001;
 const sameViewport = (a: Viewport, b: Viewport) => a.x === b.x && a.y === b.y && a.zoom === b.zoom;
 
 /** Incremental wheel transforms awaiting the next paint, never a second live camera.

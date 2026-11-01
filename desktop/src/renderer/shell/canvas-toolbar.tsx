@@ -30,5 +30,6 @@ export function CanvasToolbar({ tool, chooseTool, drawing, chooseDrawing, change
   </div>;
 }
 export function CanvasNavigation({ minimap, toggle, zoom, zoomIn, zoomOut, fit }: { minimap: boolean; toggle():void; zoom:number; zoomIn():void; zoomOut():void; fit():void }) {
-  return <div className="canvas-navigation"><Button variant="ghost" size="icon" aria-label={minimap?'收起小地图':'展开小地图'} title={minimap?'收起小地图':'展开小地图'} onClick={toggle}>{minimap?<ChevronDown/>:<Map/>}</Button><span className="toolbar-divider"/><Button variant="ghost" size="icon" aria-label="缩小画板" onClick={zoomOut}><Minus/></Button><span className="canvas-zoom">{Math.round(zoom*100)}%</span><Button variant="ghost" size="icon" aria-label="放大画板" onClick={zoomIn}><Plus/></Button><span className="toolbar-divider"/><Button variant="ghost" size="icon" aria-label="全图" title="全图" onClick={fit}><Maximize/></Button></div>;
+  const percent=zoom*100;
+  return <div className="canvas-navigation"><Button variant="ghost" size="icon" aria-label={minimap?'收起小地图':'展开小地图'} title={minimap?'收起小地图':'展开小地图'} onClick={toggle}>{minimap?<ChevronDown/>:<Map/>}</Button><span className="toolbar-divider"/><Button variant="ghost" size="icon" aria-label="缩小画板" onClick={zoomOut}><Minus/></Button><span className="canvas-zoom">{percent<1?percent.toFixed(1):Math.round(percent)}%</span><Button variant="ghost" size="icon" aria-label="放大画板" onClick={zoomIn}><Plus/></Button><span className="toolbar-divider"/><Button variant="ghost" size="icon" aria-label="全图" title="全图" onClick={fit}><Maximize/></Button></div>;
 }

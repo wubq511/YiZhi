@@ -5,7 +5,7 @@ export type BoardNode = { unitId:string; x:number; y:number; width:number; heigh
 export type BoardTheme = { themeId:string; title:string; x:number; y:number; width:number; height:number; units:BoardNode[] };
 export type BoardRoute = { id:string; source:string; target:string; type:string; directed:boolean; memberIds:string[]; points:Array<{x:number;y:number}>; label:string; kind:'theme'|'unit'|'internal'; unrouted?:true };
 export type BoardScene = { themes:BoardTheme[]; units:BoardNode[]; edges:BoardRoute[] };
-export const BOARD_LAYOUT_POLICY_VERSION = 3;
+export const BOARD_LAYOUT_POLICY_VERSION = 4;
 
 type Point = { x:number; y:number };
 type Rect = { x:number; y:number; width:number; height:number };
@@ -82,8 +82,8 @@ function unitColumns(ids:string[],edges:Edge[]):number {
   return best;
 }
 
-/** Rank only explicit prerequisites. A cycle created by theme aggregation is
- * kept in one column rather than inventing a direction or splitting a theme. */
+/** Schedule themes in published order subject to component prerequisites.
+ * Components of at most four themes share a column; larger ones may split. */
 function themeLayers(themes:BoardTheme[],edges:Edge[],nodes:Map<string,CourseGraph['nodes'][number]>):BoardTheme[][] {
   const order=new Map(themes.map((t,i)=>[t.themeId,i]));
   const outgoing=themes.map(()=>new Set<number>());
@@ -113,15 +113,59 @@ function themeLayers(themes:BoardTheme[],edges:Edge[],nodes:Map<string,CourseGra
     while(stack.length) {const node=stack.pop()!;items.push(node);for(const child of reverse[node])if(component[child]===-1){component[child]=id;stack.push(child);}}
     members.push(items);
   }
-  const next=members.map(()=>new Set<number>()),indegree=members.map(()=>0),rank=members.map(()=>0);
+  for(const items of members) items.sort((a,b)=>a-b);
+  const next=members.map(()=>new Set<number>()),indegree=members.map(()=>0);
   forward.forEach((children,a)=>children.forEach(b=>{const from=component[a],to=component[b];if(from!==to&&!next[from].has(to)){next[from].add(to);indegree[to]++;}}));
-  const ready=members.map((_,i)=>i).filter(i=>indegree[i]===0);
-  for(let cursor=0;cursor<ready.length;cursor++)for(const to of next[ready[cursor]]) {
-    rank[to]=Math.max(rank[to],rank[ready[cursor]]+1);
-    if(--indegree[to]===0)ready.push(to);
+  // Give each prerequisite the priority of its earliest dependent. This moves
+  // a later prerequisite ahead of that dependent without needlessly moving
+  // intervening, unrelated themes ahead of it as well.
+  const remaining=[...indegree],topological=members.map((_,i)=>i).filter(i=>remaining[i]===0);
+  for(let cursor=0;cursor<topological.length;cursor++)for(const to of next[topological[cursor]])if(--remaining[to]===0)topological.push(to);
+  const priority=members.map(items=>items[0]),dependentPriority=members.map(()=>Infinity);
+  for(let i=topological.length-1;i>=0;i--)for(const to of next[topological[i]]) {
+    const id=topological[i];dependentPriority[id]=Math.min(dependentPriority[id],priority[to]);
+    priority[id]=Math.min(priority[id],priority[to]);
   }
-  const layers:BoardTheme[][]=[];
-  for(let i=0;i<themes.length;i++)(layers[rank[component[i]]]??=[]).push(themes[i]);
+  const ready=members.map((_,i)=>i).filter(i=>indegree[i]===0);
+  const offsets=members.map(()=>0),layers:BoardTheme[][]=[],columnComponents=new Set<number>();
+  let column:BoardTheme[]=[];
+  const flush=()=>{if(column.length)layers.push(column);column=[];columnComponents.clear();};
+  while(ready.length) {
+    const key=(id:number)=>Math.min(members[id][offsets[id]],dependentPriority[id]);
+    ready.sort((a,b)=>key(a)-key(b)||members[a][offsets[a]]-members[b][offsets[b]]);
+    let id=ready[0];
+    // Reserve room for all remaining members of every small cycle already
+    // started here. Intervening themes retain their order whenever they fit.
+    const pending=[...columnComponents].filter(c=>members[c].length>1&&members[c].length<=4&&offsets[c]<members[c].length);
+    const reserved=pending.reduce((sum,c)=>sum+members[c].length-offsets[c],0);
+    const startsSmall=offsets[id]===0&&members[id].length>1&&members[id].length<=4;
+    const cost=startsSmall?members[id].length:1;
+    const conflicts=[...columnComponents].some(parent=>next[parent].has(id));
+    const nextPending=pending.length?Math.min(...pending.map(c=>members[c][offsets[c]])):Infinity;
+    if(pending.length&&!pending.includes(id)&&(conflicts||pending.some(c=>members[c].length===4)||column.length+reserved+cost>3||members[id][offsets[id]]>nextPending)) {
+      pending.sort((a,b)=>members[a][offsets[a]]-members[b][offsets[b]]);id=pending[0];
+    }
+    const items=members[id];
+    // A predecessor cannot share this physical column, even indirectly: every
+    // path's final edge has a predecessor in a strictly earlier column.
+    const dependsOnColumn=[...columnComponents].some(parent=>next[parent].has(id));
+    const fourthOwnCycle=column.length===3&&items.length>=4&&columnComponents.size===1&&columnComponents.has(id);
+    const smallStart=offsets[id]===0&&items.length>1&&items.length<=4;
+    const noRoomForSmall=smallStart&&(items.length===4?column.length>0:column.length+items.length>3);
+    // Only ready themes can appear between members of this cycle: dependents
+    // must wait until the whole component is placed. Reserve a fresh column
+    // when that keeps the available intervening themes in course order.
+    const intervening=smallStart&&ready.some(other=>other!==id&&members[other].slice(offsets[other])
+      .some(index=>index>items[0]&&index<items[items.length-1]));
+    const preserveInterval=smallStart&&items.length===2&&intervening&&column.length+items.length+1>3;
+    if(dependsOnColumn||noRoomForSmall||preserveInterval||(items.length>4&&offsets[id]===0&&column.length>0)||(column.length>=3&&!fourthOwnCycle))flush();
+    column.push(themes[items[offsets[id]++]]);columnComponents.add(id);
+    if(offsets[id]===items.length) {
+      ready.splice(ready.indexOf(id),1);
+      for(const to of next[id]) if(--indegree[to]===0)ready.push(to);
+    }
+  }
+  flush();
   return layers;
 }
 
@@ -213,26 +257,13 @@ export function planInitialLayout(graph:CourseGraph,options:{preserveExistingSiz
     theme.units=placed;return theme;
   });
   const layers=themeLayers(localThemes,graph.edges,nodes);
-  const incoming=new Map(graph.groups.map(group=>[group.id,new Set<string>()]));
-  for(const edge of graph.edges) if(edge.type==='requires') {
-    const from=nodes.get(edge.fromUnitId)!.themeId,to=nodes.get(edge.toUnitId)!.themeId;
-    if(from!==to)incoming.get(to)!.add(from);
-  }
-  const placedThemes=new Map<string,BoardTheme>(), originalOrder=new Map(graph.groups.map((group,i)=>[group.id,i]));
   let x=0;
   for(const layer of layers) {
-    const desired=(theme:BoardTheme)=>{
-      const parents=[...incoming.get(theme.themeId)!].flatMap(id=>{const parent=placedThemes.get(id);return parent?[parent.y+parent.height/2]:[];});
-      return parents.length?parents.reduce((sum,y)=>sum+y,0)/parents.length:undefined;
-    };
-    const arranged=layer.map(theme=>({theme,center:desired(theme)}));
-    if(x>0)arranged.sort((a,b)=>(a.center??Infinity)-(b.center??Infinity)||originalOrder.get(a.theme.themeId)!-originalOrder.get(b.theme.themeId)!);
     let bottom=-THEME_ROW_GAP, width=0;
-    for(const {theme,center} of arranged) {
-      const y=Math.max(bottom+THEME_ROW_GAP,center===undefined?0:center-theme.height/2);
+    for(const theme of layer) {
+      const y=bottom+THEME_ROW_GAP;
       for(const n of theme.units){n.x+=x;n.y+=y;}
       theme.x+=x;theme.y+=y;bottom=y+theme.height;width=Math.max(width,theme.width);
-      placedThemes.set(theme.themeId,theme);
     }
     x+=width+THEME_COLUMN_GAP;
   }
@@ -405,7 +436,9 @@ class RouteTraffic {
           penalty+=overlap*((1-distance/this.separation)*12+(distance<1e-6?1000:0));
         } else {
           const v=vertical?{a,b}:other,h=vertical?other:{a,b};
-          if(v.a.x>Math.min(h.a.x,h.b.x)&&v.a.x<Math.max(h.a.x,h.b.x)&&h.a.y>Math.min(v.a.y,v.b.y)&&h.a.y<Math.max(v.a.y,v.b.y))penalty+=10000;
+          // One clear crossing costs two lane separations, not a detour of
+          // arbitrary length. Shared or closely parallel ink remains costly.
+          if(v.a.x>Math.min(h.a.x,h.b.x)&&v.a.x<Math.max(h.a.x,h.b.x)&&h.a.y>Math.min(v.a.y,v.b.y)&&h.a.y<Math.max(v.a.y,v.b.y))penalty+=2*this.separation;
         }
       };
       const inGrid=this.each(a,b,this.separation,key=>{for(const segment of this.cells.get(key)??[])check(segment);});
@@ -485,32 +518,44 @@ function route(source:Rect,target:Rect,index:ObstacleIndex,include:(o:Obstacle)=
     }
   }
   if(best && (bestTraffic===0 || !deep))return best;
-  // Harder mazes use obstacle corners as sparse waypoints, never an X × Y grid.
-  const points=[...starts,...ends,...index.corners.filter(c=>include(c.obstacle)).map(c=>c.point)];
-  const distance=new Map<number,number>(),previous=new Map<number,{from:number;corner:Point}>(),heap=new Heap();
+  // Try nearby, distinct traversable corners first. If they cannot connect
+  // the ports, search the complete set rather than losing a valid relation.
+  const cornerDistance=(p:Point)=>Math.abs(p.x-centerA.x)+Math.abs(p.y-centerA.y)+Math.abs(p.x-centerB.x)+Math.abs(p.y-centerB.y);
+  const unique=new Map<string,Point>();
+  for(const {point,obstacle} of index.corners)if(include(obstacle))unique.set(`${point.x},${point.y}`,point);
+  const corners=[...unique.values()].filter(point=>clear(point,point))
+    .sort((a,b)=>cornerDistance(a)-cornerDistance(b)||a.x-b.x||a.y-b.y);
   const heuristic=(p:Point)=>Math.min(...ends.map(e=>Math.abs(e.x-p.x)+Math.abs(e.y-p.y)));
-  for(let i=0;i<starts.length;i++) {
-    const initial=facing(points[i],centerA,centerB);distance.set(i,initial);heap.push(i,initial+heuristic(points[i]));
-  }
-  let found:number|undefined;
-  while(heap.length) {
-    const current=heap.pop(),a=points[current.key], d=distance.get(current.key)!;
-    if(current.score>d+heuristic(a)+1e-7) continue;
-    if(current.key>=starts.length&&current.key<starts.length+ends.length){found=current.key;break;}
-    for(let i=starts.length;i<points.length;i++) {
-      const b=points[i],length=Math.abs(a.x-b.x)+Math.abs(a.y-b.y);
-      for(const corner of [{x:a.x,y:b.y},{x:b.x,y:a.y}]) if((!forward||relaxed||(corner.x>=a.x&&b.x>=corner.x))&&clear(a,corner)&&clear(corner,b)) {
-        const nd=d+length+(deep?traffic.score(simplify([a,corner,b])):0);
-        if(nd >= (distance.get(i)??Infinity))continue;
-        distance.set(i,nd);previous.set(i,{from:current.key,corner});heap.push(i,nd+heuristic(b));
+  const search=(candidates:Point[]):Point[]|undefined=>{
+    const points=[...starts,...ends,...candidates];
+    const distance=new Map<number,number>(),previous=new Map<number,{from:number;corner:Point}>(),heap=new Heap();
+    for(let i=0;i<starts.length;i++) {
+      const initial=facing(points[i],centerA,centerB);distance.set(i,initial);heap.push(i,initial+heuristic(points[i]));
+    }
+    let found:number|undefined;
+    while(heap.length) {
+      const current=heap.pop(),a=points[current.key],d=distance.get(current.key)!;
+      if(current.score>d+heuristic(a)+1e-7) continue;
+      if(current.key>=starts.length&&current.key<starts.length+ends.length){found=current.key;break;}
+      for(let i=starts.length;i<points.length;i++) {
+        const b=points[i],length=Math.abs(a.x-b.x)+Math.abs(a.y-b.y);
+        for(const corner of [{x:a.x,y:b.y},{x:b.x,y:a.y}]) if((!forward||relaxed||(corner.x>=a.x&&b.x>=corner.x))&&clear(a,corner)&&clear(corner,b)) {
+          const nd=d+length+(deep?traffic.score(simplify([a,corner,b])):0);
+          if(nd >= (distance.get(i)??Infinity))continue;
+          distance.set(i,nd);previous.set(i,{from:current.key,corner});heap.push(i,nd+heuristic(b));
+        }
       }
     }
-  }
-  if(found===undefined) return best??fallback();
-  let cursor:number=found;
-  const reversed:Point[]=[points[cursor]];
-  while(previous.has(cursor)) {const step:{from:number;corner:Point}=previous.get(cursor)!;reversed.push(step.corner,points[step.from]);cursor=step.from;}
-  consider(reversed.reverse());return best??fallback();
+    if(found===undefined)return undefined;
+    let cursor:number=found;
+    const reversed:Point[]=[points[cursor]];
+    while(previous.has(cursor)) {const step:{from:number;corner:Point}=previous.get(cursor)!;reversed.push(step.corner,points[step.from]);cursor=step.from;}
+    return reversed.reverse();
+  };
+  let path=search(corners.slice(0,256));
+  if(!path&&!best&&corners.length>256)path=search(corners);
+  if(path)consider(path);
+  return best??fallback();
 }
 
 export function projectBoard(graph:CourseGraph,placements:BoardNode[],level:'themes'|'units',relationView:string):BoardScene {
@@ -562,9 +607,10 @@ export function projectBoard(graph:CourseGraph,placements:BoardNode[],level:'the
   // Refinement searches multiple alternative lanes. Bound it for dense maps;
   // every relation still gets the normal obstacle-aware route and port lane.
   const themeRouteCount=routes.filter(r=>r.kind==='theme').length;
-  const layerColumns=themeLayers(themes,graph.edges,nodes);
-  const alignedLayers=layerColumns.every((layer,i)=>layer.every(theme=>theme.x===layer[0].x)&&(!i||layer[0].x>layerColumns[i-1][0].x));
-  const refineOverview=alignedLayers&&themeRouteCount<=20 && themeRouteCount<=Math.max(8,Math.ceil(themes.length*1.25));
+  // Deep routing considers obstacle corners pairwise. Bound both those
+  // corners (three theme obstacles, eight corners each) and the complete
+  // traffic set, including internal routes, independently of alignment.
+  const refineOverview=themes.length<=20&&index.obstacles.length<=160&&routes.length<=100&&themeRouteCount<=20 && themeRouteCount<=Math.max(8,Math.ceil(themes.length*1.25));
   const modes=new Map(graph.requirementGroups.map(g=>[g.id,g.mode]));
   const endpointKey=(r:typeof routes[number],id:string)=>JSON.stringify([r.kind==='theme'?'theme':'unit',id]);
   const laneTotals=new Map<string,number>(),lanes=new Map<string,number>(),traffic=new RouteTraffic();

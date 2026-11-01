@@ -2,7 +2,8 @@ import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { boardWheelPoint, resizeBoardWindow } from './board-test-helpers';
+import { performance as nodePerformance } from 'node:perf_hooks';
+import { boardWheelPoint, cameraMovementGaps, finishPanProbe, resizeBoardWindow, startPanProbe } from './board-test-helpers';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
 
 for(const gesture of ['drag','wheel'] as const)test(`overview ${gesture} keeps the renderer and fixed controls stable`,async()=>{
@@ -12,34 +13,70 @@ for(const gesture of ['drag','wheel'] as const)test(`overview ${gesture} keeps t
     const page=await app.firstWindow();await resizeBoardWindow(app,page,1024,768);
     await page.getByRole('button',{name:'全图',exact:true}).click();
     await expect(page.locator('.board-route-ink').first()).toBeAttached();
-    const cdp=await page.context().newCDPSession(page),frames:string[]=[];
-    cdp.on('Page.screencastFrame',frame=>{if(frames.length<200)frames.push(frame.data);void cdp.send('Page.screencastFrameAck',{sessionId:frame.sessionId});});
+    const cdp=await page.context().newCDPSession(page),frames:string[]=[],screenTimes:Array<{at:number;timestamp?:number}>=[],ackErrors:string[]=[];
+    let stopping=false;
+    cdp.on('Page.screencastFrame',frame=>{if(frames.length<200){frames.push(frame.data);screenTimes.push({at:nodePerformance.now(),timestamp:frame.metadata?.timestamp});}void cdp.send('Page.screencastFrameAck',{sessionId:frame.sessionId}).catch(error=>{if(!stopping)ackErrors.push(String(error));});});
     await cdp.send('Page.startScreencast',{format:'jpeg',quality:75,everyNthFrame:1});
     const point=await boardWheelPoint(page);
+    const clock=async()=>{const before=nodePerformance.now(),pageTime=await page.evaluate(()=>performance.now()),after=nodePerformance.now();return {before,after,pageTime,uncertainty:(after-before)/2};};
+    const native=()=>app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().map(w=>({focused:w.isFocused(),visible:w.isVisible(),minimized:w.isMinimized(),bounds:w.getBounds()})));
+    const nativeBefore=await native(),clockBefore=await clock();
     await page.mouse.move(point.x,point.y);if(gesture==='drag')await page.mouse.down();
-    await page.evaluate(()=>{
-      const samples:Array<{t:number;x:number;y:number;zoom:number}>=[];
-      (window as any).__panProbe={samples,running:true};
-      const tick=(t:number)=>{const probe=(window as any).__panProbe;if(!probe.running)return;
-        const el=document.querySelector<HTMLElement>('.react-flow__viewport')!,v=Array.from((el as any).attributeStyleMap.get('transform')) as any[];
-        samples.push({t,x:v[0].x.value,y:v[0].y.value,zoom:v[1].x.value});requestAnimationFrame(tick);};requestAnimationFrame(tick);
-    });
-    for(let i=1;i<=80;i++)if(gesture==='drag')await page.mouse.move(point.x+i*2,point.y+i);else await page.mouse.wheel(2,1);
+    await startPanProbe(page);const commands:Array<{step:number;sent:number;done:number}>=[];
+    for(let i=1;i<=80;i++){const sent=nodePerformance.now();if(gesture==='drag')await page.mouse.move(point.x+i*2,point.y+i);else await page.mouse.wheel(2,1);commands.push({step:i,sent,done:nodePerformance.now()});}
     if(gesture==='drag')await page.mouse.up();await page.waitForTimeout(100);
-    const result=await page.evaluate(()=>{const p=(window as any).__panProbe;p.running=false;return p.samples as Array<{t:number;x:number;y:number;zoom:number}>;});
-    await cdp.send('Page.stopScreencast');await cdp.detach();
+    const probe=await finishPanProbe(page),result=probe.samples,clockAfter=await clock(),nativeAfter=await native();
+    stopping=true;await cdp.send('Page.stopScreencast');await cdp.detach();
     const shellSamples:number[][]=[];
     for(const frame of frames){const image=await loadImage(Buffer.from(frame,'base64')),canvas=createCanvas(10,30),ctx=canvas.getContext('2d');ctx.drawImage(image,8,100,48,300,0,0,10,30);shellSamples.push([...ctx.getImageData(0,0,10,30).data]);}
     const differences=shellSamples.slice(1).map(s=>s.reduce((sum,v,i)=>sum+Math.abs(v-shellSamples[0][i]),0)/s.length);
-    const gaps=result.slice(1).map((s,i)=>s.t-result[i].t);
+    const gaps=cameraMovementGaps(result);
     const direction=gesture==='drag'?1:-1;
     const reversals=result.slice(1).filter((s,i)=>(s.x-result[i].x)*direction < -1||(s.y-result[i].y)*direction < -1);
-    console.log(JSON.stringify({frames:result.length,screenFrames:frames.length,maxShellDifference:Math.max(0,...differences),maxGap:Math.max(...gaps),reversals:reversals.length,first:result[0],last:result.at(-1)}));
+    const maxGap=Math.max(0,...gaps.map(g=>g.gap)),maxInputGap=Math.max(0,...probe.inputs.slice(1).map((e,i)=>e.now-probe.inputs[i].now));
+    const maxCommand=Math.max(0,...commands.map(c=>c.done-c.sent)),maxShellDifference=Math.max(0,...differences);
+    console.log(JSON.stringify({frames:result.length,screenFrames:frames.length,maxShellDifference,maxGap,maxInputGap,maxCommand,reversals:reversals.length,first:result[0],last:result.at(-1)}));
+    if(maxGap>=100||maxInputGap>=100||maxCommand>=100||result.length<=5||gaps.length===0||frames.length<=5||reversals.length||maxShellDifference>=15||ackErrors.length)
+      await test.info().attach('pan-timing.json',{body:JSON.stringify({gesture,point,probe,commands,clockBefore,clockAfter,nativeBefore,nativeAfter,screenTimes,ackErrors,maxGap,maxInputGap,maxCommand,maxShellDifference,reversals:reversals.length}),contentType:'application/json'});
     expect(result.length).toBeGreaterThan(5);
+    expect(gaps.length).toBeGreaterThan(0);
     expect((result.at(-1)!.x-result[0].x)*direction).toBeGreaterThan(60);
     expect(reversals).toHaveLength(0);
-    expect(Math.max(...gaps)).toBeLessThan(100);
+    expect(maxGap).toBeLessThan(100);
     expect(frames.length).toBeGreaterThan(5);
-    expect(Math.max(...differences)).toBeLessThan(15);
+    expect(ackErrors).toHaveLength(0);
+    expect(maxShellDifference).toBeLessThan(15);
+  } finally {await app.close();await rm(root,{recursive:true,force:true});}
+});
+
+for(const stall of ['during','after','input'] as const)test(`pan timing ${stall==='during'?'detects a stall while moving':stall==='after'?'excludes a stall after movement':'records an input pause while frames continue'}`,async()=>{
+  const root=await mkdtemp(join(tmpdir(),'yizhi-pan-boundary-'));
+  const app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile')}});
+  try {
+    const page=await app.firstWindow();await resizeBoardWindow(app,page,1024,768);
+    await page.getByRole('button',{name:'全图',exact:true}).click();await expect(page.locator('.board-route-ink').first()).toBeAttached();
+    const point=await boardWheelPoint(page);await page.mouse.move(point.x,point.y);await page.mouse.down();
+    await startPanProbe(page);
+    const nextFrame=()=>page.evaluate(()=>new Promise<void>(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>done()))));
+    const inject=()=>page.evaluate(()=>{const start=performance.now();while(performance.now()-start<150){}return {start,end:performance.now()};});
+    let block:{start:number;end:number}|undefined;
+    for(let i=1;i<=40;i++){
+      await page.mouse.move(point.x+i*2,point.y+i);
+      if(stall==='during'&&i===20){await nextFrame();block=await inject();}
+      if(stall==='input'&&i===20){const start=await page.evaluate(()=>performance.now());await page.waitForTimeout(150);block={start,end:await page.evaluate(()=>performance.now())};}
+    }
+    await page.mouse.up();if(stall==='after'){await nextFrame();block=await inject();}await page.waitForTimeout(100);
+    const probe=await finishPanProbe(page),samples=probe.samples;
+    const all=samples.slice(1).map((sample,i)=>({start:samples[i].t,end:sample.t,gap:sample.t-samples[i].t}));
+    const movement=cameraMovementGaps(samples);expect(movement.length).toBeGreaterThan(0);
+    const includesInjected=(gap:{start:number;end:number;gap:number})=>gap.gap>100&&gap.start<=block!.start+20&&gap.end>=block!.end-20;
+    if(stall==='input'){
+      const events=probe.inputs.filter(e=>e.type==='pointermove');
+      expect(events.slice(1).some((e,i)=>events[i].now<=block!.start+20&&e.now>=block!.end-20)).toBe(true);
+      expect(samples.filter(s=>s.now>block!.start+20&&s.now<block!.end-20).length).toBeGreaterThan(1);
+    }else{
+      expect(all.some(includesInjected)).toBe(true);
+      expect(movement.some(includesInjected)).toBe(stall==='during');
+    }
   } finally {await app.close();await rm(root,{recursive:true,force:true});}
 });

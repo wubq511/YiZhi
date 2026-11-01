@@ -4,6 +4,7 @@ import rough from 'roughjs';
 import { themeTitleSpace, themeTitleWidth, type BoardRoute, type BoardScene } from '../board-layout';
 import { routeIntersectsViewport } from '../board-layout/visibility';
 import { directCurve, organicRoute, unionObstacles, type StrokeObstacle } from './board-stroke';
+import { observation } from '../acceptance-observation';
 
 const meanings:Record<string,string>={requires:'前置',constructs:'构造',improves:'优化',inverse:'互逆'};
 export function boardRouteLabel(route:BoardRoute) {
@@ -82,12 +83,15 @@ function labelsFor(routes:BoardRoute[],scene:BoardScene,viewport:Viewport,drawin
 /** The shared scene owns paths; viewport culling follows their actual geometry. */
 export function BoardRoutes({scene,viewport,width,height,selectedUnitId,selectedThemeId,onActivate}:{scene:BoardScene|undefined;viewport:Viewport;width:number;height:number;selectedUnitId?:string;selectedThemeId?:string;onActivate(ids:string[],pointer:boolean):void}) {
   const maskId=useId();
-  const routes=useMemo(()=>{
-    if(!scene||width<=0||height<=0)return [];
+  const visibleMask=useMemo(()=>{
+    if(!scene||width<=0||height<=0)return '';
     const margin=32/viewport.zoom, rect={left:-viewport.x/viewport.zoom-margin,top:-viewport.y/viewport.zoom-margin,
       right:(width-viewport.x)/viewport.zoom+margin,bottom:(height-viewport.y)/viewport.zoom+margin};
-    return scene.edges.filter(route=>routeIntersectsViewport(route,rect));
+    return scene.edges.map(route=>routeIntersectsViewport(route,rect)?'1':'0').join('');
   },[scene,viewport,width,height]);
+  // A camera translation often leaves the same scene-owned routes visible.
+  // Keep that set stable so their ink and label placement can be reused.
+  const routes=useMemo(()=>scene?.edges.filter((_,index)=>visibleMask[index]==='1')??[],[scene,visibleMask]);
   const themeByUnit=useMemo(()=>new Map(scene?.themes.flatMap(theme=>theme.units.map(unit=>[unit.unitId,theme.themeId] as const))??[]),[scene]);
   const ink=useMemo(()=>{
     if(!scene)return new Map<string,RouteInk>();
@@ -153,7 +157,14 @@ export function BoardRoutes({scene,viewport,width,height,selectedUnitId,selected
     for(const route of scene.edges)if(route.kind==='theme'&&route.points.length>=2)draw(route);
     return new Map(routes.map(route=>[route.id,draw(route)] as const));
   },[routes,scene,themeByUnit,viewport.zoom]);
-  const labels=useMemo(()=>scene?labelsFor(routes,scene,viewport,strokes):new Map<string,Label>(),[routes,scene,viewport,strokes]);
+  const labels=useMemo(()=>{
+    if(!scene)return new Map<string,Label>();
+    // All label candidates and obstacles translate together; calculate in a
+    // screen-scaled origin and let the viewport translate the result.
+    const result=labelsFor(routes,scene,{x:0,y:0,zoom:viewport.zoom},strokes);
+    observation.count('board.labelLayouts');
+    return result;
+  },[routes,scene,viewport.zoom,strokes]);
   if(!scene)return null;
   const scale=1/viewport.zoom;
   return <ViewportPortal><svg className="board-route-layer" aria-label="知识关系">
