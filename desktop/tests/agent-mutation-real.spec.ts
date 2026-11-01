@@ -1,4 +1,4 @@
-import { openFirstUnit, expandDirectoryTheme } from './shell-actions';
+import { openFirstUnit, expandDirectoryTheme , agentReady} from './shell-actions';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp,rm,writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -10,7 +10,7 @@ import type { Page } from '@playwright/test';
 const real=process.env.YIZHI_REAL_EXECUTOR==='1';
 const env=(root:string)=>{const e:Record<string,string>={...process.env,PATH:'/usr/bin:/bin',YIZHI_DATA_HOME:join(root,'profile')} as Record<string,string>;delete e.YIZHI_CODEX_PATH;return e;};
 async function conversation(page:Page){return page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open(),l=await b.agent.list({sessionId:c.sessionId});return b.agent.get({sessionId:c.sessionId,conversationId:l.selectedId});});}
-async function openAgent(page:Page){await page.getByRole('button',{name:'学习对话',exact:true}).click();await expect(page.getByText('本机 Codex CLI · 已连接',{exact:true})).toBeVisible();await page.getByLabel('问答模型').selectOption('gpt-6-luna');}
+async function openAgent(page:Page){await page.getByRole('button',{name:'学习对话',exact:true}).click();await agentReady(page);await page.getByLabel('问答模型').selectOption('gpt-6-luna');}
 async function terminal(page:Page){await expect.poll(async()=>(await conversation(page)).tasks.at(-1)?.status,{timeout:120000}).not.toBe('running');return (await conversation(page)).tasks.at(-1);}
 async function evidence(name:string,value:any){if(process.env.YIZHI_EVIDENCE_DIR)await writeFile(join(process.env.YIZHI_EVIDENCE_DIR,name+'.json'),JSON.stringify(value,null,2));}
 
@@ -25,7 +25,7 @@ test('installed CLI modifies one real B, removes an actual redundant paragraph, 
   const launch=()=>electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:env(root)});app=await launch();let page=await app.firstWindow();await resizeBoardWindow(app,page);
   await openFirstUnit(page);await openAgent(page);
   result.executor=await page.evaluate(()=>(window as any).yizhi.agent.status());result.runtime=(await page.evaluate(()=>(window as any).yizhi.open())).runtime;
-  await page.getByLabel('Agent 请求方式').selectOption('modify');
+  await page.getByRole('radiogroup',{name:'Agent 请求方式'}).getByRole('radio',{name:'修改',exact:true}).click();
   const wording='位置记数法用数码、基数和位权表示数值，各位数码乘位权后相加。';
   await page.getByRole('textbox',{name:'学习对话草稿'}).fill(`请直接完成一次局部整理并保存一个完整组：把原段落 ${paragraph.id} 的文字改为“${wording}”，这是纯措辞精简不改变方法；删除明确重复的 ${duplicate.id}；把原例题 ${example.id} 移到首段 ${paragraph.id} 之前，保持原ID及所有未展开材料。不要删除个人记录。使用最新edit context中的手动布局，将目标与返回的两个邻居的x各加24、y各加36，width不变。必须实际调用read edit context和apply group，不要只回答完成。`);
   await page.getByRole('button',{name:'发送修改请求',exact:true}).click();result.task=await terminal(page);result.view=await conversation(page);expect(result.task.status,JSON.stringify(result.view)).toBe('completed');
@@ -35,7 +35,7 @@ test('installed CLI modifies one real B, removes an actual redundant paragraph, 
   expect(actual.notes).toHaveLength(1);expect(actual.notes[0].current.status).toBe('orphan');expect(actual.notes[0].original).toEqual(note.original);expect(actual.notes[0].text).toBe(note.text);expect(actual.review.prompts).toHaveLength(0);expect(actual.review.units['KU-001'].status).toBe('mastered');
   const changes=actual.graph.layout.nodes.filter((n:any)=>JSON.stringify(n)!==JSON.stringify(baseline.layout.nodes.find(x=>x.unitId===n.unitId)));expect(changes).toHaveLength(3);
   result.changedLayout=changes;result.saved=actual;expect(result.view.toolFacts.map((f:any)=>f.name)).toEqual(expect.arrayContaining(['yizhi_read_edit_context','yizhi_apply_group']));
-  await page.getByRole('textbox',{name:'学习对话草稿'}).fill('整理后的真实草稿');await expect(page.getByRole('status',{name:'对话草稿保存'})).toHaveText('草稿已保存');
+  await page.getByRole('textbox',{name:'学习对话草稿'}).fill('整理后的真实草稿');await expect(page.getByRole('status',{name:'保存状态',exact:true})).toHaveText('已保存');
   await app.close();app=await launch();page=await app.firstWindow();await resizeBoardWindow(app,page);await openAgent(page);
   await expect(page.getByRole('textbox',{name:'学习对话草稿'})).toHaveValue('整理后的真实草稿');expect((await page.evaluate(()=>(window as any).yizhi.open())).unit).toEqual(actual.unit);expect((await conversation(page)).tasks[0].groups).toEqual(result.task.groups);
   if(process.env.YIZHI_EVIDENCE_DIR)await page.screenshot({path:join(process.env.YIZHI_EVIDENCE_DIR,'t17-actual-structure-reopen.png')});result.passed=true;
@@ -58,7 +58,7 @@ for(const incomplete of [false,true])test(`installed CLI corrects actual MUX cop
   await expandDirectoryTheme(page, '复用器与分配器');
   await page.getByRole('button',{name:'MUX 器件、级联与扩展',exact:true}).first().click();await openAgent(page);
   result.executor=await page.evaluate(()=>(window as any).yizhi.agent.status());result.runtime=(await page.evaluate(()=>(window as any).yizhi.open())).runtime;
-  await expect(page.getByLabel('Agent 请求方式')).toHaveValue('modify');await expect(page.locator('.agent-attachment')).toHaveCount(2);
+  await expect(page.getByRole('radiogroup',{name:'Agent 请求方式'}).getByRole('radio',{name:'修改',exact:true})).toHaveAttribute('data-state','on');await expect(page.locator('.agent-attachment')).toHaveCount(2);
   await page.getByRole('button',{name:'发送修改请求',exact:true}).click();await page.getByRole('button',{name:'收起对话',exact:true}).click();
   const input=page.getByRole('checkbox',{name:'S0',exact:true});await revealBoardControl(page,input);const box=(await input.boundingBox())!;
   await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();
@@ -72,7 +72,7 @@ for(const incomplete of [false,true])test(`installed CLI corrects actual MUX cop
   const saved=await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return {unit:await b.readUnit(c.sessionId,'KU-057'),graph:await b.graph(c.sessionId),review:await b.reviewStates(c.sessionId),view:await b.experiments.read({sessionId:c.sessionId,instanceId:'KU-057/RB-TH-13-057-010-interactive'})};});result.saved=saved;
   expect(saved.review.units['KU-057'].status).toBe('mastered');expect(saved.review.prompts).toHaveLength(1);expect(saved.graph.edges.filter((e:any)=>e.id!=='REL-014')).toEqual(result.before.graph.edges.filter((e:any)=>e.id!=='REL-014'));
   const corrected=saved.unit.reading.blocks.find((b:any)=>b.id===muxId);expect(corrected.payload.config.selectBits).toEqual(['S1','S0']);expect(corrected.payload.config.dataSignals).toEqual(['I0','I1','I2','I3']);
-  await page.getByRole('textbox',{name:'学习对话草稿'}).fill('真实纠错后接着复习');await expect(page.getByRole('status',{name:'对话草稿保存'})).toHaveText('草稿已保存');
+  await page.getByRole('textbox',{name:'学习对话草稿'}).fill('真实纠错后接着复习');await expect(page.getByRole('status',{name:'保存状态',exact:true})).toHaveText('已保存');
   await app.close();app=await launch();page=await app.firstWindow();await resizeBoardWindow(app,page);await openAgent(page);await expect(page.getByRole('textbox',{name:'学习对话草稿'})).toHaveValue('真实纠错后接着复习');
   const reopened=await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return {unit:await b.readUnit(c.sessionId,'KU-057'),view:await b.experiments.open({sessionId:c.sessionId,unitId:'KU-057',blockId:'RB-TH-13-057-010-interactive'})};});expect(reopened.unit).toEqual(saved.unit);expect(reopened.view.state).toEqual(saved.view.state);expect(reopened.view.definition.revision).toBe(incomplete?1:2);
   await page.getByRole('button',{name:'收起对话',exact:true}).click();

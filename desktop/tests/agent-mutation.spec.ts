@@ -1,4 +1,4 @@
-import { openFirstUnit, expandDirectoryTheme } from './shell-actions';
+import { openFirstUnit, expandDirectoryTheme , agentReady} from './shell-actions';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, chmod, writeFile, cp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -13,8 +13,8 @@ test('small actual Electron window follows real tool groups, keeps student takeo
   let page=await app.firstWindow();await resizeBoardWindow(app,page);
   await openFirstUnit(page);
   await page.getByRole('button',{name:'学习对话',exact:true}).click();
-  await expect(page.getByText('本机 Codex CLI · 已连接',{exact:true})).toBeVisible();
-  await page.getByLabel('Agent 请求方式').selectOption('modify');
+  await agentReady(page);
+  await page.getByRole('radiogroup',{name:'Agent 请求方式'}).getByRole('radio',{name:'修改',exact:true}).click();
   await page.getByRole('textbox',{name:'学习对话草稿'}).fill('受控协议竞争回归，不是真实Agent验收');
   await page.getByRole('button',{name:'发送修改请求',exact:true}).click();
   await expect(page.getByRole('status',{name:'修改跟随'})).toHaveText('正在跟随修改');
@@ -29,10 +29,10 @@ test('small actual Electron window follows real tool groups, keeps student takeo
   await expect.poll(()=>page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return (await b.readingState(c.sessionId)).camera.y;})).toBeCloseTo(liveCamera.y,3);
   const camera=await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return (await b.readingState(c.sessionId)).camera;});
   await writeFile(release,'continue');
-  await expect(page.getByRole('status',{name:'回答状态'})).toContainText('等待整合',{timeout:15000});
+  await expect(page.getByRole('status',{name:'回答状态'}).filter({hasText:'等待整合'})).toBeVisible({timeout:15000});
   await expect(page.getByRole('status',{name:'修改跟随'})).toHaveText('已由你控制视野');
   await expect(page.getByRole('textbox',{name:'编辑首段正文'})).toContainText('受控协议回归');
-  await expect(page.getByRole('status',{name:'回答状态'})).toContainText('草稿候选');
+  await expect(page.locator('.agent-panel')).toContainText('草稿候选');
   const actual=await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return {state:await b.readingState(c.sessionId),unit:c.unit,graph:await b.graph(c.sessionId)};});expect(actual.state.camera).toEqual(camera);const finalCamera=await matrix();expect(finalCamera.x).toBeCloseTo(liveCamera.x,3);expect(finalCamera.y).toBeCloseTo(liveCamera.y,3);expect(finalCamera.zoom).toBeCloseTo(liveCamera.zoom,6);
   expect(actual.unit.reading.blocks[0].kind).toBe('example');const baseline=actual.graph.layout.nodes.find((n:any)=>n.unitId==='KU-001');
   await page.getByRole('button',{name:'收起对话',exact:true}).click();

@@ -52,7 +52,7 @@ else {
     courseDirectory = resolve(initialCourse ?? join(app.getPath('userData'), 'courses/digital-logic-t01'));
     core = new CourseService(join(runtimeDirectory, 'worker.cjs'), { observe: process.env.YIZHI_OBSERVE === '1' });
     if (process.env.YIZHI_OBSERVE === '1') (globalThis as any).__yizhiAcceptance = { core: () => core.observe() };
-    agent = new AgentRuntime(core, { directory: join(app.getPath('userData'), 'agent-runtime'), cliPath: process.env.YIZHI_CODEX_PATH });
+    agent = new AgentRuntime(core, { directory: join(app.getPath('userData'), 'agent-runtime'), cliPath: process.env.YIZHI_CODEX_PATH, notify: sessionId => host?.notifyAgent(sessionId) });
     description = new DescriptionRuntime(core, { directory: join(app.getPath('userData'), 'search-runtime'), cliPath: process.env.YIZHI_CODEX_PATH });
     void agent.detect();
     host=new LearningHost(core,agent,description,courseDirectory,runtimeDirectory,{preloadPath:options.preloadPath});

@@ -55,6 +55,10 @@ export class LearningHost {
     return {...await this.core.read(view.sessionId!),inputRecovery:view.recovery};
   };
   async restored(event:Electron.IpcMainInvokeEvent){const view=this.sender(event);await this.open(event);view.window.webContents.send('course:generation-changed');}
+  /** Carries no content and no identity: it only tells a window that its own cursor has more to read. */
+  notifyAgent(sessionId: string) {
+    for (const view of this.views.values()) if (view.sessionId === sessionId && !view.window.isDestroyed()) view.window.webContents.send('agent:changed');
+  }
   async show(directory=this.lastDirectory,bounds?:Electron.Rectangle) {
     if(this.quiescing||this.exiting)return;
     mkdirSync(directory,{recursive:true});directory=canonical(directory);

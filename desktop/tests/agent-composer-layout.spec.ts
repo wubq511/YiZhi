@@ -41,7 +41,7 @@ test('persisted long conversation keeps the working composer usable at desktop a
         return {
           inner: { width: innerWidth, height: innerHeight }, panel: box('.agent-panel'),
           messages: box('.agent-messages'), composer: box('.agent-composer'),
-          textarea: box('.agent-composer textarea'), mode: box('.agent-composer select[aria-label="工作中消息方式"]'),
+          textarea: box('.agent-composer textarea'), mode: box('[data-slot="toggle-group"]'),
           model: box('.agent-send select'), send: box('.agent-send button'),
         };
       });
@@ -61,7 +61,7 @@ test('persisted long conversation keeps the working composer usable at desktop a
       }
     }
     await input.fill('请在当前工作结束后继续解释位权。');
-    await page.getByRole('combobox', { name: '工作中消息方式' }).selectOption('queue');
+    await page.evaluate(() => { localStorage.setItem('yizhi.agent.message-mode','queue'); window.dispatchEvent(new Event('yizhi:message-mode')); });
     await page.getByRole('button', { name: '排队发送', exact: true }).click();
     await expect(page.getByRole('status', { name: '回答状态' }).filter({ hasText: '已排队' })).toBeVisible();
   } finally {

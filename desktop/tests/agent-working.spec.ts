@@ -67,21 +67,21 @@ test('working composer defaults to steer, shows failed delivery retry, and queue
     const input = page.getByRole('textbox',{name:'学习对话草稿'});
     await input.fill('解释位权'); await page.getByRole('button',{name:'发送问题',exact:true}).click();
     await expect(page.getByRole('status',{name:'回答状态'})).toContainText('正在回答');
-    await expect(page.getByRole('combobox',{name:'工作中消息方式'})).toHaveValue('steer');
+    await expect(page.getByRole('button',{name:'发送引导',exact:true})).toBeVisible();
     await input.fill('更正：用三进制的例子');
     await page.getByRole('button',{name:'发送引导',exact:true}).click();
     await expect(page.getByRole('status',{name:'消息送达状态'})).toContainText('引导未送达');
     await page.getByRole('button',{name:'重试原引导',exact:true}).click();
-    await expect(page.getByRole('status',{name:'消息送达状态'})).toContainText('已送达');
-    await page.getByRole('combobox',{name:'工作中消息方式'}).selectOption('queue');
+    await expect(page.locator('[data-slot="trace"]').getByText('已送达').first()).toBeVisible();
+    await page.evaluate(() => { localStorage.setItem('yizhi.agent.message-mode','queue'); window.dispatchEvent(new Event('yizhi:message-mode')); });
     await input.fill('处理结束后解释十进制'); await page.getByRole('button',{name:'排队发送',exact:true}).click();
     await expect(page.getByRole('status',{name:'回答状态'}).filter({hasText:'已排队'})).toBeVisible();
     const view = await page.evaluate(async()=>{const b=window.yizhi,c=await b.open(),l=await b.agent.list({sessionId:c.sessionId});return b.agent.get({sessionId:c.sessionId,conversationId:l.selectedId!});});
     expect(view.tasks).toHaveLength(2); expect(view.tasks[1].turnId).toBeNull();
     expect(view.tasks[0].deliveries).toHaveLength(1); expect(view.messages.filter(m=>m.role==='user')).toHaveLength(3);
     await page.screenshot({path:evidencePath('t18-working-composer.png')});
-    await expect(page.getByRole('status',{name:'回答状态'}).first()).toContainText('回答已完成',{timeout:15000});
-    await expect(page.getByRole('status',{name:'回答状态'}).nth(1)).toContainText('正在回答');
+    await expect(page.getByRole('status',{name:'回答状态'})).toHaveCount(1,{timeout:15000});
+    await expect(page.getByRole('status',{name:'回答状态'}).first()).toContainText('正在回答');
   } finally { await app.close(); await rm(root,{recursive:true,force:true}); }
 });
 

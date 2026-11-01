@@ -1,7 +1,7 @@
 import { historyTimestamp } from './history-clock';
 import type { DatabaseSync } from 'node:sqlite';
 import { createHash, randomUUID } from 'node:crypto';
-import type { AgentEvent, AgentTask, AgentMessage, ConversationView, QuestionSnapshot, SubmitQuestion } from '../agent-api';
+import type { AgentEvent, AgentTask, AgentMessage, ConversationView, QuestionSnapshot, ReasoningSegment, SubmitQuestion } from '../agent-api';
 import type { CourseUnit, ReadingBlock } from '../shared';
 import type { Sources } from './sources';
 import type { CommandGroups } from './command-groups';
@@ -23,6 +23,7 @@ export class AgentStore {
       CREATE TABLE IF NOT EXISTS agent_tasks(id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL REFERENCES agent_conversations(id),
         attempt_id TEXT NOT NULL REFERENCES cg_attempts(id), payload TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS agent_messages(id TEXT PRIMARY KEY, task_id TEXT NOT NULL REFERENCES agent_tasks(id), payload TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS agent_reasoning(id TEXT PRIMARY KEY, task_id TEXT NOT NULL REFERENCES agent_tasks(id), payload TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS agent_deliveries(attempt_id TEXT NOT NULL, event_id TEXT NOT NULL, digest TEXT NOT NULL, PRIMARY KEY(attempt_id,event_id));
       CREATE TABLE IF NOT EXISTS agent_tool_recovery(id TEXT PRIMARY KEY, attempt_id TEXT NOT NULL REFERENCES cg_attempts(id),
         purpose TEXT NOT NULL, reference_id TEXT NOT NULL, name TEXT NOT NULL, input TEXT, output TEXT, digest TEXT NOT NULL, refs TEXT NOT NULL);
@@ -95,6 +96,7 @@ export class AgentStore {
     const row = this.conversation(id);
     return { id, title: String(row.title), updatedAt: String(row.updated_at),
       toolFacts: this.db.prepare('SELECT r.* FROM agent_tool_recovery r JOIN agent_tasks t ON t.id=r.reference_id WHERE t.conversation_id=? ORDER BY r.rowid').all(id).map(r => ({ taskId: String(r.reference_id), name: String(r.name), purpose: String(r.purpose), referenceId: String(r.reference_id), digest: String(r.digest), references: parse(r.refs), hasRecoveryPayload: r.input !== null || r.output !== null })),
+      reasonings: this.db.prepare('SELECT r.payload FROM agent_reasoning r JOIN agent_tasks t ON t.id=r.task_id WHERE t.conversation_id=? ORDER BY r.rowid').all(id).map(r => parse(r.payload)),
       draft: { text: String(row.draft), seq: row.draft_session === sessionId ? Number(row.draft_seq) : 0, citationIds: [], ...parse(row.draft_context) },
       tasks: this.db.prepare('SELECT payload FROM agent_tasks WHERE conversation_id=? ORDER BY rowid').all(id).map(r => {
         const task=parse(r.payload) as AgentTask;
@@ -180,7 +182,7 @@ export class AgentStore {
       // Same shared qualification table and generation as all producer commits, created atomically with the task.
       this.db.prepare('INSERT INTO cg_attempts VALUES(?,?,?,?)').run(attemptId, id, request.generation, 'running');
       const task: AgentTask = { id, operationId: request.operationId, conversationId: request.conversationId, attemptId, generation: request.generation,
-        ...(previous ? {continuesTaskId:previous.id} : {}), snapshot, status: blockedBy.length ? 'queued' : 'running', blockedBy, threadId: null, turnId: null, model: request.model ?? null, error: null, createdAt, cursor: 0 };
+        ...(previous ? {continuesTaskId:previous.id} : {}), snapshot, status: blockedBy.length ? 'queued' : 'running', blockedBy, threadId: null, turnId: null, model: request.model ?? null, reasoningEffort: request.reasoningEffort ?? null, error: null, createdAt, cursor: 0 };
       task.cursor = this.changed(request.conversationId, id);
       this.db.prepare('INSERT INTO agent_tasks VALUES(?,?,?,?)').run(id, request.conversationId, attemptId, JSON.stringify(task));
       this.message({ id: `${id}:user`, taskId: id, role: 'user', text: request.text, state: 'complete', itemId: null });
@@ -334,6 +336,7 @@ export class AgentStore {
       note: '当前正式内容与版本；提交时的对象、选文和版本在 submittedTarget 中固定。普通问答不修改画板。' };
   }
   private message(message: AgentMessage) { this.db.prepare('INSERT INTO agent_messages VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload').run(message.id, message.taskId, JSON.stringify(message)); }
+  private reasoning(segment: ReasoningSegment) { this.db.prepare('INSERT INTO agent_reasoning VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload').run(segment.id, segment.taskId, JSON.stringify(segment)); }
   private recoveryNeeded(task:AgentTask) {
     return task.generation===this.generation()&&(['running','queued','waiting','stopping'].includes(task.status)||task.status==='unknown'&&task.recovery?.state!=='resolved');
   }
@@ -355,6 +358,11 @@ export class AgentStore {
       const message = parse(row.payload) as AgentMessage;
       if (message.role === 'assistant') { message.state = executorCompleted && message.state === 'complete' ? 'complete' : 'partial'; this.message(message); }
     }
+    // Reasoning without its actual completed item stays marked as what it is: incomplete.
+    for (const row of this.db.prepare('SELECT payload FROM agent_reasoning WHERE task_id=?').all(task.id)) {
+      const segment = parse(row.payload) as ReasoningSegment;
+      if (segment.state === 'streaming') { segment.state = 'partial'; segment.endedAt = historyTimestamp(); this.reasoning(segment); }
+    }
     if (task.status !== 'waiting') this.db.prepare("UPDATE cg_attempts SET status='stopped' WHERE id=?").run(task.attemptId);
     if (!this.recoveryNeeded(task)) {
       this.db.prepare("UPDATE cg_bases SET read_values='[]',domain_basis=NULL WHERE attempt_id=?").run(task.attemptId);
@@ -367,9 +375,9 @@ export class AgentStore {
   /** First persist the actual executor delivery, then publish its local projection.
    * A failed association cannot erase a fact already accepted from the external turn. */
   record(event: AgentEvent) {
-    if(!valid(event.eventId)||!['bind','delta','message','tool','finish'].includes(event.kind)||
+    if(!valid(event.eventId)||!['bind','delta','message','tool','finish','reasoning','reasoningCompleted'].includes(event.kind)||
       event.threadId!==undefined&&!valid(event.threadId)||event.turnId!==undefined&&!valid(event.turnId))throw new Error('执行器事件身份无效');
-    if(['delta','message'].includes(event.kind)&&(!valid(event.itemId)||!text(event.text,200_000)))throw new Error('执行器消息无效');
+    if(['delta','message','reasoning','reasoningCompleted'].includes(event.kind)&&(!valid(event.itemId)||!text(event.text,200_000)))throw new Error('执行器消息无效');
     if(event.kind==='finish'&&(!event.status||!['completed','failed','interrupted','unknown'].includes(event.status)))throw new Error('执行器终态无效');
     if(event.kind==='tool'&&(!event.tool||!valid(event.tool.name)||!Array.isArray(event.tool.references)||event.tool.references.some(id=>!valid(id))))throw new Error('执行器工具事实无效');
     const digest=hash(event),old=this.db.prepare('SELECT digest FROM agent_executor_receipts WHERE attempt_id=? AND event_id=?').get(event.attemptId,event.eventId);
@@ -378,7 +386,7 @@ export class AgentStore {
       const task=this.facts(event);
       if (event.turnId && task.turnHistory?.some(turn => turn.turnId === event.turnId)) throw new Error('旧模型轮次已经结束');
       const canReconcile=event.reconciliation && ['bind','message','finish'].includes(event.kind);
-      const retiredFact=task.generation!==this.generation()&&['tool','finish'].includes(event.kind);
+      const retiredFact=task.generation!==this.generation()&&['tool','finish','reasoning','reasoningCompleted'].includes(event.kind);
       const stopped=!!this.db.prepare('SELECT 1 FROM agent_stop_requests WHERE task_id=? AND attempt_id=?').get(task.id,task.attemptId);
       if(task.status!=='running' && !(task.status==='stopping'&&task.stopRequested) && !canReconcile && !retiredFact && !(stopped&&!task.stopRequested))throw new Error('任务尝试已停止或失效');
       if(task.status==='running'&&!stopped)this.active(event);
@@ -426,6 +434,16 @@ export class AgentStore {
         const previous = row ? parse(row.payload) as AgentMessage : undefined;
         if (previous?.state !== 'complete') this.message({ id, taskId: task.id, role: 'assistant', itemId: event.itemId,
           text: event.kind === 'message' ? event.text! : (previous?.text ?? '') + event.text!, state: event.kind === 'message' ? 'complete' : 'streaming' });
+      } else if (event.kind === 'reasoning' || event.kind === 'reasoningCompleted') {
+        if (!valid(event.itemId) || !text(event.text, 200_000)) throw new Error('执行器推理摘要无效');
+        const id = task.turnHistory?.length ? `r:${task.id}:${event.turnId ?? task.turnId ?? 'unbound'}:${event.itemId}` : `r:${task.id}:${event.itemId}`;
+        const row = this.db.prepare('SELECT payload FROM agent_reasoning WHERE id=?').get(id);
+        const previous = row ? parse(row.payload) as ReasoningSegment : undefined;
+        // A completed reasoning item is final; a later delta cannot reopen it.
+        if (previous?.state !== 'complete') this.reasoning({ id, taskId: task.id, itemId: event.itemId, turnId: event.turnId ?? task.turnId ?? null,
+          text: event.kind === 'reasoningCompleted' ? event.text! : (previous?.text ?? '') + event.text!,
+          state: event.kind === 'reasoningCompleted' ? 'complete' : 'streaming',
+          startedAt: previous?.startedAt ?? historyTimestamp(), endedAt: event.kind === 'reasoningCompleted' ? historyTimestamp() : null });
       } else if (event.kind === 'tool' && event.tool) {
         if (task.snapshot.intent !== 'question' && (event.tool.output as any)?.error) { task.mutationFailure = String((event.tool.output as any).error).slice(0,2000); task.toolErrors=[...(task.toolErrors??[]),{eventId:event.eventId,name:String(event.tool.name).slice(0,200),error:task.mutationFailure}].slice(-20); }
         const activeRecovery=task.generation===this.generation()&&['running','waiting'].includes(task.status);

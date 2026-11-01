@@ -1,3 +1,4 @@
+import { agentReady } from './shell-actions';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { mkdtemp, rm, chmod, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -11,9 +12,9 @@ test('lifecycle controls expose stopping, explicit continue and reopen the curre
   let page=await app.firstWindow();await resizeBoardWindow(app,page);
   await page.getByRole('button',{name:'学习对话',exact:true}).click();
   const composer=page.getByRole('textbox',{name:'学习对话草稿'});
-  await expect(page.getByText('本机 Codex CLI · 已连接',{exact:true})).toBeVisible();
+  await agentReady(page);
   await composer.fill('解释位权');await page.getByRole('button',{name:'发送问题',exact:true}).click();
-  await expect(page.locator('.agent-message.assistant')).toContainText('位置的权');
+  await expect(page.locator('[data-slot="message"][data-align="start"]')).toContainText('位置的权');
   await page.getByRole('button',{name:'停止任务',exact:true}).click();
   await expect(page.getByRole('status',{name:'回答状态'})).toContainText('正在停止');
   await expect(page.getByRole('status',{name:'回答状态'})).toContainText('已停止');
@@ -29,6 +30,7 @@ test('lifecycle controls expose stopping, explicit continue and reopen the curre
   await page.getByRole('button',{name:'学习对话',exact:true}).click();
   await expect(page.getByRole('textbox',{name:'学习对话草稿'})).toHaveValue('关窗保存的最新尾部');
   await expect(page.getByRole('status',{name:'回答状态'})).toHaveCount(2);
-  await expect(page.getByRole('status',{name:'回答状态'}).nth(1)).toContainText('回答已完成');
+  await expect(page.getByRole('status',{name:'回答状态'})).toHaveCount(1);
+  await expect(page.locator('[data-slot="message"][data-align="start"]').last()).toContainText('位置的权');
  }finally{await app.close();await rm(root,{recursive:true,force:true});}
 });

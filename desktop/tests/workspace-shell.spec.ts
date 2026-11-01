@@ -121,7 +121,7 @@ test('a failed review save remains visible after another channel saves and retri
     await page.getByRole('group',{name:'设置复习状态',exact:true}).getByRole('button',{name:'已掌握',exact:true}).click();
     await expect(page.getByRole('status',{name:'保存状态',exact:true})).toHaveText('有改动未保存');
     await page.getByRole('button',{name:'学习对话',exact:true}).click();await page.getByRole('textbox',{name:'学习对话草稿',exact:true}).fill('这个独立草稿保存成功');
-    await expect(page.getByRole('status',{name:'对话草稿保存'})).toContainText('草稿已保存');
+    await expect.poll(()=>page.evaluate(async()=>{const b=window.yizhi,c=await b.open(),l=await b.agent.list({sessionId:c.sessionId});return (await b.agent.get({sessionId:c.sessionId,conversationId:l.selectedId!})).draft.text;})).toBe('这个独立草稿保存成功');
     await expect(page.getByRole('status',{name:'保存状态',exact:true})).toHaveText('有改动未保存');
     fault.exec('DROP TRIGGER shell_review_failure');
     await page.locator('.shell-save').focus();await page.keyboard.press('Enter');const retry=page.getByRole('button',{name:/重试保存复习状态/});await expect(retry).toBeFocused();await page.keyboard.press('Enter');

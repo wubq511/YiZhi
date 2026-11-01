@@ -22,7 +22,7 @@ test('actual installed CLI rewrites one memory description into existing hits, p
     await expect(page.locator('.reading-layer[data-unit-id="KU-001"]')).toBeVisible();
     await page.getByRole('button', { name: '学习对话', exact: true }).click();
     await page.getByRole('textbox', { name: '学习对话草稿' }).fill('真实描述检索验收：这个未发问题必须原样保留。');
-    await expect(page.getByRole('status', { name: '对话草稿保存' })).toHaveText('草稿已保存');
+    await expect(page.getByRole('status',{name:'保存状态',exact:true})).toHaveText('已保存');
     await page.getByRole('button', { name: '收起对话', exact: true }).click();
     await page.evaluate(async () => { const c = await window.yizhi.open(); await window.yizhi.drawings.apply({ sessionId: c.sessionId, operationId: 'description-drawing-seed', id: 'description-untouched-drawing', expectedVersion: 0, value: { kind: 'rectangle', anchor: { space: 'board' }, geometry: { x: 20, y: 30, width: 40, height: 30 } } }); });
     const snapshot = () => page.evaluate(async () => {

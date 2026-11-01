@@ -11,7 +11,7 @@ export function CourseMenu({ backup, history, restore, settings }: { backup(poin
       <DropdownMenuItem onClick={event => open(history, event.detail > 0)}><History/>课程历史</DropdownMenuItem>
       <DropdownMenuItem onClick={event => open(restore, event.detail > 0)}><RotateCcw/>整课历史恢复</DropdownMenuItem>
       <DropdownMenuSeparator/>
-      <DropdownMenuItem onClick={event => open(settings, event.detail > 0)}><Settings2/>课程设置 · 历史与空间</DropdownMenuItem>
+      <DropdownMenuItem onClick={event => open(settings, event.detail > 0)}><Settings2/>课程设置</DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>;
 }

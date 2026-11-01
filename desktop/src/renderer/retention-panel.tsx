@@ -1,5 +1,7 @@
 import { Input } from './components/ui/input';
 import { Button } from './components/ui/button';
+import { ToggleGroup, ToggleGroupItem } from './components/ui/toggle-group';
+import { readMessageMode, writeMessageMode } from './message-mode';
 import { forwardRef, useImperativeHandle } from 'react';
 import { useEffect,useRef,useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -11,6 +13,7 @@ const date=(s:string)=>new Date(s).toLocaleString('zh-CN',{hour12:false});
 export const RetentionPanel = forwardRef<{ open(pointer?:boolean): void }, {sessionId:string;prepare():Promise<void>;onReturn():void}>(function RetentionPanel({sessionId,prepare,onReturn}, ref) {
  const [open,setOpen]=useState(false),[motion,setMotion]=useState(false),[status,setStatus]=useState<RetentionStatus>(),[space,setSpace]=useState<RetentionSpace>();
  const [days,setDays]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[result,setResult]=useState('');
+ const [messageMode,setMessageMode]=useState(readMessageMode);
  const trigger=useRef<HTMLButtonElement>(null),alive=useRef(true);
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
  const work=async(run:()=>Promise<void>)=>{setBusy(true);setError('');try{await run();}catch(e){if(alive.current)setError((e as Error).message);}finally{if(alive.current)setBusy(false);}};
@@ -24,9 +27,17 @@ export const RetentionPanel = forwardRef<{ open(pointer?:boolean): void }, {sess
   return()=>{cancelled=true;clearInterval(timer);};
  },[open,sessionId]);
  useImperativeHandle(ref, () => ({ open: show }));
- return <>{open&&createPortal(<dialog className="history-panel retention-panel" aria-label="历史与空间" data-motion={motion?'pointer':undefined} ref={node=>{if(node&&!node.open)node.showModal();}} onCancel={e=>{e.preventDefault();close();}} onKeyDown={e=>e.stopPropagation()}>
-  <header className="history-heading"><h2>历史与空间</h2><Button variant="outline" size="sm" disabled={busy} onClick={close}>返回课程</Button></header>
+ return <>{open&&createPortal(<dialog className="history-panel retention-panel" aria-label="课程设置" data-motion={motion?'pointer':undefined} ref={node=>{if(node&&!node.open)node.showModal();}} onCancel={e=>{e.preventDefault();close();}} onKeyDown={e=>e.stopPropagation()}>
+  <header className="history-heading"><h2>课程设置</h2><Button variant="outline" size="sm" disabled={busy} onClick={close}>返回课程</Button></header>
   {error&&<p role="alert" className="history-error">{error}</p>}
+  <section aria-labelledby="conversation-heading"><h3 id="conversation-heading">对话</h3>
+   <p>Agent 正在工作时发送新消息的方式。引导会在当前工作中交给 Agent，由它判断是补充、纠正还是独立事项；排队会等待当前处理结束。</p>
+   <ToggleGroup aria-label="工作中消息方式" type="single" variant="outline" spacing={0} value={messageMode} onValueChange={value=>{if(value!=='steer'&&value!=='queue')return; setMessageMode(value); writeMessageMode(value);}}>
+    <ToggleGroupItem value="steer">引导当前工作</ToggleGroupItem>
+    <ToggleGroupItem value="queue">排队</ToggleGroupItem>
+   </ToggleGroup>
+   <p role="status" aria-label="工作中消息方式已保存">{messageMode==='queue'?'已选择排队：新消息等待当前处理结束。':'已选择引导：新消息在当前工作中交给 Agent。'}</p>
+  </section>
   <section aria-labelledby="retention-heading"><h3 id="retention-heading">正式历史期限</h3>
    <p>按正式提交时间保留完整修改组。当前正文、个人记录、未处理草稿与有效任务的恢复依据会继续保留。</p>
    <form noValidate onSubmit={e=>{e.preventDefault();void work(async()=>{

@@ -62,6 +62,8 @@ const bridge: DesktopBridge = {
   read: (sessionId, unitId) => invoke('course:read', { sessionId, unitId }),
   onCloseCancelled(listener) {const handler=()=>listener();ipcRenderer.on('window:close-cancelled',handler);return ()=>ipcRenderer.removeListener('window:close-cancelled',handler);},
   onGenerationChanged(listener){const handler=()=>listener();ipcRenderer.on('course:generation-changed',handler);return()=>ipcRenderer.removeListener('course:generation-changed',handler);},
+  // The event argument is dropped on purpose: the nudge carries no payload for the renderer to trust.
+  onAgentChanged(listener){const handler=()=>listener();ipcRenderer.on('agent:changed',handler);return()=>ipcRenderer.removeListener('agent:changed',handler);},
   onCloseRequested(listener) {
     const handler = async (_event: Electron.IpcRendererEvent, requestId: number) => {
       let saved = false;

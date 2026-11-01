@@ -1,4 +1,4 @@
-import { courseAction, openFirstUnit, expandDirectoryTheme } from './shell-actions';
+import { courseAction, openFirstUnit, expandDirectoryTheme , agentReady} from './shell-actions';
 import type { DatabaseSync } from 'node:sqlite';
 import { openFaultDatabase } from './fault-database';
 import { test,expect,_electron as electron } from '@playwright/test';
@@ -101,8 +101,8 @@ test('history stops an executing protocol task before withdrawing its complete b
   const original=await page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open();return {unit:c.unit,graph:await b.graph(c.sessionId)};});
   await openFirstUnit(page);
   await page.getByRole('button',{name:'学习对话',exact:true}).click();
-  await expect(page.getByText('本机 Codex CLI · 已连接',{exact:true})).toBeVisible();
-  await page.getByLabel('Agent 请求方式').selectOption('modify');
+  await agentReady(page);
+  await page.getByRole('radiogroup',{name:'Agent 请求方式'}).getByRole('radio',{name:'修改',exact:true}).click();
   await page.getByRole('textbox',{name:'学习对话草稿'}).fill('受控协议历史撤回回归：提交后保持运行');
   await page.getByRole('button',{name:'发送修改请求',exact:true}).click();
   await expect(page.getByRole('textbox',{name:'编辑首段正文'})).toContainText('受控协议回归');

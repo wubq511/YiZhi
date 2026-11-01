@@ -85,6 +85,7 @@ export interface DesktopBridge extends SaveBridge {
   save(command: SaveParagraph): Promise<SaveReceipt>;
   onCloseCancelled(listener: () => void): () => void;
   onGenerationChanged(listener: () => void): () => void;
+  onAgentChanged(listener: () => void): () => void;
   onCloseRequested(listener: () => Promise<boolean>): () => void;
 }
 export type ReviewStatus = 'pending' | 'weak' | 'mastered';

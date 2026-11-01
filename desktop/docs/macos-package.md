@@ -25,3 +25,5 @@ YIZHI_PACKAGED_APP=/absolute/YiZhi.app npx playwright test tests/packaged-app.sp
 完整迁移课程、约 500 单元增长负载、公平性与实体鼠标／触控板／中文输入法等组合验收仍由 T28 单列记录，不能从这条小范围安装回归推断。
 
 组合 harness、最终输入和被动实体观测工具见 [macOS 连续学习验收工具](macos-acceptance.md)。包、证据与临时输出的存放及清理遵守 [本地产物管理](../../docs/development/本地产物管理.md)；发布候选归入 `artifacts/releases/<版本>/`，实际安装使用 `/Applications/YiZhi.app`。
+
+替换日常安装时直接用 `ditto` 覆盖 `/Applications/YiZhi.app` 并核对签名，**不要**把被替换的旧应用复制进 `artifacts/evidence/<任务>/` 当回滚副本：旧应用对应哪个提交已由 `package-manifest.json` 与安装记录写明，需要时可从该提交重新打包，留在本机只会让 Launchpad 出现多个同名条目。确需保留可再运行的替代包时归入 `artifacts/releases/<版本>/` 并记校验值，验收完成后删除 `artifacts/scratch/` 的中间包。

@@ -13,7 +13,7 @@ export async function openFirstUnit(page: Page) {
 }
 export async function courseAction(page: Page, name: string) {
   await page.getByRole('button', {name:'课程菜单',exact:true}).click();
-  await page.getByRole('menuitem', {name:name==='历史与空间'?'课程设置 · 历史与空间':name,exact:true}).click();
+  await page.getByRole('menuitem', {name,exact:true}).click();
 }
 export async function chooseShape(page: Page, name: string) {
   if (await page.getByRole('region',{name:'个人绘图工具',exact:true}).isVisible()) await page.getByRole('button',{name:'收起个人图形',exact:true}).click();
@@ -44,4 +44,18 @@ export async function openRelations(page: Page) {
 export async function relationScope(page: Page, scope: string) {
   await page.getByRole('button',{name:'关系',exact:true}).click();
   await page.getByRole('menuitemradio',{name:({main:'主关系',auxiliary:'辅助关系',all:'全部关系'} as Record<string,string>)[scope],exact:true}).click();
+}
+export async function conversationTitles(page: Page) {
+  await page.getByRole('button',{name:'学习对话列表',exact:true}).click();
+  const items = await page.getByRole('menuitem').allTextContents();
+  await page.keyboard.press('Escape');
+  return items.filter(title => title !== '新对话');
+}
+export async function pickConversation(page: Page, title: string) {
+  await page.getByRole('button',{name:'学习对话列表',exact:true}).click();
+  await page.getByRole('menuitem',{name:title,exact:true}).click();
+}
+/** The panel states nothing when the executor is fine, so readiness is the composer's own control coming alive. */
+export async function agentReady(page: Page) {
+  await expect(page.getByRole('combobox', { name: '问答模型' })).toBeEnabled({ timeout: 60_000 });
 }

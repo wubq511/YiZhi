@@ -63,7 +63,7 @@ test('installed macOS app opens offline without checkout tools, decodes real res
     await editor.fill('安装副本离线输入：独立运行并自动保存 📝。');
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     await page.getByRole('button', { name: '学习对话', exact: true }).click();
-    await expect(page.getByText(/生成暂不可用/)).toBeVisible();
+    await expect(page.getByText(/Agent 暂不可用/)).toBeVisible();
     await expect(page.getByRole('button', { name: '发送问题', exact: true })).toBeDisabled();
     await page.getByRole('button', { name: '收起对话', exact: true }).click();
     await app.evaluate(({ dialog }, path) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] }); }, pdf);

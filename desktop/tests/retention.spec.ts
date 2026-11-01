@@ -17,7 +17,7 @@ test('actual course settings validate days, report the real shrinking recovery w
  let app=await launch();
  try{
   let page=await app.firstWindow();await resizeBoardWindow(app,page);
-  await courseAction(page, '历史与空间');let dialog=page.getByRole('dialog',{name:'历史与空间',exact:true});
+  await courseAction(page,'课程设置');let dialog=page.getByRole('dialog',{name:'课程设置',exact:true});
   await expect(dialog.getByLabel('历史保留天数')).toHaveValue('140');await expect(dialog).toContainText('不能找回');await expect(dialog).toContainText('独立备份');
   await dialog.getByLabel('历史保留天数').fill('0');await dialog.getByRole('button',{name:'保存期限',exact:true}).click();await expect(dialog.getByRole('alert')).toContainText('正整数');
   await dialog.getByLabel('历史保留天数').fill('30');await dialog.getByRole('button',{name:'保存期限',exact:true}).click();
@@ -30,7 +30,11 @@ test('actual course settings validate days, report the real shrinking recovery w
   const render=await dialog.evaluate(el=>({viewport:[innerWidth,innerHeight],dialog:{width:el.clientWidth,scrollWidth:el.scrollWidth},samples:[...el.querySelectorAll('h2,p,input,button,caption,th,td')].slice(0,30).map(node=>{const s=getComputedStyle(node);return {tag:node.tagName,text:node.textContent?.slice(0,40),font:s.fontSize,lineHeight:s.lineHeight,color:s.color,background:s.backgroundColor,padding:s.padding};})}));await test.info().attach('retention-render-facts',{body:JSON.stringify(render,null,2),contentType:'application/json'});
   await dialog.getByRole('button',{name:'返回课程',exact:true}).click();await expect(page.getByRole('button',{name:'课程菜单',exact:true})).toBeFocused();
   await app.close();app=await launch();page=await app.firstWindow();await resizeBoardWindow(app,page);
-  await courseAction(page, '历史与空间');dialog=page.getByRole('dialog',{name:'历史与空间',exact:true});await expect(dialog.getByLabel('历史保留天数')).toHaveValue('30');
+  await courseAction(page,'课程设置');dialog=page.getByRole('dialog',{name:'课程设置',exact:true});await expect(dialog.getByLabel('历史保留天数')).toHaveValue('30');
+  await expect(dialog.getByRole('radiogroup',{name:'工作中消息方式'}).getByRole('radio',{name:'引导当前工作',exact:true})).toHaveAttribute('data-state','on');
+  await dialog.getByRole('radiogroup',{name:'工作中消息方式'}).getByRole('radio',{name:'排队',exact:true}).click();
+  expect(await page.evaluate(()=>localStorage.getItem('yizhi.agent.message-mode'))).toBe('queue');
+  await dialog.getByRole('button',{name:'返回课程',exact:true}).click();await courseAction(page,'课程设置');await expect(dialog.getByRole('radiogroup',{name:'工作中消息方式'}).getByRole('radio',{name:'排队',exact:true})).toHaveAttribute('data-state','on');await page.evaluate(()=>localStorage.removeItem('yizhi.agent.message-mode'));
   await expect(dialog).toContainText('最早保留提交');await expect(dialog).toContainText('保留 30 天');await page.screenshot({path:test.info().outputPath('retention-reopened.png')});
  }finally{await app.close();await rm(root,{recursive:true,force:true});}
 });

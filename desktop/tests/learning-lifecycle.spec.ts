@@ -24,7 +24,7 @@ test('explicit quit collects actual latest input in both course windows, rejects
   const ids=await Promise.all([first,second].map(p=>p.evaluate(async()=>(await (window as any).yizhi.open()).courseId)));expect(ids[0]).not.toBe(ids[1]);
   stage='edit first';console.log(stage);await first.bringToFront();await body(first,'第一课程最新正文尾部');await composer(first,'第一课程最新对话尾部');
   stage='edit second';console.log(stage);await second.bringToFront();await body(second,'第二课程最新正文尾部');await composer(second,'第二课程旧草稿');
-  await expect(second.getByRole('status',{name:'对话草稿保存'})).toHaveText('草稿已保存');
+  await expect(second.getByRole('status',{name:'保存状态',exact:true})).toHaveText('已保存');
   fault=openFaultDatabase(join(dirs[1],'course.sqlite'));fault.exec("CREATE TRIGGER lifecycle_save_failure BEFORE UPDATE OF draft ON agent_conversations BEGIN SELECT RAISE(ABORT,'latest composer disk fault'); END");
   await second.getByRole('textbox',{name:'学习对话草稿'}).fill('第二课程失败现场新尾部');
   stage='failed quit';console.log(stage);await app.evaluate(({dialog,app})=>{dialog.showErrorBox=(title,content)=>{(globalThis as any).lastLifecycleError={title,content};};app.quit();});
@@ -77,7 +77,7 @@ test('an actual crashed renderer reopens confirmed composer content and disclose
  test.setTimeout(30000);let crashStage='launch';
  const root=await mkdtemp(join(tmpdir(),'yizhi-renderer-loss-')),app=await electron.launch({args:[resolve('.'),`--course=${join(root,'course')}`],env:{...process.env,YIZHI_DATA_HOME:join(root,'profile'),YIZHI_CODEX_PATH:resolve('dist/tests/agent-executor-fixture.cjs')}});let fault:DatabaseSync|undefined;
  try {
-  let page=await app.firstWindow();await resizeBoardWindow(app,page);await composer(page,'异常前已确认草稿');await expect(page.getByRole('status',{name:'对话草稿保存'})).toHaveText('草稿已保存');
+  let page=await app.firstWindow();await resizeBoardWindow(app,page);await composer(page,'异常前已确认草稿');await expect(page.getByRole('status',{name:'保存状态',exact:true})).toHaveText('已保存');
   fault=openFaultDatabase(join(root,'course/course.sqlite'));fault.exec("CREATE TRIGGER crash_draft_fault BEFORE UPDATE OF draft ON agent_conversations BEGIN SELECT RAISE(ABORT,'unconfirmed renderer tail'); END");
   await page.getByRole('textbox',{name:'学习对话草稿'}).fill('未确认尾部不能冒充保存');await expect(page.getByRole('status',{name:'对话草稿保存'})).toHaveText('草稿未保存');
   fault.exec('DROP TRIGGER crash_draft_fault');fault.close();fault=undefined;crashStage='crash';console.log(crashStage);

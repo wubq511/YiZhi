@@ -34,7 +34,7 @@ test('explicit description search uses real hits and query/rank evidence while o
     await openFirstUnit(page);
     await page.getByRole('button', { name: '学习对话', exact: true }).click();
     await page.getByRole('textbox', { name: '学习对话草稿' }).fill('尚未发送，不要替我提问');
-    await expect(page.getByRole('status', { name: '对话草稿保存' })).toHaveText('草稿已保存');
+    await expect(page.getByRole('status',{name:'保存状态',exact:true})).toHaveText('已保存');
     await page.getByRole('button', { name: '收起对话', exact: true }).click();
     await page.evaluate(async () => { const c = await window.yizhi.open(); await window.yizhi.drawings.apply({ sessionId: c.sessionId, operationId: 'description-drawing-seed', id: 'description-untouched-drawing', expectedVersion: 0, value: { kind: 'rectangle', anchor: { space: 'board' }, geometry: { x: 20, y: 30, width: 40, height: 30 } } }); });
     const before = await page.evaluate(async () => { const c = await window.yizhi.open(), a = await window.yizhi.agent.list({ sessionId: c.sessionId }); return { drawings: await window.yizhi.drawings.list({ sessionId: c.sessionId }), drawingHistory: await window.yizhi.drawings.history({ sessionId: c.sessionId }), placements: await window.yizhi.drawings.placements({ sessionId: c.sessionId }), unit: c.unit, review: await window.yizhi.reviewStates(c.sessionId), conversation: await window.yizhi.agent.get({ sessionId: c.sessionId, conversationId: a.selectedId! }) }; });

@@ -15,6 +15,12 @@ import { AppServerRPC } from './rpc';
 const run = promisify(execFile);
 const properties = { type: 'object', properties: {}, additionalProperties: false } as const;
 const string = { type: 'string' };
+/** Closed-source models stream a curated summary; open ones put the chain in `content`. Either is the model's actual reasoning. */
+const reasoningText = (item: any) => {
+  const parts = (list: unknown) => (Array.isArray(list) ? list : [])
+    .filter((t: unknown) => typeof t === 'string' && t.length > 0).join('\n\n');
+  return parts(item?.summary) || parts(item?.content);
+};
 export const COURSE_READ_TOOLS: DynamicToolSpec[] = [
   { type: 'function', name: 'yizhi_read_target', description: 'Read the submitted fixed course target and its current formal content with version. Does not modify anything.', inputSchema: properties },
   { type: 'function', name: 'yizhi_list_sources', description: 'List actual registered source versions in this course. Seed metadata without originals is not readable.', inputSchema: properties },
@@ -44,10 +50,14 @@ export async function detectExecutor(options: { cliPath?: string; env?: NodeJS.P
       temp = await mkdtemp(join(tmpdir(), 'yizhi-protocol-'));
       await run(path, ['app-server', 'generate-json-schema', '--experimental', '--out', temp], { env: childEnv, timeout: 15_000, maxBuffer: 1_000_000 });
       const schema = await readFile(join(temp, 'codex_app_server_protocol.schemas.json'), 'utf8');
-      const dynamic = JSON.parse(schema).definitions?.v2?.DynamicToolSpec?.oneOf?.find((variant: any) => variant.properties?.type?.enum?.includes('function'));
+      const v2 = JSON.parse(schema).definitions?.v2 ?? {};
+      const dynamic = v2.DynamicToolSpec?.oneOf?.find((variant: any) => variant.properties?.type?.enum?.includes('function'));
       if ([...requiredCapabilities,...(options.requiredMethods??[])].some(name => !schema.includes(JSON.stringify(name))) || !dynamic || !['name', 'description', 'inputSchema', 'type'].every(key => dynamic.required?.includes(key)))
         throw new Error('缺少只读问答所需的 thread/turn、动态工具或增量协议能力');
-      return { available: true, path, version, models: [] };
+      // Reasoning is optional: an older CLI stays usable, it simply never shows thinking.
+      const reasoningMethod = [JSON.stringify('item/reasoning/summaryTextDelta'), JSON.stringify('item/reasoning/textDelta')].some(name => schema.includes(name));
+      const supportsReasoning = Boolean(v2.TurnStartParams?.properties?.summary) && reasoningMethod;
+      return { available: true, path, version, models: [], supportsReasoning };
     } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') lastError = `${path}: ${(error as Error).message}`; }
     finally { if (temp) await rm(temp, { recursive: true, force: true }); }
   }
@@ -81,8 +91,10 @@ export class AgentRuntime {
   private blockedMcp: Record<string, any> = {};
   private pumping = false;
   private watching?: ReturnType<typeof setTimeout>;
+  private pendingNotify = new Set<string>();
+  private notifyTimer?: ReturnType<typeof setTimeout>;
   private work = new Set<Promise<unknown>>();
-  constructor(private core: CourseService, private options: { directory: string; cliPath?: string; env?: NodeJS.ProcessEnv } ) {}
+  constructor(private core: CourseService, private options: { directory: string; cliPath?: string; env?: NodeJS.ProcessEnv; notify?: (sessionId: string) => void } ) {}
   detect() { return this.detection ??= detectExecutor({...this.options,requiredMethods:[...lifecycleCapabilities,'turn/steer']}).then(value => { this.statusValue = value; return value; }); }
   async status(): Promise<ExecutorStatus> {
     if(this.quiescing||this.closed)return {...this.statusValue,available:false,models:this.statusValue?.models??[],error:'执行器正在退出'};
@@ -112,7 +124,10 @@ export class AgentRuntime {
     for (const name of Object.keys(config.config?.mcp_servers ?? {})) this.blockedMcp[`mcp_servers.${name}.enabled`] = false;
     const models = await this.rpc.request('model/list', { limit: 100 });
     if (!Array.isArray(models.data) || !models.data.length) throw new Error('执行器没有返回可用模型目录');
-    status.models = models.data.map((m: any) => ({ id: m.id, model: m.model, displayName: m.displayName, isDefault: m.isDefault, defaultReasoningEffort: m.defaultReasoningEffort }));
+    status.models = models.data.map((m: any) => ({ id: m.id, model: m.model, displayName: m.displayName, isDefault: m.isDefault, defaultReasoningEffort: m.defaultReasoningEffort,
+      supportedReasoningEfforts: (Array.isArray(m.supportedReasoningEfforts) ? m.supportedReasoningEfforts : [])
+        .filter((option: any) => typeof option?.reasoningEffort === 'string' && option.reasoningEffort)
+        .map((option: any) => ({ effort: String(option.reasoningEffort), description: String(option.description ?? '') })) }));
   }
   submit(request: SubmitQuestion): Promise<AgentTask> {
     if(this.closed||this.quiescing)return Promise.reject(new Error('执行器正在退出'));
@@ -124,10 +139,17 @@ export class AgentRuntime {
     await this.start();
     if (this.closed||this.quiescing) throw new Error('执行器正在退出');
     if (request.model && !this.statusValue!.models.some(m => m.model === request.model)) throw new Error('所选模型不在执行器实际目录中');
+    if (request.reasoningEffort && !this.advertisedEfforts(request.model).includes(request.reasoningEffort)) throw new Error('所选思考强度不在该模型实际申报的范围内');
     const task = await this.core.agent.submit(request);
     const old = this.running.get(task.id);
     if (old) { this.align(old, task); this.background(this.deliver(old, request.operationId)); this.watch(); return task; }
     return this.track(request.sessionId, task);
+  }
+  /** Resolved the same way `begin` resolves it, so validation cannot accept an effort another model would receive. */
+  private resolvedModel(model?: string | null) { return model ?? this.statusValue!.models.find(m => m.isDefault)?.model ?? this.statusValue!.models[0]?.model; }
+  private advertisedEfforts(model?: string | null) {
+    const entry = this.statusValue!.models.find(m => m.model === this.resolvedModel(model));
+    return entry?.supportedReasoningEfforts?.map(option => option.effort) ?? (entry?.defaultReasoningEffort ? [entry.defaultReasoningEffort] : []);
   }
   private track(sessionId: string, task: AgentTask) {
     if (this.running.has(task.id) || !['running','queued'].includes(task.status)) return task;
@@ -355,7 +377,9 @@ export class AgentRuntime {
         ...(task.guidedFrom ? { independentGuidanceTask: { ...task.guidedFrom, taskId: task.id, instruction: '这已经是原 Agent 为学生新事项建立的独立业务任务。现在直接读取本次固定目标并执行 submittedRequest 的实际意图，不要再次安排同一事项，不复用父任务的 deliveryId 调度。' } } : {}),
         ...(task.integrationRounds ? { automaticIntegration: { taskId: task.id, originalAttemptId: task.attemptId, businessStatus: 'running', priorTurnStatus: 'completed', round: task.integrationRounds,
           instruction: '原业务任务尚未完成。宿主允许本轮继续整合或处理新引导；当前是否受保护以工具返回为准，仍被保护的部分保持候选。必须重新读取实际最新内容，保留学生输入，在原有效意图内完整整合 pendingGroups，用新操作与 replaces 消耗整组候选。不要重复已提交修改，不要求逐块采纳；只有真实冲突才询问。完成说明同时修改的位置和处理结果。' } } : {}) }) }],
-      effort: this.statusValue!.models.find(m => m.model === model)?.defaultReasoningEffort,
+      effort: task.reasoningEffort ?? this.statusValue!.models.find(m => m.model === model)?.defaultReasoningEffort,
+      // Reasoning summaries are requested, not assumed: without this the executor never receives any thinking text.
+      ...(this.statusValue!.supportsReasoning ? { summary: 'detailed' } : {}),
     }, 45_000);
     if (response.turn?.id) await this.enqueue(running, () => this.record(running, { kind: 'bind', threadId, turnId: response.turn.id }));
     else throw new Error('执行器未返回 turn 身份');
@@ -365,8 +389,21 @@ export class AgentRuntime {
     if(event.kind==='bind'){running.task.threadId=event.threadId??running.task.threadId;running.task.turnId=event.turnId??running.task.turnId;}
     return this.core.recordAgent({ sessionId: running.sessionId, taskId: running.task.id, attemptId: running.task.attemptId,
       generation: running.task.generation, eventId: `rpc-${this.instance}-${++this.sequence}`, ...event } as AgentEvent).then(task => {
+      // Contentless nudge: it only says pull by cursor. The store still decides what is a saved fact.
+      this.emitNotify(running.sessionId);
       this.align(running, task); if (!['running','queued','waiting','stopping'].includes(task.status)) { this.releaseRunning(task.id); void this.pump(); }
     });
+  }
+  /** Deltas arrive far faster than a frame; one nudge per session per tick, however many events landed. */
+  private emitNotify(sessionId: string) {
+    if (!this.options.notify) return;
+    this.pendingNotify.add(sessionId);
+    if (this.notifyTimer) return;
+    this.notifyTimer = setTimeout(() => {
+      this.notifyTimer = undefined;
+      const sessions = [...this.pendingNotify]; this.pendingNotify.clear();
+      if (!this.closed) for (const session of sessions) this.options.notify?.(session);
+    }, 16);
   }
   private releaseRunning(taskId:string) {this.running.delete(taskId);for(const key of this.toolReplies.keys())if(key.startsWith(taskId+':'))this.toolReplies.delete(key);}
   private enqueue(running: Running, action: () => Promise<void>) {
@@ -385,7 +422,13 @@ export class AgentRuntime {
     const identity = { threadId: p.threadId, turnId: p.turnId ?? p.turn?.id, ...(!['running','stopping'].includes(running.task.status)?{reconciliation:true}:{}) };
     if (method === 'turn/started') void this.enqueue(running, () => this.record(running, { kind: 'bind', ...identity }));
     else if (method === 'item/agentMessage/delta' && ['running','stopping'].includes(running.task.status)) void this.enqueue(running, () => this.record(running, { kind: 'delta', ...identity, itemId: p.itemId, text: p.delta }));
+    else if (['item/reasoning/summaryTextDelta', 'item/reasoning/textDelta'].includes(method) && ['running','stopping'].includes(running.task.status)) void this.enqueue(running, () => this.record(running, { kind: 'reasoning', ...identity, itemId: p.itemId, text: p.delta }));
     else if (method === 'item/completed' && p.item?.type === 'agentMessage') void this.enqueue(running, () => this.record(running, { kind: 'message', ...identity, itemId: p.item.id, text: p.item.text }));
+    else if (method === 'item/completed' && p.item?.type === 'reasoning' && ['running','stopping'].includes(running.task.status)) {
+      // Only text the executor actually received may close the segment; streamed deltas otherwise stay honestly partial.
+      const text = reasoningText(p.item);
+      if (text) void this.enqueue(running, () => this.record(running, { kind: 'reasoningCompleted', ...identity, itemId: p.item.id, text }));
+    }
     else if (method === 'turn/completed') void this.enqueue(running, () => this.record(running, { kind: 'finish', ...identity,
       status: p.turn.status === 'completed' ? 'completed' : p.turn.status === 'interrupted' ? 'interrupted' : 'failed',
       error: p.turn.error ? JSON.stringify(p.turn.error) : undefined, ...(identity.reconciliation?{recovery:{state:'resolved' as const,checkedAt:new Date().toISOString(),detail:'已收到原 turn 的迟到实际终态；未再次执行。'}}:{}) }));
@@ -467,6 +510,7 @@ export class AgentRuntime {
       if(['running','stopping'].includes(task.status))await this.record(running,{kind:'finish',status:'unknown',reconciliation:true,error:'应用明确退出，原 turn 尚无可核对终态；已收到内容和已提交组保留。'});
     }
     this.closed=true;
+    clearTimeout(this.notifyTimer); this.notifyTimer = undefined; this.pendingNotify.clear();
     await Promise.all([...this.connections].map(rpc=>rpc.close()));
     await Promise.all([...this.directories].map(cwd=>rm(cwd,{recursive:true,force:true})));
   }

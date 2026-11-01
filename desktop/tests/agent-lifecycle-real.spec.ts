@@ -1,3 +1,4 @@
+import { agentReady } from './shell-actions';
 import { test,expect,_electron as electron } from '@playwright/test';
 import { mkdtemp,mkdir,rm,writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -5,7 +6,7 @@ import { join,resolve } from 'node:path';
 import { resizeBoardWindow } from './board-test-helpers';
 import type { Page } from '@playwright/test';
 async function view(page:Page){return page.evaluate(async()=>{const b=(window as any).yizhi,c=await b.open(),l=await b.agent.list({sessionId:c.sessionId});return b.agent.get({sessionId:c.sessionId,conversationId:l.selectedId});});}
-async function openAgent(page:Page){await page.getByRole('button',{name:'学习对话',exact:true}).click();await expect(page.getByText('本机 Codex CLI · 已连接',{exact:true})).toBeVisible({timeout:30000});await page.getByLabel('问答模型').selectOption('gpt-6-luna');}
+async function openAgent(page:Page){await page.getByRole('button',{name:'学习对话',exact:true}).click();await agentReady(page);await page.getByLabel('问答模型').selectOption('gpt-6-luna');}
 test('installed CLI stops original turn, explicitly continues with fresh tool reads, survives learning-window close and reconciles durable results on reopen',async()=>{
  test.skip(process.env.YIZHI_REAL_EXECUTOR!=='1','Opt-in installed CLI acceptance, not protocol fixture');test.setTimeout(180000);
  const root=await mkdtemp(join(tmpdir(),'yizhi-t19-actual-')),result:any={};let app:any;
@@ -68,7 +69,7 @@ test('installed CLI commits a real mutation before stop, preserves original rece
   const before=await capture(page); result.before=before;
   const paragraphs=before.course.unit.reading.blocks.filter((b:any)=>b.kind==='paragraph');
   const first='【实际停止验收甲】',second='【实际续接验收乙】';
-  await page.getByLabel('Agent 请求方式').selectOption('modify');
+  await page.getByRole('radiogroup',{name:'Agent 请求方式'}).getByRole('radio',{name:'修改',exact:true}).click();
   await page.getByRole('textbox',{name:'学习对话草稿'}).fill(
    `请实际执行两个顺序独立的正文修改。先读取固定目标与edit context，只在段落 ${paragraphs[0].id} 末尾追加“${first}”，保留全部原文，作为第一个独立apply_group保存。第一个组返回后，再次调用yizhi_read_target和yizhi_read_edit_context核对刚才结果，再在另一段落 ${paragraphs[1].id} 末尾追加“${second}”，作为第二个独立apply_group保存。每个标记只出现一次，若已存在则跳过已完成步骤。不要把两段合为一个组，不改公式、结构、布局或个人内容。若被停止，后续明确继续时先实际重读，只做尚未完成部分。`);
   await page.getByRole('button',{name:'发送修改请求',exact:true}).click();
@@ -87,7 +88,7 @@ test('installed CLI commits a real mutation before stop, preserves original rece
   },original);
   expect(result.queried).toEqual(original);
   await page.getByRole('textbox',{name:'学习对话草稿'}).fill('实际修改停止后的未发送学习草稿');
-  await expect(page.getByRole('status',{name:'对话草稿保存'})).toHaveText('草稿已保存');
+  await expect(page.getByRole('status',{name:'保存状态',exact:true})).toHaveText('已保存');
   await page.getByRole('button',{name:'继续剩余工作',exact:true}).click();
   await expect.poll(async()=>(await view(page)).tasks[1]?.turnId,{timeout:60_000}).toBeTruthy();
   result.continuing=await capture(page);

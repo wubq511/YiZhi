@@ -5,9 +5,12 @@ import { existsSync, mkdirSync, watch, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 const args = process.argv.slice(2), mode = process.env.YIZHI_FIXTURE_MODE;
 if (args.includes('--version')) { console.log('codex-cli 0.163.0-fixture'); process.exit(0); }
+// Two real channels: closed models stream a curated summary, open models stream raw content.
+const reasoningChannel = process.env.YIZHI_FIXTURE_REASONING === 'content' ? 'item/reasoning/textDelta'
+  : process.env.YIZHI_FIXTURE_REASONING ? 'item/reasoning/summaryTextDelta' : '';
 if (args.includes('generate-json-schema')) {
   const dir = args[args.indexOf('--out') + 1]; mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, 'codex_app_server_protocol.schemas.json'), JSON.stringify({ methods: ['thread/start', 'thread/resume', 'thread/read', 'thread/turns/list', 'thread/items/list', 'turn/interrupt', 'turn/steer', 'turn/start', 'model/list', 'config/read', 'item/tool/call', 'item/agentMessage/delta', 'turn/completed'], definitions: { v2: { DynamicToolSpec: { oneOf: mode === 'incapable' ? [] : [{ properties: { type: { enum: ['function'] } }, required: ['name', 'description', 'inputSchema', 'type'] }] } } } })); process.exit(0);
+  writeFileSync(join(dir, 'codex_app_server_protocol.schemas.json'), JSON.stringify({ methods: ['thread/start', 'thread/resume', 'thread/read', 'thread/turns/list', 'thread/items/list', 'turn/interrupt', 'turn/steer', 'turn/start', 'model/list', 'config/read', 'item/tool/call', 'item/agentMessage/delta', 'turn/completed', ...(reasoningChannel ? [reasoningChannel] : [])], definitions: { v2: { ...(reasoningChannel ? { TurnStartParams: { properties: { summary: { type: 'string' } } } } : {}), DynamicToolSpec: { oneOf: mode === 'incapable' ? [] : [{ properties: { type: { enum: ['function'] } }, required: ['name', 'description', 'inputSchema', 'type'] }] } } } })); process.exit(0);
 }
 const lines = createInterface({ input: process.stdin });
 const send = (message: unknown) => process.stdout.write(JSON.stringify(message) + '\n');
@@ -36,7 +39,8 @@ async function receive(m: any) {
   const respond = (result: any) => send({ id: m.id, result });
   if (m.method === 'initialize') respond({ userAgent: 'protocol-fixture', platformFamily: 'unix', platformOs: 'macos' });
   if (m.method === 'config/read') respond({ config: { mcp_servers: { fixture: {} } } });
-  if (m.method === 'model/list') respond({ data: [{ id: 'fixture', model: 'fixture', displayName: 'Protocol fixture', isDefault: true }], nextCursor: null });
+  if (m.method === 'model/list') respond({ data: [{ id: 'fixture', model: 'fixture', displayName: 'Protocol fixture', isDefault: true, defaultReasoningEffort: 'medium',
+    supportedReasoningEfforts: [{ reasoningEffort: 'low', description: '快速回答' }, { reasoningEffort: 'medium', description: '常规' }, { reasoningEffort: 'high', description: '深入推演' }] }], nextCursor: null });
   if(m.method==='thread/read' && ['reconcile-missing','reconcile-unavailable'].includes(mode??''))return send({id:m.id,error:{code:-32602,message:'thread not loaded'}});
   if(m.method==='thread/read')respond({thread:{id:m.params.threadId,status:{type:active && turns.get(active.turnId)?.status==='inProgress'?'active':'idle'},turns:[]}});
   if(m.method==='thread/turns/list')respond({data:[...turns.values()].filter(t=>t.threadId===m.params.threadId),nextCursor:null});
@@ -64,6 +68,17 @@ async function receive(m: any) {
     const submitted = JSON.parse(m.params.input[0].text); snapshot = submitted.submittedRequest;
     respond({ turn: { id: identity.turnId, status: 'inProgress' } });
     notify('turn/started', { threadId: identity.threadId, turn: { id: identity.turnId } });
+    if (reasoningChannel && m.params.summary) {
+      // Staggered on purpose: a real turn gives the panel an observable streaming window, and so must the peer.
+      const index = reasoningChannel === 'item/reasoning/textDelta' ? { contentIndex: 0 } : { summaryIndex: 0 };
+      notify(reasoningChannel, { ...identity, itemId: 'think-1', ...index, delta: '先读单元正文' });
+      setTimeout(() => notify(reasoningChannel, { ...identity, itemId: 'think-1', ...index, delta: '，再按位权展开' }), 140);
+      const text = `先读单元正文，再按位权展开。effort=${m.params.effort ?? 'none'} summary=${m.params.summary}`;
+      const item = reasoningChannel === 'item/reasoning/textDelta'
+        ? { type: 'reasoning', id: 'think-1', summary: [], content: mode === 'reasoning-empty' ? [] : [text] }
+        : { type: 'reasoning', id: 'think-1', summary: mode === 'reasoning-empty' ? [] : [text] };
+      setTimeout(() => { if (mode !== 'reasoning-unclosed') notify('item/completed', { ...identity, item }); }, 420);
+    }
     const read = await tool('yizhi_read_target', {});
     if (!read?.success) return send({ id: 999, method: 'unsupported/request', params: {} });
     if (snapshot.citations.length) await tool('yizhi_read_citation', { citationId: snapshot.citations[0].citation.id });
@@ -97,7 +112,9 @@ async function receive(m: any) {
       }
     }
     const partial = '课程依据：位置的权决定数值。';
-    const full = partial + '\n补充解释：例如 22 的两个 2 分别表示 20 和 2。';
+    // A markdown-shaped answer so the prose renderer's block styling is actually exercised on screen.
+    const markdown = '## 位权\n\n**位置记数法**中每一位的权是 $10^k$：\n\n- 个位 $10^0=1$\n- 十位 $10^1=10$\n\n> 同一个数字，位不同则值不同。\n\n1. 写出位序\n2. 乘以基数幂';
+    const full = mode === 'markdown' ? markdown : partial + '\n补充解释：例如 22 的两个 2 分别表示 20 和 2。';
     notify('item/agentMessage/delta', { ...identity, itemId: 'answer', delta: partial });
     if (mode === 'disconnect') { setTimeout(() => process.exit(17), 80); return; }
     if (mode === 'malformed') { process.stdout.write('not-json\n'); return; }

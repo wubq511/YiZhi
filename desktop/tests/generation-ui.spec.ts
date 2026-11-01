@@ -24,7 +24,7 @@ test('generation request fixes a confirmed source page while the composer stays 
     await expect(page.getByRole('status',{name:'解析进度'})).toContainText('已完成 · 已确认 2 / 2 页');
     await page.getByRole('button',{name:'返回画板',exact:true}).click();
     await page.getByRole('button',{name:'学习对话',exact:true}).click();
-    await page.getByRole('combobox',{name:'Agent 请求方式'}).selectOption('generate');
+    await page.getByRole('radiogroup',{name:'Agent 请求方式'}).getByRole('radio',{name:'生成主题',exact:true}).click();
     const source=page.getByRole('combobox',{name:'生成来源 PDF'});
     await expect(source.locator('option')).toHaveCount(2);
     await source.selectOption({index:1});

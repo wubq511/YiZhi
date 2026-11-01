@@ -43,7 +43,6 @@ export async function navigateUnit(page: Page, graph: CourseGraph, id: string) {
 export interface SavedTargetFixture { conversationId: string; results: Array<{ unitId: string; marker: string; taskId: string }> }
 export async function exerciseTargetDisplays(page: Page, fixture: SavedTargetFixture, metrics: AcceptanceMetrics) {
   await page.getByRole('button', { name: 'Agent · 学习对话', exact: true }).click();
-  await page.getByRole('combobox', { name: '学习对话列表', exact: true }).selectOption(fixture.conversationId);
   const buttons = page.getByRole('button', { name: '查看实际修改', exact: true }); await expect(buttons).toHaveCount(fixture.results.length);
   const displays = [];
   for (let index = 0; index < fixture.results.length; index++) {
@@ -252,7 +251,7 @@ export async function runStudyAcceptance(app: ElectronApplication, page: Page, m
   await agentButton.focus(); await expect(agentButton).toBeFocused(); await page.keyboard.press('Enter');
   await expect(page.getByRole('textbox', { name: '学习对话草稿', exact: true })).toBeFocused();
   await panelSample('agent-open');
-  await expect(page.getByText(/生成暂不可用/)).toBeVisible();
+  await expect(page.getByText(/Agent 暂不可用/)).toBeVisible();
   await expect(page.getByRole('button', { name: '发送问题', exact: true })).toBeDisabled();
   const closeAgent = page.getByRole('button', { name: '收起对话', exact: true });
   await closeAgent.focus(); await page.keyboard.press('Shift+Tab');

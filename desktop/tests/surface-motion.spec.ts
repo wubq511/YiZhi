@@ -87,7 +87,7 @@ test('pointer surfaces animate, while keyboard and reduced motion retain immedia
     for (const [item, name, close] of [
       ['课程历史', '修改历史', '返回原阅读位置'],
       ['整课历史恢复', '整课历史恢复', '返回当前课程'],
-      ['历史与空间', '历史与空间', '返回课程'],
+      ['课程设置', '课程设置', '返回课程'],
     ]) {
       await courseAction(page, item);
       const dialog = page.getByRole('dialog', { name, exact: true });

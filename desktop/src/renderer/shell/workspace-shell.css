@@ -145,12 +145,11 @@ button.panel-close:hover { background: #efecf5; color: #4e426e; }
 .save-confirmed > div { display: flex; gap: 8px; padding: 5px 0; color: #746c7c; }
 .shell-dock :is(.search-panel, .annotation-panel, .source-panel, .agent-panel) { position: relative; inset: auto; z-index: auto; width: 100%; max-width: none; height: 100%; border: 0; border-radius: 0; box-shadow: none; background: var(--shell-panel); color: var(--shell-ink); padding: 18px 16px; scrollbar-width: thin; scrollbar-color: #cfc8d9 transparent; }
 .shell-dock :is(input, textarea, select) { font-family: inherit; font-size: 13px; accent-color: #6555be; }
-.shell-dock .agent-panel { overflow-y: auto; }
-.shell-dock .agent-panel .agent-composer { margin-top: 16px; padding-top: 14px; max-height: none; overflow: visible; }
-.shell-dock .agent-messages { flex: 1 0 120px; }
+.shell-dock .agent-panel { overflow: hidden; }
+.shell-dock .agent-panel .agent-composer { margin-top: 16px; padding-top: 14px; }
+.shell-dock .agent-messages { flex: 1 1 0; min-height: 0; }
 .shell-dock .agent-composer textarea { background: #fff; border-color: #ded8e6; border-radius: 10px; }
 .shell-dock .agent-empty { color: #756c81; font-size: 13px; line-height: 1.8; }
-.shell-dock .agent-conversations { margin-bottom: 16px; }
 .shell-dock .source-panel { gap: 10px; }
 .shell-dock .annotation-panel blockquote { margin: 12px 0; padding: 12px; border: 0; border-radius: 8px; background: #f2eef7; font-size: 13px; color: #62546e; }
 .shell-dock :focus-visible { outline: 2px solid #7568cd; outline-offset: 2px; }
@@ -195,7 +194,6 @@ button.panel-close:hover { background: #efecf5; color: #4e426e; }
 .shell-dock .agent-attachment blockquote { padding: 10px 34px 10px 12px; background: #f0edf7; color: #67577a; border-radius: 8px; }
 .shell-dock button.attachment-remove { position: absolute; right: 4px; top: 4px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #7a6e89; }
 .shell-dock .agent-target { font-size: 12px; line-height: 1.6; margin: 0 0 8px; }
-.shell-dock .agent-conversations { align-items: center; }
 @media (max-width: 760px) {
   .app-header { padding: 0 8px; gap: 3px; }
   [data-titlebar=inset] .app-header { padding-left: 84px; }

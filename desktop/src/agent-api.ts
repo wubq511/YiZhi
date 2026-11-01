@@ -4,8 +4,14 @@ export interface QuestionTarget { unitId: string; blockId?: string; selectedText
 export interface SubmitQuestion extends AgentSession {
   conversationId: string; operationId: string; generation: number; text: string;
   target: QuestionTarget; citationIds?: string[]; model?: string; intent?: import('./agent-mutation-api').AgentIntent;
-  mode?: 'steer' | 'queue';
+  mode?: 'steer' | 'queue'; reasoningEffort?: string;
   generationSpec?: import('./generation-api').GenerationSpec;
+}
+/** One model reasoning item, kept so the student can reopen what the Agent actually thought. */
+export interface ReasoningSegment {
+  id: string; taskId: string; itemId: string; turnId: string | null;
+  text: string; state: 'streaming' | 'complete' | 'partial';
+  startedAt: string; endedAt: string | null;
 }
 export interface QuestionSnapshot {
   intent?: import('./agent-mutation-api').AgentIntent;
@@ -45,7 +51,7 @@ export interface AgentTask {
   progress?: { targetId: string; stage: 'read' | 'committed' | 'retained'; sequence: number };
   generationProgress?: {completedStages:Array<'lesson'|'practice'>;pendingStages:Array<'lesson'|'practice'>};
   snapshot: QuestionSnapshot; status: AgentTaskStatus; threadId: string | null; turnId: string | null;
-  model: string | null; error: string | null; createdAt: string|null; cursor: number;
+  model: string | null; reasoningEffort?: string | null; error: string | null; createdAt: string|null; cursor: number;
   stopRequested?: boolean; continuesTaskId?: string; continuedByTaskId?: string;
   recovery?: { state: 'active' | 'resolved' | 'unknown'; checkedAt: string; detail: string };
 }
@@ -58,6 +64,7 @@ export interface AgentMessage {
 }
 export interface ConversationView extends Conversation {
   toolFacts: Array<{ taskId: string; name: string; purpose: string; referenceId: string; digest: string; references: string[]; hasRecoveryPayload: boolean }>;
+  reasonings: ReasoningSegment[];
   draft: { intent?: import('./agent-mutation-api').AgentIntent; text: string; seq: number; target?: QuestionTarget; citationIds: string[] }; messages: AgentMessage[]; tasks: AgentTask[];
 }
 export interface AgentAPI {
@@ -71,8 +78,9 @@ export interface AgentAPI {
   continue(request: AgentTaskRequest & { operationId: string }): Promise<AgentTask>;
 }
 export interface ExecutorStatus {
-  available: boolean; path?: string; version?: string; error?: string;
-  models: Array<{ id: string; model: string; displayName: string; isDefault: boolean; defaultReasoningEffort?: string }>;
+  available: boolean; path?: string; version?: string; error?: string; supportsReasoning?: boolean;
+  models: Array<{ id: string; model: string; displayName: string; isDefault: boolean; defaultReasoningEffort?: string;
+    supportedReasoningEfforts?: Array<{ effort: string; description: string }> }>;
 }
 export type AgentBridge = AgentAPI & { status(): Promise<ExecutorStatus>; reconcile(request: AgentTaskRequest): Promise<AgentTask>; retryDelivery(request: AgentSession & { taskId: string; deliveryId: string }): Promise<AgentTask>;
   generationCandidates(request:AgentTaskRequest):Promise<import('./generation-api').GenerationCandidateView[]> };
@@ -87,7 +95,7 @@ export function agentClient(invoke: (method: string, request?: any) => Promise<a
 export interface AgentEvent extends AgentSession {
   taskId: string; attemptId: string; generation: number; eventId: string;
   threadId?: string; turnId?: string;
-  kind: 'bind' | 'delta' | 'message' | 'finish' | 'tool'; itemId?: string; text?: string;
+  kind: 'bind' | 'delta' | 'message' | 'finish' | 'tool' | 'reasoning' | 'reasoningCompleted'; itemId?: string; text?: string;
   status?: AgentTaskStatus; model?: string; error?: string;
   tool?: { name: string; input: unknown; output: unknown; references: string[] };
   /** Host reconciliation only: original turn facts; never grants commit qualification. */
