@@ -73,7 +73,9 @@ test('Agent sidebar keeps drafts, native composer Undo, fixed source selection a
     await composer.fill('重开后接着问'); await expect(page.getByRole('status',{name:'保存状态',exact:true})).toHaveText('已保存');
     await app.close(); app = await launch(); page = await app.firstWindow();
     await openAgent(page); await expect(page.getByRole('textbox', { name: '学习对话草稿' })).toHaveValue('重开后接着问');
-    await page.locator('.agent-citations').last().getByRole('button').first().focus();await expect(page.locator('.agent-citation-card').last()).toContainText('Source selection fixed evidence');
+    await expect(page.locator('.agent-citations').last().getByRole('button').first()).toHaveAttribute('aria-label', '出处 1：evidence.pdf PDF 第 1 页');
+    const reopenedQuotes = await page.evaluate(async () => { const api = (window as any).yizhi; const course = await api.open(); const list = await api.agent.list({ sessionId: course.sessionId }); const view = await api.agent.get({ sessionId: course.sessionId, conversationId: list.selectedId }); return view.tasks.flatMap((task: any) => task.snapshot.citations.map((reference: any) => reference.citation.quote)); });
+    expect(reopenedQuotes).toContain('Source selection fixed evidence');
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(660, 600));
     await expect(page.getByRole('dialog', { name: 'Agent 学习对话' })).toBeVisible();
     await expect(page.getByRole('textbox', { name: '学习对话草稿' })).toBeFocused();
