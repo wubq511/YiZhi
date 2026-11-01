@@ -113,6 +113,7 @@ test('real MathLive nested selection uses a lazy reading field, proven independe
     expect(await getNotes()).toHaveLength(2);
     expect((await getNotes())[1].original.fragments[0].quote).toBe('x+x');
     await page.getByRole('button', { name: '关闭批注', exact: true }).click();
+    await expect(page.locator('.annotation-panel')).toBeHidden();
 
     await field.evaluate((el: any) => {
       const events: unknown[] = [];
