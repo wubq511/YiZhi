@@ -249,9 +249,14 @@ test('growth displaces the local chain while the current reading anchor and stud
     await nav.getByRole('button', { name: '非十进制与十进制互转', exact: true }).click();
     const heading = page.getByRole('heading', { name: '非十进制与十进制互转', exact: true });
     await expect(heading).toBeVisible();
+    if (await nav.isVisible()) await nav.getByRole('button', { name: '收起目录', exact: true }).click();
+    await expect(page.locator('main.board')).not.toHaveAttribute('inert', '');
+    await expect(page.locator('.board-background')).not.toHaveAttribute('inert', '');
     const width = page.getByRole('slider', { name: '调整非十进制与十进制互转宽度' });
     const original = await page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return (await b.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-002'); });
-    await width.focus(); await page.keyboard.press('ArrowRight');
+    await width.press('ArrowRight');
+    await expect(width).toBeFocused();
+    await expect(width).toHaveAttribute('aria-valuenow', String(original.width + 24));
     await expect(page.getByRole('status', { name: '保存状态', exact: true })).toHaveText('已保存');
     const baseline = await page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return (await b.graph(c.sessionId)).layout.nodes.find((n: any) => n.unitId === 'KU-002'); });
     expect(baseline.y).toBe(original.y); expect(baseline.width).toBe(original.width + 24);

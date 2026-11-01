@@ -5,11 +5,14 @@ export async function expandDirectoryTheme(page: Page, name: string) {
   if (await theme.getAttribute('aria-expanded') !== 'true') await theme.click();
 }
 export async function openDirectoryUnit(page: Page, theme: string, unit: string) {
+  await expect(page.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
   await expandDirectoryTheme(page, theme);
   await page.getByRole('navigation', { name: '课程目录', exact: true }).getByRole('button', { name: unit, exact: true }).click();
+  await expect(page.locator('article[data-reading-active="true"] h1')).toHaveText(unit);
 }
 export async function openFirstUnit(page: Page) {
   await openDirectoryUnit(page, '数制与数制转换', '位置记数法与权展开');
+  await expect(page.locator('[aria-label="连续编辑正文"]')).toHaveAttribute('contenteditable', 'true');
 }
 export async function courseAction(page: Page, name: string) {
   await page.getByRole('button', {name:'课程菜单',exact:true}).click();

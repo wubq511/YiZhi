@@ -2,36 +2,26 @@ name: Desktop macOS
 
 on:
   pull_request:
-    paths:
+    paths: &desktop_paths
       - desktop/**
       - legacy/review-board/**
+      - tools/desktop/**
       - .github/workflows/desktop.yml
+      - '!desktop/**/*.md'
+      - '!legacy/review-board/**/*.md'
+      - '!tools/desktop/**/*.md'
   push:
     branches: [main]
-    paths:
-      - desktop/**
-      - legacy/review-board/**
-      - .github/workflows/desktop.yml
+    paths: *desktop_paths
 
 concurrency:
-  group: desktop-${{ github.ref }}
-  cancel-in-progress: true
+  group: desktop-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  desktop-tests:
-    name: desktop-tests (${{ matrix.core }}, UI ${{ matrix.shard }}/2)
-    runs-on: macos-15
-    timeout-minutes: 25
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - core: node
-            command: test:built
-            shard: 1
-          - core: electron
-            command: test:electron:built
-            shard: 2
+  desktop-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: desktop
@@ -44,39 +34,68 @@ jobs:
           cache-dependency-path: desktop/package-lock.json
       - run: npm ci
       - run: npm run test:runner
-        if: matrix.core == 'node'
       - run: npm run test:ui:coverage
-        if: matrix.core == 'node'
       - name: Legacy save retry and live HTTP recovery
-        if: matrix.core == 'node'
         run: node --test --test-concurrency=1 ../legacy/review-board/tests/persistence-client.test.cjs ../legacy/review-board/tests/integration-client.test.cjs
-      - run: npm run build
-        id: build
       - run: npm run typecheck
-        if: matrix.core == 'node'
-      - name: Full ${{ matrix.core }} Core suite
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: npm run ${{ matrix.command }}
-      - name: UI shard ${{ matrix.shard }}/2 (one visible worker)
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: npm run test:smoke:built -- --shard=${{ matrix.shard }}/2 --workers=1
+
+  desktop-core:
+    runs-on: macos-15
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24.22.0
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test:core:built
+
+  desktop-ui:
+    name: desktop-ui (${{ matrix.shard }}/4)
+    runs-on: macos-15
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24.22.0
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: UI shard ${{ matrix.shard }}/4 (one visible worker)
+        run: npm run test:smoke:built -- --fully-parallel --shard=${{ matrix.shard }}/4 --workers=1
       - name: Upload failed desktop UI evidence
         if: failure()
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: desktop-ui-${{ matrix.core }}-shard-${{ matrix.shard }}-${{ github.run_attempt }}
+          name: desktop-ui-shard-${{ matrix.shard }}-${{ github.run_attempt }}
           path: desktop/test-results/
           if-no-files-found: ignore
           retention-days: 7
 
-  # Preserve the required-check name. No failure/cancellation/skip may become green.
   desktop:
     if: ${{ always() }}
-    needs: desktop-tests
+    needs: [desktop-static, desktop-core, desktop-ui]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Require both Core runtimes and both UI shards
+      - name: Require static, both Core runtimes and all UI shards
         env:
-          CHECK_RESULT: ${{ needs.desktop-tests.result }}
-        run: test "$CHECK_RESULT" = success
+          STATIC_RESULT: ${{ needs.desktop-static.result }}
+          CORE_RESULT: ${{ needs.desktop-core.result }}
+          UI_RESULT: ${{ needs.desktop-ui.result }}
+        run: test "$STATIC_RESULT" = success && test "$CORE_RESULT" = success && test "$UI_RESULT" = success

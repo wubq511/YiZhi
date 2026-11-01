@@ -1,6 +1,7 @@
 import { evidencePath } from './evidence-paths';
 import { test, expect, _electron as electron, type Page } from '@playwright/test';
-import { mkdtemp, rm, chmod, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, chmod, writeFile, readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { resizeBoardWindow } from './board-test-helpers';
@@ -109,9 +110,11 @@ test('offline and a genuinely missing CLI preserve basic short-word/symbol searc
   } finally { await app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
-test('literal input stays responsive while description is waiting, and stopping it cannot publish a late result', async () => {
+test('literal input stays responsive while description is waiting, and stopping exits the peer without publishing a result', async () => {
   const root = await mkdtemp(join(tmpdir(), 'yizhi-description-pending-ui-')); await chmod(fixture, 0o755);
-  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile'), YIZHI_CODEX_PATH: fixture, YIZHI_DESCRIPTION_FIXTURE: 'linger' } });
+  const ready = join(root, 'search-ready');
+  const app = await electron.launch({ args: [resolve('.'), `--course=${join(root, 'course')}`], env: { ...process.env, YIZHI_DATA_HOME: join(root, 'profile'), YIZHI_CODEX_PATH: fixture, YIZHI_DESCRIPTION_FIXTURE: 'linger',
+    YIZHI_DESCRIPTION_READY: ready } });
   let page: Page | undefined;
   try {
     page = await app.firstWindow(); await resizeBoardWindow(app, page);
@@ -131,6 +134,8 @@ test('literal input stays responsive while description is waiting, and stopping 
     await page.getByRole('button', { name: 'AI 查找', exact: true }).click();
     const enhanced = page.getByRole('region', { name: 'AI 检索结果', exact: true });
     await expect(enhanced.getByText('实际执行的查询 · 1', { exact: true })).toBeVisible();
+    await expect.poll(() => existsSync(ready)).toBe(true);
+    const peerPid = Number(await readFile(ready, 'utf8'));
     const localTab = page.getByRole('tab', { name: '本地结果', exact: true });
     await page.getByRole('searchbox', { name: '查找已有内容' }).fill('基数');
     await expect(page.getByRole('region', { name: '搜索结果', exact: true })).toContainText('已有内容');
@@ -140,7 +145,7 @@ test('literal input stays responsive while description is waiting, and stopping 
     await page.getByRole('button', { name: '停止 AI 查找', exact: true }).click();
     await expect(enhanced.getByRole('status').filter({ hasText: '已停止' })).toBeVisible();
     await expect(enhanced.locator('.search-result')).toHaveCount(0);
-    await page.waitForTimeout(4500);
+    await expect.poll(() => { try { process.kill(peerPid, 0); return true; } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ESRCH') return false; throw error; } }).toBe(false);
     await expect(enhanced.getByRole('status').filter({ hasText: '已停止' })).toBeVisible();
     await expect(enhanced.locator('.search-result')).toHaveCount(0);
     await page.getByRole('searchbox', { name: '查找已有内容' }).fill('基数');

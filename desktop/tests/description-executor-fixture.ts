@@ -45,7 +45,11 @@ async function receive(m: any) {
     const data = JSON.parse(result.contentItems[0].text);
     if (mode === 'disconnect') process.exit(17);
     if (mode === 'malformed') { process.stdout.write('invalid-json\n'); return; }
-    if (mode === 'linger' || mode === 'stale') { setTimeout(() => void complete(data), mode === 'stale' ? 400 : 4000); return; }
+    if (mode === 'linger') {
+      if (process.env.YIZHI_DESCRIPTION_READY) writeFileSync(process.env.YIZHI_DESCRIPTION_READY, String(process.pid));
+      return;
+    }
+    if (mode === 'stale') { setTimeout(() => void complete(data), 400); return; }
     await complete(data);
   }
 }

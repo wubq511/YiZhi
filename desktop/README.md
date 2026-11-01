@@ -35,9 +35,11 @@ npm run test:smoke:built
 
 `verify` 先独占构建一次，然后按可用 CPU 预算并行执行运行器回归、typecheck、完整 Node Core 和完整 Electron Core。为前两项预留预算，两套 Core 共同分配剩余文件并发度；小于 4 CPU 时分阶段执行，1 CPU 时全部串行。日志标记检查名称，任一失败或信号退出均返回非零，并等待其他检查完成。可用 `npm run verify -- --cpus=4` 限制预算，或 `--sequential` 比较串行耗时。一个 checkout 的 `dist` 同时只交给一个构建／验证命令。
 
+开发构建会按输入内容和完整输出清单复用未变化的 `dist` 与开发工具输出；需要重新生成时使用 `npm run build -- --force`。正式打包的 `build --production` 始终清洁构建。CI 的 `npm run test:core:built` 在已有构建上运行完整 Node 与 Electron Core，不重复构建或执行独立静态检查。
+
 `test:built`、`test:electron:built`、`test:smoke:built` 消费当前已完成的构建，不自动重建；修改源代码后先重新 `build` 或 `verify`。原 `npm test`、`test:electron`、`test:smoke` 仍会自动构建，可独立使用。`test:runner` 通过独立临时工作目录检查运行器的完整发现、并发预算、构建先后与失败退出。
 
-CI 将完整 UI 分为两片，各使用一台独立 macOS runner 和一个 Playwright worker，同时分别覆盖 Node／Electron Core，每台只构建一次；`desktop` 汇总检查只有两片都成功才成功。`npm run test:ui:coverage` 用 Playwright 实际发现结果检查两片并集恰为完整套件且无重复，`-- --json` 可输出逐用例归属。所有既有真实模型／安装包等 opt-in 条件保持不变。
+CI 将完整 UI 按用例分为四片，各使用一台独立 macOS runner 和一个 Playwright worker；第五台 macOS runner 执行完整 Node 与 Electron Core，类型检查、运行器回归、分片检查及旧版客户端回归在 Ubuntu 并行运行。`desktop` 汇总检查要求所有 job 成功。`npm run test:ui:coverage` 用 Playwright 实际发现结果检查四片并集恰为完整套件且无重复，`-- --json` 可输出逐用例归属。所有既有真实模型／安装包等 opt-in 条件保持不变。
 
 本机 UI 保持 `workers: 1`：现有 UI spec 文件都启动真实 Electron 并取得原生窗口。编辑／保护／批注用例依赖焦点、选区、公式输入与 composition；`editor.spec.ts` 还读写和恢复系统剪贴板。`learning-lifecycle.spec.ts` 主动前置多个窗口，窗口／来源／打包用例覆盖宿主生命周期或原生 chooser 归属。扩展和实验依赖实际可见性、离屏暂停与计时；画板用例依赖窗口几何和真实 wheel。独立课程目录和 profile 能隔离数据，不能隔离这些桌面资源。
 

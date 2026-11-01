@@ -41,6 +41,7 @@ test('shell retains panels and targets, uses real tool histories and returns key
     await page.getByRole('button',{name:'图形',exact:true}).click();await expect(page.getByRole('menuitemradio',{name:'个人箭头',exact:true})).toBeVisible();
     await page.screenshot({path:evidencePath(`implementation-shapes-${size.width}x${size.height}.png`)});
     await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'图形',exact:true})).toBeFocused();
+    await expect(page.getByRole('menuitemradio',{name:'个人箭头',exact:true})).toBeHidden();
     await chooseShape(page,'矩形');const board=(await page.locator('main.board').boundingBox())!;
     await page.mouse.move(board.x+board.width-190,board.y+140);await page.mouse.down();await page.mouse.move(board.x+board.width-80,board.y+220,{steps:8});await page.mouse.up();
     await expect(page.getByRole('status',{name:'保存状态',exact:true})).toHaveText('已保存');
@@ -118,7 +119,7 @@ test('a failed review save remains visible after another channel saves and retri
     await openFirstUnit(page);
     fault=openFaultDatabase(join(root,'course','course.sqlite'));
     fault.exec("CREATE TRIGGER shell_review_failure BEFORE INSERT ON review_states BEGIN SELECT RAISE(ABORT,'test review failure'); END");
-    await page.getByRole('group',{name:'设置复习状态',exact:true}).getByRole('button',{name:'已掌握',exact:true}).click();
+    await page.locator('article[data-unit-id="KU-001"]').getByRole('group',{name:'设置复习状态',exact:true}).getByRole('button',{name:'已掌握',exact:true}).click();
     await expect(page.getByRole('status',{name:'保存状态',exact:true})).toHaveText('有改动未保存');
     await page.getByRole('button',{name:'学习对话',exact:true}).click();await page.getByRole('textbox',{name:'学习对话草稿',exact:true}).fill('这个独立草稿保存成功');
     await expect.poll(()=>page.evaluate(async()=>{const b=window.yizhi,c=await b.open(),l=await b.agent.list({sessionId:c.sessionId});return (await b.agent.get({sessionId:c.sessionId,conversationId:l.selectedId!})).draft.text;})).toBe('这个独立草稿保存成功');

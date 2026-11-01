@@ -62,6 +62,7 @@ test('Core failures stay nonzero while later files still run; empty suites and i
 async function verificationWorkspace(t) {
   const root = await workspace(t);
   await copyFile(new URL('verify.mjs', scripts), join(root, 'scripts/verify.mjs'));
+  await copyFile(new URL('core-runs.mjs', scripts), join(root, 'scripts/core-runs.mjs'));
   await mkdir(join(root, 'node_modules/typescript/bin'), { recursive: true });
   await mkdir(join(root, 'scripts/tests'), { recursive: true });
   await writeFile(join(root, 'scripts/build.mjs'), `

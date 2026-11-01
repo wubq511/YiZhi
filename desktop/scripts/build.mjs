@@ -1,8 +1,12 @@
 import { build } from 'esbuild';
 import { execFileSync } from 'node:child_process';
 import { mkdir, copyFile, readdir, cp, rm, writeFile } from 'node:fs/promises';
+import { fresh, invalidate, record } from './build-cache.mjs';
 const production=process.argv.includes('--production');
-if(process.argv.slice(2).some(arg=>arg!=='--production'))throw new Error('Unknown build argument');
+const force=process.argv.includes('--force');
+if(process.argv.slice(2).some(arg=>!['--production','--force'].includes(arg)))throw new Error('Unknown build argument');
+if(!production&&!force&&await fresh()) { console.log('[build] development outputs unchanged'); process.exit(0); }
+await invalidate();
 await rm('dist',{recursive:true,force:true});
 await mkdir('dist/tests', { recursive: true });
 const runtimeInputs={};
@@ -50,3 +54,4 @@ await cp('src/extensions/packages', 'dist/extensions', { recursive: true });
 for(const [entry,inputs] of Object.entries(runtimeInputs))if(inputs.some(input=>input.includes('tools/desktop/')))throw new Error('Development dependency in runtime: '+entry);
 await writeFile('dist/runtime-inputs.json',JSON.stringify(runtimeInputs,null,2)+'\n');
 if(!production)await import('../../tools/desktop/build.mjs');
+if(!production)await record();

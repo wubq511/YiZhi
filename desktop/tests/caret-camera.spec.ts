@@ -12,6 +12,8 @@ test('keyboard caret navigation keeps board controls fixed and reopens at the ac
   try {
     let page = await app.firstWindow();
     await openFirstUnit(page);
+    await expect(page.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
+    await expect(page.getByRole('textbox', { name: '连续编辑正文', exact: true })).toHaveAttribute('contenteditable', 'true');
     const first = page.getByRole('textbox', { name: '编辑首段正文', exact: true });
     await first.fill('连续输入的长正文应当保持同一个画板相机和输入现场。'.repeat(90));
     await expect(page.getByRole('status', { name: '保存状态' })).toHaveText('已保存');

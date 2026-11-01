@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 
 function discover(shard) {
   const result = spawnSync(process.execPath, ['node_modules/@playwright/test/cli.js', 'test',
-    '--list', '--reporter=json', ...(shard ? [`--shard=${shard}/2`] : [])], {
+    '--list', '--reporter=json', '--fully-parallel', ...(shard ? [`--shard=${shard}/4`] : [])], {
     shell: false, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024,
   });
   assert.equal(result.status, 0, result.error?.message ?? result.stderr);
@@ -25,7 +25,7 @@ function discover(shard) {
 }
 
 const full = discover();
-const shards = [discover(1), discover(2)];
+const shards = [1, 2, 3, 4].map(discover);
 const ids = tests => tests.map(test => test.id).sort();
 const union = shards.flat();
 assert.equal(new Set(ids(full)).size, full.length, 'Duplicate full-suite test identity');
@@ -36,5 +36,5 @@ const summary = { full: full.length, shards: shards.map(tests => tests.length),
 };
 console.log(JSON.stringify({ ...summary, ...(process.argv.includes('--json') ? {
   // --list discovers opt-in cases too; their existing runtime skip predicates stay intact.
-  tests: full.map(test => ({ ...test, shard: shards[0].some(candidate => candidate.id === test.id) ? 1 : 2 })),
+  tests: full.map(test => ({ ...test, shard: shards.findIndex(shard => shard.some(candidate => candidate.id === test.id)) + 1 })),
 } : {}) }, null, 2));

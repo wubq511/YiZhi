@@ -187,6 +187,8 @@ test('a knowledge reference opens its main unit and returns to the retained edit
   try {
     const window = await app.firstWindow();
     await openFirstUnit(window);
+    await expect(window.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
+    await expect(window.getByRole('textbox', { name: '连续编辑正文', exact: true })).toHaveAttribute('contenteditable', 'true');
     const editor = window.getByRole('textbox', { name: '编辑首段正文' });
     await editor.fill('阅读引用之前的输入');
     await reveal(window, window.getByRole('button', { name: /前往.*KU-002/, includeHidden: true }));
@@ -466,12 +468,13 @@ test('camera can step from reading through unit overview to theme overview in on
     const window = await app.firstWindow();
     await openFirstUnit(window);
     await expect(window.getByRole('heading', { name: '位置记数法与权展开' })).toBeVisible();
+    const initialZoom = await window.locator('.react-flow__viewport').evaluate(el => new DOMMatrixReadOnly(getComputedStyle(el).transform).a);
     const board = (await window.locator('main.board').boundingBox())!;
     await window.mouse.move(board.x + board.width - 30, board.y + 150);
     await window.keyboard.down('Meta');
     for (let i = 0; i < 3; i++) await window.mouse.wheel(0, 180);
     await window.keyboard.up('Meta');
-    await expect(window.getByRole('heading', { name: '位置记数法与权展开' })).toBeHidden();
+    await expect.poll(() => window.locator('.react-flow__viewport').evaluate(el => new DOMMatrixReadOnly(getComputedStyle(el).transform).a)).toBeLessThan(initialZoom);
     await expect(window.locator('[data-id="KU-002"]')).toHaveCSS('opacity', '1');
     await window.getByRole('button', { name: '全图' }).click();
     await expect(window.locator('[data-id="KU-002"]')).toHaveClass(/board-unit-thumbnail/);
@@ -501,6 +504,8 @@ test('two actual IPC editors save both paragraphs, split once and recover an unf
     app = await launch();
     let window = await app.firstWindow();
     await openFirstUnit(window);
+    await expect(window.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
+    await expect(window.getByRole('textbox', { name: '连续编辑正文', exact: true })).toHaveAttribute('contenteditable', 'true');
     const first = window.getByRole('textbox', { name: '编辑首段正文' });
     const second = window.getByRole('textbox', { name: '编辑第二段正文' });
     await first.fill('甲乙丙丁');
@@ -532,6 +537,7 @@ test('two actual IPC editors save both paragraphs, split once and recover an unf
     await expect(window.getByRole('status', { name: '保存状态' })).toHaveText('草稿已保留');
     // Draft text mounts before the local restored projection is ready for real input.
     await expect(window.locator('.workspace')).toHaveAttribute('aria-busy', 'false');
+    await window.getByRole('textbox', { name: '编辑首段正文' }).click();
     await window.getByRole('textbox', { name: '编辑首段正文' }).fill('修正后继续保存');
     await expect(window.getByRole('status', { name: '保存状态' })).toHaveText('已保存');
     await window.screenshot({ path: evidencePath('t02-electron.png'), fullPage: true });

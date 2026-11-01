@@ -221,7 +221,7 @@ test('held displayed selection creates an old-version orphan and explicit reasso
     });
     await expect.poll(() => editor.evaluate((el: any) => el.editor.storage.courseSelection.capture().latestFormalRevision)).toBe(result.revision!);
     await page.getByRole('button', { name: '批注所选文字', exact: true }).click();
-    await expect(page.getByRole('region', { name: '个人批注', exact: true })).toContainText('待重新关联');
+    await expect(page.locator('.annotation-panel')).toContainText('待重新关联');
     const getNotes = () => page.evaluate(async () => { const b = (window as any).yizhi, c = await b.open(); return b.annotations.list({ sessionId: c.sessionId }); });
     const note = (await getNotes())[0];
     expect(note.original.fragments).toEqual(captured.fragments);
