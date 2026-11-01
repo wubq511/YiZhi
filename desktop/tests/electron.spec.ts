@@ -107,8 +107,8 @@ test('real Electron IPC saves, retains failed input, retries, drains quit, reope
       const blocked = await contender.firstWindow();
       await expect(blocked.getByRole('alert')).toContainText('课程暂时无法打开');
       await contender.evaluate(({ app }) => app.quit());
-      await expect.poll(() => contenderProcess.exitCode, { timeout: 3000 }).not.toBeNull();
-    } finally { if (contenderProcess.exitCode === null) contenderProcess.kill('SIGKILL'); }
+      await expect.poll(() => ({ code: contenderProcess.exitCode, signal: contenderProcess.signalCode }), { timeout: 10_000 }).toEqual({ code: 0, signal: null });
+    } finally { if (contenderProcess.exitCode === null && contenderProcess.signalCode === null) contenderProcess.kill('SIGKILL'); }
     fault = openFaultDatabase(join(root, 'course/course.sqlite'));
     fault.exec("CREATE TRIGGER reject_write BEFORE UPDATE ON units BEGIN SELECT RAISE(ABORT, 'storage unavailable'); END");
     await editor.fill('保存失败后保留这段输入，重试仍是它。');
